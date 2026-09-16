@@ -28,7 +28,6 @@ import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
@@ -71,6 +70,8 @@ import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarIconEdgeInset
+import org.bakasu.bakasu.ui.component.TopBarIconPill
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
@@ -109,7 +110,7 @@ fun SuperUserPage(bottomPadding: Dp) {
     val scope = rememberCoroutineScope()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState),
+        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     )
     val listState = rememberLazyListState()
     val snackBarHostState = LocalSnackbarHost.current
@@ -194,7 +195,7 @@ fun SuperUserPage(bottomPadding: Dp) {
                 searchText = uiState.search,
                 onSearchTextChange = { viewModel.dispatch(SuperUserUiAction.Search(it)) },
                 dropdownContent = {
-                    IconButton(onClick = { showDropdown = true }) {
+                    TopBarIconPill(onClick = { showDropdown = true }) {
                         Icon(
                             imageVector = Icons.TwoTone.MoreVert,
                             contentDescription = stringResource(id = R.string.settings),
@@ -215,9 +216,10 @@ fun SuperUserPage(bottomPadding: Dp) {
                     }
                 },
                 navigationContent = {
-                    IconButton(onClick = {
-                        navigator.push(Route.Sulog)
-                    }) {
+                    TopBarIconPill(
+                        modifier = Modifier.padding(start = TopBarIconEdgeInset),
+                        onClick = { navigator.push(Route.Sulog) }
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.TwoTone.Article,
                             contentDescription = stringResource(R.string.sulog),

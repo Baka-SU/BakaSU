@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,11 +29,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -67,6 +65,8 @@ import org.bakasu.bakasu.domain.model.InstalledApp
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarTitlePill
+import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.profile.AppProfileConfig
 import org.bakasu.bakasu.ui.component.profile.RootProfileConfig
 import org.bakasu.bakasu.ui.component.profile.TemplateConfig
@@ -77,9 +77,11 @@ import org.bakasu.bakasu.ui.component.settings.SettingsDropdownWidget
 import org.bakasu.bakasu.ui.component.settings.SettingsJumpPageWidget
 import org.bakasu.bakasu.ui.component.settings.SettingsSwitchWidget
 import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
+import org.bakasu.bakasu.ui.component.transparentTopAppBarColors
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.theme.CardConfig
+import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
@@ -106,10 +108,9 @@ fun AppProfileScreen(
     uid: Int,
     packageName: String,
 ) {
-    val cardConfig: CardConfig = koinInject()
     val navigator = LocalNavigator.current
     val snackBarHost = LocalSnackbarHost.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val scope = rememberCoroutineScope()
     val viewModel =
         koinViewModel<AppProfileViewModel>(parameters = { parametersOf(uid, packageName) })
@@ -151,37 +152,23 @@ fun AppProfileScreen(
         return
     }
 
-    val colorScheme = MaterialTheme.colorScheme
-    val cardColor = if (cardConfig.isCustomBackgroundEnabled) {
-        Color.Transparent
-    } else {
-        colorScheme.surfaceContainer
-    }
-
     Scaffold(
         topBar = {
-            LargeFlexibleTopAppBar(
-                modifier = Modifier.blurEffect(),
+            TopAppBar(
                 title = {
-                    Text(
-                        text = appGroup.mainApp.label,
-                    )
+                    TopBarTitlePill {
+                        Text(
+                            text = appGroup.mainApp.label,
+                        )
+                    }
                 },
-                subtitle = {
-                    Text(
-                        text = appGroup.mainApp.displayIdentifier,
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = cardColor,
-                    scrolledContainerColor = cardColor,
-                ),
+                colors = transparentTopAppBarColors(),
                 navigationIcon = {
                     AppBackButton(
                         onClick = dropUnlessResumed { navigator.pop() },
                     )
                 },
-                windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
+                windowInsets = pillTopAppBarWindowInsets(),
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -271,7 +258,7 @@ private fun AppProfileInner(
         item {
             if (isSpecial) {
                 SettingsBaseWidget(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = ScreenEdgePadding, vertical = 8.dp),
                     title = appGroup.mainApp.label,
                     description = appGroup.mainApp.displayIdentifier,
                     iconPlaceholder = false,
@@ -281,7 +268,7 @@ private fun AppProfileInner(
                 )
             } else {
                 SettingsDropdownWidget(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = ScreenEdgePadding, vertical = 8.dp),
                     title = appGroup.mainApp.label,
                     description = appGroup.mainApp.displayIdentifier,
                     iconPlaceholder = false,
@@ -310,7 +297,7 @@ private fun AppProfileInner(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = ScreenEdgePadding, vertical = 8.dp),
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surfaceBright.copy(
                         alpha = cardConfig.cardAlpha,
@@ -350,7 +337,7 @@ private fun AppProfileInner(
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
+                                .padding(horizontal = ScreenEdgePadding)
                                 .padding(top = 8.dp)
                                 .clip(RoundedCornerShape(16.dp))
                                 .renderBackgroundBlur(MaterialTheme.colorScheme.surfaceBright),
@@ -430,7 +417,7 @@ private fun AppProfileInner(
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
+                                .padding(horizontal = ScreenEdgePadding)
                                 .padding(top = 8.dp)
                                 .clip(RoundedCornerShape(16.dp))
                                 .renderBackgroundBlur(MaterialTheme.colorScheme.surfaceBright),
@@ -457,7 +444,7 @@ private fun AppProfileInner(
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
+                                    .padding(horizontal = ScreenEdgePadding)
                                     .padding(top = 8.dp),
                                 shape = RoundedCornerShape(16.dp),
                                 color = MaterialTheme.colorScheme.surfaceBright.copy(

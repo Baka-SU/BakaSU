@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -41,14 +40,12 @@ import androidx.compose.material.icons.twotone.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SearchBarDefaults.inputFieldColors
 import androidx.compose.material3.SearchBarDefaults.inputFieldShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -94,6 +91,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.theme.CardConfig
+import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
@@ -461,8 +459,6 @@ fun SearchAppBar(
     scrollBehavior: TopAppBarScrollBehavior? = null,
     searchBarPlaceHolderText: String,
 ) {
-    val themeConfig: ThemeConfig = koinInject()
-    val cardConfig: CardConfig = koinInject()
     val textFieldState = rememberTextFieldState(initialText = searchText)
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -531,13 +527,14 @@ fun SearchAppBar(
     }
 
     Column {
-        LargeFlexibleTopAppBar(
-            modifier = Modifier.blurEffect(),
+        TopAppBar(
             scrollBehavior = scrollBehavior,
             title = {
-                Text(
-                    text = title,
-                )
+                TopBarTitlePill {
+                    Text(
+                        text = title
+                    )
+                }
             },
             navigationIcon = {
                 if (onBackClick != null) {
@@ -556,7 +553,7 @@ fun SearchAppBar(
                     enter = fadeIn(),
                     exit = fadeOut(),
                 ) {
-                    IconButton(
+                    TopBarIconPill(
                         onClick = {
                             searchAppBarScrollBehavior?.expandSearchBar()
                             requestSearchFocus = true
@@ -570,21 +567,8 @@ fun SearchAppBar(
                 }
                 dropdownContent?.invoke()
             },
-            windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor =
-                    if (themeConfig.isEnableBlur) {
-                        Color.Transparent
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = cardConfig.cardAlpha)
-                    },
-                scrolledContainerColor =
-                    if (themeConfig.isEnableBlur) {
-                        Color.Transparent
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = cardConfig.cardAlpha)
-                    },
-            ),
+            windowInsets = pillTopAppBarWindowInsets(),
+            colors = transparentTopAppBarColors(),
         )
 
         AnimatedVisibility(
@@ -601,7 +585,7 @@ fun SearchAppBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 16.dp)
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = ScreenEdgePadding)
                         .clip(CircleShape)
                         .renderBackgroundBlur(MaterialTheme.colorScheme.surfaceContainerHighest),
                     textFieldState = textFieldState,

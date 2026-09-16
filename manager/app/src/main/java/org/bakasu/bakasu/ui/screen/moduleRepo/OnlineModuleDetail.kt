@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,8 +40,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
@@ -51,11 +47,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -89,14 +85,19 @@ import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.GithubMarkdown
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarTitlePill
+import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
+import org.bakasu.bakasu.ui.component.transparentTopAppBarColors
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Navigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.theme.CardConfig
+import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
@@ -149,24 +150,24 @@ private fun OnlineModuleDetailContent(module: CatalogModule) {
     val snackBarHost = LocalSnackbarHost.current
     val topAppBarState = rememberTopAppBarState()
     val coroutineScope = rememberCoroutineScope()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
 
     val tabTitles = listOf(stringResource(R.string.readme), stringResource(R.string.release), stringResource(R.string.info))
     val uriHandler = LocalUriHandler.current
     val pagerState = rememberPagerState(pageCount = { tabTitles.size })
 
-    LaunchedEffect(Unit) {
-        scrollBehavior.state.heightOffset =
-            scrollBehavior.state.heightOffsetLimit
-    }
 
     Scaffold(
         topBar = {
             Column(
                 modifier = Modifier.blurEffect(),
             ) {
-                LargeFlexibleTopAppBar(
-                    title = { Text(module.moduleName) },
+                TopAppBar(
+                    title = {
+                        TopBarTitlePill {
+                            Text(module.moduleName)
+                        }
+                    },
                     scrollBehavior = scrollBehavior,
                     navigationIcon = {
                         AppBackButton(
@@ -176,7 +177,7 @@ private fun OnlineModuleDetailContent(module: CatalogModule) {
                         )
                     },
                     actions = {
-                        IconButton(
+                        TopBarIconPill(
                             onClick = {
                                 uriHandler.openUri("https://modules.kernelsu.org/module/${module.moduleId}")
                             },
@@ -187,21 +188,8 @@ private fun OnlineModuleDetailContent(module: CatalogModule) {
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors().copy(
-                        containerColor =
-                            if (themeConfig.isEnableBlur) {
-                                Color.Transparent
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                            },
-                        scrolledContainerColor =
-                            if (themeConfig.isEnableBlur) {
-                                Color.Transparent
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                            },
-                    ),
-                    windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
+                    colors = transparentTopAppBarColors(),
+                    windowInsets = pillTopAppBarWindowInsets(),
                 )
 
                 PrimaryTabRow(
@@ -463,7 +451,7 @@ fun ReleaseCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 12.dp, end = 12.dp, top = 12.dp)
+            .padding(start = ScreenEdgePadding, end = ScreenEdgePadding, top = 12.dp)
             .clip(RoundedCornerShape(16.dp))
             .renderBackgroundBlur(MaterialTheme.colorScheme.surfaceBright),
         shape = RoundedCornerShape(16.dp),

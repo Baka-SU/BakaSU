@@ -65,7 +65,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
@@ -135,6 +134,8 @@ import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.InstallConfirmationDialog
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarIconEdgeInset
+import org.bakasu.bakasu.ui.component.TopBarIconPill
 import org.bakasu.bakasu.ui.component.WarningCard
 import org.bakasu.bakasu.ui.component.ZipFileDetector
 import org.bakasu.bakasu.ui.component.ZipFileInfo
@@ -150,6 +151,7 @@ import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.screen.LabelText
 import org.bakasu.bakasu.ui.theme.CardConfig
+import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
@@ -308,7 +310,7 @@ fun ModulePage(bottomPadding: Dp) {
 
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState),
+        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     )
 
     Scaffold(
@@ -320,7 +322,7 @@ fun ModulePage(bottomPadding: Dp) {
                     viewModel.dispatch(ModuleUiAction.Search(query))
                 },
                 dropdownContent = {
-                    IconButton(
+                    TopBarIconPill(
                         onClick = { showDropdown = true },
                     ) {
                         Icon(
@@ -337,10 +339,9 @@ fun ModulePage(bottomPadding: Dp) {
                     }
                 },
                 navigationContent = {
-                    IconButton(
-                        onClick = {
-                            navigator.push(Route.ModuleRepo)
-                        },
+                    TopBarIconPill(
+                        modifier = Modifier.padding(start = TopBarIconEdgeInset),
+                        onClick = { navigator.push(Route.ModuleRepo) }
                     ) {
                         Icon(
                             imageVector = Icons.TwoTone.Cloud,
@@ -907,10 +908,10 @@ private fun ModuleList(
             modifier = modifier,
             contentPadding = remember {
                 PaddingValues(
-                    start = 16.dp,
+                    start = ScreenEdgePadding,
                     top = 0.dp,
-                    end = 16.dp,
-                    bottom = 72.dp + 5.dp + 5.dp, // FAB + bottom padding of FAB
+                    end = ScreenEdgePadding,
+                    bottom = 72.dp + 5.dp + 5.dp // FAB + bottom padding of FAB
                 )
             },
         ) {
@@ -1242,8 +1243,8 @@ fun ModuleItem(
                         this
                     }
                 }
-                .padding(horizontal = 16.dp)
-                .padding(top = 12.dp),
+                .padding(horizontal = ScreenEdgePadding)
+                .padding(top = 12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
