@@ -99,6 +99,8 @@ data class SettingsUiState(
     val defaultUmountModules: Boolean = false,
     val useBuiltinMonoFont: Boolean = false,
     val useSoftReboot: Boolean = false,
+    val enableSwipeDismiss: Boolean = true,
+    val pagerInterceptionMode: Int = 1,
 )
 
 sealed interface SettingsUiAction {
@@ -138,6 +140,8 @@ sealed interface SettingsUiAction {
     data class SetSuLog(val enabled: Boolean) : SettingsUiAction
     data class SetDefaultUmountModules(val enabled: Boolean) : SettingsUiAction
     data class SetUseSoftReboot(val enabled: Boolean) : SettingsUiAction
+    data class SetSwipeDismiss(val enabled: Boolean) : SettingsUiAction
+    data class SetPagerInterceptionMode(val index: Int) : SettingsUiAction
 }
 
 sealed interface SettingsUiEvent {
@@ -452,11 +456,25 @@ fun dispatch(action: SettingsUiAction) {
 
             is SettingsUiAction.SetUseSoftReboot ->
                 handleUseSoftRebootChange(action.enabled)
+            is SettingsUiAction.SetSwipeDismiss -> handleSwipeDismissChange(action.enabled)
+            is SettingsUiAction.SetPagerInterceptionMode ->
+                handlePagerInterceptionModeChange(action.index)
         }
     }
 
     fun handleBuiltinMonospaceFontChange(checked: Boolean) {
         updatePlatformAsync(PlatformSetting.BuiltinMonospaceFont(checked))
+    }
+
+    fun handleSwipeDismissChange(enabled: Boolean) {
+        mutableState.update { it.copy(enableSwipeDismiss = enabled) }
+        updatePlatformAsync(PlatformSetting.SwipeDismiss(enabled))
+    }
+
+    fun handlePagerInterceptionModeChange(index: Int) {
+        val coerced = index.coerceIn(0, 2)
+        mutableState.update { it.copy(pagerInterceptionMode = coerced) }
+        updatePlatformAsync(PlatformSetting.PagerInterceptionMode(coerced))
     }
 
     private fun updateAppearanceAsync(setting: AppearanceSetting) {
@@ -504,6 +522,8 @@ fun dispatch(action: SettingsUiAction) {
                 autoJailbreakEnabled = snapshot.autoJailbreakEnabled,
                 useBuiltinMonoFont = snapshot.useBuiltinMonoFont,
                 useSoftReboot = snapshot.useSoftReboot,
+                enableSwipeDismiss = snapshot.enableSwipeDismiss,
+                pagerInterceptionMode = snapshot.pagerInterceptionMode,
             )
         }
     }

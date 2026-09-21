@@ -24,6 +24,8 @@ data class SettingsPlatformSnapshot(
     val autoJailbreakEnabled: Boolean = false,
     val useBuiltinMonoFont: Boolean = false,
     val useSoftReboot: Boolean = false,
+    val enableSwipeDismiss: Boolean = true,
+    val pagerInterceptionMode: Int = 1,
 )
 
 data class PlatformFeatureStatus(
@@ -81,4 +83,6 @@ sealed interface PlatformSetting {
     data class SuCompatMode(val value: Int) : PlatformSetting
     data class BuiltinMonospaceFont(val enabled: Boolean) : PlatformSetting
     data class UseSoftReboot(val enabled: Boolean) : PlatformSetting
+    data class SwipeDismiss(val enabled: Boolean) : PlatformSetting
+    data class PagerInterceptionMode(val value: Int) : PlatformSetting
 }
