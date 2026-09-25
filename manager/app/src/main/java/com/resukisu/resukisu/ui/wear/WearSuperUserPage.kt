@@ -32,6 +32,7 @@ import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearScaledItem
 import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
+import com.resukisu.resukisu.ui.component.wear.wearButtonColors
 import com.resukisu.resukisu.ui.viewmodel.SuperUserUiState
 
 @Composable
@@ -66,6 +67,7 @@ internal fun WearSuperUserPage(
                     .transformedHeight(this, spec),
                 transformation = SurfaceTransformation(spec),
                 onClick = { onAppClick(group.uid, group.primaryPackageName) },
+                colors = wearButtonColors(),
                 icon = {
                     PackageIcon(
                         packageName = if (group.isWebViewZygote) "android" else group.mainApp.packageName,

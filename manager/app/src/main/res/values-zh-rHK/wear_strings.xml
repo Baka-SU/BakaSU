@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="wear_root_available">Root 可用</string>
+    <string name="wear_root_working">運作中</string>
     <string name="wear_root_unavailable">無 Root</string>
     <string name="wear_kernel_su">KernelSU</string>
     <string name="wear_android">Android</string>
@@ -10,9 +11,9 @@
     <string name="wear_disabled">已停用</string>
     <string name="wear_pending_removal">等待解除安裝</string>
     <string name="wear_no_logs">暫無 SU 日誌</string>
-    <string name="wear_loading">載入中</string>
+    <string name="wear_enable_sulog">開啟 SU 日誌</string>
+    <string name="wear_disable_sulog">關閉 SU 日誌</string>
     <string name="wear_refresh">重新整理</string>
-    <string name="wear_refreshing">正在重新整理</string>
     <string name="wear_install_module">安裝模組</string>
     <string name="wear_installing_module">正在安裝模組</string>
     <string name="wear_module_file_unreadable">無法讀取所選模組 ZIP</string>

@@ -1,9 +1,15 @@
 package com.resukisu.resukisu.ui.wear
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Android
-import androidx.compose.material.icons.twotone.CheckCircle
 import androidx.compose.material.icons.twotone.Extension
 import androidx.compose.material.icons.twotone.Group
 import androidx.compose.material.icons.twotone.Home
@@ -13,11 +19,13 @@ import androidx.compose.material.icons.twotone.Smartphone
 import androidx.compose.material.icons.twotone.DeveloperBoard
 import androidx.compose.material.icons.twotone.Tag
 import androidx.compose.material.icons.twotone.Info
-import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import com.resukisu.resukisu.R
@@ -38,29 +46,52 @@ internal fun WearHomePage(
 ) {
     val unknown = stringResource(R.string.unknown)
     val rootStatus = if (state.systemStatus.isRootAvailable) {
-        stringResource(R.string.wear_root_available)
+        stringResource(R.string.wear_root_working)
     } else {
         stringResource(R.string.wear_root_unavailable)
+    }
+    val workingMode = when (state.systemStatus.lkmMode) {
+        true -> stringResource(R.string.wear_mode_lkm)
+        false -> stringResource(R.string.wear_mode_gki)
+        null -> null
     }
     WearList(isLoading = !state.isInitialDataLoaded) { spec ->
         item { WearPageHeader(spec, Icons.TwoTone.Home, stringResource(R.string.home)) }
         if (state.isInitialDataLoaded) {
             item {
                 WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
-                    WearIconText(
-                        Icons.TwoTone.Security,
-                        rootStatus,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    WearIconText(
-                        if (state.systemStatus.isFullFeatured) Icons.TwoTone.CheckCircle
-                        else Icons.TwoTone.Warning,
-                        if (state.systemStatus.isFullFeatured) {
-                            stringResource(R.string.home_working)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.TwoTone.Security, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(rootStatus, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                        if (state.systemStatus.isRootAvailable && workingMode != null) {
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                workingMode,
+                                modifier = Modifier.background(
+                                    MaterialTheme.colorScheme.primary,
+                                    RoundedCornerShape(6.dp),
+                                ).padding(horizontal = 4.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                    Text(
+                        if (state.systemStatus.isRootAvailable) {
+                            stringResource(
+                                R.string.home_short_info,
+                                state.systemInfo.superuserCount,
+                                state.systemInfo.moduleCount,
+                            )
                         } else {
                             stringResource(R.string.home_unsupported)
                         },
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

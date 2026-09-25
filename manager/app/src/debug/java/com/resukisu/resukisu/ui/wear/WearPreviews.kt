@@ -13,9 +13,11 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.wear.compose.material3.AppScaffold
 import com.resukisu.resukisu.BuildConfig
+import com.resukisu.resukisu.KernelVersion
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.HomeDashboardState
 import com.resukisu.resukisu.domain.model.HomeSystemInfo
+import com.resukisu.resukisu.domain.model.KernelStatus
 import com.resukisu.resukisu.ui.component.wear.WearDetailField
 import com.resukisu.resukisu.ui.component.wear.WearInfoCard
 import com.resukisu.resukisu.ui.component.wear.WearList
@@ -48,9 +50,16 @@ private fun WearHomePreview() {
         AppScaffold {
             WearHomePage(
                 state = HomeDashboardState(
+                    systemStatus = KernelStatus(
+                        kernelVersion = KernelVersion(5, 15, 0),
+                        isRootAvailable = true,
+                        isFullFeatured = true,
+                        lkmMode = true,
+                    ),
                     systemInfo = HomeSystemInfo(
                         deviceModel = stringResource(R.string.home_device_model),
                         androidVersion = android.os.Build.VERSION.RELEASE,
+                        superuserCount = 1,
                     ),
                     isInitialDataLoaded = true,
                 ),

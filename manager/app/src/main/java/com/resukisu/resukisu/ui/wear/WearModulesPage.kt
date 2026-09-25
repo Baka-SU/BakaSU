@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.Button
-import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
@@ -36,6 +35,7 @@ import com.resukisu.resukisu.R
 import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearStatusItem
+import com.resukisu.resukisu.ui.component.wear.wearButtonColors
 import com.resukisu.resukisu.ui.viewmodel.ModuleUiState
 
 @Composable
@@ -81,6 +81,7 @@ internal fun WearModulesPage(
                 modifier = Modifier.fillMaxWidth().transformedHeight(this, spec),
                 transformation = SurfaceTransformation(spec),
                 onClick = { onModuleClick(module.id) },
+                colors = wearButtonColors(),
                 icon = { Icon(Icons.TwoTone.Extension, contentDescription = null) },
                 secondaryLabel = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -118,10 +119,7 @@ private fun TransformingLazyColumnItemScope.WearInstallModuleButton(
                 .transformedHeight(this@WearInstallModuleButton, spec)
                 .semantics { contentDescription = label },
             transformation = SurfaceTransformation(spec),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            ),
+            colors = wearButtonColors(),
         ) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Icon(Icons.TwoTone.Add, contentDescription = null, modifier = Modifier.size(24.dp))

@@ -186,7 +186,11 @@ fun WearManagerScreen() {
                     "logs" -> WearLogsPage(
                         state = logs,
                         onBack = { detailType = "" },
-                        onEnable = { sulogViewModel.dispatch(SulogUiAction.Enable) },
+                        onSetEnabled = { enabled ->
+                            sulogViewModel.dispatch(
+                                if (enabled) SulogUiAction.Enable else SulogUiAction.Disable
+                            )
+                        },
                         onSelectFile = { path ->
                             sulogViewModel.dispatch(SulogUiAction.SelectFile(path))
                         },

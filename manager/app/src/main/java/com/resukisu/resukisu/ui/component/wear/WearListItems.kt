@@ -58,6 +58,7 @@ fun TransformingLazyColumnItemScope.WearActionButton(
         enabled = enabled,
         modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
         transformation = SurfaceTransformation(transformationSpec),
+        colors = wearButtonColors(),
         icon = { Icon(icon, contentDescription = null) },
     ) { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
 }

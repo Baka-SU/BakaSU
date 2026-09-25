@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.ArrowBack
+import androidx.compose.material.icons.twotone.PowerSettingsNew
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -29,13 +30,14 @@ import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearScaledItem
 import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
+import com.resukisu.resukisu.ui.component.wear.wearButtonColors
 import com.resukisu.resukisu.ui.viewmodel.SulogUiState
 
 @Composable
 internal fun WearLogsPage(
     state: SulogUiState,
     onBack: () -> Unit,
-    onEnable: () -> Unit,
+    onSetEnabled: (Boolean) -> Unit,
     onSelectFile: (String) -> Unit,
 ) {
     WearList(isLoading = state.isLoading) { spec ->
@@ -46,18 +48,19 @@ internal fun WearLogsPage(
         if (!state.errorMessage.isNullOrBlank()) {
             item { WearScaledItem(spec) { Text(state.errorMessage) } }
         }
+        item {
+            WearActionButton(
+                spec,
+                Icons.TwoTone.PowerSettingsNew,
+                stringResource(if (state.isSulogEnabled) R.string.wear_disable_sulog else R.string.wear_enable_sulog),
+                onClick = { onSetEnabled(!state.isSulogEnabled) },
+                enabled = !state.isLoading,
+            )
+        }
         when {
             state.isLoading -> Unit
             !state.isSulogEnabled -> {
                 item { WearScaledItem(spec) { Text(stringResource(R.string.sulog_disabled_title)) } }
-                item {
-                    WearActionButton(
-                        spec,
-                        Icons.AutoMirrored.TwoTone.Article,
-                        stringResource(R.string.sulog_enable_action),
-                        onEnable,
-                    )
-                }
             }
             else -> {
                 if (state.files.size > 1) {
@@ -68,6 +71,7 @@ internal fun WearLogsPage(
                                 .transformedHeight(this, spec),
                             transformation = SurfaceTransformation(spec),
                             onClick = { onSelectFile(file.path) },
+                            colors = wearButtonColors(),
                             icon = { Icon(Icons.AutoMirrored.TwoTone.Article, contentDescription = null) },
                         ) { Text(file.name.toSulogDisplayName(), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }

@@ -28,6 +28,7 @@ import com.resukisu.resukisu.BuildConfig
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.ui.component.PackageIcon
 import com.resukisu.resukisu.ui.component.wear.WearActionButton
+import com.resukisu.resukisu.ui.component.wear.wearButtonColors
 import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearScaledItem
 
@@ -88,6 +89,7 @@ internal fun WearAboutDetail(onBack: () -> Unit) {
                 onClick = { openLink(licenseUrl) },
                 modifier = Modifier.fillMaxWidth().transformedHeight(this, spec),
                 transformation = SurfaceTransformation(spec),
+                colors = wearButtonColors(),
                 icon = { Icon(Icons.TwoTone.Copyright, contentDescription = null) },
                 secondaryLabel = { Text(stringResource(R.string.license, stringResource(R.string.wear_project_license))) },
             ) { Text(stringResource(R.string.open_source_license)) }

@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="wear_root_available">Root ready</string>
+    <string name="wear_root_working">Working</string>
     <string name="wear_root_unavailable">No Root</string>
+    <string name="wear_mode_lkm" translatable="false">LKM</string>
+    <string name="wear_mode_gki" translatable="false">GKI</string>
     <string name="wear_kernel_su">KernelSU</string>
     <string name="wear_android">Android</string>
     <string name="wear_allowed">Allowed</string>
@@ -10,9 +13,9 @@
     <string name="wear_disabled">Disabled</string>
     <string name="wear_pending_removal">Pending removal</string>
     <string name="wear_no_logs">No SU log entries</string>
-    <string name="wear_loading">Loading</string>
+    <string name="wear_enable_sulog">Enable SU log</string>
+    <string name="wear_disable_sulog">Disable SU log</string>
     <string name="wear_refresh">Refresh</string>
-    <string name="wear_refreshing">Refreshing</string>
     <string name="wear_install_module">Install module</string>
     <string name="wear_installing_module">Installing module</string>
     <string name="wear_module_file_unreadable">Cannot read the selected module ZIP</string>
