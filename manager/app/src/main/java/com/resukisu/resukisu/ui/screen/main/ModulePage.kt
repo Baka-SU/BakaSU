@@ -875,10 +875,10 @@ private fun ModuleList(
                     .padding(top = topPadding)
                     .align(Alignment.TopCenter),
                 state = pullRefreshState,
-                isRefreshing = uiState.isRefreshing,
+                isRefreshing = (uiState.isLoading || uiState.isRefreshing),
             )
         },
-        isRefreshing = uiState.isRefreshing
+        isRefreshing = (uiState.isLoading || uiState.isRefreshing)
     ) {
         val metaModuleWarningText by produceState<String?>(
             initialValue = null,

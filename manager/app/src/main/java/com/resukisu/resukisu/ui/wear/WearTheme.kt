@@ -8,7 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.material3.AppScaffold
-import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
@@ -30,9 +29,8 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
 @Composable
 fun WearStartupStatus(error: String? = null) {
     AppScaffold {
-        WearList { spec ->
-            if (error == null) item { WearScaledItem(spec) { CircularProgressIndicator() } }
-            item { WearScaledItem(spec) { Text(error ?: stringResource(R.string.wear_loading)) } }
+        WearList(isLoading = error == null) { spec ->
+            if (error != null) item { WearScaledItem(spec) { Text(error) } }
         }
     }
 }

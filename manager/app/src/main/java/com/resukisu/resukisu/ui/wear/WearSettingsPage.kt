@@ -47,7 +47,7 @@ internal fun WearSettingsPage(
         item { WearSectionHeader(spec, Icons.TwoTone.Tune, stringResource(R.string.wear_general)) }
         item {
             WearSettingsSwitchWidget(spec,
-                label = stringResource(R.string.settings_check_manager_update),
+                label = stringResource(R.string.wear_manager_updates),
                 checked = state.checkManagerUpdate,
                 onCheckedChange = { onAction(SettingsUiAction.SetManagerUpdateCheck(it)) },
                 icon = Icons.TwoTone.Update,
@@ -55,7 +55,7 @@ internal fun WearSettingsPage(
         }
         item {
             WearSettingsSwitchWidget(spec,
-                label = stringResource(R.string.settings_check_module_update),
+                label = stringResource(R.string.wear_module_updates),
                 checked = state.checkModuleUpdate,
                 onCheckedChange = { onAction(SettingsUiAction.SetModuleUpdateCheck(it)) },
                 icon = Icons.TwoTone.Extension,
@@ -63,7 +63,7 @@ internal fun WearSettingsPage(
         }
         item {
             WearSettingsSwitchWidget(spec,
-                label = stringResource(R.string.settings_soft_reboot),
+                label = stringResource(R.string.wear_soft_restart),
                 checked = state.useSoftReboot,
                 onCheckedChange = { onAction(SettingsUiAction.SetUseSoftReboot(it)) },
                 icon = Icons.TwoTone.RestartAlt,

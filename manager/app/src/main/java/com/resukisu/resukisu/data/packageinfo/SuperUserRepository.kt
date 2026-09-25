@@ -117,6 +117,7 @@ class SuperUserRepository(
                 normalGroups + webviewGroup
             }
             mutableState.value = SuperUserState(
+                isInitialDataLoaded = true,
                 groups = groups,
                 refreshing = false,
                 loadingProgress = 1f,
@@ -127,7 +128,7 @@ class SuperUserRepository(
         } catch (error: Exception) {
             Result.failure(error)
         } finally {
-            mutableState.update { it.copy(refreshing = false) }
+            mutableState.update { it.copy(refreshing = false, isInitialDataLoaded = true) }
         }
     }
 

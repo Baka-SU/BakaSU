@@ -295,7 +295,7 @@ private fun SuperUserContent(
                 .blurSource(),
             contentAlignment = Alignment.Center
         ) {
-            if (uiState.isRefreshing && uiState.search.isEmpty()) {
+            if ((uiState.isLoading || uiState.isRefreshing) && uiState.search.isEmpty()) {
                 LoadingIndicator()
             } else {
                 val isSearchEmpty = uiState.search.isNotEmpty()
@@ -329,7 +329,7 @@ private fun SuperUserContent(
     PullToRefreshBox(
         state = pullRefreshState,
         onRefresh = { viewModel.dispatch(SuperUserUiAction.Refresh) },
-        isRefreshing = uiState.isRefreshing,
+        isRefreshing = (uiState.isLoading || uiState.isRefreshing),
         modifier = Modifier
             .fillMaxSize()
             .blurSource(),
@@ -339,7 +339,7 @@ private fun SuperUserContent(
                     .padding(top = innerPadding.calculateTopPadding())
                     .align(Alignment.TopCenter),
                 state = pullRefreshState,
-                isRefreshing = uiState.isRefreshing,
+                isRefreshing = (uiState.isLoading || uiState.isRefreshing),
             )
         },
     ) {

@@ -110,8 +110,8 @@ class HomeViewModel(
     }
 
     fun refreshData(refreshUI: Boolean = false): Job {
+        refreshJob?.takeIf(Job::isActive)?.let { return it }
         if (!refreshUI) {
-            refreshJob?.takeIf(Job::isActive)?.let { return it }
             if (uiState.value.isInitialDataLoaded) return completedJob()
         }
         refreshManagerUpdates(force = refreshUI)

@@ -9,9 +9,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.AdminPanelSettings
-import androidx.compose.material.icons.twotone.Android
 import androidx.compose.material.icons.twotone.Group
-import androidx.compose.material.icons.twotone.Refresh
 import androidx.compose.material.icons.twotone.Security
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,17 +19,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.Button
-import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.lazy.transformedHeight
 import com.resukisu.resukisu.R
+import com.resukisu.resukisu.ui.component.PackageIcon
 import com.resukisu.resukisu.ui.component.wear.WearIconText
 import com.resukisu.resukisu.ui.component.wear.WearInfoCard
 import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearScaledItem
 import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
@@ -45,7 +42,7 @@ internal fun WearSuperUserPage(
     onRefresh: () -> Unit,
     onAppClick: (Int, String) -> Unit,
 ) {
-    WearList { spec ->
+    WearList(isLoading = state.isLoading, isRefreshing = state.isRefreshing, onRefresh = onRefresh) { spec ->
         item { WearPageHeader(spec, Icons.TwoTone.AdminPanelSettings, stringResource(R.string.superuser)) }
         item {
             WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
@@ -58,11 +55,9 @@ internal fun WearSuperUserPage(
             }
         }
         item { WearSectionHeader(spec, Icons.TwoTone.Group, stringResource(R.string.wear_apps)) }
-        if (state.isRefreshing && state.appGroupList.isEmpty()) {
-            item { WearScaledItem(spec) { CircularProgressIndicator() } }
-        } else if (!error.isNullOrBlank()) {
+        if (!error.isNullOrBlank()) {
             item { WearScaledItem(spec) { Text(error) } }
-        } else if (state.appGroupList.isEmpty()) {
+        } else if (!state.isLoading && state.appGroupList.isEmpty()) {
             item { WearScaledItem(spec) { Text(stringResource(R.string.wear_no_apps)) } }
         }
         items(state.appGroupList, key = { "${it.uid}:${it.primaryPackageName}" }) { group ->
@@ -71,7 +66,13 @@ internal fun WearSuperUserPage(
                     .transformedHeight(this, spec),
                 transformation = SurfaceTransformation(spec),
                 onClick = { onAppClick(group.uid, group.primaryPackageName) },
-                icon = { Icon(Icons.TwoTone.Android, contentDescription = null) },
+                icon = {
+                    PackageIcon(
+                        packageName = if (group.isWebViewZygote) "android" else group.mainApp.packageName,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                    )
+                },
                 secondaryLabel = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -94,9 +95,6 @@ internal fun WearSuperUserPage(
             ) {
                 Text(group.mainApp.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-        }
-        item {
-            WearActionButton(spec, Icons.TwoTone.Refresh, stringResource(R.string.wear_refresh), onRefresh)
         }
     }
 }

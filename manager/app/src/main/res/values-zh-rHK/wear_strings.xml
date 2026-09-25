@@ -7,14 +7,19 @@
     <string name="wear_allowed">已允許</string>
     <string name="wear_denied">已拒絕</string>
     <string name="wear_enabled">已啟用</string>
+    <string name="wear_disabled">已停用</string>
     <string name="wear_pending_removal">等待解除安裝</string>
     <string name="wear_no_logs">暫無 SU 日誌</string>
     <string name="wear_loading">載入中</string>
     <string name="wear_refresh">重新整理</string>
+    <string name="wear_refreshing">正在重新整理</string>
     <string name="wear_back">返回</string>
     <string name="wear_apps">應用程式</string>
     <string name="wear_general">一般</string>
     <string name="wear_security">安全性</string>
     <string name="wear_advanced">進階</string>
     <string name="wear_no_apps">找不到應用程式</string>
+    <string name="wear_manager_updates">應用程式更新</string>
+    <string name="wear_module_updates">模組更新</string>
+    <string name="wear_soft_restart">軟重新啟動</string>
 </resources>

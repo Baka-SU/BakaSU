@@ -76,7 +76,10 @@ fun WearManagerScreen() {
     LaunchedEffect(pagerState.currentPage, detailType) {
         if (detailType.isNotEmpty()) return@LaunchedEffect
         when (pagerState.currentPage) {
-            HOME -> homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
+            HOME -> {
+                homeError = null
+                homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
+            }
             SUPERUSER -> superUserViewModel.dispatch(SuperUserUiAction.Refresh)
             MODULES -> moduleViewModel.dispatch(ModuleUiAction.Refresh())
         }
@@ -154,11 +157,10 @@ fun WearManagerScreen() {
                         }?.uid?.let { it in superuser.managerUids } == true,
                         onBack = { detailType = "" },
                     )
-                    "about" -> WearAboutDetail(home = home, onBack = { detailType = "" })
+                    "about" -> WearAboutDetail(onBack = { detailType = "" })
                     "logs" -> WearLogsPage(
                         state = logs,
                         onBack = { detailType = "" },
-                        onRefresh = { sulogViewModel.dispatch(SulogUiAction.RefreshLatest) },
                         onEnable = { sulogViewModel.dispatch(SulogUiAction.Enable) },
                         onSelectFile = { path ->
                             sulogViewModel.dispatch(SulogUiAction.SelectFile(path))
@@ -182,10 +184,7 @@ fun WearManagerScreen() {
                             ) { page ->
                                 AnimatedPage(pageIndex = page, pagerState = pagerState) {
                                     when (page) {
-                                        HOME -> WearHomePage(home, homeError) {
-                                            homeError = null
-                                            homeViewModel.dispatch(HomeUiAction.Refresh())
-                                        }
+                                        HOME -> WearHomePage(home, homeError)
                                         SUPERUSER -> WearSuperUserPage(
                                             state = superuser,
                                             isRootAvailable = home.systemStatus.isRootAvailable,

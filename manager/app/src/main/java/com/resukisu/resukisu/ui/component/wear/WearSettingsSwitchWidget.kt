@@ -31,6 +31,6 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
         onCheckedChange = onCheckedChange,
         enabled = enabled,
         icon = { Icon(icon, contentDescription = null) },
-        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        label = { Text(label, maxLines = 2, overflow = TextOverflow.Ellipsis) },
     )
 }

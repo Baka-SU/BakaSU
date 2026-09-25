@@ -121,7 +121,7 @@ class SulogViewModel(
                 val result = setSulogEnabled(true)
                 result.exceptionOrNull()?.let {
                     mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))
-                } ?: refresh(state.value.selectedFilePath)
+                } ?: refresh(state.value.selectedFilePath, replaceInFlight = true)
             }
 
             SulogUiAction.CleanFile -> state.value.selectedFilePath?.let { path ->
@@ -129,7 +129,7 @@ class SulogViewModel(
                     val result = cleanSulog(path)
                     result.exceptionOrNull()?.let {
                         mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))
-                    } ?: refresh(path)
+                    } ?: refresh(path, replaceInFlight = true)
                 }
             }
 
@@ -141,11 +141,12 @@ class SulogViewModel(
                 setStringSetPreference(PREF_SULOG_FILTERS, filters.value.map { it.name }.toSet())
             }
 
-            is SulogUiAction.SelectFile -> refresh(action.path)
+            is SulogUiAction.SelectFile -> refresh(action.path, replaceInFlight = true)
         }
     }
 
-    private fun refresh(preferredFilePath: String?) {
+    private fun refresh(preferredFilePath: String?, replaceInFlight: Boolean = false) {
+        if (!replaceInFlight && refreshJob?.isActive == true) return
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
             refreshSulog(preferredFilePath).exceptionOrNull()?.let {

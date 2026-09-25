@@ -70,8 +70,10 @@ fun TransformingLazyColumnItemScope.WearScaledItem(
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(
-        modifier = modifier.transformedHeight(this, transformationSpec).graphicsLayer {
+        modifier = Modifier.graphicsLayer {
             with(transformationSpec) { applyContainerTransformation(scrollProgress) }
+        }.then(modifier.transformedHeight(this, transformationSpec)).graphicsLayer {
+            with(transformationSpec) { applyContentTransformation(scrollProgress) }
         },
         content = content,
     )

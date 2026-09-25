@@ -40,6 +40,7 @@ enum class SortType(val displayNameRes: Int, val persistKey: String) {
 }
 
 data class SuperUserUiState(
+    val isLoading: Boolean = true,
     val appGroupList: List<InstalledAppGroup> = emptyList(),
     val search: String = "",
     val showSystemApps: Boolean = false,
@@ -128,7 +129,8 @@ class SuperUserViewModel(
             currentSortType = local.sortType,
             reverseOrder = local.reverseOrder,
             managerUids = uids,
-            isRefreshing = source.refreshing,
+            isLoading = !source.isInitialDataLoaded,
+            isRefreshing = source.refreshing && source.isInitialDataLoaded,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, SuperUserUiState())
     val uiState: StateFlow<SuperUserUiState> = state

@@ -25,10 +25,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import java.text.Collator
 import java.util.Locale
 
 data class ModuleUiState(
+    val isLoading: Boolean = true,
     val moduleList: List<InstalledModule> = emptyList(),
     val moduleSizes: Map<String, String> = emptyMap(),
     val isRefreshing: Boolean = false,
@@ -91,6 +93,7 @@ class ModuleViewModel(
     private val reboot: RebootUseCase,
     private val isSoftRebootPreferred: IsSoftRebootPreferredUseCase,
 ) : ViewModel() {
+    private var refreshJob: Job? = null
     private val controls = MutableStateFlow(ModuleControls())
     private val mutableEvents = MutableSharedFlow<ModuleUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<ModuleUiEvent> = mutableEvents.asSharedFlow()
@@ -108,7 +111,8 @@ class ModuleViewModel(
                 sortActionFirst = preferences.sortActionFirst,
             ),
             moduleSizes = local.moduleSizes,
-            isRefreshing = source.refreshing,
+            isLoading = !source.isInitialDataLoaded,
+            isRefreshing = source.refreshing && source.isInitialDataLoaded,
             search = local.search,
             sortEnabledFirst = preferences.sortEnabledFirst,
             sortActionFirst = preferences.sortActionFirst,
@@ -166,7 +170,8 @@ class ModuleViewModel(
         }
     }
     private fun refresh(manual: Boolean) {
-        viewModelScope.launch { refreshNow(manual) }
+        if (refreshJob?.isActive == true) return
+        refreshJob = viewModelScope.launch { refreshNow(manual) }
     }
 
     private suspend fun refreshNow(manual: Boolean) {

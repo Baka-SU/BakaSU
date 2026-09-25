@@ -62,6 +62,7 @@ data class InstalledAppGroup(
 }
 
 data class SuperUserState(
+    val isInitialDataLoaded: Boolean = false,
     val groups: List<InstalledAppGroup> = emptyList(),
     val refreshing: Boolean = false,
     val loadingProgress: Float = 0f,

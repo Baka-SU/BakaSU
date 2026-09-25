@@ -1,19 +1,20 @@
 package com.resukisu.resukisu.ui.wear
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.ArrowBack
-import androidx.compose.material.icons.twotone.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.itemsIndexed
 import androidx.wear.compose.material3.Button
-import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
@@ -23,7 +24,6 @@ import com.resukisu.resukisu.domain.model.SulogEventType
 import com.resukisu.resukisu.domain.model.toSulogDisplayName
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.ui.component.wear.WearIconText
-import com.resukisu.resukisu.ui.component.wear.WearInfoCard
 import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
@@ -35,26 +35,19 @@ import com.resukisu.resukisu.ui.viewmodel.SulogUiState
 internal fun WearLogsPage(
     state: SulogUiState,
     onBack: () -> Unit,
-    onRefresh: () -> Unit,
     onEnable: () -> Unit,
     onSelectFile: (String) -> Unit,
 ) {
-    WearList { spec ->
+    WearList(isLoading = state.isLoading) { spec ->
         item { WearPageHeader(spec, Icons.AutoMirrored.TwoTone.Article, stringResource(R.string.sulog)) }
         item {
             WearActionButton(spec, Icons.AutoMirrored.TwoTone.ArrowBack, stringResource(R.string.wear_back), onBack)
         }
+        if (!state.errorMessage.isNullOrBlank()) {
+            item { WearScaledItem(spec) { Text(state.errorMessage) } }
+        }
         when {
-            state.isLoading -> {
-                item { WearScaledItem(spec) { CircularProgressIndicator() } }
-                item { WearScaledItem(spec) { Text(stringResource(R.string.wear_loading)) } }
-            }
-            !state.errorMessage.isNullOrBlank() -> {
-                item { WearScaledItem(spec) { Text(state.errorMessage) } }
-                item {
-                    WearActionButton(spec, Icons.TwoTone.Refresh, stringResource(R.string.network_retry), onRefresh)
-                }
-            }
+            state.isLoading -> Unit
             !state.isSulogEnabled -> {
                 item { WearScaledItem(spec) { Text(stringResource(R.string.sulog_disabled_title)) } }
                 item {
@@ -94,18 +87,22 @@ internal fun WearLogsPage(
                         SulogEventType.Dropped -> R.string.sulog_event_dropped
                         SulogEventType.Unknown -> R.string.sulog_entry_unknown_event
                     }
-                    WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
-                        WearIconText(
-                            Icons.AutoMirrored.TwoTone.Article,
-                            stringResource(eventLabel),
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        entry.timestampText?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 1) }
-                        Text(entry.rawLine, maxLines = 5)
+                    WearScaledItem(spec) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            WearIconText(
+                                Icons.AutoMirrored.TwoTone.Article,
+                                stringResource(eventLabel),
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                            entry.timestampText?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Text(entry.rawLine, style = MaterialTheme.typography.bodySmall)
+                        }
                     }
-                }
-                item {
-                    WearActionButton(spec, Icons.TwoTone.Refresh, stringResource(R.string.wear_refresh), onRefresh)
                 }
             }
         }
