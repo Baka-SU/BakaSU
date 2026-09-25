@@ -19,16 +19,11 @@ import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.AnimatedPage
 import androidx.wear.compose.material3.AppScaffold
-import androidx.wear.compose.material3.ColorScheme
-import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.HorizontalPagerScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.PagerScaffoldDefaults
 import androidx.wear.compose.material3.SwipeToDismissBox
-import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.dynamicColorScheme
 import com.resukisu.resukisu.R
-import com.resukisu.resukisu.ui.component.WearList
 import com.resukisu.resukisu.ui.viewmodel.HomeUiAction
 import com.resukisu.resukisu.ui.viewmodel.HomeUiEvent
 import com.resukisu.resukisu.ui.viewmodel.HomeViewModel
@@ -47,30 +42,7 @@ import org.koin.compose.viewmodel.koinViewModel
 private const val HOME = 0
 private const val SUPERUSER = 1
 private const val MODULES = 2
-private const val LOGS = 3
-private const val SETTINGS = 4
-
-@Composable
-fun WearManagerTheme(content: @Composable () -> Unit) {
-    val context = LocalContext.current
-    MaterialTheme(colorScheme = dynamicColorScheme(context) ?: ColorScheme()) {
-        androidx.compose.foundation.layout.Box(
-            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
-        ) { content() }
-    }
-}
-
-@Composable
-fun WearStartupStatus(error: String? = null) {
-    AppScaffold {
-        WearList {
-            if (error == null) item { CircularProgressIndicator() }
-            item {
-                Text(error ?: androidx.compose.ui.res.stringResource(R.string.wear_loading))
-            }
-        }
-    }
-}
+private const val SETTINGS = 3
 
 @Composable
 fun WearManagerScreen() {
@@ -96,7 +68,7 @@ fun WearManagerScreen() {
     var settingsError by remember { mutableStateOf<String?>(null) }
     var settingsMessageResource by remember { mutableStateOf<Pair<Int, Int?>?>(null) }
     val operationFailedText = stringResource(R.string.operation_failed)
-    val pagerState = rememberPagerState(pageCount = { 5 })
+    val pagerState = rememberPagerState(pageCount = { 4 })
     val pageStateHolder = rememberSaveableStateHolder()
 
     BackHandler(detailType.isNotEmpty()) { detailType = "" }
@@ -107,8 +79,10 @@ fun WearManagerScreen() {
             HOME -> homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
             SUPERUSER -> superUserViewModel.dispatch(SuperUserUiAction.Refresh)
             MODULES -> moduleViewModel.dispatch(ModuleUiAction.Refresh())
-            LOGS -> sulogViewModel.dispatch(SulogUiAction.RefreshLatest)
         }
+    }
+    LaunchedEffect(detailType) {
+        if (detailType == "logs") sulogViewModel.dispatch(SulogUiAction.RefreshLatest)
     }
     LaunchedEffect(homeViewModel) {
         homeViewModel.events.collect { event ->
@@ -181,6 +155,15 @@ fun WearManagerScreen() {
                         onBack = { detailType = "" },
                     )
                     "about" -> WearAboutDetail(home = home, onBack = { detailType = "" })
+                    "logs" -> WearLogsPage(
+                        state = logs,
+                        onBack = { detailType = "" },
+                        onRefresh = { sulogViewModel.dispatch(SulogUiAction.RefreshLatest) },
+                        onEnable = { sulogViewModel.dispatch(SulogUiAction.Enable) },
+                        onSelectFile = { path ->
+                            sulogViewModel.dispatch(SulogUiAction.SelectFile(path))
+                        },
+                    )
                 }
             }
         } else {
@@ -228,14 +211,6 @@ fun WearManagerScreen() {
                                                 detailType = "module"
                                             },
                                         )
-                                        LOGS -> WearLogsPage(
-                                            state = logs,
-                                            onRefresh = { sulogViewModel.dispatch(SulogUiAction.RefreshLatest) },
-                                            onEnable = { sulogViewModel.dispatch(SulogUiAction.Enable) },
-                                            onSelectFile = { path ->
-                                                sulogViewModel.dispatch(SulogUiAction.SelectFile(path))
-                                            },
-                                        )
                                         SETTINGS -> WearSettingsPage(
                                             state = settings,
                                             message = settingsError ?: settingsMessageResource?.let { (id, arg) ->
@@ -246,6 +221,7 @@ fun WearManagerScreen() {
                                                 settingsMessageResource = null
                                                 settingsViewModel.dispatch(it)
                                             },
+                                            onLogsClick = { detailType = "logs" },
                                             onAboutClick = { detailType = "about" },
                                         )
                                     }

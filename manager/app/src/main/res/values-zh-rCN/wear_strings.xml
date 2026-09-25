@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="wear_root_available">Root 可用</string>
-    <string name="wear_root_unavailable">Root 不可用</string>
-    <string name="wear_kernel_su">KernelSU 版本</string>
+    <string name="wear_root_unavailable">无 Root</string>
+    <string name="wear_kernel_su">KernelSU</string>
+    <string name="wear_android">Android</string>
     <string name="wear_allowed">已允许</string>
     <string name="wear_denied">已拒绝</string>
     <string name="wear_enabled">已启用</string>

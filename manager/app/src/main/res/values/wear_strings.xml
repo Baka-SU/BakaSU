@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
-    <string name="wear_root_available">Root available</string>
-    <string name="wear_root_unavailable">Root unavailable</string>
-    <string name="wear_kernel_su">KernelSU version</string>
+    <string name="wear_root_available">Root ready</string>
+    <string name="wear_root_unavailable">No Root</string>
+    <string name="wear_kernel_su">KernelSU</string>
+    <string name="wear_android">Android</string>
     <string name="wear_allowed">Allowed</string>
     <string name="wear_denied">Denied</string>
     <string name="wear_enabled">Enabled</string>

@@ -1,1 +1,4 @@
 libksud.so
+!arm64-v8a/libksud.so
+!armeabi-v7a/libksud.so
+!x86_64/libksud.so
