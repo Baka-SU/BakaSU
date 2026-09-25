@@ -20,9 +20,7 @@ import androidx.wear.compose.material3.lazy.rememberTransformationSpec
 /**
  * A Wear screen whose crown and vertical touch gestures scroll only its own content.
  *
- * Both loading states are layered over the list so neither moves the content, the pager or the page
- * structure: the first load is centred in the content area, while a pull up refresh slides its own
- * indicator in from the bottom edge.
+ * Loading states are layered over the list so neither moves the content or the pager.
  */
 @Composable
 fun WearList(
@@ -62,10 +60,7 @@ fun WearList(
                 }
                 WearRefreshIndicator(
                     visible = isRefreshing,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(contentPadding)
-                        .padding(bottom = 8.dp),
+                    modifier = Modifier.align(Alignment.Center),
                 )
             }
         }

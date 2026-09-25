@@ -13,6 +13,10 @@
     <string name="wear_loading">正在載入</string>
     <string name="wear_refresh">重新整理</string>
     <string name="wear_refreshing">正在重新整理</string>
+    <string name="wear_install_module">安裝模組</string>
+    <string name="wear_installing_module">正在安裝模組</string>
+    <string name="wear_module_file_unreadable">無法讀取所選模組 ZIP</string>
+    <string name="wear_file_picker_unavailable">檔案選擇器不可用</string>
     <string name="wear_back">返回</string>
     <string name="wear_apps">應用程式</string>
     <string name="wear_general">一般</string>

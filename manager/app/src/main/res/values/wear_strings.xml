@@ -13,6 +13,10 @@
     <string name="wear_loading">Loading</string>
     <string name="wear_refresh">Refresh</string>
     <string name="wear_refreshing">Refreshing</string>
+    <string name="wear_install_module">Install module</string>
+    <string name="wear_installing_module">Installing module</string>
+    <string name="wear_module_file_unreadable">Cannot read the selected module ZIP</string>
+    <string name="wear_file_picker_unavailable">File picker unavailable</string>
     <string name="wear_back">Back</string>
     <string name="wear_apps">Apps</string>
     <string name="wear_general">General</string>

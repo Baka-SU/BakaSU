@@ -109,6 +109,7 @@ private fun WearModuleStatesPreview(
                 } else null,
                 onRefresh = {},
                 onModuleClick = {},
+                onInstallClick = {},
             )
         }
     }

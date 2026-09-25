@@ -1,11 +1,15 @@
 package com.resukisu.resukisu.ui.wear
 
+import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -62,12 +66,23 @@ fun WearManagerScreen() {
 
     var detailType by rememberSaveable { mutableStateOf("") }
     var selectedId by rememberSaveable { mutableStateOf("") }
+    var installRequestId by rememberSaveable { mutableIntStateOf(0) }
     var moduleError by remember { mutableStateOf<String?>(null) }
     var superuserError by remember { mutableStateOf<String?>(null) }
     var homeError by remember { mutableStateOf<String?>(null) }
     var settingsError by remember { mutableStateOf<String?>(null) }
     var settingsMessageResource by remember { mutableStateOf<Pair<Int, Int?>?>(null) }
+    val selectModuleLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            selectedId = uri.toString()
+            installRequestId++
+            detailType = "install"
+        }
+    }
     val operationFailedText = stringResource(R.string.operation_failed)
+    val pickerUnavailableText = stringResource(R.string.wear_file_picker_unavailable)
     val pagerState = rememberPagerState(pageCount = { 4 })
     val pageStateHolder = rememberSaveableStateHolder()
 
@@ -148,6 +163,16 @@ fun WearManagerScreen() {
                             moduleViewModel.dispatch(ModuleUiAction.SetRemoved(id, removed))
                         },
                     )
+                    "install" -> WearModuleInstallPage(
+                        uri = selectedId,
+                        requestId = installRequestId,
+                        onBack = { detailType = "" },
+                        onInstalled = {
+                            moduleViewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
+                            moduleViewModel.dispatch(ModuleUiAction.Refresh())
+                            homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
+                        },
+                    )
                     "app" -> WearAppDetail(
                         group = superuser.appGroupList.firstOrNull {
                             "${it.uid}:${it.primaryPackageName}" == selectedId
@@ -208,6 +233,25 @@ fun WearManagerScreen() {
                                             onModuleClick = { id ->
                                                 selectedId = id
                                                 detailType = "module"
+                                            },
+                                            onInstallClick = {
+                                                val mimeTypes = arrayOf(
+                                                    "application/zip", "application/octet-stream"
+                                                )
+                                                val pickers = context.packageManager.queryIntentActivities(
+                                                    ActivityResultContracts.OpenDocument()
+                                                        .createIntent(context, mimeTypes),
+                                                    PackageManager.MATCH_DEFAULT_ONLY,
+                                                )
+                                                if (pickers.isNotEmpty() &&
+                                                    pickers.all { it.activityInfo.name.endsWith("DocumentsStub") }
+                                                ) {
+                                                    moduleError = pickerUnavailableText
+                                                } else {
+                                                    moduleError = null
+                                                    runCatching { selectModuleLauncher.launch(mimeTypes) }
+                                                        .onFailure { moduleError = pickerUnavailableText }
+                                                }
                                             },
                                         )
                                         SETTINGS -> WearSettingsPage(
