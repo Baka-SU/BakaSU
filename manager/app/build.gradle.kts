@@ -210,6 +210,8 @@ dependencies {
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.wear.compose.foundation)
+    implementation(libs.androidx.wear.compose.material3)
 
     implementation(libs.androidx.compose.runtime.tracing)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

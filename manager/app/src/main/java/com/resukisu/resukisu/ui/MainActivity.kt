@@ -2,6 +2,7 @@ package com.resukisu.resukisu.ui
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -36,12 +37,18 @@ import com.resukisu.resukisu.ui.viewmodel.SettingsUiEvent
 import com.resukisu.resukisu.ui.viewmodel.SettingsViewModel
 import com.resukisu.resukisu.ui.viewmodel.SuperUserUiAction
 import com.resukisu.resukisu.ui.viewmodel.SuperUserViewModel
+import com.resukisu.resukisu.ui.wear.WearManagerScreen
+import com.resukisu.resukisu.ui.wear.WearManagerTheme
+import com.resukisu.resukisu.ui.wear.WearStartupStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
+    private val isWearDevice by lazy {
+        packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)
+    }
     private val superUserViewModel: SuperUserViewModel by viewModel()
     private val homeViewModel: HomeViewModel by viewModel()
     private val moduleViewModel: ModuleViewModel by viewModel()
@@ -76,6 +83,20 @@ class MainActivity : ComponentActivity() {
             }
 
             super.onCreate(savedInstanceState)
+
+            if (isWearDevice) {
+                lifecycleScope.launch { ensureManagerInstalled() }
+                setContent {
+                    WearManagerTheme {
+                        when (val state = startupState.collectAsStateWithLifecycle().value) {
+                            StartupState.Loading -> WearStartupStatus()
+                            is StartupState.Failed -> WearStartupStatus(state.message)
+                            StartupState.Ready -> WearManagerScreen()
+                        }
+                    }
+                }
+                return
+            }
 
             splashScreen.setKeepOnScreenCondition {
                 shouldKeepStartupSplash(
@@ -194,6 +215,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         try {
             super.onResume()
+            if (isWearDevice) return
             themeUtils.onActivityResume(this)
             synchronizeUiSettings()
         } catch (e: Exception) {
@@ -211,6 +233,7 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         try {
             super.onPause()
+            if (isWearDevice) return
             themeUtils.onActivityPause()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -219,7 +242,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         try {
-            themeUtils.unregisterThemeChangeObserver(this, themeChangeObserver)
+            if (::themeChangeObserver.isInitialized) {
+                themeUtils.unregisterThemeChangeObserver(this, themeChangeObserver)
+            }
             super.onDestroy()
         } catch (e: Exception) {
             e.printStackTrace()

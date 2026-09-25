@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wear_root_available">Root 可用</string>
+    <string name="wear_root_unavailable">Root 不可用</string>
+    <string name="wear_kernel_su">KernelSU 版本</string>
+    <string name="wear_allowed">已允许</string>
+    <string name="wear_denied">已拒绝</string>
+    <string name="wear_enabled">已启用</string>
+    <string name="wear_pending_removal">等待卸载</string>
+    <string name="wear_no_logs">暂无 SU 日志</string>
+    <string name="wear_loading">正在加载</string>
+    <string name="wear_refresh">刷新</string>
+    <string name="wear_back">返回</string>
+    <string name="wear_apps">应用</string>
+    <string name="wear_general">常规</string>
+    <string name="wear_security">安全</string>
+    <string name="wear_advanced">高级</string>
+    <string name="wear_no_apps">未找到应用</string>
+</resources>
