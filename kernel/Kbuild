@@ -1,0 +1,244 @@
+kernelsu-objs := core/init.o
+kernelsu-objs += policy/allowlist.o
+kernelsu-objs += policy/app_profile.o
+kernelsu-objs += policy/feature.o
+kernelsu-objs += feature/sucompat.o
+kernelsu-objs += feature/kernel_umount.o
+kernelsu-objs += feature/sulog.o
+kernelsu-objs += feature/adb_root.o
+kernelsu-objs += feature/selinux_hide.o
+kernelsu-objs += feature/module_load_filter.o
+kernelsu-objs += hook/setuid_hook.o
+
+ifndef CONFIG_KSU_DISABLE_MANAGER
+kernelsu-objs += feature/dynamic_manager.o
+kernelsu-objs += manager/apk_sign.o
+kernelsu-objs += manager/throne_tracker.o
+kernelsu-objs += manager/manager.o
+endif
+
+kernelsu-objs += compat/kernel_compat.o
+kernelsu-objs += infra/su_mount_ns.o
+kernelsu-objs += infra/seccomp_cache.o
+kernelsu-objs += infra/file_wrapper.o
+kernelsu-objs += infra/event_queue.o
+kernelsu-objs += runtime/boot_event.o
+kernelsu-objs += runtime/ksud_integration.o
+
+kernelsu-objs += selinux/selinux.o
+kernelsu-objs += selinux/sepolicy.o
+kernelsu-objs += selinux/rules.o
+
+kernelsu-objs += sulog/event.o
+kernelsu-objs += sulog/fd.o
+
+kernelsu-objs += supercall/dispatch.o
+kernelsu-objs += supercall/perm.o
+kernelsu-objs += supercall/supercall.o
+
+ifdef CONFIG_ARM64
+kernelsu-objs += compat/apatch_conflict.o
+endif
+
+ccflags-y += -Wno-implicit-function-declaration -Wno-strict-prototypes -Wno-missing-prototypes
+ccflags-y += $(call cc-disable-warning, int-conversion)
+ccflags-y += -Wno-declaration-after-statement -Wno-unused-function -Wno-unused-variable -Wno-missing-braces
+ccflags-y += -Wno-int-to-pointer-cast -Wno-declaration-after-statement
+
+ccflags-y += -I$(srctree)/security/selinux -I$(srctree)/security/selinux/include
+ccflags-y += -I$(srctree)/$(src) -I$(srctree)/$(src)/include
+ccflags-y += -I$(src) -I$(src)/include
+
+obj-$(CONFIG_KSU) += kernelsu.o
+
+REPO_NAME := ReSukiSU
+
+KDIR := $(KDIR)
+
+GIT_BIN := /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git
+
+KSU_SRC := $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+
+LOCAL_GIT_EXISTS := $(shell test -e $(KSU_SRC)/../.git && echo 1 || echo 0)
+
+ifeq ($(LOCAL_GIT_EXISTS),0)
+$(info -- Can't find $(REPO_NAME) git submodule!)
+$(info -- If you are using bazel to build this kernel,)
+$(info -- Please go to Kbuild and change KSU_SRC to the absolute path of the KSU kernel folder.)
+$(error You should use $(REPO_NAME) as a git submodule instead of copying code directly)
+endif
+
+ifdef KBUILD_EXTMOD
+include $(KSU_SRC)/tools/ddk_compatible.mk
+endif
+
+$(shell cd $(KSU_SRC); [ -f ../.git/shallow ] && $(GIT_BIN) fetch --unshallow)
+KSU_LOCAL_VERSION := $(shell cd $(KSU_SRC); $(GIT_BIN) rev-list --count HEAD)
+KSU_VERSION := $(shell expr 30000 + $(KSU_LOCAL_VERSION) + 700)
+
+KSU_TAG_NAME    := $(shell cd $(KSU_SRC); $(GIT_BIN) describe --abbrev=0 --tags 2>/dev/null || echo "v4.1.0")
+KSU_COMMIT_SHA  := $(shell cd $(KSU_SRC); $(GIT_BIN) rev-parse --short=8 HEAD 2>/dev/null || echo "unknown")
+ifneq ($(shell cd $(KSU_SRC); $(GIT_BIN) diff-index --quiet HEAD; echo $$?),0)
+KSU_COMMIT_SHA  := $(KSU_COMMIT_SHA)-dirty
+endif
+KSU_BRANCH_NAME := $(shell cd $(KSU_SRC); $(GIT_BIN) branch --show-current 2>/dev/null || echo "unknown")
+
+# call subst to process placeholders
+KSU_VERSION_FULL := $(subst ",,$(CONFIG_KSU_FULL_NAME_FORMAT))
+KSU_VERSION_FULL := $(subst %TAG_NAME%,$(KSU_TAG_NAME),$(KSU_VERSION_FULL))
+KSU_VERSION_FULL := $(subst %COMMIT_SHA%,$(KSU_COMMIT_SHA),$(KSU_VERSION_FULL))
+KSU_VERSION_FULL := $(subst %REPO_NAME%,$(REPO_NAME),$(KSU_VERSION_FULL))
+KSU_VERSION_FULL := $(subst %BRANCH_NAME%,$(KSU_BRANCH_NAME),$(KSU_VERSION_FULL))
+KSU_VERSION_FULL := $(subst %KSU_VERSION%,$(KSU_VERSION),$(KSU_VERSION_FULL))
+
+$(info -- $(REPO_NAME) version code: $(KSU_VERSION))
+$(info -- $(REPO_NAME) version name: $(KSU_VERSION_FULL))
+
+ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
+ccflags-y += -DKSU_VERSION_FULL=\"$(KSU_VERSION_FULL)\"
+
+ifdef CONFIG_KSU_MULTI_MANAGER_SUPPORT
+$(info -- Supported Unofficial Manager: MKSU, RKSU, KOWSU, SukiSU-Ultra, ReSukiSU )
+endif
+
+KERNEL_VERSION := $(VERSION).$(PATCHLEVEL)
+KERNEL_TYPE := Non-GKI
+# Check for GKI 2.0 (5.10+ or 6.x+)
+ifneq ($(shell test \( $(VERSION) -ge 5 -a $(PATCHLEVEL) -ge 10 \) -o $(VERSION) -ge 6; echo $$?),0)
+# Check for GKI 1.0 (5.4)
+ifeq ($(shell test $(VERSION)-$(PATCHLEVEL) = 5-4; echo $$?),0)
+KERNEL_TYPE := GKI 1.0
+endif
+else
+KERNEL_TYPE := GKI 2.0
+endif
+
+ifneq ($(shell test $(VERSION) -ge 4; echo $$?),0)
+KERNEL_TYPE := Non-GKI (Legacy)
+endif
+$(info -- KERNEL_VERSION: $(KERNEL_VERSION))
+$(info -- KERNEL_TYPE: $(KERNEL_TYPE))
+
+ifeq ($(CONFIG_ARM64),y)
+  kernelsu-objs += hook/arm64/patch_memory.o
+else ifeq ($(CONFIG_X86_64),y)
+  kernelsu-objs += hook/x86_64/patch_memory.o
+else ifeq ($(CONFIG_ARM),y)
+  kernelsu-objs += hook/arm32/patch_memory.o
+else
+  ifeq ($(CONFIG_KSU),y)
+    $(info -- Unsupported arch)
+    $(error $(REPO_NAME) only support arm64-v8a, armeabi-v7a, x86-64)
+  endif
+endif
+
+kernelsu-objs += infra/symbol_resolver.o
+
+ifeq ($(KERNEL_TYPE), GKI 2.0)
+  kernelsu-objs += hook/lsm_hook_magic.o
+endif
+
+ifeq ($(CONFIG_KSU),y)
+  ifneq ($(CONFIG_KALLSYMS_ALL),y)
+    include $(KSU_SRC)/tools/static_export_check.mk
+  endif
+endif
+
+ifdef CONFIG_KSU_TRACEPOINT_HOOK
+  $(info -- $(REPO_NAME): using Tracepoint Syscall Redirect Hook)
+
+  ifndef CONFIG_KSU_DISABLE_MANAGER
+    kernelsu-objs += manager/pkg_observer.o
+  endif
+
+  kernelsu-objs += hook/syscall_hook_manager.o
+  kernelsu-objs += hook/syscall_event_bridge.o
+  kernelsu-objs += hook/tp_marker.o
+  ifeq ($(CONFIG_ARM64),y)
+    kernelsu-objs += hook/arm64/syscall_hook.o
+  else ifeq ($(CONFIG_X86_64),y)
+    kernelsu-objs += hook/x86_64/syscall_hook.o
+  else
+    ifeq ($(CONFIG_KSU), y)
+      $(info -- Unsupported arch)
+      $(info -- Only arm64-v8a and x86-64 support for tracepoint hook)
+      $(error Unsupported arch for tracepoint hook)
+    endif
+  endif
+  ifeq ($(CONFIG_KSU),y)
+    ifneq ($(KERNEL_TYPE), GKI 2.0)
+      $(info -- $(REPO_NAME) TP Hooks are only supported on GKI 2.0 kernels.)
+      $(info -- Current Kernel Type: $(KERNEL_TYPE))
+      $(info -- If you really want to continue, go to Kbuild and comment out this warning.)
+      $(info -- Usually, this error occurs because you forgot to enable some kernel configurations.)
+      $(info -- Read: https://resukisu.org/guide/manual-integrate.html)
+      $(error TP hooks are incompatible with Non-GKI/GKI 1.0 kernels.)
+    endif
+  endif
+
+else ifdef CONFIG_KSU_MANUAL_HOOK
+  $(info -- $(REPO_NAME): using Manual Hook)
+  include $(KSU_SRC)/tools/manual_hook_check.mk
+else ifdef CONFIG_KSU_SUSFS
+  $(info -- $(REPO_NAME): using SuSFS Inline hook)
+  include $(KSU_SRC)/tools/inline_hook_check.mk
+  include $(KSU_SRC)/tools/susfs_compat.mk
+  ifeq ($(shell test -e $(srctree)/fs/susfs.c; echo $$?),0)
+    $(eval SUSFS_VERSION=$(shell cat $(srctree)/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g'))
+    $(info )
+    $(info -- SUSFS_VERSION: $(SUSFS_VERSION))
+  else
+    $(info -- You have not integrated susfs in your kernel yet.)
+    $(info -- Read: https://gitlab.com/simonpunk/susfs4ksu)
+    $(error You should integrate susfs in your kernel.)
+  endif
+else
+  ifeq ($(CONFIG_KSU),y)
+    $(error Unsupported hook method)
+  endif
+endif
+
+ifndef CONFIG_KSU_TRACEPOINT_HOOK
+  # For old kernel, pkg observer maybe let system freeze
+  # https://github.com/ReSukiSU/ReSukiSU/issues/82#issuecomment-4015396974
+  #
+  # 6.7- we use lsm_hooks to call ksu_handle_rename
+  # 6.8+ we use pkg_observer to track_throne
+  ifeq ($(shell test \( $(VERSION) -lt 6 -o \( $(VERSION) -eq 6 -a $(PATCHLEVEL) -lt 8 \) \) && echo y),y)
+      kernelsu-objs += hook/lsm_hooks.o
+  else
+    ifndef CONFIG_KSU_DISABLE_MANAGER
+      kernelsu-objs += manager/pkg_observer.o
+    endif
+  endif
+endif
+
+include $(KSU_SRC)/tools/kernel_compat.mk
+
+# Custom Signs
+ifdef KSU_EXPECTED_SIZE
+ccflags-y += -DEXPECTED_SIZE=$(KSU_EXPECTED_SIZE)
+$(info -- Custom KernelSU Manager signature size: $(KSU_EXPECTED_SIZE))
+endif
+
+ifdef KSU_EXPECTED_HASH
+ccflags-y += -DEXPECTED_HASH=\"$(KSU_EXPECTED_HASH)\"
+$(info -- Custom KernelSU Manager signature hash: $(KSU_EXPECTED_HASH))
+endif
+
+ifdef KSU_EXPECTED_PR_BUILD_SIZE
+  ifndef KSU_EXPECTED_PR_BUILD_HASH
+    $(error KSU_EXPECTED_PR_BUILD_HASH must be set when KSU_EXPECTED_PR_BUILD_SIZE is set)
+  endif
+  ccflags-y += -DEXPECTED_PR_BUILD_SIZE=$(KSU_EXPECTED_PR_BUILD_SIZE)
+  ccflags-y += -DEXPECTED_PR_BUILD_HASH=\"$(KSU_EXPECTED_PR_BUILD_HASH)\"
+  $(info -- KernelSU Manager Pull Request signature size: $(KSU_EXPECTED_PR_BUILD_SIZE))
+  $(info -- KernelSU Manager Pull Request signature hash: $(KSU_EXPECTED_PR_BUILD_HASH))
+endif
+
+ifdef KSU_MANAGER_PACKAGE
+ccflags-y += -DKSU_MANAGER_PACKAGE=\"$(KSU_MANAGER_PACKAGE)\"
+$(info -- KernelSU Manager package name: $(KSU_MANAGER_PACKAGE))
+endif
+
+# Keep a new line here!! Because someone may append config

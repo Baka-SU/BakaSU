@@ -1,0 +1,321 @@
+# SELinux drivers check
+ifeq ($(shell grep -q "current_sid(void)" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: current_sid found)
+ccflags-y += -DKSU_COMPAT_HAS_CURRENT_SID
+endif
+ifeq ($(shell grep -q "struct selinux_state " $(srctree)/security/selinux/include/security.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: selinux_state found)
+ccflags-y += -DKSU_COMPAT_HAS_SELINUX_STATE
+endif
+
+# Handle optional backports
+ifeq ($(shell grep -q "strncpy_from_user_nofault" $(srctree)/include/linux/uaccess.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: strncpy found)
+ccflags-y += -DKSU_OPTIONAL_STRNCPY
+endif
+
+ifeq ($(shell grep -q "ssize_t kernel_read" $(srctree)/fs/read_write.c; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: kernel_read found)
+ccflags-y += -DKSU_OPTIONAL_KERNEL_READ
+endif
+
+ifeq ($(shell grep "ssize_t kernel_write" $(srctree)/fs/read_write.c | grep -q "const void" ; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: kernel_write found)
+ccflags-y += -DKSU_OPTIONAL_KERNEL_WRITE
+endif
+
+ifeq ($(shell grep -q "inode_security_struct\s\+\*selinux_inode" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: selinux_inode found)
+ccflags-y += -DKSU_OPTIONAL_SELINUX_INODE
+endif
+
+ifeq ($(shell grep -q "task_security_struct\s\+\*selinux_cred" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: selinux_cred found)
+ccflags-y += -DKSU_OPTIONAL_SELINUX_CRED
+endif
+
+# seccomp_types.h was added in 6.7
+ifeq ($(shell grep -q "atomic_t\s\+filter_count" $(srctree)/include/linux/seccomp.h $(srctree)/include/linux/seccomp_types.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: seccomp_filter_count found)
+ccflags-y += -DKSU_OPTIONAL_SECCOMP_FILTER_CNT
+endif
+
+# some old kernels backport this, so check whether put_seccomp_filter still exists
+ifneq ($(shell grep -wq "put_seccomp_filter" $(srctree)/kernel/seccomp.c $(srctree)/include/linux/seccomp.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: put_seccomp_filter found)
+ccflags-y += -DKSU_OPTIONAL_SECCOMP_FILTER_RELEASE
+endif
+
+# https://github.com/torvalds/linux/commit/215b674b84dd052098fe6389e32a5afaff8b4d56
+# 5.12-
+ifeq ($(shell grep -q "security_inode_init_security_anon" $(srctree)/include/linux/security.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: security_inode_init_security_anon found)
+ccflags-y += -DKSU_OPTIONAL_HAS_INIT_SEC_ANON
+endif
+
+# https://github.com/torvalds/linux/commit/e7e832ce6fa769f800cd7eaebdb0459ad31e0416
+# 5.12-
+ifeq ($(shell grep -q "anon_inode_getfd_secure" $(srctree)/fs/anon_inodes.c; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: anon_inode_getfd_secure found)
+ccflags-y += -DKSU_HAS_GETFD_SECURE
+endif
+
+# https://github.com/torvalds/linux/commit/4f0b9194bc119a9850a99e5e824808e2f468c348
+# 6.8-
+ifeq ($(shell grep -q "anon_inode_create_getfd" $(srctree)/fs/anon_inodes.c; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: anon_inode_create_getfd found)
+ccflags-y += -DKSU_HAS_ANON_INODE_CREATE_FD
+endif
+
+ifeq ($(shell grep -q "static inline struct inode \*file_inode" $(srctree)/include/linux/fs.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: file_inode() found)
+ccflags-y += -DKSU_UL_HAS_FILE_INODE
+endif
+
+ifneq ($(shell grep -q __flush_dcache_area $(srctree)/arch/arm64/include/asm/cacheflush.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: __flush_dcache_area not found)
+ccflags-y += -DKSU_FLUSH_DCACHE_AREA_NOT_FOUND
+endif
+
+# Checks Samsung
+ifeq ($(shell grep -q "CONFIG_KDP_CRED" $(srctree)/kernel/cred.c; echo $$?),0)
+$(info -- $(REPO_NAME)/compat/samsung: CONFIG_KDP_CRED found)
+ccflags-y += -DSAMSUNG_UH_DRIVER_EXIST
+endif
+
+ifeq ($(shell grep -q "SEC_SELINUX_PORTING_COMMON" $(srctree)/security/selinux/avc.c; echo $$?),0)
+$(info -- $(REPO_NAME)/compat/samsung: SEC_SELINUX_PORTING_COMMON found)
+ccflags-y += -DSAMSUNG_SELINUX_PORTING
+endif
+
+## For Huawei EMUI10+ check  
+# Scan Kernel Tree to find CONFIG_HKIP_SELINUX_PROT in ebitmap.h
+ifeq ($(shell grep -q "CONFIG_HKIP_SELINUX_PROT" $(srctree)/security/selinux/ss/ebitmap.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME): CONFIG_HKIP_SELINUX_PROT found!)
+ccflags-y += -DKSU_COMPAT_IS_HISI_HM2
+endif
+
+# policy mutex
+# kernel 5.10+
+ifeq ($(shell grep -q "policy_mutex" $(srctree)/security/selinux/include/security.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: policy_mutex found)
+ccflags-y += -DKSU_COMPAT_HAS_POLICY_MUTEX
+endif
+
+# Function ns_get_path check
+# for kernel 3.19-
+# https://github.com/torvalds/linux/commit/e149ed2b805fefdccf7ccdfc19eca22fdd4514ac
+ifeq ($(shell grep -q "ns_get_path" $(srctree)/fs/nsfs.c 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: ns_get_path found)
+ccflags-y += -DKSU_COMPAT_HAS_NS_GET_PATH
+endif
+
+# Modern dentry_open check
+# add . to skip (, avoid build failed
+# for kernel 3.6-
+ifeq ($(shell grep -q "dentry_open.const struct path" $(srctree)/include/linux/fs.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: modern dentry_open found)
+ccflags-y += -DKSU_COMPAT_HAS_MODERN_DENTRY_OPEN
+endif
+
+# UL, look for "ext4_unregister_sysfs" on fs/ext4
+ifeq ($(shell grep -q "^extern void ext4_unregister_sysfs" $(srctree)/fs/ext4/ext4.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: ext4_unregister_sysfs found)
+ccflags-y += -DKSU_HAS_MODERN_EXT4
+endif
+
+# UL, look for read_iter on f_op struct
+ifeq ($(shell grep -q "read_iter" $(srctree)/include/linux/fs.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: f_op->read_iter found)
+ccflags-y += -DKSU_HAS_FOP_READ_ITER
+endif
+
+# UL, look for iterate_dir on fs/readdir.c
+ifeq ($(shell grep -q "^int iterate_dir" $(srctree)/fs/readdir.c 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: iterate_dir found)
+ccflags-y += -DKSU_HAS_ITERATE_DIR
+endif
+
+# UL, look for modern alloc_uid on include/linux/sched.h
+ifeq ($(shell grep -q "alloc_uid.kuid_t" $(srctree)/include/linux/sched.c 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: modern alloc_Uid found)
+ccflags-y += -DKSU_HAS_MODERN_ALLOC_UID
+endif
+
+# UL(4.3-), look for modern static_key interface
+# https://github.com/torvalds/linux/commit/11276d5306b8e5b438a36bbff855fe792d7eaa61
+ifeq ($(shell grep -q "DEFINE_STATIC_KEY_TRUE" $(srctree)/include/linux/jump_label.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: modern static_key_interface found)
+ccflags-y += -DKSU_HAS_MODERN_STATIC_KEY_INTERFACE
+endif
+
+# UL(4.0-), d_inode may not found
+# https://github.com/torvalds/linux/commit/155e35d4daa804582f75acaa2c74ec797a89c615
+ifeq ($(shell grep -q "static inline struct inode..d_inode" $(srctree)/include/linux/dcache.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: d_inode found)
+ccflags-y += -DKSU_HAS_D_INODE
+endif
+
+# https://github.com/torvalds/linux/commit/5955102c9984fa081b2d570cfac75c97eecf8f3b
+# for setuid_hooks only
+# it will remove when we impl dynamic-manager feature init out of replaceable ksud
+ifeq ($(shell grep -q "inode_lock.struct inode" $(srctree)/include/linux/fs.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: inode_lock found)
+ccflags-y += -DKSU_HAS_INODE_LOCK_UNLOCK
+endif
+
+# for kernel version below 3.7, uapi/asm-generic/errno.h maybe not found
+ifneq ($(wildcard $(srctree)/include/uapi/asm-generic/errno.h),)
+$(info -- $(REPO_NAME)/compat: modern errno file found)
+ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/uapi/asm-generic/errno.h
+else
+ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/asm-generic/errno.h
+endif
+
+# for kernel version below 5.10, include/linux/minmax.h maybe not found
+# https://github.com/torvalds/linux/commit/b296a6d53339a79082c1d2c1761e948e8b3def69
+ifneq ($(wildcard $(srctree)/include/linux/minmax.h),)
+$(info -- $(REPO_NAME)/compat: minmax.h found)
+ccflags-y += -DKSU_COMPAT_HAS_MINMAX_H
+endif
+
+# for kernel version below 4.18, include/linux/overflow.h maybe not found
+# https://github.com/torvalds/linux/commit/f0907827a8a9152aedac2833ed1b674a7b2a44f2
+ifneq ($(wildcard $(srctree)/include/linux/overflow.h),)
+$(info -- $(REPO_NAME)/compat: overflow.h found)
+ccflags-y += -DKSU_COMPAT_HAS_OVERFLOW_H
+endif
+
+# for kernel version below 3.14, linux/proc_ns.h maybe not found
+# https://github.com/torvalds/linux/commit/0bb80f240520c4148b623161e7856858c021696d
+ifneq ($(wildcard $(srctree)/include/linux/proc_ns.h),)
+$(info -- $(REPO_NAME)/compat: modern proc ns header file found)
+ccflags-y += -DKSU_HAS_MODERN_PROC_NS
+endif
+
+# Android SPEC Changes
+# https://android-review.googlesource.com/c/kernel/common/+/3009995
+ifeq ($(shell grep -q "POLICYDB_CONFIG_ANDROID_NETLINK_ROUTE" $(srctree)/security/selinux/ss/policydb.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: android spec POLICYDB_CONFIG_ANDROID_NETLINK_ROUTE found!!)
+ccflags-y += -DKSU_COMPAT_HAS_POLICYDB_CONFIG_ANDROID_NETLINK_ROUTE
+endif
+
+ifeq ($(shell grep -q "POLICYDB_CONFIG_ANDROID_NETLINK_GETNEIGH" $(srctree)/security/selinux/ss/policydb.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: android spec POLICYDB_CONFIG_ANDROID_NETLINK_GETNEIGH found!!)
+ccflags-y += -DKSU_COMPAT_HAS_POLICYDB_CONFIG_ANDROID_NETLINK_GETNEIGH
+endif
+
+# https://github.com/torvalds/linux/commit/acdf52d97f824019888422842757013b37441dd1
+ifneq ($(shell grep -q "flex_array" $(srctree)/security/selinux/ss/policydb.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found modern selinux policydb)
+ccflags-y += -DKSU_COMPAT_HAS_MODERN_POLICYDB
+endif
+
+ifeq ($(shell grep -q "struct sidtab .sidtab" $(srctree)/security/selinux/ss/services.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found sidtab as reference)
+ccflags-y += -DKSU_COMPAT_SIDTAB_AS_REFERENCE
+endif
+
+ifeq ($(shell grep -q "hlist_head" $(srctree)/include/linux/lsm_hooks.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found hlist in security_hook_list)
+ccflags-y += -DKSU_COMPAT_HLIST_FOR_SECURITY_HOOK_LIST
+endif
+
+ifeq ($(shell grep -F -q "int (*setprocattr)(const char *name, void *value, size_t size);" $(srctree)/include/linux/lsm_hooks.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found new setprocattr prototype)
+ccflags-y += -DKSU_COMPAT_SETPROCATTR_USE_NEW_PROTOTYPE
+endif
+
+ifeq ($(shell grep -F -q "char *lsm_names" $(srctree)/security/security.c; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found required provide lsm name)
+ccflags-y += -DKSU_COMPAT_REQUIRE_PROVIDE_LSM_NAME
+endif
+
+# https://github.com/torvalds/linux/commit/4b36cb773a8153417a080f8025d522322f915aea
+ifeq ($(shell grep -q "struct mutex status_lock" $(srctree)/security/selinux/include/security.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found selinux status variables in selinux_state)
+ccflags-y += -DKSU_COMPAT_SELINUX_STATUS_VAR_IN_SELINUX_STATE
+endif
+
+ifeq ($(shell grep -q "struct selinux_policy" $(srctree)/security/selinux/ss/services.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found selinux_policy struct)
+ccflags-y += -DKSU_COMPAT_HAS_SELINUX_POLICY_STRUCT
+endif
+
+# https://github.com/torvalds/linux/commit/03414a49ad5f3c56988c36d2070e402ffa17feaf
+ifeq ($(shell grep -q "struct hashtab table" $(srctree)/security/selinux/ss/symtab.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found hashtabs is a struct instead of pointer)
+ccflags-y += -DKSU_COMPAT_HAS_NON_POINTER_SYMTAB_STRUCT
+endif
+
+# https://github.com/torvalds/linux/commit/237389e3015e0f4ceac7cf00c70a59746150561d
+ifeq ($(shell grep -q "symtab_search" $(srctree)/security/selinux/ss/symtab.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found symtab_search function)
+ccflags-y += -DKSU_COMPAT_HAS_SYMTAB_SEARCH
+endif
+
+# https://github.com/torvalds/linux/commit/24def7bb92c19337cee26d506f87dc4eeeba7a19
+ifeq ($(shell grep -q "hashtab_key_params" $(srctree)/security/selinux/ss/hashtab.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found hashtab_key_params function)
+ccflags-y += -DKSU_COMPAT_HAS_HASHTAB_KEY_PARAMS
+endif
+
+# https://github.com/torvalds/linux/commit/c3a276111ea2572399281988b3129683e2a6b60b
+ifeq ($(shell grep -q "filename_trans_key" $(srctree)/security/selinux/ss/policydb.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found filename_trans_key function)
+ccflags-y += -DKSU_COMPAT_HAS_FILENAME_TRANS_KEY
+endif
+
+# https://github.com/torvalds/linux/commit/e20b043a6902ecb61c2c84355c3bae5149f391db
+# https://github.com/torvalds/linux/commit/b1d9e6b0646d0e5ee5d9050bd236b6c65d66faef
+ifeq ($(shell grep -q "security_add_hooks" $(srctree)/include/linux/lsm_hooks.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found security_add_hooks)
+ccflags-y += -DKSU_COMPAT_HAS_LIST_OF_LSM_HOOKS
+endif
+
+# for HUAWEI kernel
+# huawei rename type_attr_map_arry -> type_attr_map
+# https://github.com/xixiaobei-bei/Huawei_MHA_EMUI9.0_ReSukiSU/blob/master/security/selinux/ss/policydb.h#L293
+ifneq ($(shell grep -q "type_attr_map_array" $(srctree)/security/selinux/ss/policydb.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: type_attr_map_array not found)
+ccflags-y += -DKSU_COMPAT_TYPE_ATTR_MAP_ARRAY_NOT_FOUND
+endif
+
+# for HUAWEI kernel
+# huawei removed sym_name func
+# https://github.com/xixiaobei-bei/Huawei_MHA_EMUI9.0_ReSukiSU/blob/master/security/selinux/ss/policydb.h
+ifneq ($(shell grep -q "sym_name" $(srctree)/security/selinux/ss/policydb.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: sym_name not found)
+ccflags-y += -DKSU_COMPAT_SYM_NAME_NOT_FOUND
+endif
+
+# for kernel version below 3.8, include/uapi/linux/module.h maybe not found
+# https://github.com/torvalds/linux/commit/2f3238aebedb243804f58d62d57244edec4149b2
+ifneq ($(wildcard $(srctree)/uapi/include/linux/module.h),)
+$(info -- $(REPO_NAME)/compat: module.h found)
+ccflags-y += -DKSU_COMPAT_HAS_UAPI_MODULE_H
+endif
+
+# optional hook
+ifneq ($(shell grep -q "ksu_handle_post_execve" $(srctree)/fs/exec.c; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: ksu_handle_post_execve hook not found)
+ccflags-y += -DKSU_COMPAT_NO_POST_EXECVE_HOOK
+endif
+
+# https://github.com/torvalds/linux/commit/a721f7b8c3548e943e514a957f2a37f4763b9888
+ifeq ($(shell grep -q -F "void security_bprm_committed_creds(const struct linux_binprm *bprm)" $(srctree)/security/security.c; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: constify bprm parameter in security_bprm_committed_creds found)
+ccflags-y += -DKSU_COMPAT_CONSTIFY_BPRM_PARAMETER_IN_SECURITY_BPRM_COMMITTED_CREDS
+endif
+
+# https://github.com/torvalds/linux/commit/8c0637e950d68933a67f7438f779d79b049b5e5c
+ifeq ($(shell grep -q -F "key_need_perm" $(srctree)/include/linux/key.h; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: key need perm as enum found)
+ccflags-y += -DKSU_COMPAT_KEY_NEED_PERM_AS_ENUM
+endif
+
+# https://github.com/torvalds/linux/commit/765927b2d508712d320c8934db963bbe14c3fcec
+ifeq ($(shell grep -q "struct file .dentry_open.const struct path .path, int flags," $(srctree)/fs/open.c; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: modern dentry_open found)
+ccflags-y += -DKSU_COMPAT_HAS_MODERN_DENTRY_OPEN
+endif

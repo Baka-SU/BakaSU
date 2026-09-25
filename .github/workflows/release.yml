@@ -1,0 +1,38 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build-manager:
+    uses: ./.github/workflows/build-manager.yml
+    secrets: inherit
+  release:
+    needs:
+      - build-manager
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Manager artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: manager
+          name: "Manager-release"
+          merge-multiple: true
+
+      - name: Check is rc tags
+        id: is_rc_tag
+        run: |
+          if [ "${{ contains(github.ref_name,'-rc') }}" == 'true' ]; then
+            echo "IS_RC_TAG=true" >> $GITHUB_OUTPUT
+          else
+            echo "IS_RC_TAG=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: release
+        uses: softprops/action-gh-release@v3
+        with:
+          prerelease: ${{ steps.is_rc_tag.outputs.IS_RC_TAG == 'true' }}
+          files: |
+            manager/*.apk

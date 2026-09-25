@@ -1,0 +1,453 @@
+package com.resukisu.resukisu.ui.screen
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.twotone.Add
+import androidx.compose.material.icons.twotone.ImportExport
+import androidx.compose.material.icons.twotone.Sync
+import androidx.compose.material3.DropdownMenuGroup
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenuPopup
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.contentColorFor
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.core.content.getSystemService
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.dropUnlessResumed
+import com.resukisu.resukisu.R
+import com.resukisu.resukisu.domain.model.ProfileTemplate
+import com.resukisu.resukisu.ui.component.NetworkRefreshContent
+import com.resukisu.resukisu.ui.component.settings.AppBackButton
+import com.resukisu.resukisu.ui.component.settings.SettingsJumpPageWidget
+import com.resukisu.resukisu.ui.component.settings.lazySegmentColumn
+import com.resukisu.resukisu.ui.navigation.LocalNavigator
+import com.resukisu.resukisu.ui.navigation.Navigator
+import com.resukisu.resukisu.ui.navigation.Route
+import com.resukisu.resukisu.ui.theme.CardConfig
+import com.resukisu.resukisu.ui.theme.ThemeConfig
+import com.resukisu.resukisu.ui.theme.blurEffect
+import com.resukisu.resukisu.ui.theme.blurSource
+import com.resukisu.resukisu.ui.util.ActivityResumeEffect
+import com.resukisu.resukisu.ui.util.adaptiveScaffoldWindowInsets
+import com.resukisu.resukisu.ui.viewmodel.TemplateUiAction
+import com.resukisu.resukisu.ui.viewmodel.TemplateUiEvent
+import com.resukisu.resukisu.ui.viewmodel.TemplateViewModel
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
+
+/**
+ * @author weishu
+ * @date 2023/10/20.
+ */
+
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun AppProfileTemplateScreen() {
+    val pullRefreshState = rememberPullToRefreshState()
+    val viewModel = koinViewModel<TemplateViewModel>()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    var isUserRefreshing by remember { mutableStateOf(false) }
+    val scrollBehavior =
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val navigator = LocalNavigator.current
+    val context = LocalContext.current
+    val clipboardManager = context.getSystemService<ClipboardManager>()
+    val appProfileTemplateImportEmpty =
+        stringResource(R.string.app_profile_template_import_empty)
+    val appProfileTemplateImportSuccess =
+        stringResource(R.string.app_profile_template_import_success)
+    val appProfileTemplateExportEmpty =
+        stringResource(R.string.app_profile_template_export_empty)
+
+    LaunchedEffect(viewModel, clipboardManager) {
+        viewModel.events.collect { event ->
+            when (event) {
+                TemplateUiEvent.ImportCompleted -> {
+                    Toast.makeText(
+                        context,
+                        appProfileTemplateImportSuccess,
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                    viewModel.dispatch(TemplateUiAction.Refresh())
+                }
+
+                is TemplateUiEvent.Exported -> {
+                    clipboardManager?.setPrimaryClip(ClipData.newPlainText("", event.json))
+                }
+
+                TemplateUiEvent.ExportEmpty -> {
+                    Toast.makeText(
+                        context,
+                        appProfileTemplateExportEmpty,
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+
+                is TemplateUiEvent.Error -> if (event.message.isNotBlank()) {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        scrollBehavior.state.heightOffset = scrollBehavior.state.heightOffsetLimit
+
+        navigator.observeResult<Boolean>("template_edit").collect { success ->
+            if (success) {
+                navigator.clearResult("template_edit")
+                scope.launch { viewModel.dispatch(TemplateUiAction.Refresh()) }
+            }
+        }
+    }
+
+    ActivityResumeEffect {
+        viewModel.dispatch(TemplateUiAction.Refresh())
+    }
+
+    Scaffold(
+        topBar = {
+            TopBar(
+                onBack = dropUnlessResumed { navigator.pop() },
+                onSync = {
+                    viewModel.dispatch(TemplateUiAction.Refresh(synchronize = true))
+                },
+                onImport = {
+                    val clipboardText =
+                        clipboardManager?.primaryClip?.getItemAt(0)?.text?.toString()
+                    if (clipboardText.isNullOrEmpty()) {
+                        Toast.makeText(
+                            context,
+                            appProfileTemplateImportEmpty,
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    } else {
+                        viewModel.dispatch(TemplateUiAction.Import(clipboardText))
+                    }
+                },
+                onExport = {
+                    viewModel.dispatch(TemplateUiAction.Export)
+                },
+                scrollBehavior = scrollBehavior,
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                modifier = Modifier.padding(WindowInsets.navigationBars.asPaddingValues()),
+                onClick = {
+                    navigator.navigateForResult(
+                        Route.TemplateEditor(
+                            templateId = "",
+                            readOnly = false,
+                            isCreation = true,
+                        ),
+                        "template_edit"
+                    )
+                },
+                icon = { Icon(Icons.TwoTone.Add, null) },
+                text = { Text(stringResource(id = R.string.app_profile_template_create)) },
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        },
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        contentWindowInsets = adaptiveScaffoldWindowInsets(),
+    ) { innerPadding ->
+        if (uiState.templateList.isEmpty()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
+                    .blurSource()
+            ) {
+                item {
+                    Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
+                }
+                item {
+                    NetworkRefreshContent(
+                        modifier = Modifier.fillParentMaxSize(),
+                        offline = uiState.isOffline,
+                        onRetry = {
+                            scope.launch { viewModel.dispatch(TemplateUiAction.Refresh(synchronize = true)) }
+                        },
+                    )
+                }
+                item {
+                    Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
+                }
+            }
+        } else {
+            PullToRefreshBox(
+                state = pullRefreshState,
+                modifier = Modifier
+                    .nestedScroll(
+                        scrollBehavior.nestedScrollConnection
+                    )
+                    .blurSource(),
+                isRefreshing = isUserRefreshing,
+                onRefresh = {
+                    scope.launch {
+                        isUserRefreshing = true
+                        try {
+                            viewModel.fetchTemplates()
+                        } finally {
+                            isUserRefreshing = false
+                        }
+                    }
+                },
+                indicator = {
+                    PullToRefreshDefaults.LoadingIndicator(
+                        state = pullRefreshState,
+                        isRefreshing = isUserRefreshing,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = innerPadding.calculateTopPadding()),
+                    )
+                },
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = remember {
+                        PaddingValues(bottom = 16.dp + 56.dp + 16.dp /* Scaffold Fab Spacing + Fab container height */)
+                    }
+                ) {
+                    item {
+                        Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
+                    }
+
+                    lazySegmentColumn(
+                        items = uiState.templateList,
+                        key = { _, app -> app.id }) { _, app ->
+                        TemplateItem(app)
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TemplateItem(
+    template: ProfileTemplate
+) {
+    val navigator = LocalNavigator.current
+    SettingsJumpPageWidget(
+        title = template.name,
+        iconPlaceholder = false,
+        onClick = {
+            navigator.navigateForResult(
+                Route.TemplateEditor(template.id, !template.local),
+                "template_edit"
+            )
+        },
+        description = "${template.id}${if (template.author.isEmpty()) "" else "@${template.author}"}",
+        descriptionStyle = MaterialTheme.typography.bodySmallEmphasized,
+        descriptionColumnContent = {
+            Text(template.description)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 5.dp)
+            ) {
+                LabelText("UID: ${template.uid}")
+                LabelText(
+                    label = "GID: ${template.gid}",
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                )
+                LabelText(
+                    label = template.context,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                )
+                if (template.local) {
+                    LabelText(
+                        label = stringResource(R.string.local),
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    )
+                } else {
+                    LabelText(
+                        label = stringResource(R.string.remote),
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    )
+                }
+            }
+        }
+    )
+}
+
+@Preview
+@Composable
+fun TemplateItemPreview() {
+    CompositionLocalProvider(
+        LocalNavigator provides Navigator(Route.AppProfileTemplate)
+    ) {
+        TemplateItem(ProfileTemplate())
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun TopBar(
+    onBack: () -> Unit,
+    onSync: () -> Unit = {},
+    onImport: () -> Unit = {},
+    onExport: () -> Unit = {},
+    scrollBehavior: TopAppBarScrollBehavior,
+) {
+    val themeConfig: ThemeConfig = koinInject()
+    val cardConfig: CardConfig = koinInject()
+    LargeFlexibleTopAppBar(
+        modifier = Modifier.blurEffect(
+        ),
+        title = {
+            Text(stringResource(R.string.settings_profile_template))
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor =
+                if (themeConfig.isEnableBlur)
+                    Color.Transparent
+                else
+                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
+            scrolledContainerColor =
+                if (themeConfig.isEnableBlur)
+                    Color.Transparent
+                else
+                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
+        ),
+        navigationIcon = {
+            AppBackButton(
+                onClick = onBack
+            )
+        },
+        actions = {
+            IconButton(onClick = onSync) {
+                Icon(
+                    Icons.TwoTone.Sync,
+                    contentDescription = stringResource(id = R.string.app_profile_template_sync)
+                )
+            }
+
+            var showDropdown by remember { mutableStateOf(false) }
+            IconButton(onClick = {
+                showDropdown = true
+            }) {
+                Icon(
+                    imageVector = Icons.TwoTone.ImportExport,
+                    contentDescription = stringResource(id = R.string.app_profile_import_export)
+                )
+
+                DropdownMenuPopup(expanded = showDropdown, onDismissRequest = {
+                    showDropdown = false
+                }) {
+                    DropdownMenuGroup(
+                        shapes = MenuDefaults.groupShapes()
+                    ) {
+                        DropdownMenuItem(
+                            shape = MenuDefaults.itemShape(0, 2).shape,
+                            text = {
+                                Text(stringResource(id = R.string.app_profile_import_from_clipboard))
+                            },
+                            onClick = {
+                                onImport()
+                                showDropdown = false
+                            },
+                        )
+                        DropdownMenuItem(
+                            shape = MenuDefaults.itemShape(1, 2).shape,
+                            text = {
+                                Text(stringResource(id = R.string.app_profile_export_to_clipboard))
+                            },
+                            onClick = {
+                                onExport()
+                                showDropdown = false
+                            },
+                        )
+                    }
+                }
+            }
+        },
+        windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
+        scrollBehavior = scrollBehavior
+    )
+}
+
+@Composable
+fun LabelText(
+    label: String,
+    containerColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = contentColorFor(containerColor)
+) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = containerColor
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmallEmphasized,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}

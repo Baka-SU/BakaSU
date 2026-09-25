@@ -1,0 +1,797 @@
+package com.resukisu.resukisu.ui.screen.moduleRepo
+
+import android.content.Context
+import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.twotone.Download
+import androidx.compose.material.icons.twotone.Extension
+import androidx.compose.material.icons.twotone.MoreVert
+import androidx.compose.material.icons.twotone.Star
+import androidx.compose.material.icons.twotone.WebAsset
+import androidx.compose.material3.CheckableDropdownMenuItem
+import androidx.compose.material3.DropdownMenuGroup
+import androidx.compose.material3.DropdownMenuPopup
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.resukisu.resukisu.R
+import com.resukisu.resukisu.domain.model.CatalogAuthor
+import com.resukisu.resukisu.domain.model.CatalogModule
+import com.resukisu.resukisu.domain.model.ModuleRelease
+import com.resukisu.resukisu.domain.model.ModuleReleaseAsset
+import com.resukisu.resukisu.domain.usecase.EnqueueDownloadUseCase
+import com.resukisu.resukisu.domain.usecase.ObserveDownloadUseCase
+import com.resukisu.resukisu.ui.activity.PermissionRequestInterface
+import com.resukisu.resukisu.ui.component.ConfirmDialogHandle
+import com.resukisu.resukisu.ui.component.ConfirmResult
+import com.resukisu.resukisu.ui.component.DialogHandle
+import com.resukisu.resukisu.ui.component.NetworkRefreshContent
+import com.resukisu.resukisu.ui.component.SearchAppBar
+import com.resukisu.resukisu.ui.component.SwipeableSnackbarHost
+import com.resukisu.resukisu.ui.component.rememberConfirmDialog
+import com.resukisu.resukisu.ui.component.rememberCustomDialog
+import com.resukisu.resukisu.ui.component.rememberSearchAppBarScrollBehavior
+import com.resukisu.resukisu.ui.navigation.LocalNavigator
+import com.resukisu.resukisu.ui.navigation.Navigator
+import com.resukisu.resukisu.ui.navigation.Route
+import com.resukisu.resukisu.ui.screen.LabelText
+import com.resukisu.resukisu.ui.theme.CardConfig
+import com.resukisu.resukisu.ui.theme.ThemeConfig
+import com.resukisu.resukisu.ui.theme.blurSource
+import com.resukisu.resukisu.ui.theme.renderBackgroundBlur
+import com.resukisu.resukisu.ui.util.ActivityResumeEffect
+import com.resukisu.resukisu.ui.util.LocalPermissionRequestInterface
+import com.resukisu.resukisu.ui.util.LocalSnackbarHost
+import com.resukisu.resukisu.ui.util.adaptiveScaffoldWindowInsets
+import com.resukisu.resukisu.ui.util.downloader.download
+import com.resukisu.resukisu.ui.viewmodel.ModuleRepoUiAction
+import com.resukisu.resukisu.ui.viewmodel.ModuleRepoUiState
+import com.resukisu.resukisu.ui.viewmodel.ModuleRepoViewModel
+import com.resukisu.resukisu.ui.viewmodel.formatFileSize
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
+
+/**
+ * @author AlexLiuDev233
+ * @date 2025/12/6
+ */
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ModuleRepoScreen() {
+    val navigator = LocalNavigator.current
+    val viewModel = koinViewModel<ModuleRepoViewModel>()
+    val enqueueDownload = koinInject<EnqueueDownloadUseCase>()
+    val observeDownload = koinInject<ObserveDownloadUseCase>()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackBarHost = LocalSnackbarHost.current
+    val topAppBarState = rememberTopAppBarState()
+    val scrollBehavior = rememberSearchAppBarScrollBehavior(
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
+    )
+    val currentModuleForChooseDialog = remember { mutableStateOf<CatalogModule?>(null) }
+    val chooseDialog = rememberCustomDialog({ dismiss ->
+        ChooseDialogContent(
+            currentModuleForChooseDialog,
+            enqueueDownload,
+            observeDownload,
+            dismiss,
+        )
+    })
+    val confirmDialog = rememberConfirmDialog()
+    var showDropdown by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullToRefreshState()
+    val refreshModules = { viewModel.dispatch(ModuleRepoUiAction.Refresh) }
+
+    LaunchedEffect(Unit) {
+        scrollBehavior.state.heightOffset = scrollBehavior.state.heightOffsetLimit
+
+    }
+
+    ActivityResumeEffect {
+        refreshModules()
+    }
+
+    val isLoading = uiState.modules.isEmpty() && uiState.search.isEmpty()
+
+    Scaffold(
+        topBar = {
+            SearchAppBar(
+                title = stringResource(R.string.module_repo),
+                searchText = uiState.search,
+                onSearchTextChange = { query ->
+                    viewModel.dispatch(ModuleRepoUiAction.Search(query))
+                },
+                dropdownContent = {
+                    IconButton(
+                        onClick = { showDropdown = true },
+                    ) {
+                        Icon(
+                            imageVector = Icons.TwoTone.MoreVert,
+                            contentDescription = stringResource(id = R.string.settings),
+                        )
+
+                        ModuleRepoDropdown(
+                            expanded = showDropdown,
+                            onDismissRequest = { showDropdown = false },
+                            viewModel = viewModel,
+                            uiState = uiState,
+                        )
+                    }
+                },
+                onBackClick = {
+                    navigator.pop()
+                },
+                scrollBehavior = scrollBehavior,
+                searchBarPlaceHolderText = stringResource(R.string.search_modules),
+            )
+        },
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        contentWindowInsets = adaptiveScaffoldWindowInsets(),
+        snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) }
+    ) { innerPadding ->
+        if (isLoading) {
+            NetworkRefreshContent(
+                offline = uiState.offline,
+                onRetry = refreshModules,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blurSource()
+                    .padding(innerPadding),
+            )
+        } else if (uiState.modules.isEmpty() && uiState.search.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blurSource()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.TwoTone.Extension,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(96.dp)
+                            .padding(bottom = 16.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.search_no_any_match),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+            }
+        } else {
+            PullToRefreshBox(
+                modifier = Modifier.blurSource(),
+                state = pullRefreshState,
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = {
+                    viewModel.dispatch(ModuleRepoUiAction.Refresh)
+                },
+                indicator = {
+                    PullToRefreshDefaults.LoadingIndicator(
+                        state = pullRefreshState,
+                        isRefreshing = uiState.isRefreshing,
+                        modifier = Modifier
+                            .padding(top = innerPadding.calculateTopPadding())
+                            .align(Alignment.TopCenter),
+                    )
+                }
+            ) {
+                LazyColumn(
+                    state = rememberLazyListState(),
+                    modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = remember {
+                        PaddingValues(
+                            start = 16.dp,
+                            top = 0.dp,
+                            end = 16.dp,
+                            bottom = 0.dp
+                        )
+                    }
+                ) {
+                    item {
+                        Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
+                    }
+
+                    items(uiState.modules) { module ->
+                        OnlineModuleItem(
+                            module,
+                            confirmDialog,
+                            chooseDialog,
+                            currentModuleForChooseDialog
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ModuleRepoDropdown(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    viewModel: ModuleRepoViewModel,
+    uiState: ModuleRepoUiState,
+) {
+    DropdownMenuPopup(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+    ) {
+        DropdownMenuGroup(
+            shapes = MenuDefaults.groupShapes(),
+        ) {
+            CheckableDropdownMenuItem(
+                checked = uiState.sortStargazerCountFirst,
+                onCheckedChange = {
+                    viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it))
+                },
+                text = { Text(stringResource(R.string.module_sort_star_first)) },
+                shapes = MenuDefaults.itemShape(
+                    index = 0,
+                    count = 1,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+fun OnlineModuleItem(
+    module: CatalogModule,
+    confirmDialog: ConfirmDialogHandle,
+    chooseDialog: DialogHandle,
+    currentModuleForChooseDialog: MutableState<CatalogModule?>
+) {
+    val themeConfig: ThemeConfig = koinInject()
+    val cardConfig: CardConfig = koinInject()
+    val context = LocalContext.current
+    val permissionRequestInterface = LocalPermissionRequestInterface.current
+    val navigator = LocalNavigator.current
+    val coroutineScope = rememberCoroutineScope()
+    val enqueueDownload = koinInject<EnqueueDownloadUseCase>()
+    val observeDownload = koinInject<ObserveDownloadUseCase>()
+
+    Surface(
+        color =
+            if (themeConfig.isEnableBlurExp)
+                Color.Transparent
+            else
+                MaterialTheme.colorScheme.surfaceBright.copy(cardConfig.cardAlpha),
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable {
+                navigator.push(Route.ModuleRepoDetail(module.moduleId))
+            }
+            .renderBackgroundBlur(),
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .padding(top = 12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val moduleVersion = stringResource(id = R.string.module_version)
+                val moduleAuthor = stringResource(id = R.string.module_author)
+
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = module.moduleName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier
+                                .weight(1f)
+                                .horizontalScroll(rememberScrollState()),
+                            softWrap = true,
+                            maxLines = 1
+                        )
+                        if (module.stargazerCount > 0) {
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                Icon(
+                                    imageVector = Icons.TwoTone.Star,
+                                    contentDescription = "stars",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = module.stargazerCount.toString(),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(start = 4.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "$moduleVersion: ${module.latestRelease} (${module.latestVersionCode})",
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                        lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
+                        fontFamily = MaterialTheme.typography.bodySmall.fontFamily,
+                    )
+
+                    Text(
+                        text = "$moduleAuthor: ${module.authors}",
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                        lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
+                        fontFamily = MaterialTheme.typography.bodySmall.fontFamily,
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = module.summary,
+                fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                fontFamily = MaterialTheme.typography.bodySmall.fontFamily,
+                lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
+                fontWeight = MaterialTheme.typography.bodySmall.fontWeight,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 4,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 文件夹名称和metamodule标签
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                LabelText(
+                    label = module.moduleId,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                )
+                if (module.metamodule) {
+                    LabelText(
+                        label = "META",
+                        containerColor = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
+                if (module.installed) {
+                    LabelText(
+                        label = stringResource(R.string.installed),
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            HorizontalDivider(thickness = Dp.Hairline)
+
+            Row(horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.CenterVertically)) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    FilledTonalButton(
+                        modifier = Modifier.defaultMinSize(minWidth = 52.dp, minHeight = 32.dp),
+                        onClick = {
+                            navigator.push(Route.ModuleRepoDetail(module.moduleId))
+                        },
+                        contentPadding = PaddingValues(
+                            start = 12.dp,
+                            top = 7.dp,
+                            end = 12.dp,
+                            bottom = 7.dp,
+                        ),
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(20.dp),
+                            imageVector = Icons.TwoTone.WebAsset,
+                            contentDescription = null
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+
+                    if (module.latestAsset != null) {
+                        val confirmInstallTitle =
+                            stringResource(R.string.confirm_install_module_title, module.moduleName)
+                        FilledTonalButton(
+                            modifier = Modifier.defaultMinSize(minWidth = 52.dp, minHeight = 32.dp),
+                            onClick = {
+                                coroutineScope.launch {
+                                    val result = confirmDialog.awaitConfirm(
+                                        title = confirmInstallTitle,
+                                        html = true,
+                                        content = module.latestAsset.descriptionHTML
+                                    )
+
+                                    if (result == ConfirmResult.Canceled) return@launch
+
+                                    val assets = module.latestAsset.assets
+                                    if (assets.size <= 1) {
+                                        assets.firstOrNull()?.let { asset ->
+                                            downloadAssetAndInstall(
+                                                context,
+                                                permissionRequestInterface,
+                                                module,
+                                                asset,
+                                                navigator,
+                                                coroutineScope,
+                                                enqueueDownload,
+                                                observeDownload,
+                                            )
+                                        }
+                                    } else {
+                                        currentModuleForChooseDialog.value = module
+                                        chooseDialog.show()
+                                    }
+                                }
+                            },
+                            contentPadding = PaddingValues(
+                                start = 12.dp,
+                                top = 7.dp,
+                                end = 12.dp,
+                                bottom = 7.dp,
+                            ),
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(20.dp),
+                                imageVector = Icons.TwoTone.Download,
+                                contentDescription = null
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun downloadAssetAndInstall(
+    context: Context,
+    permissionRequestInterface: PermissionRequestInterface,
+    module: CatalogModule,
+    asset: ModuleReleaseAsset,
+    navigator: Navigator,
+    coroutineScope: CoroutineScope,
+    enqueueDownload: EnqueueDownloadUseCase,
+    observeDownload: ObserveDownloadUseCase,
+) {
+    val downloadingText = context.getText(R.string.module_downloading).toString()
+    coroutineScope.launch {
+        withContext(Dispatchers.IO) {
+            download(
+                context = context,
+                permissionRequestInterface = permissionRequestInterface,
+                url = asset.downloadUrl,
+                fileName = asset.name,
+                enqueueDownload = enqueueDownload,
+                observeDownload = observeDownload,
+                onDownloaded = { uri ->
+                    navigator.push(
+                        Route.Flash.module(uri.toString())
+                    )
+                },
+                onDownloading = {
+                    launch(Dispatchers.Main) {
+                        Toast.makeText(context, downloadingText.format(module.moduleName), Toast.LENGTH_SHORT).show()
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+fun ChooseDialogContent(
+    currentModuleForChooseDialog: MutableState<CatalogModule?>,
+    enqueueDownload: EnqueueDownloadUseCase,
+    observeDownload: ObserveDownloadUseCase,
+    dismiss: () -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val navigator = LocalNavigator.current
+    val context = LocalContext.current
+    val permissionRequestInterface = LocalPermissionRequestInterface.current
+    val module = currentModuleForChooseDialog.value
+    if (module == null || module.latestAsset == null) {
+        dismiss()
+        return
+    }
+    var selectedAsset by remember { mutableStateOf<ModuleReleaseAsset?>(null) }
+
+    Dialog(
+        onDismissRequest = { dismiss() }
+    ) {
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.assets_multiple_select_dialog_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(module.latestAsset.assets) { asset ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(shape = RoundedCornerShape(24.dp))
+                                .clickable { selectedAsset = asset }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedAsset == asset,
+                                onClick = null
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Column {
+                                Text(
+                                    text = asset.name,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = stringResource(R.string.assets_multiple_select_dialog_content_description,formatFileSize(asset.size), asset.downloadCount),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = { dismiss() }) {
+                        Text(stringResource(android.R.string.cancel))
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(
+                        onClick = {
+                            if (selectedAsset == null) {
+                                Toast.makeText(context, R.string.assets_multiple_select_dialog_warning, Toast.LENGTH_SHORT).show()
+                                return@TextButton
+                            }
+                            selectedAsset?.let { selected ->
+                                dismiss()
+                                downloadAssetAndInstall(
+                                    context = context,
+                                    permissionRequestInterface = permissionRequestInterface,
+                                    module = module,
+                                    asset = selected,
+                                    navigator = navigator,
+                                    coroutineScope = coroutineScope,
+                                    enqueueDownload = enqueueDownload,
+                                    observeDownload = observeDownload,
+                                )
+                            }
+                        }
+                    ) {
+                        Text(stringResource(android.R.string.ok))
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+// 下面全是预览相关了
+
+fun initFakeRepoModuleForPreview(): CatalogModule {
+    return CatalogModule(
+        moduleId = "id",
+        moduleName = "name",
+        authors = "author",
+        authorList = ArrayList<CatalogAuthor>().apply {
+            add(
+                CatalogAuthor(
+                    name = "name",
+                    link = "link"
+                )
+            )
+        },
+        summary = "I am a test module and i do nothing but show a very long description",
+        metamodule = true,
+        stargazerCount = 1,
+        updatedAt = "updateAt",
+        createdAt = "createAt",
+        latestRelease = "latestRelease",
+        latestReleaseTime = "latestReleaseTime",
+        latestVersionCode = 1,
+        latestAsset = ModuleRelease(
+            name = "name",
+            tagName = "tagName",
+            publishedAt = "publishedAt",
+            descriptionHTML = "descriptionHTML",
+            assets = ArrayList<ModuleReleaseAsset>().apply {
+                add(
+                    ModuleReleaseAsset(
+                        name = "name",
+                        downloadUrl = "downloadUrl",
+                        size = 0,
+                        downloadCount = 0
+                    )
+                )
+                add(
+                    ModuleReleaseAsset(
+                        name = "name2",
+                        downloadUrl = "downloadUrl2",
+                        size = 0,
+                        downloadCount = 0
+                    )
+                )
+            }
+        ),
+        installed = true,
+        readme = "README",
+        sourceUrl = "Source URL",
+        releases = emptyList()
+    )
+}
+
+@Preview(locale = "en")
+@Composable
+fun OnlineModuleItemPreview() {
+    val currentModuleForChooseDialog = remember { mutableStateOf<CatalogModule?>(null) }
+
+    CompositionLocalProvider(
+        LocalNavigator provides Navigator(Route.ModuleRepo),
+        LocalPermissionRequestInterface provides object : PermissionRequestInterface {
+            override fun requestPermission(
+                permission: String,
+                callback: (Boolean) -> Unit,
+                requestDescription: String
+            ) {
+            }
+
+            override fun requestPermissions(
+                permissions: Array<String>,
+                callback: (Map<String, @JvmSuppressWildcards Boolean>) -> Unit,
+                requestDescription: Map<String, String>
+            ) {
+            }
+        }
+    ) {
+        OnlineModuleItem(
+            initFakeRepoModuleForPreview(),
+            rememberConfirmDialog(),
+            rememberCustomDialog { },
+            currentModuleForChooseDialog,
+        )
+    }
+}
+
+@Preview(locale = "zh-rCN", showBackground = true)
+@Composable
+fun ChooseDialogPreview() {
+    val currentModuleForChooseDialog =
+        remember { mutableStateOf<CatalogModule?>(initFakeRepoModuleForPreview()) }
+
+    CompositionLocalProvider(
+        LocalNavigator provides Navigator(Route.ModuleRepo),
+        LocalPermissionRequestInterface provides object : PermissionRequestInterface {
+            override fun requestPermission(
+                permission: String,
+                callback: (Boolean) -> Unit,
+                requestDescription: String
+            ) {
+            }
+
+            override fun requestPermissions(
+                permissions: Array<String>,
+                callback: (Map<String, @JvmSuppressWildcards Boolean>) -> Unit,
+                requestDescription: Map<String, String>
+            ) {
+            }
+        }
+    ) {
+        ChooseDialogContent(
+            currentModuleForChooseDialog,
+            koinInject<EnqueueDownloadUseCase>(),
+            koinInject<ObserveDownloadUseCase>(),
+        ) {}
+    }
+}

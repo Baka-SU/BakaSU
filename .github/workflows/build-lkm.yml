@@ -1,0 +1,38 @@
+name: Build LKM for KernelSU
+on:
+  workflow_call:
+    inputs:
+      expected_pr_build_size:
+        description: 'Second expected signature size (for PR builds)'
+        required: false
+        default: ''
+        type: string
+      expected_pr_build_hash:
+        description: 'Second expected signature hash (for PR builds)'
+        required: false
+        default: ''
+        type: string
+  workflow_dispatch:
+jobs:
+  build-lkm:
+    strategy:
+      fail-fast: false
+      matrix:
+        kmi:
+          - android12-5.10
+          - android13-5.10
+          - android13-5.15
+          - android14-5.15
+          - android14-6.1
+          - android15-6.6
+          - android16-6.12
+          - android17-6.18
+        arch:
+          - arm64
+          - x86_64
+    uses: ./.github/workflows/ddk-lkm.yml
+    with:
+      kmi: ${{ matrix.kmi }}
+      arch: ${{ matrix.arch }}
+      expected_pr_build_size: ${{ inputs.expected_pr_build_size || '' }}
+      expected_pr_build_hash: ${{ inputs.expected_pr_build_hash || '' }}

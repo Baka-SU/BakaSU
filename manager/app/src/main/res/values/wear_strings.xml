@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="wear_root_available">Root ready</string>
+    <string name="wear_root_working">Working</string>
+    <string name="wear_root_unavailable">No Root</string>
+    <string name="wear_mode_lkm" translatable="false">LKM</string>
+    <string name="wear_mode_gki" translatable="false">GKI</string>
+    <string name="wear_kernel_su">KernelSU</string>
+    <string name="wear_android">Android</string>
+    <string name="wear_allowed">Allowed</string>
+    <string name="wear_denied">Denied</string>
+    <string name="wear_enabled">Enabled</string>
+    <string name="wear_disabled">Disabled</string>
+    <string name="wear_pending_removal">Pending removal</string>
+    <string name="wear_no_logs">No SU log entries</string>
+    <string name="wear_enable_sulog">Enable SU log</string>
+    <string name="wear_disable_sulog">Disable SU log</string>
+    <string name="wear_refresh">Refresh</string>
+    <string name="wear_install_module">Install module</string>
+    <string name="wear_installing_module">Installing module</string>
+    <string name="wear_module_file_unreadable">Cannot read the selected module ZIP</string>
+    <string name="wear_file_picker_unavailable">File picker unavailable</string>
+    <string name="wear_back">Back</string>
+    <string name="wear_apps">Apps</string>
+    <string name="wear_general">General</string>
+    <string name="wear_security">Security</string>
+    <string name="wear_advanced">Advanced</string>
+    <string name="wear_no_apps">No apps found</string>
+    <string name="wear_manager_updates">App updates</string>
+    <string name="wear_module_updates">Module updates</string>
+    <string name="wear_soft_restart">Soft restart</string>
+    <string name="wear_project_url" translatable="false">https://github.com/ReSukiSU/ReSukiSU</string>
+    <string name="wear_project_license_url" translatable="false">https://github.com/ReSukiSU/ReSukiSU/blob/main/LICENSE</string>
+    <string name="wear_project_license" translatable="false">GPL-3.0</string>
+    <string name="wear_github" translatable="false">GitHub</string>
+    <string name="wear_app_version" translatable="false">%1$s (%2$d)</string>
+</resources>

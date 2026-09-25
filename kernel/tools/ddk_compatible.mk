@@ -1,0 +1,30 @@
+ifeq ($(CONFIG_KSU_DISABLE_MANAGER),y)
+ccflags-y += -DCONFIG_KSU_DISABLE_MANAGER
+endif
+
+ifeq ($(CONFIG_KSU_DISABLE_POLICY),y)
+ccflags-y += -DCONFIG_KSU_DISABLE_POLICY
+endif
+
+ifeq ($(CONFIG_KSU_DEBUG),y)
+ccflags-y += -DCONFIG_KSU_DEBUG
+endif
+
+ifeq ($(CONFIG_KSU_TOOLKIT_SUPPORT),y)
+ccflags-y += -DCONFIG_KSU_TOOLKIT_SUPPORT
+endif
+
+ifeq ($(CONFIG_KSU_MULTI_MANAGER_SUPPORT),y)
+ccflags-y += -DCONFIG_KSU_MULTI_MANAGER_SUPPORT
+endif
+
+ifeq ($(CONFIG_KSU_X86_PATCH_SYSCALL_DISPATCHER),y)
+ccflags-y += -DCONFIG_KSU_X86_PATCH_SYSCALL_DISPATCHER=1
+endif
+
+# ddk are only support Tracepoint Syscall Redirect hook
+ifeq ($(CONFIG_KSU_TRACEPOINT_HOOK),y)
+ccflags-y += -DCONFIG_KSU_TRACEPOINT_HOOK
+endif
+
+CONFIG_KSU_FULL_NAME_FORMAT := "%TAG_NAME%-%COMMIT_SHA%@%REPO_NAME%"

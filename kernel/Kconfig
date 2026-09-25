@@ -1,0 +1,249 @@
+menu "KernelSU"
+
+config KSU
+	  tristate "KernelSU function support"
+      select KALLSYMS
+	  default y
+	  help
+		Enable kernel-level root privileges on Android System.
+		Choose "m" here to build KernelSU as LKM
+
+config KSU_DEBUG
+	  bool "KernelSU debug mode"
+	  depends on KSU
+	  default n
+	  help
+		Enable KernelSU debug mode.
+
+config KSU_TOOLKIT_SUPPORT
+      bool "KernelSU toolkit support"
+      depends on KSU
+      default n
+      help
+        Enable KernelSU Toolkit (https://github.com/backslashxx/ksu_toolkit) support.
+        For testing and debugging purposes.
+        Support ksu toolkit features as below:
+        1: CHANGE_MANAGER_UID sys_reboot extensions
+        2: CHANGE_KSUVER sys_reboot extensions
+        3: CHANGE_SPOOF_UNAME sys_reboot extensions
+        4: CHANGE_KSUFLAGS sys_reboot_extensions
+        5: allow userspace pull list entries (always supported)
+        6: sulog (Not supported for now, use ksu's upstream sulog feature instead)
+        If you don't know what is that, DON'T enable this!
+
+config KSU_FULL_NAME_FORMAT
+      string "KernelSU full name format"
+      depends on KSU
+      default "%TAG_NAME%-%COMMIT_SHA%@%REPO_NAME%"
+      help
+        Change the build time full name format.
+        It is displayed in KernelSU manager under "Version".
+        There are some placeholders:
+        %TAG_NAME%    = latest tag name of this branch
+        %COMMIT_SHA%  = short SHA of Git HEAD
+        %REPO_NAME%   = project name
+        %BRANCH_NAME% = current Git branch name
+        %KSU_VERSION% = KSU version code
+
+config KSU_DISABLE_MANAGER
+	bool "Disable KernelSU manager integration"
+	depends on KSU
+	default n
+	help
+	  Disable manager APK detection and manager-specific handling.
+	  Root will be used in place of manager-only functionality.
+
+config KSU_DISABLE_POLICY
+	bool "Disable KernelSU policy profiles"
+	depends on KSU
+	default n
+	help
+	  Disable per-app root/non-root profile customization.
+	  Escalation will always use the default full root profile, and
+	  non-root handling will follow the global umount policy only.
+
+config KSU_X86_PATCH_SYSCALL_DISPATCHER
+	bool "Dynamically patch x64's hardened syscall dispatcher to support syscall hooks"
+	depends on KSU && X86_64
+	default n
+	help
+	  Dynamically patch x64's hardened syscall dispatcher to support syscall hooks. This is a
+	  replacement for a kernel source code patch, and is useful for x86_64 LKM mode.
+
+config KSU_MULTI_MANAGER_SUPPORT
+	bool "Multi KernelSU manager support"
+	depends on KSU && !KSU_DISABLE_MANAGER
+	default y
+	help
+		Enable multi KernelSU manager support
+
+choice
+	prompt "KernelSU Hooking Method"
+	depends on KSU
+	default KSU_TRACEPOINT_HOOK
+	help
+	  Select the hooking method for KernelSU.
+	  Note: Tracepoint Syscall Redirect hook is only supported for GKI2(5.10+)
+
+config KSU_TRACEPOINT_HOOK
+	bool "Tracepoint Syscall Redirect"
+	help
+	  The standard, upstream method for modern kernels. 
+	  Utilizes GKI tracepoints for syscall redirection. 
+	  The implementation is only for devices with GKI2 support.
+	  Support for kernel 5.10+
+
+config KSU_MANUAL_HOOK
+	bool "Manually hook KernelSU"
+	depends on KSU != m
+	help
+	  If enabled, it hooks the required KernelSU syscalls 
+	  with a manually-patched function.
+	  Support for kernel 3.4+
+
+config KSU_SUSFS
+	bool "SUSFS Inline Hook"
+	depends on THREAD_INFO_IN_TASK && 64BIT
+	help
+	  Patch and Enable SUSFS to kernel with KernelSU.
+	  SuSFS Officially support kernel 5.10+
+	  This KSU driver support it for 4.3+ in KSU side, 
+	  But the kernel side susfs compatibility MUST completed by yourself.
+
+endchoice
+
+menu "KernelSU - Manual Hook Auto hook"
+    depends on KSU_MANUAL_HOOK
+
+comment "------------------------WARNING-------------------------------"
+comment "ReSukiSU will check EVERY hooks in kernel compile process"
+comment "If anything mismatch with document, Kernel compile maybe FAILED!"
+comment "See document if you face any compile failed due to hook check"
+comment "Document: https://resukisu.org/guide/manual-integrate.html"
+comment "--------------------------------------------------------------"
+
+config KSU_MANUAL_HOOK_AUTO_SETUID_HOOK
+	bool "Automatically hook setuid by lsm"
+	depends on KSU_MANUAL_HOOK
+	default y
+	help
+	  THIS OPTION CAN NOT BE USED IN KERNEL_VERSION >= 6.8 DUE TO LSM CHANGES
+	  YOU MUST MANUALLY HOOK SETRESUID
+
+	  If you turn off this option, edit kernel/sys.c.
+	  In __sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)
+	  add a call to ksu_handle_setresuid there.
+
+config KSU_MANUAL_HOOK_AUTO_INITRC_HOOK
+    bool "Automatically hook ksu init rc by lsm"
+	depends on KSU_MANUAL_HOOK
+	default y
+	help
+	  THIS OPTION CAN NOT BE USED IN KERNEL_VERSION >= 6.8 DUE TO LSM CHANGES
+	  YOU MUST MANUALLY HOOK SYS_READ
+
+	  If you turn off this option, edit fs/read_write.c.
+	  in SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
+	  add a call to ksu_handle_sys_read there.
+
+config KSU_MANUAL_HOOK_AUTO_INPUT_HOOK
+    bool "Automatically hook input hook by input_handler"
+       depends on KSU_MANUAL_HOOK
+       default y
+       help
+         If you turn off this option, edit drivers/input/input.c.
+         in void input_event(struct input_dev *dev, unsigned int type, unsigned int code, int value)
+         add a call to ksu_handle_input_handle_event there.
+
+endmenu
+
+menu "KernelSU - SUSFS"
+    depends on KSU_SUSFS
+
+comment "------------------------WARNING-------------------------------"
+comment "ReSukiSU will check EVERY hooks in kernel compile process"
+comment "If anything mismatch with simonpunk's patch, Kernel compile maybe FAILED!"
+comment "See simonpunk's original patch if you face any compile failed due to hook check"
+comment "Repo: https://gitlab.com/simonpunk/susfs4ksu"
+comment "--------------------------------------------------------------"
+config KSU_SUSFS_SUS_PATH
+    bool "Enable to hide suspicious path"
+    depends on KSU_SUSFS
+    default y
+    help
+        - Allow hiding the user-defined path and all its sub-paths from various system calls.
+        - Use "add_sus_path_loop" instead of "add_sus_path" if the user-defined path is frequently modified.
+        - Use with caution, as it may cause performance loss and be vulnerable to side-channel attacks.
+          just disable this feature if it doesn't work for you or you don't need it at all.
+        - Effective only on zygote spawned user app process with uid >= 10000.
+
+config KSU_SUSFS_SUS_MOUNT
+    bool "Enable to hide suspicious mounts"
+    depends on KSU_SUSFS
+    default y
+    help
+        - Automatically assign fake mnt_id and fake mnt_group_id for mounts mounted by ksu process until /sdcard is decrypted, this is to evade from mnt_id/mnt_group_id gap detections.
+        - Allow hiding all sus mounts from /proc/self/[mounts|mountinfo|mountstat] for non-su processes.
+
+config KSU_SUSFS_SUS_KSTAT
+    bool "Enable to spoof suspicious kstat"
+    depends on KSU_SUSFS
+    default y
+    help
+        - Allow spoofing the kstat of user-defined file/directory.
+        - Effective only on zygote spawned user app process with uid >= 10000.
+
+config KSU_SUSFS_SPOOF_UNAME
+    bool "Enable to spoof uname"
+    depends on KSU_SUSFS
+    default y
+    help
+        - Allow spoofing the string returned by uname syscall to user-defined string.
+        - Effective on all processes.
+
+config KSU_SUSFS_ENABLE_LOG
+    bool "Enable logging susfs log to kernel"
+    depends on KSU_SUSFS
+    default y
+    help
+        - Allow logging susfs log to kernel, uncheck it to completely disable all susfs log.
+
+config KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
+    bool "Enable to automatically hide ksu and susfs symbols from /proc/kallsyms"
+    depends on KSU_SUSFS
+    default y
+    help
+        - Automatically hide ksu and susfs symbols from '/proc/kallsyms'.
+        - Effective on all processes.
+
+config KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
+    bool "Enable to spoof /proc/bootconfig (gki) or /proc/cmdline (non-gki)"
+    depends on KSU_SUSFS
+    default y
+    help
+        - Spoof the output of /proc/bootconfig (gki) or /proc/cmdline (non-gki) with a user-defined file.
+        - Effective on all processes.
+
+config KSU_SUSFS_OPEN_REDIRECT
+    bool "Enable to redirect a path to be opened with another path (experimental)"
+    depends on KSU_SUSFS
+    default y
+    help
+        - Allow redirecting a target path to be opened with another user-defined path.
+        - Please be reminded that process with open access to the target and redirected path can be detected.
+        - Effective only on processes with uid < 2000.
+
+config KSU_SUSFS_SUS_MAP
+    bool "Enable hiding some mmapped real files from different proc maps interfaces"
+    depends on KSU_SUSFS
+    default y
+    help
+        - Allow hiding mmapped real files from /proc/<pid>/[maps|smaps|smaps_rollup|map_files|mem|pagemap]
+        - It does NOT support hiding anon memory.
+        - It does NOT hide any inline hooks or PLT hooks caused by the injected library itself.
+        - It may not be able to evade detections by apps that implement a good injection detection.
+        - Effective only on zygote spawned umounted user app process >= 10000.
+
+endmenu
+
+endmenu

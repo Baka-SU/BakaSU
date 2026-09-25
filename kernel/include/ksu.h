@@ -1,0 +1,35 @@
+#ifndef __KSU_H_KSU
+#define __KSU_H_KSU
+
+#include <linux/version.h>
+#include <linux/types.h>
+#include <linux/cred.h>
+#include <linux/workqueue.h>
+
+#define KERNEL_SU_VERSION KSU_VERSION
+#define KERNEL_SU_OPTION 0xDEADBEEF
+
+extern struct cred *ksu_cred;
+extern bool ksu_late_loaded;
+extern bool allow_shell;
+#ifdef MODULE
+extern bool ksu_bundled;
+#endif
+extern bool ksu_no_custom_rc;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_SELINUX_POLICY_STRUCT)
+extern struct selinux_policy *backup_sepolicy;
+#else
+extern struct policydb *backup_policydb;
+extern struct sidtab *backup_sidtab;
+#endif
+
+// kernel su version full strings
+#ifndef KSU_VERSION_FULL
+#define KSU_VERSION_FULL "v3.x-00000000@unknown"
+#endif
+#define KSU_FULL_VERSION_STRING 255
+
+void setup_ksu_cred(void);
+
+#endif

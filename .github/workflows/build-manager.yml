@@ -1,0 +1,405 @@
+name: Build Manager
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-manager.yml'
+      - '.github/workflows/build-lkm.yml'
+      - '.github/workflows/ddk-lkm.yml'
+      - '.github/workflows/ksud.yml'
+      - 'manager/**'
+      - 'kernel/**'
+      - 'userspace/**'
+      - 'scripts/ksubot.py'
+  pull_request:
+  workflow_call:
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      expected_size: ${{ steps.extract.outputs.expected_size }}
+      expected_hash: ${{ steps.extract.outputs.expected_hash }}
+      keystore: ${{ steps.gen.outputs.keystore }}
+      keystore_password: ${{ steps.gen.outputs.keystore_password }}
+      key_password: ${{ steps.gen.outputs.key_password }}
+      spoofed_package_name: ${{ steps.pkg.outputs.spoofed_package_name }}
+    steps:
+      - name: Generate temporary keystore
+        if: github.event_name == 'pull_request'
+        id: gen
+        run: |
+          KEYSTORE_PASSWORD=$(openssl rand -hex 32)
+          KEY_PASSWORD=$(openssl rand -hex 32)
+          echo "keystore_password=$KEYSTORE_PASSWORD" >> $GITHUB_OUTPUT
+          echo "key_password=$KEY_PASSWORD" >> $GITHUB_OUTPUT
+
+          keytool -genkeypair \
+            -alias pr-key \
+            -keyalg RSA -keysize 2048 \
+            -validity 1 \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -keypass "$KEY_PASSWORD" \
+            -dname "CN=KernelSU PR Build" \
+            -storetype JKS \
+            -keystore pr-key.jks
+
+          echo "keystore=$(base64 -w 0 pr-key.jks)" >> $GITHUB_OUTPUT
+
+      - name: Extract certificate hash and size
+        if: github.event_name == 'pull_request'
+        id: extract
+        env:
+          STORE_PASS: ${{ steps.gen.outputs.keystore_password }}
+        run: |
+          # Export DER certificate
+          keytool -exportcert \
+            -alias pr-key \
+            -keystore pr-key.jks \
+            -storepass "$STORE_PASS" \
+            -file pr-cert.der
+
+          # Calculate size in hex
+          SIZE_DEC=$(stat -c%s pr-cert.der)
+          SIZE_HEX=$(printf '0x%04x' "$SIZE_DEC")
+          echo "expected_size=$SIZE_HEX" >> $GITHUB_OUTPUT
+
+          # Calculate SHA256 hash
+          HASH=$(sha256sum pr-cert.der | awk '{print $1}')
+          echo "expected_hash=$HASH" >> $GITHUB_OUTPUT
+
+          echo "Certificate size: $SIZE_HEX ($SIZE_DEC bytes)"
+          echo "Certificate hash: $HASH"
+
+      - name: Generate package name for spoofed manager
+        id: pkg
+        run: |
+          word1=$(tr -dc 'a-z' </dev/urandom | head -c6)
+          word2=$(tr -dc 'a-z' </dev/urandom | head -c6)
+          word3=$(tr -dc 'a-z' </dev/urandom | head -c6)
+          SPOOFED_PACKAGE_NAME="${word1}.${word2}.${word3}"
+          echo "spoofed_package_name=$SPOOFED_PACKAGE_NAME" >> $GITHUB_OUTPUT
+
+  build-lkm:
+    needs: prepare
+    uses: ./.github/workflows/build-lkm.yml
+    with:
+      expected_pr_build_size: ${{ needs.prepare.outputs.expected_size || '' }}
+      expected_pr_build_hash: ${{ needs.prepare.outputs.expected_hash || '' }}
+    secrets: inherit
+
+  build-ksuinit:
+    uses: ./.github/workflows/ksuinit.yml
+
+  build-ksud:
+    needs: [build-lkm, build-ksuinit]
+    strategy:
+      matrix:
+        target:
+          - aarch64-linux-android
+          - x86_64-linux-android
+          - armv7-linux-androideabi
+        os: [ubuntu-latest]
+    uses: ./.github/workflows/ksud.yml
+    with:
+      target: ${{ matrix.target }}
+      os: ${{ matrix.os }}
+
+  build-manager:
+    needs: [prepare]
+    runs-on: ubuntu-latest
+    if: always() && needs.prepare.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - manager_type: "spoofed"
+            build_type: "release"
+
+          - manager_type: "normal"
+            build_type: "release"
+          - manager_type: "normal"
+            build_type: "debug"
+    defaults:
+      run:
+        working-directory: ./manager
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Determine commit for build
+        id: commit
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "COMMIT_SHA=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          else
+            echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine manager variant
+        id: determine
+        run: |
+          if [ "${{ matrix.manager_type }}" == "spoofed" ]; then
+            echo "title=Spoofed-Manager" >> $GITHUB_OUTPUT
+          else
+            echo "title=Manager" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Write key
+        if: ${{ github.event_name == 'workflow_dispatch' || ( github.event_name != 'pull_request') || github.ref_type == 'tag' }}
+        run: |
+          if [ ! -z "${{ secrets.KEYSTORE }}" ]; then
+            {
+              echo KEYSTORE_PASSWORD='${{ secrets.KEYSTORE_PASSWORD }}'
+              echo KEY_ALIAS='${{ secrets.KEY_ALIAS }}'
+              echo KEY_PASSWORD='${{ secrets.KEY_PASSWORD }}'
+              echo KEYSTORE_FILE='key.jks'
+            } >> gradle.properties
+            echo "${{ secrets.KEYSTORE }}" | base64 -d > key.jks
+          fi
+
+      - name: Write PR key
+        if: github.event_name == 'pull_request'
+        env:
+          PR_KEYSTORE: ${{ needs.prepare.outputs.keystore }}
+          PR_KEYSTORE_PASSWORD: ${{ needs.prepare.outputs.keystore_password }}
+          PR_KEY_PASSWORD: ${{ needs.prepare.outputs.key_password }}
+        run: |
+          echo "$PR_KEYSTORE" | base64 -d > pr-key.jks
+          {
+            echo KEYSTORE_PASSWORD="$PR_KEYSTORE_PASSWORD"
+            echo KEY_ALIAS='pr-key'
+            echo KEY_PASSWORD="$PR_KEY_PASSWORD"
+            echo KEYSTORE_FILE='pr-key.jks'
+          } >> gradle.properties
+      
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build APK
+        run: |
+          export BUILD_EXTRA_ARGS=""
+          if [ "${{ matrix.manager_type }}" == "spoofed" ]; then
+            export KSU_PACKAGE_NAME="${{ needs.prepare.outputs.spoofed_package_name }}"
+            export BUILD_EXTRA_ARGS="-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME -PIS_SPOOFED_BUILD=true"
+          elif [ "${{ github.event_name }}" == "pull_request" ]; then
+            export KSU_PACKAGE_NAME="com.resukisu.resukisu.pr${{github.event.pull_request.number}}"
+            export BUILD_EXTRA_ARGS="-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME"
+          elif [ "${{ github.ref_type }}" != "tag" ] && [ "${{ github.ref_name }}" != "main" ]; then
+            export KSU_PACKAGE_NAME="com.resukisu.resukisu.dev"
+            export KSU_NAME="ReSukiSU-DEV"
+            export BUILD_EXTRA_ARGS="-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME -PKSU_NAME=$KSU_NAME"
+          fi
+
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            ./gradlew assemble${{ matrix.build_type }} -Pcommit=${{ steps.commit.outputs.COMMIT_SHA }} -PIS_PR_BUILD=true $BUILD_EXTRA_ARGS
+          else
+            ./gradlew assemble${{ matrix.build_type }} -Pcommit=${{ steps.commit.outputs.COMMIT_SHA }} $BUILD_EXTRA_ARGS
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }}
+          path: |
+            manager/app/build/outputs/apk/release/*.apk
+            manager/app/build/outputs/apk/debug/*.apk
+
+      - name: Upload mappings
+        uses: actions/upload-artifact@v7
+        with:
+          name: "${{ steps.determine.outputs.title }}-mappings"
+          path: "manager/app/build/outputs/mapping/release/"
+          if-no-files-found: ignore
+
+  repack-manager:
+    if: always() && needs.build-manager.result == 'success' && needs.build-ksud.result == 'success'
+    needs: [build-manager, build-ksud, prepare]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - manager_type: "spoofed"
+            build_type: "release"
+          - manager_type: "normal"
+            build_type: "release"
+          - manager_type: "normal"
+            build_type: "debug"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Determine manager variant
+        id: determine
+        run: |
+          if [ "${{ matrix.manager_type }}" == "spoofed" ]; then
+            echo "title=Spoofed-Manager" >> $GITHUB_OUTPUT
+          else
+            echo "title=Manager" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download artifact
+        uses: actions/download-artifact@v8
+        with:
+            name: ${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }}
+            path: artifacts/${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }}
+      
+      - name: Download arm64 ksud
+        uses: actions/download-artifact@v8
+        with:
+          name: ksud-aarch64-linux-android
+          path: artifacts/ksud-aarch64-linux-android
+
+      - name: Download x86_64 ksud
+        uses: actions/download-artifact@v8
+        with:
+          name: ksud-x86_64-linux-android
+          path: artifacts/ksud-x86_64-linux-android
+
+      - name: Download arm ksud
+        uses: actions/download-artifact@v8
+        with:
+          name: ksud-armv7-linux-androideabi
+          path: artifacts/ksud-armv7-linux-androideabi
+
+      - name: Place manager apk and ksud artifacts
+        run: |
+          mkdir -p manager/app/build/outputs/apk/${{ matrix.build_type }}
+          APKS=$(find artifacts/${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }} -type f -name "*.apk")
+          APKS=$(echo "$APKS" | tr '\n' ' ')
+          test -n "$APKS"
+          cp -f $APKS manager/app/build/outputs/apk/${{ matrix.build_type }}/
+
+          mkdir -p target/aarch64-linux-android/release
+          mkdir -p target/armv7-linux-androideabi/release
+          mkdir -p target/x86_64-linux-android/release
+          ARM64_KSUD=$(find artifacts/ksud-aarch64-linux-android -type f -name ksud | head -n 1)
+          ARMV7_KSUD=$(find artifacts/ksud-armv7-linux-androideabi -type f -name ksud | head -n 1)
+          X86_64_KSUD=$(find artifacts/ksud-x86_64-linux-android -type f -name ksud | head -n 1)
+          test -n "$ARM64_KSUD"
+          test -n "$ARMV7_KSUD"
+          test -n "$X86_64_KSUD"
+          cp -f "$ARM64_KSUD" target/aarch64-linux-android/release/ksud
+          cp -f "$ARMV7_KSUD" target/armv7-linux-androideabi/release/ksud
+          cp -f "$X86_64_KSUD" target/x86_64-linux-android/release/ksud
+
+      - name: Prepare signing inputs
+        env:
+          PR_KEYSTORE: ${{ needs.prepare.outputs.keystore }}
+          PR_KEYSTORE_PASSWORD: ${{ needs.prepare.outputs.keystore_password }}
+          PR_KEY_PASSWORD: ${{ needs.prepare.outputs.key_password }}
+          PROD_KEYSTORE: ${{ secrets.KEYSTORE }}
+          PROD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          PROD_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          PROD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "$PR_KEYSTORE" | base64 -d > pr-key.jks
+            echo "SIGN_KEYSTORE_FILE=pr-key.jks" >> $GITHUB_ENV
+            echo "SIGN_KEY_ALIAS=pr-key" >> $GITHUB_ENV
+            echo "SIGN_KEYSTORE_PASSWORD=$PR_KEYSTORE_PASSWORD" >> $GITHUB_ENV
+            echo "SIGN_KEY_PASSWORD=$PR_KEY_PASSWORD" >> $GITHUB_ENV
+          else
+            test -n "$PROD_KEYSTORE"
+            echo "$PROD_KEYSTORE" | base64 -d > key.jks
+            echo "SIGN_KEYSTORE_FILE=key.jks" >> $GITHUB_ENV
+            echo "SIGN_KEY_ALIAS=$PROD_KEY_ALIAS" >> $GITHUB_ENV
+            echo "SIGN_KEYSTORE_PASSWORD=$PROD_KEYSTORE_PASSWORD" >> $GITHUB_ENV
+            echo "SIGN_KEY_PASSWORD=$PROD_KEY_PASSWORD" >> $GITHUB_ENV
+          fi
+
+      - name: Repack and resign
+        run: |
+          python3 repack_apk_multi.py repack \
+            -b ${{ matrix.build_type }} \
+            -t release \
+            -a arm64-v8a \
+            -a armeabi-v7a \
+            -a x86_64 \
+            -K "$SIGN_KEYSTORE_FILE" \
+            -A "$SIGN_KEY_ALIAS" \
+            -P "$SIGN_KEYSTORE_PASSWORD" \
+            -S "$SIGN_KEY_PASSWORD" \
+            --strip
+
+      - name: Delete gradle build
+        uses: GeekyEggo/delete-artifact@v6
+        with:
+          name: ${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }}
+        
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.determine.outputs.title }}-${{ matrix.build_type }}
+          path: dist/*.apk
+
+  upload-telegram:
+    needs: repack-manager
+    if: github.event_name != 'pull_request' && github.event_name != 'workflow_call'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        manager_type: [ "spoofed", "normal" ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup need_upload
+        id: need_upload
+        run: |
+          if [ ! -z "${{ secrets.BOT_TOKEN }}" ]; then
+            echo "UPLOAD=true" >> $GITHUB_OUTPUT
+          else
+            echo "UPLOAD=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine manager variant
+        id: determine
+        run: |
+          if [ "${{ matrix.manager_type }}" == "spoofed" ]; then
+            echo "title=Spoofed-Manager" >> $GITHUB_OUTPUT
+            echo "topicid=${{ vars.MESSAGE_SPOOFED_THREAD_ID }}" >> $GITHUB_OUTPUT
+          else
+            echo "title=Manager" >> $GITHUB_OUTPUT
+            echo "topicid=${{ vars.MESSAGE_THREAD_ID }}" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ "${{ github.ref }}" != "refs/heads/main" && "${{ github.ref_type }}" != "tag" ]]; then
+            echo "topicid=${{ vars.MESSAGE_DEVELOPING_MANAGER_THREAD_ID }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download Release artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ steps.determine.outputs.title }}-release
+          path: ./apk/release
+
+      - name: Upload to Telegram
+        if: steps.need_upload.outputs.UPLOAD == 'true'
+        env:
+          CHAT_ID: ${{ vars.CHAT_ID }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          MESSAGE_THREAD_ID: ${{ steps.determine.outputs.topicid }}
+          DEVELOPING_THREAD_ID: ${{ vars.MESSAGE_DEVELOPING_MANAGER_THREAD_ID }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TITLE: ${{ steps.determine.outputs.title }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          pip3 install python-telegram-bot
+          export VERSION=$(git rev-list --count HEAD)
+          APK_RELEASE=apk/release/*.apk
+          python3 $GITHUB_WORKSPACE/scripts/ksubot.py $APK_RELEASE
