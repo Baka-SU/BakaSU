@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Scaffold
@@ -32,6 +31,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.resukisu.resukisu.ui.activity.component.NavigationBar
+import com.resukisu.resukisu.ui.component.HorizontalPagerWithInteraction
 import com.resukisu.resukisu.ui.rememberMaterial3BlurBackdrop
 import com.resukisu.resukisu.ui.screen.BottomBarDestination
 import com.resukisu.resukisu.ui.theme.ThemeConfig
@@ -133,7 +133,8 @@ fun MainScreen(
         LocalSelectedPage provides uiSelectedPage
     ) {
         val content = @Composable { paddingBottom: Dp ->
-            HorizontalPager(
+            HorizontalPagerWithInteraction(
+                enableGestureOverride = false,
                 modifier = Modifier
                     .fillMaxSize()
                     .pagerGestureOverride(
@@ -157,7 +158,7 @@ fun MainScreen(
                     snapAnimationSpec = PagerNavigationSpringSpec,
                 ),
             ) { pageIndex ->
-                if (pages.isEmpty()) return@HorizontalPager
+                if (pages.isEmpty()) return@HorizontalPagerWithInteraction
 
                 val snackBarHostState = remember { SnackbarHostState() }
                 CompositionLocalProvider(
