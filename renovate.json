@@ -2,5 +2,33 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "matchManagers":["maven","gradle"],
+      "sourceDirectory": "./manager",
+      "groupName": "maven-dependencies",
+      "labels": ["manager","java"]
+    },
+    {
+      "matchManagers":["cargo"],
+      "sourceDirectory": "./userspace/ksud",
+      "groupName": "rust-dependencies",
+      "labels": ["rust"]
+    },
+        {
+      "matchManagers":["cargo"],
+      "sourceDirectory": "./userspace/ksuinit",
+      "groupName": "rust-dependencies",
+      "labels": ["rust"]
+    },
+    {
+      "matchCategories":["ci"],
+      "matchDepTypes":["action"],
+      "matchDatasources":["github-tags"],
+      "matchUpdateTypes":"major",
+      "groupName": "action-dependencies",
+      "labels": ["github-actions"]
+    }
   ]
 }
