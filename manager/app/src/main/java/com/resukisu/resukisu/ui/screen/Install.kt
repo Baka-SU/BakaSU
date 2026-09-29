@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.AutoFixHigh
@@ -66,6 +65,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.LkmSelection
 import com.resukisu.resukisu.ui.component.DialogHandle
+import com.resukisu.resukisu.ui.component.HorizontalPagerWithInteraction
 import com.resukisu.resukisu.ui.component.rememberConfirmDialog
 import com.resukisu.resukisu.ui.component.rememberCustomDialog
 import com.resukisu.resukisu.ui.component.settings.AppBackButton
@@ -136,7 +136,7 @@ fun InstallScreen(
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface
     ) { innerPadding ->
-        HorizontalPager(
+        HorizontalPagerWithInteraction(
             state = pagerState,
             modifier = Modifier
                 .fillMaxSize()

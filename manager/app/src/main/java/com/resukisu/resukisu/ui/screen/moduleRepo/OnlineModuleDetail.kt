@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -86,6 +85,7 @@ import com.resukisu.resukisu.domain.usecase.ObserveDownloadUseCase
 import com.resukisu.resukisu.ui.activity.PermissionRequestInterface
 import com.resukisu.resukisu.ui.component.ConfirmResult
 import com.resukisu.resukisu.ui.component.GithubMarkdown
+import com.resukisu.resukisu.ui.component.HorizontalPagerWithInteraction
 import com.resukisu.resukisu.ui.component.SwipeableSnackbarHost
 import com.resukisu.resukisu.ui.component.rememberConfirmDialog
 import com.resukisu.resukisu.ui.component.settings.AppBackButton
@@ -246,7 +246,7 @@ private fun OnlineModuleDetailContent(module: CatalogModule) {
                 .blurSource()
         ) {
 
-            HorizontalPager(
+            HorizontalPagerWithInteraction(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize()
             ) { page ->
