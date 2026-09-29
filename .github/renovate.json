@@ -4,6 +4,7 @@
     "config:recommended"
   ],
   "ignorePresets": ["workarounds:javaLTSVersions"],
+  "ignoreDeps": ["java-jdk","org.lsposed.libcxx:libcxx"],
   "timezone": "Asia/Shanghai",
   "addLabels": ["dependencies"],
   "commitMessagePrefix": "deps:",
@@ -13,19 +14,19 @@
   "packageRules": [
     {
       "matchManagers":["maven","gradle"],
-      "sourceDirectory": "./manager",
+      "matchFileNames": ["manager/**"],
       "groupName": "maven group in manager",
       "labels": ["manager","java"]
     },
     {
       "matchManagers":["cargo"],
-      "sourceDirectory": "./userspace/ksud",
+      "matchFileNames": ["userspace/ksud/**"],
       "groupName": "cargo group in ksud",
       "labels": ["rust","ksud"]
     },
         {
       "matchManagers":["cargo"],
-      "sourceDirectory": "./userspace/ksuinit",
+      "matchFileNames": ["userspace/ksuinit/**"],
       "groupName": "cargo group in ksuinit",
       "labels": ["rust","ksuinit"]
     },
