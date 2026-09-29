@@ -3,23 +3,30 @@
   "extends": [
     "config:recommended"
   ],
+  "ignorePresets": ["workarounds:javaLTSVersions"],
+  "timezone": "Asia/Shanghai",
+  "addLabels": ["dependencies"],
+  "commitMessagePrefix": "deps:",
+  "schedule": [
+	"on Monday"
+  ],
   "packageRules": [
     {
       "matchManagers":["maven","gradle"],
       "sourceDirectory": "./manager",
-      "groupName": "maven-dependencies",
+      "groupName": "maven-dependencies in manager",
       "labels": ["manager","java"]
     },
     {
       "matchManagers":["cargo"],
       "sourceDirectory": "./userspace/ksud",
-      "groupName": "rust-dependencies",
+      "groupName": "rust-dependencies in ksud",
       "labels": ["rust"]
     },
         {
       "matchManagers":["cargo"],
       "sourceDirectory": "./userspace/ksuinit",
-      "groupName": "rust-dependencies",
+      "groupName": "rust-dependencies in ksuinit",
       "labels": ["rust"]
     },
     {
