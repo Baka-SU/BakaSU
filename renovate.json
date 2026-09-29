@@ -14,20 +14,20 @@
     {
       "matchManagers":["maven","gradle"],
       "sourceDirectory": "./manager",
-      "groupName": "maven-dependencies in manager",
+      "groupName": "maven group in manager",
       "labels": ["manager","java"]
     },
     {
       "matchManagers":["cargo"],
       "sourceDirectory": "./userspace/ksud",
-      "groupName": "rust-dependencies in ksud",
-      "labels": ["rust"]
+      "groupName": "cargo group in ksud",
+      "labels": ["rust","ksud"]
     },
         {
       "matchManagers":["cargo"],
       "sourceDirectory": "./userspace/ksuinit",
-      "groupName": "rust-dependencies in ksuinit",
-      "labels": ["rust"]
+      "groupName": "cargo group in ksuinit",
+      "labels": ["rust","ksuinit"]
     },
     {
       "matchCategories":["ci"],
