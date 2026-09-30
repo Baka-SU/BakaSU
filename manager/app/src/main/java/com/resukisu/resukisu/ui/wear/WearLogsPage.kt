@@ -8,6 +8,12 @@ import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.ArrowBack
 import androidx.compose.material.icons.twotone.PowerSettingsNew
+import androidx.compose.material.icons.twotone.Search
+import androidx.compose.material.icons.twotone.Refresh
+import androidx.compose.material.icons.twotone.Delete
+import com.resukisu.resukisu.ui.component.wear.rememberWearConfirmDialog
+import com.resukisu.resukisu.ui.component.wear.WearSettingsSwitchWidget
+import com.resukisu.resukisu.domain.model.SulogEventFilter
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -39,12 +45,21 @@ internal fun WearLogsPage(
     onBack: () -> Unit,
     onSetEnabled: (Boolean) -> Unit,
     onSelectFile: (String) -> Unit,
+    onSearch: () -> Unit,
+    onRefresh: () -> Unit,
+    onClean: () -> Unit,
+    onToggleFilter: (SulogEventFilter) -> Unit,
+    error: String? = null,
 ) {
-    WearList(isLoading = state.isLoading) { spec ->
+    val cleanDialog = rememberWearConfirmDialog(stringResource(R.string.sulog_clean_title),
+        stringResource(R.string.confirm_delete), onClean)
+    WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
         item { WearPageHeader(spec, Icons.AutoMirrored.TwoTone.Article, stringResource(R.string.sulog)) }
-        item {
-            WearActionButton(spec, Icons.AutoMirrored.TwoTone.ArrowBack, stringResource(R.string.wear_back), onBack)
-        }
+        item { WearActionButton(spec, Icons.TwoTone.Search, stringResource(R.string.sulog_search_placeholder), onSearch) }
+        item { WearActionButton(spec, Icons.TwoTone.Refresh, stringResource(R.string.wear_refresh), onRefresh, !state.isRefreshing) }
+        item { WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.sulog_clean_title), cleanDialog::show,
+            state.selectedFilePath != null && !state.isRefreshing) }
+        if (error != null) item { WearScaledItem(spec) { Text(error) } }
         if (!state.errorMessage.isNullOrBlank()) {
             item { WearScaledItem(spec) { Text(state.errorMessage) } }
         }
@@ -54,9 +69,19 @@ internal fun WearLogsPage(
                 Icons.TwoTone.PowerSettingsNew,
                 stringResource(if (state.isSulogEnabled) R.string.wear_disable_sulog else R.string.wear_enable_sulog),
                 onClick = { onSetEnabled(!state.isSulogEnabled) },
-                enabled = !state.isLoading,
+                enabled = !state.isLoading && state.sulogStatus == "supported",
             )
         }
+        if (state.sulogStatus != "supported") item { WearScaledItem(spec) { Text(stringResource(R.string.sulog_unsupported_title)) } }
+        item { WearScaledItem(spec) { Text(stringResource(R.string.sulog_filter_title)) } }
+        SulogEventFilter.entries.forEach { filter -> item {
+            WearSettingsSwitchWidget(spec, stringResource(when (filter) {
+                SulogEventFilter.RootExecve -> R.string.sulog_filter_root_execve
+                SulogEventFilter.SuCompat -> R.string.sulog_filter_sucompat
+                SulogEventFilter.IoctlGrantRoot -> R.string.sulog_filter_ioctl_grant_root
+                SulogEventFilter.DaemonEvent -> R.string.sulog_filter_daemon_restart
+            }), filter in state.selectedFilters, { onToggleFilter(filter) })
+        } }
         when {
             state.isLoading -> Unit
             !state.isSulogEnabled -> {
