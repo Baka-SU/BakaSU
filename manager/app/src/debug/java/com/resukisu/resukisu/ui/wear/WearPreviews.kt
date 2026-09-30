@@ -64,6 +64,8 @@ private fun WearHomePreview() {
                     isInitialDataLoaded = true,
                 ),
                 error = null,
+                onBack = {},
+                onRebootPanel = {},
             )
         }
     }
@@ -119,6 +121,8 @@ private fun WearModuleStatesPreview(
                 onRefresh = {},
                 onModuleClick = {},
                 onInstallClick = {},
+                onSearch = {},
+                onSort = {},
             )
         }
     }

@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="wear_root_available">Root 可用</string>
-    <string name="wear_root_working">運作中</string>
-    <string name="wear_root_unavailable">無 Root</string>
-    <string name="wear_kernel_su">KernelSU</string>
-    <string name="wear_android">Android</string>
     <string name="wear_allowed">已允許</string>
     <string name="wear_denied">已拒絕</string>
     <string name="wear_enabled">已啟用</string>
@@ -15,7 +10,6 @@
     <string name="wear_disable_sulog">關閉 SU 日誌</string>
     <string name="wear_refresh">重新整理</string>
     <string name="wear_install_module">安裝模組</string>
-    <string name="wear_installing_module">正在安裝模組</string>
     <string name="wear_module_file_unreadable">無法讀取所選模組 ZIP</string>
     <string name="wear_file_picker_unavailable">檔案選擇器不可用</string>
     <string name="wear_back">返回</string>
@@ -25,6 +19,28 @@
     <string name="wear_advanced">進階</string>
     <string name="wear_no_apps">找不到應用程式</string>
     <string name="wear_manager_updates">應用程式更新</string>
-    <string name="wear_module_updates">模組更新</string>
-    <string name="wear_soft_restart">軟重新啟動</string>
+    <string name="scroll_to_top">回到頂部</string>
+    <string name="wear_display">顯示</string>
+    <string name="wear_link_mode">開啟連結</string>
+    <string name="wear_picker_mode">檔案選擇器</string>
+    <string name="wear_auto">自動</string>
+    <string name="wear_builtin_picker">內建選擇器</string>
+    <string name="wear_system_picker">系統選擇器</string>
+    <string name="wear_browser">預設瀏覽器</string>
+    <string name="wear_phone">在手機上開啟</string>
+    <string name="wear_phone_sent">已向手機傳送開啟要求</string>
+    <string name="wear_directory_unavailable">無法讀取此目錄，請檢查儲存空間存取權限。</string>
+    <string name="wear_file_exists">已存在同名檔案。</string>
+    <string name="wear_parent_directory">上層目錄</string>
+    <string name="wear_invalid_color">請輸入 #RRGGBB 格式的顏色。</string>
+    <string name="wear_file_name">檔案名稱</string>
+    <string name="wear_remove_background">移除背景</string>
+    <string name="wear_link_unsupported">無法開啟此類型的連結。</string>
+    <string name="wear_link_webview_unavailable">此手錶沒有可用的系統 WebView。</string>
+    <string name="wear_link_browser_unavailable">此手錶上沒有可以開啟此連結的瀏覽器。</string>
+    <string name="wear_link_phone_unavailable">沒有已連線的手機可以開啟此連結。</string>
+    <string name="wear_link_phone_failed">無法將連結傳送至手機。</string>
+    <string name="wear_webui_local_only">模組 WebUI 依賴手錶本機的模組檔案與手錶內建的 WebView，瀏覽器或手機無法開啟。</string>
+    <string name="wear_custom_color">自訂顏色</string>
+    <string name="wear_directory_empty">此資料夾中沒有相符的檔案</string>
 </resources>
