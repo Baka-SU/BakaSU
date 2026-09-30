@@ -465,10 +465,25 @@ static inline struct file *ksu_filp_open_nonotify(const char *path, int flags)
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0) || defined(KSU_COMPAT_HAS_MODERN_DENTRY_OPEN)
     f = dentry_open(&p, flags | __FMODE_NONOTIFY, current_cred());
 #else
+    // clang-format off
+
+    // Old dentry_open consumes dentry / mnt!
+    // We have 2 choice
+    // 1. path_get or dget and mntget before call dentry_open
+    // 2. don't path_put when it happen
+    //
+    // I choose #2, because it can optimize 1 dentry / mnt get and put
+    // Because stupid compiler's dead code warning, we can't directly return f when this case end
+    // define DENTRY_OPEN_COSUME_CONTEXT and ifdef for path_put to let them shut up
+    #define DENTRY_OPEN_CONSUME_CONTEXT
+    // clang-format on
     f = dentry_open(p.dentry, p.mnt, flags | __FMODE_NONOTIFY, current_cred());
+    // return f;
 #endif
 
+#ifndef DENTRY_OPEN_CONSUME_CONTEXT
     path_put(&p);
+#endif
     return f;
 }
 
