@@ -35,8 +35,8 @@
       "matchDepTypes":["action"],
       "matchDatasources":["github-tags"],
       "matchUpdateTypes":"major",
-      "groupName": "action-dependencies",
-      "labels": ["github-actions"]
+      "groupName": "action group",
+      "labels": ["github_actions"]
     }
   ]
 }
