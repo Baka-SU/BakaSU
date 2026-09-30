@@ -555,4 +555,10 @@
     <string name="install_upload_lkm_file_summary">Egyéni .ko fájl használata a beépített LKM helyett</string>
     <string name="install_force_backup_summary">Győződj meg arról, hogy a kiválasztott boot képfájl gyári</string>
     <string name="install_force_backup">Biztonsági mentés mint gyári képfálj</string>
+    <string name="settings_pager_gesture_native">Alapértelmezett</string>
+    <string name="settings_pager_gesture_cross_axis">Kereszttengelyes</string>
+    <string name="settings_pager_gesture_ios_like">iOS stílusú</string>
+    <string name="settings_enable_swipe_dismiss">Visszacsúsztató navigációs mozdulat</string>
+    <string name="settings_enable_swipe_dismiss_summary">Csúsztasd az ujjad a képernyő szélétől befelé, hogy visszatérj az előző oldalra.</string>
+    <string name="settings_pager_gesture_mode">Horizontális lapozás</string>
 </resources>
