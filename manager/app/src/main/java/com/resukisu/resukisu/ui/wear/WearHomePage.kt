@@ -1,157 +1,166 @@
 package com.resukisu.resukisu.ui.wear
 
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Android
+import androidx.compose.material.icons.twotone.Block
+import androidx.compose.material.icons.twotone.DeveloperBoard
+import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Extension
+import androidx.compose.material.icons.twotone.FilterList
 import androidx.compose.material.icons.twotone.Group
-import androidx.compose.material.icons.twotone.Home
+import androidx.compose.material.icons.twotone.Info
 import androidx.compose.material.icons.twotone.Memory
 import androidx.compose.material.icons.twotone.Security
+import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.material.icons.twotone.Smartphone
-import androidx.compose.material.icons.twotone.DeveloperBoard
 import androidx.compose.material.icons.twotone.Tag
-import androidx.compose.material.icons.twotone.Info
+import androidx.compose.material.icons.twotone.TaskAlt
+import androidx.compose.material.icons.twotone.Tune
+import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material3.Icon
-import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.Text
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import com.resukisu.resukisu.BuildConfig
+import com.resukisu.resukisu.Natives.KernelPatchImplementation
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.HomeDashboardState
-import com.resukisu.resukisu.ui.component.wear.WearIconText
-import com.resukisu.resukisu.ui.component.wear.WearInfoCard
+import com.resukisu.resukisu.ui.component.wear.WearChip
+import com.resukisu.resukisu.ui.component.wear.WearChipEmphasis
 import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearScaledItem
-import com.resukisu.resukisu.ui.component.wear.WearValueRow
-import com.resukisu.resukisu.ui.component.wear.WearDetailField
 import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
+import com.resukisu.resukisu.ui.component.wear.WearStatusItem
+import com.resukisu.resukisu.ui.component.wear.WearStatusTone
 
 @Composable
 internal fun WearHomePage(
     state: HomeDashboardState,
     error: String?,
+    onBack: () -> Unit,
+    onRebootPanel: () -> Unit,
+    listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
+    onInstall: (() -> Unit)? = null,
 ) {
     val unknown = stringResource(R.string.unknown)
-    val rootStatus = if (state.systemStatus.isRootAvailable) {
-        stringResource(R.string.wear_root_working)
-    } else {
-        stringResource(R.string.wear_root_unavailable)
-    }
-    val workingMode = when (state.systemStatus.lkmMode) {
-        true -> stringResource(R.string.wear_mode_lkm)
-        false -> stringResource(R.string.wear_mode_gki)
-        null -> null
-    }
-    WearList(isLoading = !state.isInitialDataLoaded) { spec ->
-        item { WearPageHeader(spec, Icons.TwoTone.Home, stringResource(R.string.home)) }
+    val status = state.systemStatus
+    val info = state.systemInfo
+    WearList(isLoading = !state.isInitialDataLoaded && error == null,
+        onBack = onBack, onOpenPanel = onRebootPanel,
+        panelLabel = stringResource(R.string.reboot), listState = listState,
+    ) { spec ->
+        item { WearPageHeader(spec, null, stringResource(R.string.home)) }
         if (state.isInitialDataLoaded) {
+            // Build and compatibility notices are yellow warnings; failing to obtain root is a red error.
+            val warnings = buildList {
+                if (status.isManager && !status.isFullFeatured) add(
+                    if ((status.kernelUAPIVersion ?: 1) > status.managerUAPIVersion) R.string.require_manager_version
+                    else if (status.lkmMode == true) R.string.require_kernel_version else R.string.require_kernel_version_gki)
+                if (BuildConfig.DEBUG) add(R.string.debug_version_notice)
+                if (BuildConfig.IS_PR_BUILD || status.isPrBuild) add(R.string.home_pr_build_warning)
+                if (status.kernelPatchImplementation == KernelPatchImplementation.OFFICIAL) add(R.string.conflict_with_apatch)
+            }
+            // Notices are paragraphs, so they stay full-text cards instead of truncated chip labels.
+            if (status.ksuVersion != null && !status.isRootAvailable) item {
+                WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.grant_root_failed), tone = WearStatusTone.ERROR)
+            }
+            warnings.forEach { id ->
+                item { WearStatusItem(spec, Icons.TwoTone.Warning, stringResource(id), tone = WearStatusTone.WARNING) }
+            }
+            if (!status.isOfficialSignature) item {
+                WearStatusItem(spec, Icons.TwoTone.Warning,
+                    stringResource(R.string.unofficial_version_notice, stringResource(R.string.app_name)),
+                    tone = WearStatusTone.WARNING)
+            }
+            // The running state is the screen's only high-emphasis chip.
             item {
-                WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.TwoTone.Security, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(rootStatus, style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                        if (state.systemStatus.isRootAvailable && workingMode != null) {
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                workingMode,
-                                modifier = Modifier.background(
-                                    MaterialTheme.colorScheme.primary,
-                                    RoundedCornerShape(6.dp),
-                                ).padding(horizontal = 4.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                    Text(
-                        if (state.systemStatus.isRootAvailable) {
-                            stringResource(
-                                R.string.home_short_info,
-                                state.systemInfo.superuserCount,
-                                state.systemInfo.moduleCount,
-                            )
-                        } else {
-                            stringResource(R.string.home_unsupported)
+                val working = status.ksuVersion != null
+                WearChip(
+                    spec,
+                    label = stringResource(when {
+                        working && status.isSafeMode -> R.string.safe_mode
+                        working -> R.string.home_working
+                        status.kernelVersion.isGKI() -> R.string.home_not_installed
+                        else -> R.string.home_unsupported
+                    }),
+                    secondaryLabel = listOfNotNull(
+                        stringResource(when {
+                            working -> R.string.home_short_info
+                            status.kernelVersion.isGKI() -> R.string.home_click_to_install
+                            else -> R.string.home_unsupported_reason
+                        }, info.superuserCount, info.moduleCount),
+                        // Mode and jailbreak share one line so the clickable chip stays within three lines.
+                        if (!working) null
+                        else stringResource(if (status.lkmMode == true) R.string.wear_mode_lkm else R.string.wear_mode_builtin).let { mode ->
+                            if (status.isLateLoadMode) stringResource(R.string.wear_joined, mode, stringResource(R.string.jailbreak_mode))
+                            else mode
                         },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                    ).joinToString("\n"),
+                    icon = when {
+                        working -> Icons.TwoTone.TaskAlt
+                        status.kernelVersion.isGKI() -> Icons.TwoTone.Warning
+                        else -> Icons.TwoTone.Block
+                    },
+                    // Not installed or unsupported is an error state, shown in red.
+                    emphasis = if (working) WearChipEmphasis.HIGH else WearChipEmphasis.ERROR,
+                    // As on the phone, the status opens installation when root or a GKI kernel allows it.
+                    onClick = onInstall.takeIf { status.isRootAvailable || status.kernelVersion.isGKI() },
+                )
             }
             item { WearSectionHeader(spec, Icons.TwoTone.Info, stringResource(R.string.home_version_info)) }
+            val fields = buildList {
+                add(Triple(Icons.TwoTone.Smartphone, R.string.home_device_model, info.deviceModel))
+                add(Triple(Icons.TwoTone.DeveloperBoard, R.string.home_kernel, info.kernelRelease))
+                if (!state.isSimpleMode) add(Triple(Icons.TwoTone.Android, R.string.home_android_version, info.androidVersion))
+                if (status.isManager) add(Triple(Icons.TwoTone.Memory, R.string.home_kernel_version, status.ksuFullVersion.orEmpty()))
+                add(Triple(Icons.TwoTone.Tag, R.string.home_manager_version,
+                    info.managerVersion.let { (name, code, build) -> "$name ($code/$build)" }))
+                if (!state.isSimpleMode && info.susfsEnabled && info.susfsVersion.isNotEmpty())
+                    add(Triple(Icons.TwoTone.Settings, R.string.home_susfs_version, info.susfsVersion))
+            }
+            fields.forEach { (icon, label, value) -> item {
+                WearChip(spec, stringResource(label), secondaryLabel = value.ifBlank { unknown }, icon = icon)
+            } }
+            item { WearSectionHeader(spec, Icons.TwoTone.Security, stringResource(R.string.home_status_info)) }
             item {
-                WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
-                    WearDetailField(
-                        Icons.TwoTone.Smartphone,
-                        stringResource(R.string.home_device_model),
-                        state.systemInfo.deviceModel.ifBlank { unknown },
-                    )
-                    WearDetailField(
-                        Icons.TwoTone.Android,
-                        stringResource(R.string.home_android_version),
-                        state.systemInfo.androidVersion.ifBlank { unknown },
-                    )
-                }
+                WearChip(spec, stringResource(R.string.home_selinux_status),
+                    secondaryLabel = info.selinuxStatus.ifBlank { unknown }, icon = Icons.TwoTone.Security)
             }
             item {
-                WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
-                    WearDetailField(
-                        Icons.TwoTone.DeveloperBoard,
-                        stringResource(R.string.home_kernel),
-                        state.systemInfo.kernelRelease.ifBlank { unknown },
-                    )
-                    WearDetailField(
-                        Icons.TwoTone.Memory,
-                        stringResource(R.string.home_kernel_version),
-                        state.systemStatus.ksuFullVersion ?: unknown,
-                    )
-                }
+                WearChip(spec, stringResource(R.string.home_seccomp_status), secondaryLabel = stringResource(when (info.seccompStatus) {
+                    -1 -> R.string.seccomp_status_not_supported
+                    0 -> R.string.seccomp_status_disabled
+                    1 -> R.string.seccomp_status_strict
+                    2 -> R.string.seccomp_status_filter
+                    else -> R.string.seccomp_status_unknown
+                }), icon = Icons.TwoTone.FilterList)
             }
-            item {
-                WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
-                    WearDetailField(
-                        Icons.TwoTone.Tag,
-                        stringResource(R.string.home_manager_version),
-                        state.systemInfo.managerVersion.let { (name, code, build) ->
-                            "${name.ifBlank { unknown }} ($code/$build)"
-                        },
-                    )
-                }
+            if (!state.isSimpleMode && info.managersList != null) item {
+                val managers = info.managersList.managers.groupBy { it.signatureIndex }.toSortedMap().map { (index, managers) ->
+                    val signature = when (index) {
+                        0 -> stringResource(R.string.app_name)
+                        255 -> stringResource(R.string.dynamic_managerature)
+                        else -> if (index >= 1) stringResource(R.string.signature_index, index)
+                            else stringResource(R.string.unknown_signature)
+                    }
+                    managers.joinToString(", ") { it.uid.toString() } + " ($signature)"
+                }.joinToString("\n")
+                WearChip(spec, stringResource(R.string.multi_manager_list),
+                    secondaryLabel = managers.ifEmpty { stringResource(R.string.no_active_manager) }, icon = Icons.TwoTone.Group)
             }
-            item {
-                WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
-                    WearValueRow(
-                        Icons.TwoTone.Group,
-                        stringResource(R.string.superuser),
-                        state.systemInfo.superuserCount.toString(),
-                    )
-                    WearValueRow(
-                        Icons.TwoTone.Extension,
-                        stringResource(R.string.module),
-                        state.systemInfo.moduleCount.toString(),
-                    )
+            if (!state.isSimpleMode) {
+                val extras = buildList {
+                    if (status.isFullFeatured) add(Triple(Icons.TwoTone.Tune, R.string.home_hook_type, status.hookType))
+                    if (info.zygiskImplement.isNotEmpty() && info.zygiskImplement != "None")
+                        add(Triple(Icons.TwoTone.Extension, R.string.home_zygisk_implement, info.zygiskImplement))
+                    if (info.metaModuleImplement.isNotEmpty() && info.metaModuleImplement != "None")
+                        add(Triple(Icons.TwoTone.Extension, R.string.home_meta_module_implement, info.metaModuleImplement))
                 }
+                extras.forEach { (icon, label, value) -> item {
+                    WearChip(spec, stringResource(label), secondaryLabel = value, icon = icon)
+                } }
             }
         }
-        if (!error.isNullOrBlank()) item {
-            WearScaledItem(spec) { Text(error, maxLines = 2, overflow = TextOverflow.Ellipsis) }
-        }
+        if (!error.isNullOrBlank()) item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR) }
     }
 }

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="wear_mode_builtin" translatable="false">Built-in</string>
+    <string name="wear_uid" translatable="false">UID</string>
+    <string name="wear_gid" translatable="false">GID</string>
+    <string name="wear_webui" translatable="false">WebUI</string>
+    <string name="scroll_to_top">Back to top</string>
+    <string name="wear_display">Display</string>
+    <string name="wear_link_mode">Open links</string>
+    <string name="wear_picker_mode">File picker</string>
+    <string name="wear_auto">Automatic</string>
+    <string name="wear_builtin_picker">Built-in picker</string>
+    <string name="wear_system_picker">System picker</string>
+    <string name="wear_browser">Default browser</string>
+    <string name="wear_phone">Open on phone</string>
+    <string name="wear_phone_sent">Open request sent to phone</string>
+    <string name="wear_directory_unavailable">Cannot read this directory. Check storage access.</string>
+    <string name="wear_file_exists">A file with this name already exists.</string>
+    <string name="wear_parent_directory">Parent directory</string>
+    <string name="wear_invalid_color">Enter a colour as #RRGGBB.</string>
+    <string name="wear_ui_scale" translatable="false">%1$.2fx</string>
+    <string name="wear_webview" translatable="false">WebView</string>
+    <string name="wear_file_name">File name</string>
+    <string name="wear_remove_background">Remove background</string>
+    <string name="wear_link_unsupported">This type of link can\'t be opened.</string>
+    <string name="wear_link_webview_unavailable">System WebView isn\'t available on this watch.</string>
+    <string name="wear_link_browser_unavailable">No browser on this watch can open this link.</string>
+    <string name="wear_link_phone_unavailable">No connected phone is available to open this link.</string>
+    <string name="wear_link_phone_failed">Couldn\'t send the link to the phone.</string>
+    <string name="wear_webui_local_only">Module WebUI runs from this watch\'s module files and needs the watch\'s own WebView. A browser or phone can\'t open it.</string>
+    <string name="wear_custom_color">Custom colour</string>
+    <string name="wear_joined" translatable="false">%1$s · %2$s</string>
+    <string name="wear_directory_empty">No matching files in this folder</string>
+</resources>
