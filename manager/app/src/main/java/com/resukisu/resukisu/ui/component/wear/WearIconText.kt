@@ -67,7 +67,7 @@ fun WearDetailField(
         Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium)
+            Text(label, style = MaterialTheme.typography.titleSmall)
             Text(
                 value,
                 style = MaterialTheme.typography.bodySmall,

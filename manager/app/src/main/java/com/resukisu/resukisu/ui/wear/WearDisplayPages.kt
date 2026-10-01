@@ -3,9 +3,7 @@ package com.resukisu.resukisu.ui.wear
 import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -13,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Check
 import androidx.compose.material.icons.twotone.Delete
+import androidx.compose.material.icons.twotone.FormatSize
 import androidx.compose.material.icons.twotone.Image
 import androidx.compose.material.icons.twotone.Palette
 import androidx.compose.material.icons.twotone.Restore
@@ -24,26 +23,25 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.Icon
-import androidx.wear.compose.material3.IconButtonDefaults
 import androidx.wear.compose.material3.IconToggleButton
 import androidx.wear.compose.material3.IconToggleButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.Slider
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
-import androidx.wear.compose.material3.touchTargetAwareSize
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearInfoCard
@@ -52,6 +50,7 @@ import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearScaledItem
 import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
 import com.resukisu.resukisu.ui.component.wear.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.component.wear.WearSliderCard
 import com.resukisu.resukisu.ui.component.wear.WearSubPage
 import com.resukisu.resukisu.ui.component.wear.WearTextInputPage
 import com.resukisu.resukisu.ui.theme.ThemeConfig
@@ -78,7 +77,7 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
     val valid = hex.matches(Regex("#[0-9a-fA-F]{6}"))
     if (editingHex) {
         WearSubPage({ editingHex = false }) {
-            WearTextInputPage(stringResource(R.string.wear_custom_color), hex, { editingHex = false }) { text ->
+            WearTextInputPage(stringResource(R.string.wear_custom_color), hex) { text ->
                 hex = text.trim().uppercase().let { if (it.startsWith("#")) it else "#$it" }
                 editingHex = false
             }
@@ -96,15 +95,20 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
                 secondaryLabel = stringResource(R.string.dynamic_color_summary))
         }
         item { WearSectionHeader(spec, Icons.TwoTone.Palette, stringResource(R.string.choose_theme_color)) }
+        // Swatches share the row equally so they fill the screen width (margins stretch evenly).
         SwatchColors.chunked(columns).forEachIndexed { index, row ->
             item(key = "swatches-$index") {
                 WearScaledItem(spec) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        row.forEach { value -> ColorSwatch(Color(value), !state.useDynamicColor && config.seedColor == Color(value).toArgb()) {
-                            hex = Color(value).toArgb().toHex()
-                            onAction(SettingsUiAction.SetDynamicColor(false))
-                            onAction(SettingsUiAction.SetThemeColor(Color(value).toArgb()))
-                        } }
+                    Row(Modifier.fillMaxWidth()) {
+                        row.forEach { value ->
+                            Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
+                                ColorSwatch(Color(value), !state.useDynamicColor && config.seedColor == Color(value).toArgb()) {
+                                    hex = Color(value).toArgb().toHex()
+                                    onAction(SettingsUiAction.SetDynamicColor(false))
+                                    onAction(SettingsUiAction.SetThemeColor(Color(value).toArgb()))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -129,13 +133,9 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
                     { onAction(SettingsUiAction.RemoveCustomBackground) }, colors = ButtonDefaults.filledTonalButtonColors())
             }
             item {
-                ValueHeader(spec, stringResource(R.string.settings_background_dim), "${(state.backgroundDim * 100).roundToInt()}%")
-            }
-            item {
-                WearScaledItem(spec) {
-                    Slider(state.backgroundDim, { onAction(SettingsUiAction.SetBackgroundDim(it)) }, steps = 19,
-                        valueRange = 0f..1f, modifier = Modifier.fillMaxWidth())
-                }
+                WearSliderCard(spec, Icons.TwoTone.Image, stringResource(R.string.settings_background_dim),
+                    "${(state.backgroundDim * 100).roundToInt()}%", state.backgroundDim,
+                    { onAction(SettingsUiAction.SetBackgroundDim(it)) }, valueRange = 0f..1f, steps = 19)
             }
         }
     }
@@ -147,7 +147,8 @@ private fun ColorSwatch(color: Color, selected: Boolean, onSelect: () -> Unit) {
     IconToggleButton(
         checked = selected,
         onCheckedChange = { onSelect() },
-        modifier = Modifier.touchTargetAwareSize(IconButtonDefaults.SmallButtonSize),
+        // Fill the weighted cell; the cell keeps a 1:1 aspect so the swatch stays round.
+        modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(3.dp),
         colors = IconToggleButtonDefaults.colors(
             checkedContainerColor = color, checkedContentColor = Color.Black,
             uncheckedContainerColor = color, uncheckedContentColor = Color.Black,
@@ -187,19 +188,8 @@ private fun TransformingLazyColumnItemScope.HexColorButton(spec: TransformationS
     ) { Text(hex, maxLines = 1) }
 }
 
-/** A centered label over a numeral value, used above a slider. */
-@Composable
-private fun TransformingLazyColumnItemScope.ValueHeader(spec: TransformationSpec, label: String, value: String) {
-    WearScaledItem(spec) {
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
-            Text(value, style = MaterialTheme.typography.numeralSmall, color = MaterialTheme.colorScheme.primary)
-        }
-    }
-}
-
 /**
- * The pending UI scale as a numeral over its slider; the apply action is the single high-emphasis
+ * The pending UI scale in a slider card; the apply action is the single high-emphasis
  * button and runs only when the scale changed, and restoring the system scale only resets the
  * pending value.
  */
@@ -208,14 +198,14 @@ internal fun WearDpiPage(state: SettingsUiState, message: String?, onBack: () ->
     val systemDpi = state.systemDpi.coerceAtLeast(1)
     val pending = (state.tempDpi.toFloat() / systemDpi).coerceIn(0.75f, 1.5f)
     WearList(onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.app_dpi_title)) }
+        item { WearPageHeader(spec, null, stringResource(R.string.wear_display)) }
         if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
-        item { ValueHeader(spec, stringResource(R.string.app_dpi_summary), stringResource(R.string.wear_ui_scale, pending)) }
+        // The scale label and value sit inside the slider card, above its track.
         item {
-            WearScaledItem(spec) {
-                Slider(pending, { onAction(SettingsUiAction.SetTempDpi((it * systemDpi).roundToInt())) },
-                    steps = 14, valueRange = 0.75f..1.5f, modifier = Modifier.fillMaxWidth())
-            }
+            WearSliderCard(spec, Icons.TwoTone.FormatSize, stringResource(R.string.app_dpi_title),
+                stringResource(R.string.wear_ui_scale, pending), pending,
+                { onAction(SettingsUiAction.SetTempDpi((it * systemDpi).roundToInt())) },
+                valueRange = 0.75f..1.5f, steps = 14)
         }
         item {
             WearActionButton(spec, Icons.TwoTone.Check, stringResource(R.string.dpi_apply_settings),

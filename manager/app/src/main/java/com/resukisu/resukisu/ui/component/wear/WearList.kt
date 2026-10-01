@@ -1,9 +1,20 @@
 package com.resukisu.resukisu.ui.component.wear
 
+import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material3.LocalContentColor
+import androidx.wear.compose.material3.ProgressIndicatorDefaults
+import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.material.icons.Icons
@@ -52,33 +63,42 @@ fun WearList(
 ) {
     val scope = rememberCoroutineScope()
     val transformationSpec = rememberTransformationSpec()
-    if (isLoading) {
-        WearLoadingScreen()
-        return
-    }
+    val pullOffset = remember { mutableFloatStateOf(0f) }
+    val animatedOffset by animateFloatAsState(pullOffset.floatValue,
+        animationSpec = tween(if (pullOffset.floatValue == 0f) 150 else 2_000), label = "wear-panel-damping")
+    // The gesture covers the whole screen, including the edge button shown at the end of the list.
+    val gestureModifier = Modifier.wearRefreshGesture(
+        listState,
+        pullOffset,
+        enabled = !isLoading && !isRefreshing,
+        onRefresh = onRefresh,
+        onOpenPanel = onOpenPanel,
+        onClosePanel = onClosePanel,
+        panelLabel = panelLabel,
+    )
+    // Loading shows a progress indicator instead of the content, as the phone does; the branded
+    // loading screen is only for the manager's first load.
     val listContent: @Composable (PaddingValues) -> Unit = { contentPadding ->
         TransformingLazyColumn(
-            modifier = Modifier.fillMaxSize().wearRefreshGesture(
-                listState,
-                enabled = !isRefreshing,
-                onRefresh = onRefresh,
-                onOpenPanel = onOpenPanel,
-                onClosePanel = onClosePanel,
-                panelLabel = panelLabel,
-            ),
+            modifier = Modifier.fillMaxSize().graphicsLayer { translationY = animatedOffset },
             state = listState,
             contentPadding = contentPadding,
             flingBehavior = if (snap) TransformingLazyColumnDefaults.snapFlingBehavior(listState)
                 else ScrollableDefaults.flingBehavior(),
             rotaryScrollableBehavior = if (snap) RotaryScrollableDefaults.snapBehavior(listState)
                 else RotaryScrollableDefaults.behavior(listState),
-        ) { content(transformationSpec) }
+        ) {
+            if (isLoading) wearLoadingItem(transformationSpec)
+            else content(transformationSpec)
+        }
     }
     if (onBack != null || onConfirm != null || backToTop) {
-        ScreenScaffold(scrollState = listState, edgeButton = {
+        ScreenScaffold(scrollState = listState, modifier = gestureModifier, edgeButton = {
             EdgeButton(
                 onClick = {
-                    if (onConfirm != null) onConfirm()
+                    // While refreshing, the edge button only shows the progress of the pull refresh.
+                    if (isRefreshing) Unit
+                    else if (onConfirm != null) onConfirm()
                     else if (backToTop) scope.launch { listState.animateScrollToItem(0) }
                     else onBack?.invoke()
                 },
@@ -90,12 +110,16 @@ fun WearList(
                     overscrollEffect = rememberOverscrollEffect(),
                 ),
             ) {
-                Icon(
+                // The pull refresh starts at the end of the list, so its progress shows here, where
+                // the finger was, instead of over the list items.
+                if (isRefreshing) CircularProgressIndicator(Modifier.size(24.dp),
+                    colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current))
+                else Icon(
                     if (onConfirm != null) Icons.Default.Check
                     else if (backToTop) Icons.Default.VerticalAlignTop else Icons.AutoMirrored.Default.ArrowBack,
                     contentDescription = stringResource(if (onConfirm != null) R.string.confirm else if (backToTop) R.string.scroll_to_top else R.string.wear_back),
                 )
             }
         }) { listContent(it) }
-    } else ScreenScaffold(scrollState = listState) { listContent(it) }
+    } else ScreenScaffold(scrollState = listState, modifier = gestureModifier) { listContent(it) }
 }
