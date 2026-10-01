@@ -1,5 +1,12 @@
 package com.resukisu.resukisu.ui.wear
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.Animatable
 import com.resukisu.resukisu.ui.viewmodel.WearPreferencesViewModel
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
@@ -20,9 +27,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.MotionScheme
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.dynamicColorScheme
 import com.materialkolor.ktx.toColor
@@ -32,6 +41,8 @@ import com.resukisu.resukisu.ui.component.wear.WearBackground
 import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearLoadingScreen
 import com.resukisu.resukisu.ui.component.wear.WearScaledItem
+import com.resukisu.resukisu.ui.component.wear.WearTimeText
+import com.resukisu.resukisu.ui.component.wear.LocalWearPageAnimation
 import com.resukisu.resukisu.ui.theme.ThemeConfig
 import com.resukisu.resukisu.ui.viewmodel.SettingsViewModel
 import org.koin.compose.koinInject
@@ -94,18 +105,36 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
         // Wear screens keep a pure black background whichever scheme is used.
         scheme.copy(background = Color.Black)
     }
-    CompositionLocalProvider(LocalDensity provides density, LocalConfiguration provides configuration) {
-        MaterialTheme(colorScheme = colors) {
+    CompositionLocalProvider(LocalDensity provides density, LocalConfiguration provides configuration,
+        LocalWearPageAnimation provides preferences.pageAnimation) {
+        MaterialTheme(colorScheme = colors, motionScheme = MotionScheme.expressive()) {
             // The custom background is the app backdrop: black base, the image, then a dark dim
             // overlay (backgroundDim). Surfaces (cards, buttons) sit opaque on top of it.
-            WearBackground { content() }
+            // A language change swaps the texts in place; the content fades back in over it.
+            val locales = LocalConfiguration.current.locales
+            val motion = MaterialTheme.motionScheme
+            val reduceMotion = LocalReduceMotion.current
+            val fade = remember { Animatable(1f) }
+            var shownLocales by remember { mutableStateOf(locales) }
+            LaunchedEffect(locales, reduceMotion) {
+                if (locales != shownLocales) {
+                    shownLocales = locales
+                    if (!reduceMotion) {
+                        fade.snapTo(0f)
+                        fade.animateTo(1f, motion.fastEffectsSpec())
+                    } else fade.snapTo(1f)
+                } else if (reduceMotion) {
+                    fade.snapTo(1f)
+                }
+            }
+            WearBackground { Box(Modifier.fillMaxSize().graphicsLayer { alpha = fade.value }) { content() } }
         }
     }
 }
 
 @Composable
 fun WearStartupStatus(error: String? = null) {
-    AppScaffold(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface) {
+    AppScaffold(timeText = { WearTimeText() }, containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface) {
         if (error == null) WearLoadingScreen()
         else WearList { spec ->
             item { WearPageHeader(spec, null, stringResource(R.string.app_name)) }

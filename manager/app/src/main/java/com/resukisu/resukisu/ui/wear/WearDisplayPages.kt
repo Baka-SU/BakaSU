@@ -1,12 +1,12 @@
 package com.resukisu.resukisu.ui.wear
 
-import androidx.compose.material.icons.twotone.Settings
-import com.resukisu.resukisu.ui.component.wear.WearChip
 import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -17,7 +17,6 @@ import androidx.compose.material.icons.twotone.FormatSize
 import androidx.compose.material.icons.twotone.Image
 import androidx.compose.material.icons.twotone.Palette
 import androidx.compose.material.icons.twotone.Restore
-import androidx.compose.material.icons.twotone.Wallpaper
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +53,7 @@ import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
 import com.resukisu.resukisu.ui.component.wear.WearSettingsSwitchWidget
 import com.resukisu.resukisu.ui.component.wear.WearSliderCard
 import com.resukisu.resukisu.ui.component.wear.WearSubPage
+import com.resukisu.resukisu.ui.component.wear.WearPageTransition
 import com.resukisu.resukisu.ui.component.wear.WearTextInputPage
 import com.resukisu.resukisu.ui.theme.ThemeConfig
 import com.resukisu.resukisu.ui.viewmodel.SettingsUiAction
@@ -77,67 +77,73 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
     var hex by rememberSaveable { mutableStateOf(config.seedColor.toHex()) }
     var editingHex by rememberSaveable { mutableStateOf(false) }
     val valid = hex.matches(Regex("#[0-9a-fA-F]{6}"))
-    if (editingHex) {
-        WearSubPage({ editingHex = false }) {
-            WearTextInputPage(stringResource(R.string.wear_custom_color), hex) { text ->
-                hex = text.trim().uppercase().let { if (it.startsWith("#")) it else "#$it" }
-                editingHex = false
+    WearPageTransition(if (editingHex) "hex" else "", if (editingHex) 1 else 0) { route ->
+        if (route == "hex") {
+            WearSubPage({ editingHex = false }) {
+                WearTextInputPage(stringResource(R.string.wear_custom_color), hex) { text ->
+                    hex = text.trim().uppercase().let { if (it.startsWith("#")) it else "#$it" }
+                    editingHex = false
+                }
             }
-        }
-        return
-    }
-    // Swatches need 48dp targets plus spacing; narrow screens or large fonts get fewer columns.
-    val columns = ((LocalConfiguration.current.screenWidthDp * (1 - 2 * 0.052f)) / 56f).toInt().coerceIn(1, 3)
-    WearList(onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.theme_color)) }
-        if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
-        item {
-            WearSettingsSwitchWidget(spec, stringResource(R.string.dynamic_color_title), state.useDynamicColor,
-                { onAction(SettingsUiAction.SetDynamicColor(it)) }, icon = Icons.TwoTone.Palette,
-                secondaryLabel = stringResource(R.string.dynamic_color_summary))
-        }
-        item { WearSectionHeader(spec, Icons.TwoTone.Palette, stringResource(R.string.choose_theme_color)) }
-        // Swatches share the row equally so they fill the screen width (margins stretch evenly).
-        SwatchColors.chunked(columns).forEachIndexed { index, row ->
-            item(key = "swatches-$index") {
-                WearScaledItem(spec) {
-                    Row(Modifier.fillMaxWidth()) {
-                        row.forEach { value ->
-                            Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
-                                ColorSwatch(Color(value), !state.useDynamicColor && config.seedColor == Color(value).toArgb()) {
-                                    hex = Color(value).toArgb().toHex()
-                                    onAction(SettingsUiAction.SetDynamicColor(false))
-                                    onAction(SettingsUiAction.SetThemeColor(Color(value).toArgb()))
+        } else {
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                // Measure in the active density: the app's scale can differ from the device configuration.
+                // Reserve the scaffold side margins and at least 48dp plus spacing for each swatch.
+                val sideMargin = (LocalConfiguration.current.screenWidthDp * 0.052f).dp
+                val columns = ((maxWidth - sideMargin * 2) / 56.dp).toInt().coerceIn(1, 3)
+                WearList(onBack = onBack) { spec ->
+                    item { WearPageHeader(spec, null, stringResource(R.string.theme_color)) }
+                    if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
+                    item {
+                        WearSettingsSwitchWidget(spec, stringResource(R.string.dynamic_color_title), state.useDynamicColor,
+                            { onAction(SettingsUiAction.SetDynamicColor(it)) }, icon = Icons.TwoTone.Palette,
+                            secondaryLabel = stringResource(R.string.dynamic_color_summary))
+                    }
+                    item { WearSectionHeader(spec, null, stringResource(R.string.choose_theme_color)) }
+                    // Swatches share the row equally so they fill the screen width (margins stretch evenly).
+                    SwatchColors.chunked(columns).forEachIndexed { index, row ->
+                        item(key = "swatches-$index") {
+                            WearScaledItem(spec) {
+                                Row(Modifier.fillMaxWidth()) {
+                                    row.forEach { value ->
+                                        Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
+                                            ColorSwatch(Color(value), !state.useDynamicColor && config.seedColor == Color(value).toArgb()) {
+                                                hex = Color(value).toArgb().toHex()
+                                                onAction(SettingsUiAction.SetDynamicColor(false))
+                                                onAction(SettingsUiAction.SetThemeColor(Color(value).toArgb()))
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
+                    item { WearSectionHeader(spec, null, stringResource(R.string.wear_custom_color)) }
+                    item { HexColorButton(spec, hex, valid) { editingHex = true } }
+                    item {
+                        WearActionButton(spec, Icons.TwoTone.Check, stringResource(R.string.background_crop_apply), {
+                            onAction(SettingsUiAction.SetDynamicColor(false))
+                            onAction(SettingsUiAction.SetThemeColor(hex.toColorInt()))
+                        }, enabled = valid, colors = ButtonDefaults.buttonColors())
+                    }
+                    item { WearSectionHeader(spec, null, stringResource(R.string.settings_custom_background)) }
+                    item {
+                        WearActionButton(spec, Icons.TwoTone.Image, stringResource(R.string.settings_custom_background_summary), onImage,
+                            colors = ButtonDefaults.filledTonalButtonColors())
+                    }
+                    // Dimming only affects the custom background image, so it appears with one.
+                    if (state.isCustomBackgroundEnabled) {
+                        item {
+                            WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.wear_remove_background),
+                                { onAction(SettingsUiAction.RemoveCustomBackground) }, colors = ButtonDefaults.filledTonalButtonColors())
+                        }
+                        item {
+                            WearSliderCard(spec, Icons.TwoTone.Image, stringResource(R.string.settings_background_dim),
+                                "${(state.backgroundDim * 100).roundToInt()}%", state.backgroundDim,
+                                { onAction(SettingsUiAction.SetBackgroundDim(it)) }, valueRange = 0f..1f, steps = 19)
+                        }
+                    }
                 }
-            }
-        }
-        item { WearSectionHeader(spec, Icons.TwoTone.Palette, stringResource(R.string.wear_custom_color)) }
-        item { HexColorButton(spec, hex, valid) { editingHex = true } }
-        item {
-            WearActionButton(spec, Icons.TwoTone.Check, stringResource(R.string.background_crop_apply), {
-                onAction(SettingsUiAction.SetDynamicColor(false))
-                onAction(SettingsUiAction.SetThemeColor(hex.toColorInt()))
-            }, enabled = valid, colors = ButtonDefaults.buttonColors())
-        }
-        item { WearSectionHeader(spec, Icons.TwoTone.Wallpaper, stringResource(R.string.settings_custom_background)) }
-        item {
-            WearActionButton(spec, Icons.TwoTone.Image, stringResource(R.string.settings_custom_background_summary), onImage,
-                colors = ButtonDefaults.filledTonalButtonColors())
-        }
-        // Dimming only affects the custom background image, so it appears with one.
-        if (state.isCustomBackgroundEnabled) {
-            item {
-                WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.wear_remove_background),
-                    { onAction(SettingsUiAction.RemoveCustomBackground) }, colors = ButtonDefaults.filledTonalButtonColors())
-            }
-            item {
-                WearSliderCard(spec, Icons.TwoTone.Image, stringResource(R.string.settings_background_dim),
-                    "${(state.backgroundDim * 100).roundToInt()}%", state.backgroundDim,
-                    { onAction(SettingsUiAction.SetBackgroundDim(it)) }, valueRange = 0f..1f, steps = 19)
             }
         }
     }
@@ -196,8 +202,7 @@ private fun TransformingLazyColumnItemScope.HexColorButton(spec: TransformationS
  * pending value.
  */
 @Composable
-internal fun WearDpiPage(state: SettingsUiState, message: String?, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit,
-    shape: String, onShape: () -> Unit) {
+internal fun WearDpiPage(state: SettingsUiState, message: String?, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit) {
     val systemDpi = state.systemDpi.coerceAtLeast(1)
     val pending = (state.tempDpi.toFloat() / systemDpi).coerceIn(0.75f, 1.5f)
     WearList(onBack = onBack) { spec ->
@@ -218,11 +223,6 @@ internal fun WearDpiPage(state: SettingsUiState, message: String?, onBack: () ->
             WearActionButton(spec, Icons.TwoTone.Restore, stringResource(R.string.language_system_default),
                 { onAction(SettingsUiAction.SetTempDpi(systemDpi)) }, state.tempDpi != systemDpi,
                 secondaryText = stringResource(R.string.wear_ui_scale, 1f), colors = ButtonDefaults.filledTonalButtonColors())
-        }
-        // The screen shape chip, showing the current choice and opening the choice page.
-        item {
-            WearChip(spec, stringResource(R.string.wear_screen_shape), secondaryLabel = screenShapeLabel(shape),
-                icon = Icons.TwoTone.Settings, onClick = onShape)
         }
     }
 }

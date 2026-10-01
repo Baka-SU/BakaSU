@@ -1,6 +1,7 @@
 package com.resukisu.resukisu.ui.wear
 
 import android.content.Intent
+import android.os.SystemClock
 import android.net.Uri
 import androidx.wear.compose.material3.Text
 import androidx.compose.material.icons.Icons
@@ -18,6 +19,7 @@ import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearInfoCard
 import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
+import com.resukisu.resukisu.ui.component.wear.WearPageTransition
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,7 +42,9 @@ import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import com.resukisu.resukisu.ui.component.wear.WearTextInputPage
 import com.resukisu.resukisu.ui.component.wear.rememberWearConfirmDialog
 import com.resukisu.resukisu.ui.component.wear.rememberWearRemoteInput
-import androidx.wear.compose.foundation.pager.HorizontalPager
+import com.resukisu.resukisu.ui.component.HorizontalPagerWithInteraction
+import com.resukisu.resukisu.ui.component.wear.WearTimeText
+import com.resukisu.resukisu.ui.component.wear.WearHorizontalPageIndicator
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.AnimatedPage
 import androidx.wear.compose.material3.AppScaffold
@@ -71,6 +76,7 @@ import com.resukisu.resukisu.ui.viewmodel.SuperUserUiAction
 import com.resukisu.resukisu.ui.viewmodel.SuperUserUiEvent
 import com.resukisu.resukisu.ui.viewmodel.SuperUserViewModel
 import org.koin.compose.viewmodel.koinViewModel
+import com.resukisu.resukisu.ui.util.ActivityResumeEffect
 
 private const val HOME = 0
 private const val SUPERUSER = 1
@@ -80,6 +86,10 @@ private const val SETTINGS = 3
 private val SuperUserPages = setOf("app", "search-app", "search-app-results", "app-filter")
 private val ModulePages = setOf("module", "module-action", "module-update", "search-module", "search-module-results", "module-sort")
 private val LogSubPages = setOf("log-options", "log-entry", "search-log")
+private val RootPages = SuperUserPages + ModulePages + LogSubPages + setOf(
+    "logs", "install", "settings-security", "settings-advanced", "sucompat", "templates",
+    "dynamic-manager", "umount", "uninstall", "reboot", "susfs",
+)
 
 @Composable
 fun WearManagerScreen() {
@@ -204,11 +214,18 @@ fun WearManagerScreen() {
             }
         }
     }
+    // Some watches ship a document picker that starts but closes at once without a result. In
+    // automatic mode an empty result that quick counts as a failed picker and opens the built-in
+    // one; a later empty result is the user canceling.
+    var systemPickerStartedAt by rememberSaveable { mutableLongStateOf(0L) }
+    fun onSystemPickerEmpty() {
+        if (preferences.picker == "auto" && SystemClock.elapsedRealtime() - systemPickerStartedAt < 2_000) openPage("file-picker")
+    }
     val selectModuleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) onFileSelected(uri.toString())
+        if (uri != null) onFileSelected(uri.toString()) else onSystemPickerEmpty()
     }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gzip")) { uri ->
-        if (uri != null) fileViewModel.exportTo(uri.toString())
+        if (uri != null) fileViewModel.exportTo(uri.toString()) else onSystemPickerEmpty()
     }
     val operationFailedText = stringResource(R.string.operation_failed)
     val pickerUnavailableText = stringResource(R.string.wear_file_picker_unavailable)
@@ -230,6 +247,7 @@ fun WearManagerScreen() {
         else fileViewModel.checkSystemPicker(fileMode(task))
     }
     fun launchSystemPicker() {
+        systemPickerStartedAt = SystemClock.elapsedRealtime()
         runCatching {
             if (fileTask == "bugreport") exportLauncher.launch("KernelSU_bugreport.tar.gz")
             else selectModuleLauncher.launch(when (fileTask) {
@@ -247,25 +265,47 @@ fun WearManagerScreen() {
     val settingsMessage = settingsError ?: settingsMessageResource?.let { (id, arg) ->
         if (arg == null) stringResource(id) else stringResource(id, arg)
     }
-    val pagerState = rememberPagerState(pageCount = { 4 })
+    val pages = if (home.systemStatus.isFullFeatured) listOf(HOME, SUPERUSER, MODULES, SETTINGS)
+        else listOf(HOME, SETTINGS)
+    val pagerState = rememberPagerState(pageCount = { pages.size })
+    var previousPages by remember { mutableStateOf(pages) }
+    LaunchedEffect(pages) {
+        if (pages != previousPages) {
+            val selectedPage = previousPages.getOrNull(pagerState.currentPage) ?: HOME
+            pagerState.scrollToPage(pages.indexOf(selectedPage).coerceAtLeast(0))
+            previousPages = pages
+        }
+    }
+    LaunchedEffect(home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled, detailType) {
+        if ((!home.systemStatus.isFullFeatured && detailType in RootPages) ||
+            (detailType == "susfs" && !home.systemInfo.susfsEnabled)) {
+            clearSettingsFeedback()
+            detailType = ""
+            parents = emptyList()
+        }
+    }
     val pageStateHolder = rememberSaveableStateHolder()
 
     BackHandler(detailType.isNotEmpty()) { goBack() }
     BackHandler(linkLoading) { linkViewModel.cancel() }
 
+    ActivityResumeEffect(homeViewModel) {
+        homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = true))
+    }
+
     // Lists load once, as on the phone: later changes refresh through their own events (status
     // changes, module install and toggles) and the pull gesture, not on every page visit. Pages
     // restored on their own after process death still start the first load they need.
     LaunchedEffect(pagerState.currentPage, detailType) {
-        val page = if (detailType.isEmpty()) pagerState.currentPage else -1
+        val page = if (detailType.isEmpty()) pages.getOrNull(pagerState.currentPage) else null
         if (page == HOME) {
             homeError = null
             homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
         }
-        if ((page == SUPERUSER || detailType in SuperUserPages) && superuser.isLoading) {
+        if (home.systemStatus.isFullFeatured && (page == SUPERUSER || detailType in SuperUserPages) && superuser.isLoading) {
             superUserViewModel.dispatch(SuperUserUiAction.Refresh)
         }
-        if ((page == MODULES || detailType in ModulePages) && (modules.moduleList.isEmpty() || modules.isNeedRefresh)) {
+        if (home.systemStatus.isFullFeatured && (page == MODULES || detailType in ModulePages) && (modules.moduleList.isEmpty() || modules.isNeedRefresh)) {
             moduleViewModel.dispatch(ModuleUiAction.Refresh())
         }
     }
@@ -353,246 +393,253 @@ fun WearManagerScreen() {
     // A found manager update is offered in a dialog, the stable channel first as on the phone's Home.
     com.resukisu.resukisu.ui.component.wear.WearManagerUpdateDialog(home.stableManagerUpdate ?: home.betaManagerUpdate)
     WearPhoneWebUiDialogs(webUiOnPhone, { webUiOnPhone = false }, webUiPhoneFailure, webUiPhoneFailed) { webUiPhoneFailed = false }
-    AppScaffold(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface) {
-        if (linkLoading) {
-            // A waiting spinner; the branded loading screen is only shown at app startup.
-            androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                androidx.wear.compose.material3.CircularProgressIndicator()
-            }
-        } else if (detailType.isNotEmpty()) {
-            com.resukisu.resukisu.ui.component.wear.WearSwipeToDismissBox(onDismissed = { goBack() }) { isBackground ->
-                if (isBackground) {
-                    // The revealed layer shows only the app backdrop while swiping.
-                    Unit
-                } else pageStateHolder.SaveableStateProvider("wear-details-$detailType-$selectedId") { when (detailType) {
-                    "module" -> WearModuleDetail(
-                        module = modules.moduleList.firstOrNull { it.id == selectedId },
-                        error = moduleError,
-                        onBack = { goBack() },
-                        onEnabledChange = { id, enabled ->
-                            moduleViewModel.dispatch(ModuleUiAction.SetEnabled(id, enabled))
-                        },
-                        onRemove = { id, removed ->
-                            moduleViewModel.dispatch(ModuleUiAction.SetRemoved(id, removed))
-                        },
-                        onWebUi = { module -> linkViewModel.openWebUi(module.id, module.name, preferences.link) },
-                        onExecute = { actionRequestId++; openPage("module-action") },
-                        onUpdate = { openPage("module-update") },
-                    )
-                    "module-action" -> WearExecuteModulePage(selectedId, actionRequestId, { goBack() }) {
-                        moduleViewModel.dispatch(ModuleUiAction.Refresh())
-                    }
-                    "module-update" -> WearModuleUpdatePage(modules.moduleList.firstOrNull { it.id == selectedId }, { goBack() }) {
-                        installUri = it; installRequestId++; goBack(); openPage("install")
-                    }
-                    "install" -> WearModuleInstallPage(
-                        uri = installUri,
-                        requestId = installRequestId,
-                        onBack = { goBack() },
-                        onInstalled = {
-                            moduleViewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
+    AppScaffold(timeText = { WearTimeText() }, containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface) {
+        WearPageTransition(detailType, parents.size) { route ->
+            if (linkLoading) {
+                // A waiting spinner; the branded loading screen is only shown at app startup.
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    androidx.wear.compose.material3.CircularProgressIndicator()
+                }
+            } else if (route.isNotEmpty()) {
+                com.resukisu.resukisu.ui.component.wear.WearSwipeToDismissBox(onDismissed = { goBack() }) { isBackground ->
+                    if (isBackground) {
+                        // The revealed layer shows only the app backdrop while swiping.
+                        Unit
+                    } else pageStateHolder.SaveableStateProvider("wear-details-$route-$selectedId") { when (route) {
+                        "module" -> WearModuleDetail(
+                            module = modules.moduleList.firstOrNull { it.id == selectedId },
+                            error = moduleError,
+                            onBack = { goBack() },
+                            onEnabledChange = { id, enabled ->
+                                moduleViewModel.dispatch(ModuleUiAction.SetEnabled(id, enabled))
+                            },
+                            onRemove = { id, removed ->
+                                moduleViewModel.dispatch(ModuleUiAction.SetRemoved(id, removed))
+                            },
+                            onWebUi = { module -> linkViewModel.openWebUi(module.id, module.name, preferences.link) },
+                            onExecute = { actionRequestId++; openPage("module-action") },
+                            onUpdate = { openPage("module-update") },
+                        )
+                        "module-action" -> WearExecuteModulePage(selectedId, actionRequestId, { goBack() }) {
                             moduleViewModel.dispatch(ModuleUiAction.Refresh())
-                            homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
-                        },
-                    )
-                    "app" -> WearAppDetail(
-                        group = superuser.appGroupList.firstOrNull {
-                            "${it.uid}:${it.primaryPackageName}" == selectedId
-                        },
-                        isManager = superuser.appGroupList.firstOrNull {
-                            "${it.uid}:${it.primaryPackageName}" == selectedId
-                        }?.uid?.let { it in superuser.managerUids } == true,
-                        onBack = { goBack() },
-                        onSaved = { superUserViewModel.dispatch(SuperUserUiAction.StatusChanged) },
-                    )
-                    "about" -> WearAboutDetail(onBack = { goBack() },
-                        onOpenLink = { linkViewModel.open(it, preferences.link) }, onLicenses = { openPage("licenses") })
-                    "licenses" -> WearLicensePage({ goBack() }) { linkViewModel.open(it, preferences.link) }
-                    "browser" -> WearBrowserPage(linkUrl, { goBack() }) {
-                        goBack()
-                        // In automatic mode a WebView that cannot be created falls back to the phone.
-                        if (preferences.link == "auto") linkViewModel.open(linkUrl, "phone")
-                        else { linkMessage = R.string.wear_link_webview_unavailable; openPage("link-result") }
-                    }
-                    "link-result" -> WearList(onBack = { goBack() }) { spec ->
-                        item { WearPageHeader(spec, null, stringResource(R.string.wear_link_mode)) }
-                        item { WearInfoCard(spec) { Text(stringResource(linkMessage)) } }
-                        item { WearActionButton(spec, Icons.TwoTone.Settings, stringResource(R.string.wear_link_mode), { openPage("link-mode") }) }
-                    }
-                    "file-picker" -> WearFilePage(
-                        title = stringResource(when (fileTask) {
-                            "image" -> R.string.settings_custom_background
-                            "bugreport" -> R.string.save_log
-                            "boot" -> R.string.select_file
-                            "lkm" -> R.string.install_upload_lkm_file
-                            "ak3" -> R.string.horizon_kernel
-                            else -> R.string.wear_install_module
-                        }),
-                        mode = fileMode(fileTask),
-                        onBack = { goBack() }, onSelected = { goBack(); onFileSelected(it) },
-                        onSaved = { savedPath = it; detailType = "saved-log" },
-                        requestId = pickerRequest,
-                    )
-                    "bugreport" -> WearList(isLoading = fileState.loading, onBack = { goBack() }) { spec ->
-                        val fileError = fileState.error ?: if (fileState.failed) operationFailedText else null
-                        item { WearPageHeader(spec, null, stringResource(R.string.send_log)) }
-                        (fileError ?: settingsMessage)?.let { item { WearInfoCard(spec) { Text(it) } } }
-                        item { WearActionButton(spec, Icons.TwoTone.Save, stringResource(R.string.save_log), {
-                            settingsError = null; fileViewModel.clearError(); selectFile("bugreport")
-                        }) }
-                        item { WearActionButton(spec, Icons.TwoTone.Share, sendLogText, {
-                            settingsError = null; fileViewModel.share()
-                        }) }
-                    }
-                    "saved-log" -> WearList(onBack = { goBack() }) { spec ->
-                        item { WearPageHeader(spec, null, stringResource(R.string.save_log)) }
-                        item { WearInfoCard(spec) { Text(savedPath) } }
-                    }
-                    "settings-general", "settings-security", "settings-advanced", "settings-display" -> WearSettingsPage(
-                        settings, home.systemStatus, settingsMessage, dispatchSettings, { openPage(it) }, { goBack() },
-                        detailType.removePrefix("settings-"), preferences)
-                    "templates" -> WearTemplatePage { goBack() }
-                    "dynamic-manager" -> WearDynamicManagerPage { goBack() }
-                    "umount" -> WearUmountPage { goBack() }
-                    "uninstall" -> WearUninstallPage({ goBack() }) {
-                        flashKind = if (it is com.resukisu.resukisu.domain.model.FlashOperation.Restore) "restore" else "uninstall"
-                        installRequestId++; openPage("flash")
-                    }
-                    "flash" -> WearModuleInstallPage("", installRequestId, { goBack() },
-                        onInstalled = { homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false)) },
-                        operation = when (flashKind) {
-                            "boot" -> kernelInstallViewModel.bootOperation(null)
-                            "restore" -> com.resukisu.resukisu.domain.model.FlashOperation.Restore
-                            else -> com.resukisu.resukisu.domain.model.FlashOperation.Uninstall
-                        })
-                    "kernel-install", "kernel-install-lkm", "kernel-install-ak3", "install-partition", "install-kmi" -> {
-                        val installState by koinViewModel<InstallViewModel>().state.collectAsStateWithLifecycle()
-                        val environment = installState.environment
-                        val flashBoot = { flashKind = "boot"; installRequestId++; openPage("flash") }
-                        when (detailType) {
-                            "kernel-install" -> WearInstallPage(environment, installState.loading, { goBack() }) { openPage(it) }
-                            "kernel-install-lkm" -> WearLkmInstallPage(environment, kernelInstall, kernelInstallViewModel,
-                                { goBack() }, { selectFile("boot") }, { selectFile("lkm") }, { openPage(it) }, flashBoot)
-                            "kernel-install-ak3" -> WearAk3InstallPage(environment, kernelInstall, kernelInstallViewModel,
-                                { goBack() }, { selectFile("ak3") }) { kernelFlashRequest++; openPage("kernel-flash") }
-                            else -> WearKernelChoicePage(detailType, environment, kernelInstall, kernelInstallViewModel,
-                                { goBack() }) { goBack(); flashBoot() }
                         }
+                        "module-update" -> WearModuleUpdatePage(modules.moduleList.firstOrNull { it.id == selectedId }, { goBack() }) {
+                            installUri = it; installRequestId++; goBack(); openPage("install")
+                        }
+                        "install" -> WearModuleInstallPage(
+                            uri = installUri,
+                            requestId = installRequestId,
+                            onBack = { goBack() },
+                            onInstalled = {
+                                moduleViewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
+                                moduleViewModel.dispatch(ModuleUiAction.Refresh())
+                                homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
+                            },
+                        )
+                        "app" -> WearAppDetail(
+                            group = superuser.appGroupList.firstOrNull {
+                                "${it.uid}:${it.primaryPackageName}" == selectedId
+                            },
+                            isManager = superuser.appGroupList.firstOrNull {
+                                "${it.uid}:${it.primaryPackageName}" == selectedId
+                            }?.uid?.let { it in superuser.managerUids } == true,
+                            onBack = { goBack() },
+                            onSaved = { superUserViewModel.dispatch(SuperUserUiAction.StatusChanged) },
+                        )
+                        "about" -> WearAboutDetail(onBack = { goBack() },
+                            onOpenLink = { linkViewModel.open(it, preferences.link) }, onLicenses = { openPage("licenses") })
+                        "licenses" -> WearLicensePage({ goBack() }) { linkViewModel.open(it, preferences.link) }
+                        "browser" -> WearBrowserPage(linkUrl, { goBack() }) {
+                            goBack()
+                            // In automatic mode a WebView that cannot be created falls back to the phone.
+                            if (preferences.link == "auto") linkViewModel.open(linkUrl, "phone")
+                            else { linkMessage = R.string.wear_link_webview_unavailable; openPage("link-result") }
+                        }
+                        "link-result" -> WearList(onBack = { goBack() }) { spec ->
+                            item { WearPageHeader(spec, null, stringResource(R.string.operation_failed)) }
+                            item { WearInfoCard(spec) { Text(stringResource(linkMessage)) } }
+                            item { WearActionButton(spec, Icons.TwoTone.Settings, stringResource(R.string.wear_link_mode), { openPage("link-mode") }) }
+                        }
+                        "file-picker" -> WearFilePage(
+                            title = stringResource(when (fileTask) {
+                                "image" -> R.string.settings_custom_background
+                                "bugreport" -> R.string.save_log
+                                "boot" -> R.string.select_file
+                                "lkm" -> R.string.install_upload_lkm_file
+                                "ak3" -> R.string.horizon_kernel
+                                else -> R.string.wear_install_module
+                            }),
+                            mode = fileMode(fileTask),
+                            onBack = { goBack() }, onSelected = { goBack(); onFileSelected(it) },
+                            onSaved = { savedPath = it; detailType = "saved-log" },
+                            requestId = pickerRequest,
+                        )
+                        "bugreport" -> WearList(isLoading = fileState.loading, onBack = { goBack() }) { spec ->
+                            val fileError = fileState.error ?: if (fileState.failed) operationFailedText else null
+                            item { WearPageHeader(spec, null, stringResource(R.string.send_log)) }
+                            (fileError ?: settingsMessage)?.let { item { WearInfoCard(spec) { Text(it) } } }
+                            item { WearActionButton(spec, Icons.TwoTone.Save, stringResource(R.string.save_log), {
+                                settingsError = null; fileViewModel.clearError(); selectFile("bugreport")
+                            }) }
+                            item { WearActionButton(spec, Icons.TwoTone.Share, sendLogText, {
+                                settingsError = null; fileViewModel.share()
+                            }) }
+                        }
+                        "saved-log" -> WearList(onBack = { goBack() }) { spec ->
+                            item { WearPageHeader(spec, null, stringResource(R.string.save_log)) }
+                            item { WearInfoCard(spec) { Text(savedPath) } }
+                        }
+                        "settings-general", "settings-security", "settings-advanced", "settings-display" -> WearSettingsPage(
+                            settings, home.systemStatus, settingsMessage, dispatchSettings, { openPage(it) }, { goBack() },
+                            route.removePrefix("settings-"), preferences)
+                        "templates" -> WearTemplatePage { goBack() }
+                        "susfs" -> if (home.systemStatus.isFullFeatured && home.systemInfo.susfsEnabled) {
+                            WearSuSFSPage(preferences.picker) { goBack() }
+                        }
+                        "dynamic-manager" -> WearDynamicManagerPage { goBack() }
+                        "umount" -> WearUmountPage { goBack() }
+                        "uninstall" -> WearUninstallPage({ goBack() }) {
+                            flashKind = if (it is com.resukisu.resukisu.domain.model.FlashOperation.Restore) "restore" else "uninstall"
+                            installRequestId++; openPage("flash")
+                        }
+                        "flash" -> WearModuleInstallPage("", installRequestId, { goBack() },
+                            onInstalled = { homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false)) },
+                            operation = when (flashKind) {
+                                "boot" -> kernelInstallViewModel.bootOperation(null)
+                                "restore" -> com.resukisu.resukisu.domain.model.FlashOperation.Restore
+                                else -> com.resukisu.resukisu.domain.model.FlashOperation.Uninstall
+                            })
+                        "kernel-install", "kernel-install-lkm", "kernel-install-ak3", "install-partition", "install-kmi" -> {
+                            val installState by koinViewModel<InstallViewModel>().state.collectAsStateWithLifecycle()
+                            val environment = installState.environment
+                            val flashBoot = { flashKind = "boot"; installRequestId++; openPage("flash") }
+                            when (route) {
+                                "kernel-install" -> WearInstallPage(environment, installState.loading, { goBack() }) { openPage(it) }
+                                "kernel-install-lkm" -> WearLkmInstallPage(environment, kernelInstall, kernelInstallViewModel,
+                                    { goBack() }, { selectFile("boot") }, { selectFile("lkm") }, { openPage(it) }, flashBoot)
+                                "kernel-install-ak3" -> WearAk3InstallPage(environment, kernelInstall, kernelInstallViewModel,
+                                    { goBack() }, { selectFile("ak3") }) { kernelFlashRequest++; openPage("kernel-flash") }
+                                else -> WearKernelChoicePage(route, environment, kernelInstall, kernelInstallViewModel,
+                                    { goBack() }) { goBack(); flashBoot() }
+                            }
+                        }
+                        "kernel-flash" -> WearKernelFlashPage(kernelInstall.ak3Uri.orEmpty(), kernelInstall.slot,
+                            kernelInstall.skipKsud, kernelFlashRequest) { goBack() }
+                        "color" -> WearColorPage(settings, settingsMessage, { goBack() }, dispatchSettings, { selectFile("image") })
+                        "dpi" -> WearDpiPage(settings, settingsMessage, { goBack() }, dispatchSettings)
+                        "picker-mode", "link-mode", "screen-shape", "page-animation", "language", "sucompat" -> WearSelectionPage(
+                            route, settings, preferences, preferenceViewModel, settingsMessage, { goBack() }, dispatchSettings)
+                        "reboot" -> WearRebootPanel(home.systemStatus.isRootAvailable, { goBack() }) {
+                            homeViewModel.dispatch(HomeUiAction.Reboot(it))
+                        }
+                        "app-filter" -> WearSuperUserPanel(superuser, { goBack() }, superUserViewModel::dispatch)
+                        "module-sort" -> WearModulePanel(modules, { goBack() }, moduleViewModel::dispatch)
+                        "search-app" -> WearTextInputPage(stringResource(R.string.search_apps), superuser.search) {
+                            showSearchResults("search-app-results", it) { query -> superUserViewModel.dispatch(SuperUserUiAction.Search(query)) }
+                        }
+                        "search-module" -> WearTextInputPage(stringResource(R.string.search_modules), modules.search) {
+                            showSearchResults("search-module-results", it) { query -> moduleViewModel.dispatch(ModuleUiAction.Search(query)) }
+                        }
+                        "search-app-results" -> WearAppSearchResults(superuser, superuserError,
+                            onEdit = appSearchInput,
+                            onAppClick = { uid, packageName -> selectedId = "$uid:$packageName"; openPage("app") },
+                            onBack = { goBack() })
+                        "search-module-results" -> WearModuleSearchResults(modules, moduleError,
+                            onEdit = moduleSearchInput,
+                            onModuleClick = { selectedId = it; openPage("module") },
+                            onBack = { goBack() })
+                        "search-log" -> WearTextInputPage(stringResource(R.string.sulog_search_placeholder), logs.searchText) {
+                            sulogViewModel.dispatch(SulogUiAction.Search(it)); goBack()
+                        }
+                        "logs" -> WearLogsPage(
+                            state = logs,
+                            onBack = { goBack() },
+                            onSetEnabled = { enabled ->
+                                sulogViewModel.dispatch(
+                                    if (enabled) SulogUiAction.Enable else SulogUiAction.Disable
+                                )
+                            },
+                            onSearch = logSearchInput,
+                            onClearSearch = { sulogViewModel.dispatch(SulogUiAction.Search("")) },
+                            onRefresh = { logError = null; sulogViewModel.dispatch(SulogUiAction.Refresh) },
+                            onOptions = { openPage("log-options") },
+                            onEntry = { selectedLogKey = it.key; openPage("log-entry") },
+                            error = logError,
+                        )
+                        "log-options" -> WearLogOptionsPage(
+                            state = logs,
+                            onBack = { goBack() },
+                            onSelectFile = { sulogViewModel.dispatch(SulogUiAction.SelectFile(it)) },
+                            onToggleFilter = { sulogViewModel.dispatch(SulogUiAction.ToggleFilter(it)) },
+                            onClean = { sulogViewModel.dispatch(SulogUiAction.CleanFile) },
+                        )
+                        "log-entry" -> WearLogEntryPage(logs.entries.firstOrNull { it.key == selectedLogKey }) { goBack() }
                     }
-                    "kernel-flash" -> WearKernelFlashPage(kernelInstall.ak3Uri.orEmpty(), kernelInstall.slot,
-                        kernelInstall.skipKsud, kernelFlashRequest) { goBack() }
-                    "color" -> WearColorPage(settings, settingsMessage, { goBack() }, dispatchSettings, { selectFile("image") })
-                    "dpi" -> WearDpiPage(settings, settingsMessage, { goBack() }, dispatchSettings,
-                        preferences.shape) { openPage("screen-shape") }
-                    "picker-mode", "link-mode", "screen-shape", "language", "sucompat" -> WearSelectionPage(
-                        detailType, settings, preferences, preferenceViewModel, settingsMessage, { goBack() }, dispatchSettings)
-                    "reboot" -> WearRebootPanel(home.systemStatus.isRootAvailable, { goBack() }) {
-                        homeViewModel.dispatch(HomeUiAction.Reboot(it))
                     }
-                    "app-filter" -> WearSuperUserPanel(superuser, { goBack() }, superUserViewModel::dispatch)
-                    "module-sort" -> WearModulePanel(modules, { goBack() }, moduleViewModel::dispatch)
-                    "search-app" -> WearTextInputPage(stringResource(R.string.search_apps), superuser.search) {
-                        showSearchResults("search-app-results", it) { query -> superUserViewModel.dispatch(SuperUserUiAction.Search(query)) }
-                    }
-                    "search-module" -> WearTextInputPage(stringResource(R.string.search_modules), modules.search) {
-                        showSearchResults("search-module-results", it) { query -> moduleViewModel.dispatch(ModuleUiAction.Search(query)) }
-                    }
-                    "search-app-results" -> WearAppSearchResults(superuser, superuserError,
-                        onEdit = appSearchInput,
-                        onAppClick = { uid, packageName -> selectedId = "$uid:$packageName"; openPage("app") },
-                        onBack = { goBack() })
-                    "search-module-results" -> WearModuleSearchResults(modules, moduleError,
-                        onEdit = moduleSearchInput,
-                        onModuleClick = { selectedId = it; openPage("module") },
-                        onBack = { goBack() })
-                    "search-log" -> WearTextInputPage(stringResource(R.string.sulog_search_placeholder), logs.searchText) {
-                        sulogViewModel.dispatch(SulogUiAction.Search(it)); goBack()
-                    }
-                    "logs" -> WearLogsPage(
-                        state = logs,
-                        onBack = { goBack() },
-                        onSetEnabled = { enabled ->
-                            sulogViewModel.dispatch(
-                                if (enabled) SulogUiAction.Enable else SulogUiAction.Disable
-                            )
-                        },
-                        onSearch = logSearchInput,
-                        onClearSearch = { sulogViewModel.dispatch(SulogUiAction.Search("")) },
-                        onRefresh = { logError = null; sulogViewModel.dispatch(SulogUiAction.Refresh) },
-                        onOptions = { openPage("log-options") },
-                        onEntry = { selectedLogKey = it.key; openPage("log-entry") },
-                        error = logError,
-                    )
-                    "log-options" -> WearLogOptionsPage(
-                        state = logs,
-                        onBack = { goBack() },
-                        onSelectFile = { sulogViewModel.dispatch(SulogUiAction.SelectFile(it)) },
-                        onToggleFilter = { sulogViewModel.dispatch(SulogUiAction.ToggleFilter(it)) },
-                        onClean = { sulogViewModel.dispatch(SulogUiAction.CleanFile) },
-                    )
-                    "log-entry" -> WearLogEntryPage(logs.entries.firstOrNull { it.key == selectedLogKey }) { goBack() }
                 }
-                }
-            }
-        } else if (!home.isInitialDataLoaded && homeError == null) {
-            // The manager's first load continues the startup loading screen until Home has its data,
-            // which it requests itself in case the pager was restored on another page.
-            LaunchedEffect(Unit) { homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false)) }
-            com.resukisu.resukisu.ui.component.wear.WearLoadingScreen()
-        } else {
-            com.resukisu.resukisu.ui.component.wear.WearSwipeToDismissBox(onDismissed = { activity?.finish() }) { isBackground ->
-                if (isBackground) {
-                    // The revealed layer shows only the app backdrop while swiping.
-                    Unit
-                } else {
-                    pageStateHolder.SaveableStateProvider("wear-main-pages") {
-                        HorizontalPagerScaffold(pagerState = pagerState) {
-                            HorizontalPager(
-                                modifier = Modifier.fillMaxSize(),
-                                state = pagerState,
-                                flingBehavior = PagerScaffoldDefaults.snapWithSpringFlingBehavior(pagerState),
-                            ) { page ->
-                                AnimatedPage(pageIndex = page, pagerState = pagerState) {
-                                    when (page) {
-                                        HOME -> WearHomePage(home, homeError, { activity?.finish() },
-                                            { openPage("reboot") }, homeListState, onInstall = { openPage("kernel-install") }, backToTop = true)
-                                        SUPERUSER -> WearSuperUserPage(
-                                            state = superuser,
-                                            error = superuserError,
-                                            onRefresh = {
-                                                superuserError = null
-                                                superUserViewModel.dispatch(SuperUserUiAction.Refresh)
-                                            },
-                                            onBack = { activity?.finish() },
-                                            onSearch = appSearchInput,
-                                            onLogs = { openPage("logs") },
-                                            onFilter = { openPage("app-filter") },
-                                            listState = appListState,
-                                            onAppClick = { uid, packageName ->
-                                                selectedId = "$uid:$packageName"
-                                                openPage("app")
-                                            },
-                                            backToTop = true,
-                                        )
-                                        MODULES -> WearModulesPage(
-                                            state = modules,
-                                            error = moduleError,
-                                            onRefresh = {
-                                                moduleError = null
-                                                moduleViewModel.dispatch(ModuleUiAction.Refresh(manual = true))
-                                            },
-                                            onSearch = moduleSearchInput,
-                                            onSort = { openPage("module-sort") },
-                                            listState = moduleListState,
-                                            onModuleClick = { id ->
-                                                selectedId = id
-                                                openPage("module")
-                                            },
-                                            onInstallClick = { selectFile("module") },
-                                        )
-                                        SETTINGS -> WearSettingsPage(settings, home.systemStatus, settingsMessage,
-                                            dispatchSettings, { openPage(it) }, { activity?.finish() },
-                                            preferences = preferences, listState = settingsListState, backToTop = true)
+            } else if (!home.isInitialDataLoaded && homeError == null) {
+                // The manager's first load continues the startup loading screen until Home has its data,
+                // which it requests itself in case the pager was restored on another page.
+                LaunchedEffect(Unit) { homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false)) }
+                com.resukisu.resukisu.ui.component.wear.WearLoadingScreen()
+            } else {
+                com.resukisu.resukisu.ui.component.wear.WearSwipeToDismissBox(onDismissed = { activity?.finish() }) { isBackground ->
+                    if (isBackground) {
+                        // The revealed layer shows only the app backdrop while swiping.
+                        Unit
+                    } else {
+                        pageStateHolder.SaveableStateProvider("wear-main-pages") {
+                            HorizontalPagerScaffold(pagerState = pagerState,
+                                pageIndicator = { WearHorizontalPageIndicator(pagerState) }) {
+                                HorizontalPagerWithInteraction(
+                                    modifier = Modifier.fillMaxSize(),
+                                    state = pagerState,
+                                    flingBehavior = PagerScaffoldDefaults.snapWithSpringFlingBehavior(pagerState),
+                                    key = { pages[it] },
+                                ) { page ->
+                                    AnimatedPage(pageIndex = page, pagerState = pagerState) {
+                                        when (pages.getOrNull(page)) {
+                                            HOME -> WearHomePage(home, homeError, { activity?.finish() },
+                                                { openPage("reboot") }, homeListState, onInstall = { openPage("kernel-install") }, backToTop = true)
+                                            SUPERUSER -> WearSuperUserPage(
+                                                state = superuser,
+                                                error = superuserError,
+                                                onRefresh = {
+                                                    superuserError = null
+                                                    superUserViewModel.dispatch(SuperUserUiAction.Refresh)
+                                                },
+                                                onBack = { activity?.finish() },
+                                                onSearch = appSearchInput,
+                                                onLogs = { openPage("logs") },
+                                                onFilter = { openPage("app-filter") },
+                                                listState = appListState,
+                                                onAppClick = { uid, packageName ->
+                                                    selectedId = "$uid:$packageName"
+                                                    openPage("app")
+                                                },
+                                                backToTop = true,
+                                            )
+                                            MODULES -> WearModulesPage(
+                                                state = modules,
+                                                error = moduleError,
+                                                onRefresh = {
+                                                    moduleError = null
+                                                    moduleViewModel.dispatch(ModuleUiAction.Refresh(manual = true))
+                                                },
+                                                onSearch = moduleSearchInput,
+                                                onSort = { openPage("module-sort") },
+                                                listState = moduleListState,
+                                                onModuleClick = { id ->
+                                                    selectedId = id
+                                                    openPage("module")
+                                                },
+                                                onInstallClick = { selectFile("module") },
+                                            )
+                                            SETTINGS -> WearSettingsPage(settings, home.systemStatus, settingsMessage,
+                                                dispatchSettings, { openPage(it) }, { activity?.finish() },
+                                                preferences = preferences, susfsAvailable = home.systemInfo.susfsEnabled,
+                                                listState = settingsListState, backToTop = true)
+                                        }
                                     }
                                 }
                             }

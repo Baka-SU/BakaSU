@@ -1,5 +1,7 @@
 package com.resukisu.resukisu.ui
 
+import android.os.LocaleList
+import android.content.res.Configuration
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -71,7 +73,21 @@ class MainActivity : ComponentActivity() {
 
     private val intentState = MutableStateFlow(0)
 
+    /**
+     * A language change reaches the activity here instead of relaunching it. Wear recomposes in
+     * place with a short fade; the phone recreates itself, as the system relaunch did before.
+     */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        val localeChanged = newConfig.locales != shownLocales
+        super.onConfigurationChanged(newConfig)
+        shownLocales = newConfig.locales
+        if (localeChanged && !isWearDevice) recreate()
+    }
+
+    private var shownLocales: LocaleList? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        shownLocales = resources.configuration.locales
         try {
             val splashScreen = installSplashScreen()
 

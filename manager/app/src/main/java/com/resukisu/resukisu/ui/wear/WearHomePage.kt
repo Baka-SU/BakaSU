@@ -8,8 +8,8 @@ import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Extension
 import androidx.compose.material.icons.twotone.FilterList
 import androidx.compose.material.icons.twotone.Group
-import androidx.compose.material.icons.twotone.Info
 import androidx.compose.material.icons.twotone.Memory
+import androidx.compose.material.icons.twotone.RestartAlt
 import androidx.compose.material.icons.twotone.Security
 import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.material.icons.twotone.Smartphone
@@ -25,6 +25,7 @@ import com.resukisu.resukisu.BuildConfig
 import com.resukisu.resukisu.Natives.KernelPatchImplementation
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.HomeDashboardState
+import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearChip
 import com.resukisu.resukisu.ui.component.wear.WearChipEmphasis
 import com.resukisu.resukisu.ui.component.wear.WearList
@@ -47,7 +48,7 @@ internal fun WearHomePage(
     val status = state.systemStatus
     val info = state.systemInfo
     // The first load shows the branded loading screen in WearManagerScreen instead of this list.
-    WearList(onBack = onBack, onOpenPanel = onRebootPanel,
+    WearList(onBack = onBack, onOpenPanel = onRebootPanel.takeIf { status.isRootAvailable },
         panelLabel = stringResource(R.string.reboot), listState = listState, backToTop = backToTop,
     ) { spec ->
         item { WearPageHeader(spec, null, stringResource(R.string.home)) }
@@ -108,7 +109,10 @@ internal fun WearHomePage(
                     onClick = onInstall.takeIf { status.isRootAvailable || status.kernelVersion.isGKI() },
                 )
             }
-            item { WearSectionHeader(spec, Icons.TwoTone.Info, stringResource(R.string.home_version_info)) }
+            if (status.isRootAvailable) item {
+                WearActionButton(spec, Icons.TwoTone.RestartAlt, stringResource(R.string.reboot), onRebootPanel)
+            }
+            item { WearSectionHeader(spec, null, stringResource(R.string.home_version_info)) }
             val fields = buildList {
                 add(Triple(Icons.TwoTone.Smartphone, R.string.home_device_model, info.deviceModel))
                 add(Triple(Icons.TwoTone.DeveloperBoard, R.string.home_kernel, info.kernelRelease))
@@ -122,7 +126,7 @@ internal fun WearHomePage(
             fields.forEach { (icon, label, value) -> item {
                 WearChip(spec, stringResource(label), secondaryLabel = value.ifBlank { unknown }, icon = icon)
             } }
-            item { WearSectionHeader(spec, Icons.TwoTone.Security, stringResource(R.string.home_status_info)) }
+            item { WearSectionHeader(spec, null, stringResource(R.string.home_status_info)) }
             item {
                 WearChip(spec, stringResource(R.string.home_selinux_status),
                     secondaryLabel = info.selinuxStatus.ifBlank { unknown }, icon = Icons.TwoTone.Security)
