@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -24,8 +24,9 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
 
 /**
- * Feedback at the pulled boundary: the indicator follows the pull and fills its ring. Holding past
- * the threshold opens or closes the panel; the arrow points in that panel transition's direction.
+ * Feedback for pulling down at the top of a list: a round indicator slides in from the top edge and
+ * fills its ring with the pull. Once the pull is far enough to commit on release, the arrow flips
+ * up (or the close mark grows) with a small bounce, telling the user to let go.
  *
  * [progress] is the pull relative to the commit threshold; [closing] marks a panel that the pull
  * closes rather than opens.
@@ -37,13 +38,15 @@ fun WearPullIndicator(progress: Float, closing: Boolean, modifier: Modifier = Mo
     val shown by animateFloatAsState(progress.coerceIn(0f, 1f),
         if (reduceMotion) snap() else motion.fastEffectsSpec(), label = "pull-shown")
     val armed = progress >= 1f
+    val flip by animateFloatAsState(if (armed) 180f else 0f,
+        if (reduceMotion) snap() else motion.fastSpatialSpec(), label = "pull-flip")
     val scale by animateFloatAsState(if (armed && !reduceMotion) 1.15f else 1f,
         if (reduceMotion) snap() else motion.fastSpatialSpec(), label = "pull-scale")
     if (shown <= 0.01f) return
     Box(
         modifier.size(36.dp)
             .graphicsLayer {
-                translationY = (shown - 1f) * 36.dp.toPx() * if (closing) 1f else -1f
+                translationY = (shown - 1f) * 36.dp.toPx()
                 alpha = shown
                 scaleX = scale
                 scaleY = scale
@@ -61,10 +64,10 @@ fun WearPullIndicator(progress: Float, closing: Boolean, modifier: Modifier = Mo
             strokeWidth = 3.dp,
         )
         Icon(
-            if (closing) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+            if (closing) Icons.Default.Close else Icons.Default.KeyboardArrowDown,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onPrimaryContainer,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(20.dp).graphicsLayer { if (!closing) rotationZ = flip },
         )
     }
 }
