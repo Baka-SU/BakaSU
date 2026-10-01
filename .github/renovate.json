@@ -9,7 +9,8 @@
   "addLabels": ["dependencies"],
   "commitMessagePrefix": "deps:",
   "schedule": [
-    "after 6pm and before 10am every day"
+    "after 6pm",
+    "before 10am"
   ],
   "packageRules": [
     {
