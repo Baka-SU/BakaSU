@@ -68,4 +68,5 @@
     <string name="wear_susfs_backup_restore">Резервное копирование и восстановление</string>
     <string name="wear_filter_sort">Фильтрация и сортировка</string>
     <string name="wear_sort">Сортировка</string>
+    <string name="wear_online_templates">Онлайн-шаблоны</string>
 </resources>

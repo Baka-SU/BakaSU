@@ -68,4 +68,5 @@
     <string name="wear_susfs_backup_restore">Backup at pag-restore</string>
     <string name="wear_filter_sort">I-filter at ayusin</string>
     <string name="wear_sort">Ayusin</string>
+    <string name="wear_online_templates">Mga online na template</string>
 </resources>

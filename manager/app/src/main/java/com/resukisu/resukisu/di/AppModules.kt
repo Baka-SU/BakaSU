@@ -62,6 +62,7 @@ import com.resukisu.resukisu.domain.usecase.ClearDynamicManagerUseCase
 import com.resukisu.resukisu.domain.usecase.ConfigureSuLogUseCase
 import com.resukisu.resukisu.domain.usecase.ControlAppUseCase
 import com.resukisu.resukisu.domain.usecase.DeleteProfileTemplateUseCase
+import com.resukisu.resukisu.domain.usecase.BrowseOnlineProfileTemplatesUseCase
 import com.resukisu.resukisu.domain.usecase.EnableSulogUseCase
 import com.resukisu.resukisu.domain.usecase.EnqueueDownloadUseCase
 import com.resukisu.resukisu.domain.usecase.EnqueueManagerUpdateUseCase
@@ -353,6 +354,7 @@ val useCaseModule = module {
     factoryOf(::ObserveProfileTemplateRefreshingUseCase)
     factoryOf(::ObserveProfileTemplateOfflineUseCase)
     factoryOf(::RefreshProfileTemplatesUseCase)
+    factoryOf(::BrowseOnlineProfileTemplatesUseCase)
     factoryOf(::GetProfileTemplateUseCase)
     factoryOf(::SaveProfileTemplateUseCase)
     factoryOf(::DeleteProfileTemplateUseCase)
@@ -430,7 +432,10 @@ val viewModelModule = module {
     viewModelOf(::SuSFSViewModel)
     viewModelOf(::ModuleRepoViewModel)
     viewModel { parameters -> ModuleDetailViewModel(parameters[0], get()) }
-    viewModelOf(::TemplateViewModel)
+    viewModel { parameters ->
+        TemplateViewModel(get(), get(), get(), get(), get(), get(), get(), get(),
+            localOnly = parameters.getOrNull<Boolean>() ?: false)
+    }
     viewModel { parameters ->
         TemplateEditorViewModel(
             templateId = parameters[0],

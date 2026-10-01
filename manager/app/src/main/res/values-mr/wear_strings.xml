@@ -68,4 +68,5 @@
     <string name="wear_susfs_backup_restore">बॅकअप आणि पुनर्संचयित करणे</string>
     <string name="wear_filter_sort">फिल्टर आणि क्रमवारी</string>
     <string name="wear_sort">क्रमवारी</string>
+    <string name="wear_online_templates">ऑनलाइन टेम्पलेट</string>
 </resources>

@@ -26,12 +26,14 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.LocalReduceMotion
+import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnDefaults
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
@@ -79,6 +81,13 @@ fun WearList(
     val pullProgress = remember { mutableFloatStateOf(0f) }
     val motion = MaterialTheme.motionScheme
     val reduceMotion = LocalReduceMotion.current
+    val screenActive = LocalScreenIsActive.current
+    LaunchedEffect(screenActive) {
+        if (!screenActive) {
+            pullOffset.floatValue = 0f
+            pullProgress.floatValue = 0f
+        }
+    }
     // The list follows a boundary pull closely and springs back with a small bounce when it ends.
     val animatedOffset by animateFloatAsState(pullOffset.floatValue,
         animationSpec = if (reduceMotion) snap()
@@ -89,7 +98,7 @@ fun WearList(
         listState,
         pullOffset,
         pullProgress,
-        enabled = !isLoading && !isRefreshing,
+        enabled = screenActive && !isLoading && !isRefreshing,
         onRefresh = onRefresh,
         onOpenPanel = onOpenPanel,
         onClosePanel = onClosePanel,
@@ -112,7 +121,7 @@ fun WearList(
                 else content(transformationSpec)
             }
             // Pulling down at the top shows the panel indicator in the room the list makes for it.
-            if (onOpenPanel != null || onClosePanel != null) WearPullIndicator(
+            if (onOpenPanel != null) WearPullIndicator(
                 pullProgress.floatValue, closing = onClosePanel != null,
                 Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
             )
@@ -140,7 +149,9 @@ fun WearList(
             ) {
                 // The pull refresh starts at the end of the list, so its progress shows here, where
                 // the finger is: a ring that fills with the pull, then a spinner while refreshing.
-                if (pullProgress.floatValue < 0f) CircularProgressIndicator(
+                if (onClosePanel != null && pullProgress.floatValue < 0f) WearPullIndicator(
+                    -pullProgress.floatValue, closing = true)
+                else if (pullProgress.floatValue < 0f) CircularProgressIndicator(
                     progress = { (-pullProgress.floatValue).coerceIn(0f, 1f) }, modifier = Modifier.size(24.dp),
                     colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current))
                 else if (isRefreshing) CircularProgressIndicator(Modifier.size(24.dp),

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -63,8 +64,10 @@ fun TransformingLazyColumnItemScope.WearSectionHeader(
         modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
         transformation = SurfaceTransformation(transformationSpec),
     ) {
-        if (icon == null) Text(title)
-        else WearIconText(icon, title, style = LocalTextStyle.current)
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            if (icon == null) Text(title, Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            else WearIconText(icon, title, style = LocalTextStyle.current)
+        }
     }
 }
 
