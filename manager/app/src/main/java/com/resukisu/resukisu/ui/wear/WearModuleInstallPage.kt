@@ -91,7 +91,7 @@ internal fun WearModuleInstallPage(
             FlashOperation.Uninstall -> R.string.settings_uninstall_permanent
             FlashOperation.Restore -> R.string.settings_restore_stock_image
             is FlashOperation.Boot -> R.string.install
-            is FlashOperation.Module -> R.string.wear_install_module
+            is FlashOperation.Module -> R.string.install
         })) }
         item {
             WearFlashStatusChip(spec, status, stringResource(when {

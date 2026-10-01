@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="wear_mode_lkm" translatable="false">LKM</string>
     <string name="wear_allowed">Allowed</string>
     <string name="wear_denied">Denied</string>
@@ -10,15 +10,11 @@
     <string name="wear_enable_sulog">Enable SU log</string>
     <string name="wear_disable_sulog">Disable SU log</string>
     <string name="wear_refresh">Refresh</string>
-    <string name="wear_install_module">Install module</string>
     <string name="wear_module_file_unreadable">Cannot read the selected module ZIP</string>
     <string name="wear_file_picker_unavailable">File picker unavailable</string>
-    <string name="wear_back">Back</string>
     <string name="wear_apps">Apps</string>
     <string name="wear_general">General</string>
     <string name="wear_security">Security</string>
-    <string name="wear_advanced">Advanced</string>
-    <string name="wear_no_apps">No apps found</string>
     <string name="wear_manager_updates">App updates</string>
     <string name="wear_project_url" translatable="false">https://github.com/ReSukiSU/ReSukiSU</string>
     <string name="wear_project_license" translatable="false">GPL-3.0</string>

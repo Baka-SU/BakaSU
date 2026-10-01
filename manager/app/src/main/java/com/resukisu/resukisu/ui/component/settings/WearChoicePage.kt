@@ -12,8 +12,8 @@ import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.transformedHeight
 import com.resukisu.resukisu.ui.component.wear.WearList
+import com.resukisu.resukisu.ui.component.wear.WearInfoCard
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearScaledItem
 
 @Composable
 fun WearChoicePage(title: String, choices: List<Pair<String, String>>, selected: String,
@@ -21,7 +21,7 @@ fun WearChoicePage(title: String, choices: List<Pair<String, String>>, selected:
     icon: ((String) -> ImageVector)? = null, onChoose: (String) -> Unit) {
     WearList(onBack = onBack, snap = true) { spec ->
         item { WearPageHeader(spec, null, title) }
-        if (!message.isNullOrBlank()) item { WearScaledItem(spec) { Text(message) } }
+        if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
         LazySegmentedColumn(choices, { it.first }) { (value, label) ->
             RadioButton(
                 selected = value == selected,
