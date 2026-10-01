@@ -46,8 +46,13 @@ import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.HorizontalPagerScaffold
 import androidx.compose.ui.graphics.Color
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.openOnPhoneDialogCurvedText
+import androidx.wear.compose.material3.confirmationDialogCurvedText
+import androidx.wear.compose.material3.OpenOnPhoneDialogDefaults
+import androidx.wear.compose.material3.OpenOnPhoneDialog
+import androidx.wear.compose.material3.FailureConfirmationDialog
+import androidx.wear.compose.material3.ConfirmationDialogDefaults
 import androidx.wear.compose.material3.PagerScaffoldDefaults
-import androidx.wear.compose.material3.SwipeToDismissBox
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.ui.viewmodel.HomeUiAction
 import com.resukisu.resukisu.ui.viewmodel.HomeUiEvent
@@ -166,6 +171,10 @@ fun WearManagerScreen() {
     var actionRequestId by rememberSaveable { mutableIntStateOf(0) }
     var linkUrl by rememberSaveable { mutableStateOf("") }
     var linkMessage by rememberSaveable { mutableIntStateOf(R.string.operation_failed) }
+    // Results of opening a module WebUI on the phone, shown as confirmation dialogs.
+    var webUiOnPhone by remember { mutableStateOf(false) }
+    var webUiPhoneFailed by remember { mutableStateOf(false) }
+    var webUiPhoneFailure by remember { mutableStateOf<WearLinkFailure?>(null) }
     var fileTask by rememberSaveable { mutableStateOf("module") }
     var pickerRequest by rememberSaveable { mutableIntStateOf(0) }
     var savedPath by rememberSaveable { mutableStateOf("") }
@@ -336,11 +345,14 @@ fun WearManagerScreen() {
                     .putExtra("id", event.moduleId).putExtra("name", event.moduleName))
             }.onFailure { moduleError = operationFailedText }
             WearLinkEvent.SentToPhone -> { linkMessage = R.string.wear_phone_sent; openPage("link-result") }
-            is WearLinkEvent.Failed -> { linkMessage = linkFailureMessage(event.reason, event.webUi); openPage("link-result") }
+            is WearLinkEvent.Failed -> { linkMessage = linkFailureMessage(event.reason); openPage("link-result") }
+            WearLinkEvent.WebUiOnPhone -> webUiOnPhone = true
+            is WearLinkEvent.WebUiPhoneFailed -> { webUiPhoneFailure = event.reason; webUiPhoneFailed = true }
         } }
     }
     // A found manager update is offered in a dialog, the stable channel first as on the phone's Home.
     com.resukisu.resukisu.ui.component.wear.WearManagerUpdateDialog(home.stableManagerUpdate ?: home.betaManagerUpdate)
+    WearPhoneWebUiDialogs(webUiOnPhone, { webUiOnPhone = false }, webUiPhoneFailure, webUiPhoneFailed) { webUiPhoneFailed = false }
     AppScaffold(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface) {
         if (linkLoading) {
             // A waiting spinner; the branded loading screen is only shown at app startup.
@@ -348,10 +360,10 @@ fun WearManagerScreen() {
                 androidx.wear.compose.material3.CircularProgressIndicator()
             }
         } else if (detailType.isNotEmpty()) {
-            SwipeToDismissBox(onDismissed = { goBack() }) { isBackground ->
+            com.resukisu.resukisu.ui.component.wear.WearSwipeToDismissBox(onDismissed = { goBack() }) { isBackground ->
                 if (isBackground) {
-                    // Transparent, so the global background stays visible while swiping.
-                    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize())
+                    // The revealed layer shows only the app backdrop while swiping.
+                    Unit
                 } else pageStateHolder.SaveableStateProvider("wear-details-$detailType-$selectedId") { when (detailType) {
                     "module" -> WearModuleDetail(
                         module = modules.moduleList.firstOrNull { it.id == selectedId },
@@ -470,8 +482,9 @@ fun WearManagerScreen() {
                     "kernel-flash" -> WearKernelFlashPage(kernelInstall.ak3Uri.orEmpty(), kernelInstall.slot,
                         kernelInstall.skipKsud, kernelFlashRequest) { goBack() }
                     "color" -> WearColorPage(settings, settingsMessage, { goBack() }, dispatchSettings, { selectFile("image") })
-                    "dpi" -> WearDpiPage(settings, settingsMessage, { goBack() }, dispatchSettings)
-                    "picker-mode", "link-mode", "language", "sucompat" -> WearSelectionPage(
+                    "dpi" -> WearDpiPage(settings, settingsMessage, { goBack() }, dispatchSettings,
+                        preferences.shape) { openPage("screen-shape") }
+                    "picker-mode", "link-mode", "screen-shape", "language", "sucompat" -> WearSelectionPage(
                         detailType, settings, preferences, preferenceViewModel, settingsMessage, { goBack() }, dispatchSettings)
                     "reboot" -> WearRebootPanel(home.systemStatus.isRootAvailable, { goBack() }) {
                         homeViewModel.dispatch(HomeUiAction.Reboot(it))
@@ -527,10 +540,10 @@ fun WearManagerScreen() {
             LaunchedEffect(Unit) { homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false)) }
             com.resukisu.resukisu.ui.component.wear.WearLoadingScreen()
         } else {
-            SwipeToDismissBox(onDismissed = { activity?.finish() }) { isBackground ->
+            com.resukisu.resukisu.ui.component.wear.WearSwipeToDismissBox(onDismissed = { activity?.finish() }) { isBackground ->
                 if (isBackground) {
-                    // Transparent, so the global background stays visible while swiping.
-                    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize())
+                    // The revealed layer shows only the app backdrop while swiping.
+                    Unit
                 } else {
                     pageStateHolder.SaveableStateProvider("wear-main-pages") {
                         HorizontalPagerScaffold(pagerState = pagerState) {
@@ -591,10 +604,34 @@ fun WearManagerScreen() {
     }
 }
 
-private fun linkFailureMessage(reason: WearLinkFailure?, webUi: Boolean): Int = when (reason) {
-    null -> if (webUi) R.string.wear_webui_local_only else R.string.operation_failed
+private fun linkFailureMessage(reason: WearLinkFailure?): Int = when (reason) {
+    null -> R.string.operation_failed
     WearLinkFailure.UNSUPPORTED_URL -> R.string.wear_link_unsupported
     WearLinkFailure.WEBVIEW_UNAVAILABLE -> R.string.wear_link_webview_unavailable
     WearLinkFailure.PHONE_UNAVAILABLE -> R.string.wear_link_phone_unavailable
+    WearLinkFailure.PHONE_APP_MISSING -> R.string.wear_phone_app_missing
     WearLinkFailure.PHONE_FAILED -> R.string.wear_link_phone_failed
+}
+
+/**
+ * The official open-on-phone confirmation after a module WebUI was opened on the phone, and the
+ * failure confirmation when it could not be: a disconnected phone shows the connection failure icon.
+ */
+@Composable
+private fun WearPhoneWebUiDialogs(opened: Boolean, onOpenedDismissed: () -> Unit, failure: WearLinkFailure?, failed: Boolean, onFailureDismissed: () -> Unit) {
+    val openText = OpenOnPhoneDialogDefaults.text
+    val openStyle = OpenOnPhoneDialogDefaults.curvedTextStyle
+    OpenOnPhoneDialog(visible = opened, onDismissRequest = onOpenedDismissed,
+        curvedText = { openOnPhoneDialogCurvedText(text = openText, style = openStyle) })
+    val failureText = stringResource(when (failure) {
+        WearLinkFailure.PHONE_UNAVAILABLE -> R.string.wear_phone_disconnected
+        WearLinkFailure.PHONE_APP_MISSING -> R.string.wear_phone_app_missing
+        else -> R.string.wear_phone_open_failed
+    })
+    val failureStyle = ConfirmationDialogDefaults.curvedTextStyle
+    FailureConfirmationDialog(visible = failed, onDismissRequest = onFailureDismissed,
+        curvedText = { confirmationDialogCurvedText(text = failureText, style = failureStyle) }) {
+        if (failure == WearLinkFailure.PHONE_UNAVAILABLE) ConfirmationDialogDefaults.ConnectionFailureIcon()
+        else ConfirmationDialogDefaults.FailureIcon()
+    }
 }

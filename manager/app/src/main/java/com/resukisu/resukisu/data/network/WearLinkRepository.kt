@@ -6,6 +6,13 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.webkit.WebViewCompat
 import androidx.wear.remote.interactions.RemoteActivityHelper
+import com.google.android.gms.tasks.Tasks
+import com.google.android.gms.wearable.CapabilityClient
+import com.google.android.gms.wearable.Wearable
+import com.resukisu.resukisu.data.webui.WearWebUiProtocol
+import com.resukisu.resukisu.data.webui.WearWebUiSession
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -18,7 +25,7 @@ import kotlin.coroutines.resumeWithException
 enum class WearLinkTarget { WEBVIEW, PHONE }
 
 /** Why a link could not be opened, so the UI can show the actual reason and offer a mode switch. */
-enum class WearLinkFailure { UNSUPPORTED_URL, WEBVIEW_UNAVAILABLE, PHONE_UNAVAILABLE, PHONE_FAILED }
+enum class WearLinkFailure { UNSUPPORTED_URL, WEBVIEW_UNAVAILABLE, PHONE_UNAVAILABLE, PHONE_APP_MISSING, PHONE_FAILED }
 class WearLinkException(val reason: WearLinkFailure, cause: Throwable? = null) : Exception(reason.name, cause)
 
 /**
@@ -48,22 +55,57 @@ class WearLinkRepository(private val application: Application) {
                 availability == RemoteActivityHelper.STATUS_TEMPORARILY_UNAVAILABLE) {
                 throw WearLinkException(WearLinkFailure.PHONE_UNAVAILABLE)
             }
-            // The helper resolves connected target nodes and reports a failed remote dispatch.
-            val future = helper.startRemoteActivity(Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE))
-            try {
-                suspendCancellableCoroutine<Unit> { continuation ->
-                    future.addListener({
-                        try { future.get(); if (continuation.isActive) continuation.resume(Unit) }
-                        catch (error: Exception) { if (continuation.isActive) continuation.resumeWithException(error) }
-                    }, java.util.concurrent.Executor { it.run() })
-                    continuation.invokeOnCancellation { future.cancel(true) }
-                }
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                throw WearLinkException(WearLinkFailure.PHONE_FAILED, error)
-            }
+            startOnPhone(Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE), null)
         }
         target
+    }
+
+    /**
+     * Opens a module's WebUI on the paired phone. A connected phone must have this app, found by its
+     * Data Layer capability; the phone page is then started with RemoteActivityHelper, and the
+     * session it may call back into is limited to [moduleId].
+     */
+    suspend fun openWebUiOnPhone(moduleId: String, moduleName: String) = withContext(Dispatchers.IO) {
+        val nodeClient = Wearable.getNodeClient(application)
+        val connected = runCatching { Tasks.await(nodeClient.connectedNodes, 5, TimeUnit.SECONDS) }.getOrDefault(emptyList())
+        if (connected.isEmpty()) throw WearLinkException(WearLinkFailure.PHONE_UNAVAILABLE)
+        val localId = runCatching { Tasks.await(nodeClient.localNode, 5, TimeUnit.SECONDS).id }
+            .getOrElse { throw WearLinkException(WearLinkFailure.PHONE_FAILED, it) }
+        val phones = runCatching {
+            Tasks.await(Wearable.getCapabilityClient(application)
+                .getCapability(WearWebUiProtocol.CAPABILITY, CapabilityClient.FILTER_REACHABLE), 5, TimeUnit.SECONDS).nodes
+        }.getOrDefault(emptySet()).filter { it.id != localId }
+        val phone = phones.firstOrNull { it.isNearby } ?: phones.firstOrNull()
+            ?: throw WearLinkException(WearLinkFailure.PHONE_APP_MISSING)
+        val token = UUID.randomUUID().toString()
+        WearWebUiSession.start(token, moduleId)
+        val uri = Uri.Builder().scheme(WearWebUiProtocol.SCHEME).authority(WearWebUiProtocol.HOST)
+            .appendQueryParameter("node", localId).appendQueryParameter("token", token)
+            .appendQueryParameter("module", moduleId).appendQueryParameter("name", moduleName).build()
+        try {
+            startOnPhone(Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE), phone.id)
+        } catch (error: Exception) {
+            WearWebUiSession.end(token)
+            throw error
+        }
+    }
+
+    /** Starts [intent] on phone [nodeId], or any connected phone when null; a failed dispatch is reported. */
+    private suspend fun startOnPhone(intent: Intent, nodeId: String?) {
+        val helper = RemoteActivityHelper(application, java.util.concurrent.Executor { it.run() })
+        val future = helper.startRemoteActivity(intent, nodeId)
+        try {
+            suspendCancellableCoroutine<Unit> { continuation ->
+                future.addListener({
+                    try { future.get(); if (continuation.isActive) continuation.resume(Unit) }
+                    catch (error: Exception) { if (continuation.isActive) continuation.resumeWithException(error) }
+                }, java.util.concurrent.Executor { it.run() })
+                continuation.invokeOnCancellation { future.cancel(true) }
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            throw WearLinkException(WearLinkFailure.PHONE_FAILED, error)
+        }
     }
 }

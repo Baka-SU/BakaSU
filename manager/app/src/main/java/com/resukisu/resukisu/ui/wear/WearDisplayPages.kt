@@ -1,5 +1,7 @@
 package com.resukisu.resukisu.ui.wear
 
+import androidx.compose.material.icons.twotone.Settings
+import com.resukisu.resukisu.ui.component.wear.WearChip
 import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -194,11 +196,12 @@ private fun TransformingLazyColumnItemScope.HexColorButton(spec: TransformationS
  * pending value.
  */
 @Composable
-internal fun WearDpiPage(state: SettingsUiState, message: String?, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit) {
+internal fun WearDpiPage(state: SettingsUiState, message: String?, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit,
+    shape: String, onShape: () -> Unit) {
     val systemDpi = state.systemDpi.coerceAtLeast(1)
     val pending = (state.tempDpi.toFloat() / systemDpi).coerceIn(0.75f, 1.5f)
     WearList(onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.wear_display)) }
+        item { WearPageHeader(spec, null, stringResource(R.string.wear_display_scaling)) }
         if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
         // The scale label and value sit inside the slider card, above its track.
         item {
@@ -215,6 +218,11 @@ internal fun WearDpiPage(state: SettingsUiState, message: String?, onBack: () ->
             WearActionButton(spec, Icons.TwoTone.Restore, stringResource(R.string.language_system_default),
                 { onAction(SettingsUiAction.SetTempDpi(systemDpi)) }, state.tempDpi != systemDpi,
                 secondaryText = stringResource(R.string.wear_ui_scale, 1f), colors = ButtonDefaults.filledTonalButtonColors())
+        }
+        // The screen shape chip, showing the current choice and opening the choice page.
+        item {
+            WearChip(spec, stringResource(R.string.wear_screen_shape), secondaryLabel = screenShapeLabel(shape),
+                icon = Icons.TwoTone.Settings, onClick = onShape)
         }
     }
 }

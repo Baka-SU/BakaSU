@@ -17,6 +17,9 @@ internal fun WearSelectionPage(route: String, state: SettingsUiState, preference
         "picker-mode" -> WearChoicePage(stringResource(R.string.wear_picker_mode),
             PickerModes.map { it to pickerModeLabel(it) },
             preferences.picker, onBack, message = message, onChoose = preferenceViewModel::setPicker)
+        "screen-shape" -> WearChoicePage(stringResource(R.string.wear_screen_shape),
+            ScreenShapes.map { it to screenShapeLabel(it) },
+            preferences.shape, onBack, onChoose = preferenceViewModel::setShape)
         "link-mode" -> WearChoicePage(stringResource(R.string.wear_link_mode),
             LinkModes.map { it to linkModeLabel(it) },
             preferences.link, onBack, message = message, onChoose = preferenceViewModel::setLink)
@@ -45,12 +48,20 @@ private fun Locale.settingTag() = if (country.isEmpty()) language else "${langua
 
 private val PickerModes = listOf("auto", "builtin", "system")
 private val LinkModes = listOf("auto", "webview", "phone")
+private val ScreenShapes = listOf("auto", "round", "square")
 
 /** Labels shared by the choice pages and the current-value summaries in settings. */
 @Composable
 internal fun pickerModeLabel(mode: String) = stringResource(when (mode) {
     "builtin" -> R.string.wear_builtin_picker
     "system" -> R.string.wear_system_picker
+    else -> R.string.wear_auto
+})
+
+@Composable
+internal fun screenShapeLabel(shape: String) = stringResource(when (shape) {
+    "round" -> R.string.wear_shape_round
+    "square" -> R.string.wear_shape_square
     else -> R.string.wear_auto
 })
 
