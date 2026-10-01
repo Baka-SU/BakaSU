@@ -38,9 +38,15 @@
     <string name="wear_link_webview_unavailable">此手錶沒有可用的系統 WebView。</string>
     <string name="wear_link_phone_unavailable">沒有已連線的手機可以開啟此連結。</string>
     <string name="wear_link_phone_failed">無法將連結傳送至手機。</string>
-    <string name="wear_webui_local_only">模組 WebUI 依賴手錶本機的模組檔案與手錶內建的 WebView，瀏覽器或手機無法開啟。</string>
     <string name="wear_custom_color">自訂顏色</string>
     <string name="wear_directory_empty">此資料夾中沒有相符的檔案</string>
     <string name="wear_clear_search">清除搜尋</string>
     <string name="wear_loading">正在載入</string>
+    <string name="wear_phone_disconnected">手機未連線</string>
+    <string name="wear_phone_app_missing">手機未安裝管理器</string>
+    <string name="wear_phone_open_failed">無法在手機上開啟</string>
+    <string name="wear_display_scaling">顯示與縮放</string>
+    <string name="wear_screen_shape">螢幕形狀</string>
+    <string name="wear_shape_round">圓形</string>
+    <string name="wear_shape_square">方形</string>
 </resources>

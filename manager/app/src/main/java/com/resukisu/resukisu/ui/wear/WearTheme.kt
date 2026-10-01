@@ -1,5 +1,8 @@
 package com.resukisu.resukisu.ui.wear
 
+import com.resukisu.resukisu.ui.viewmodel.WearPreferencesViewModel
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import androidx.compose.ui.res.stringResource
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import androidx.compose.material.icons.Icons
@@ -7,15 +10,12 @@ import androidx.compose.material.icons.twotone.Error
 import com.resukisu.resukisu.ui.component.wear.WearStatusTone
 import com.resukisu.resukisu.ui.component.wear.WearStatusItem
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -25,10 +25,10 @@ import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.dynamicColorScheme
-import coil.compose.AsyncImage
 import com.materialkolor.ktx.toColor
 import com.materialkolor.ktx.toHct
 import com.resukisu.resukisu.R
+import com.resukisu.resukisu.ui.component.wear.WearBackground
 import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearLoadingScreen
 import com.resukisu.resukisu.ui.component.wear.WearScaledItem
@@ -43,6 +43,16 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
     val config = koinInject<ThemeConfig>()
     val viewModel = koinViewModel<SettingsViewModel>()
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
+    val preferences by koinViewModel<WearPreferencesViewModel>().state.collectAsStateWithLifecycle()
+    // A chosen screen shape replaces the device's round flag, which Wear Compose layouts follow.
+    val systemConfiguration = LocalConfiguration.current
+    val configuration = remember(systemConfiguration, preferences.shape) {
+        if (preferences.shape != "round" && preferences.shape != "square") systemConfiguration
+        else Configuration(systemConfiguration).apply {
+            screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
+                if (preferences.shape == "round") Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
+        }
+    }
     val systemDensity = LocalDensity.current
     val density = remember(systemDensity, settings.dpi) {
         if (settings.dpi <= 0) systemDensity
@@ -84,28 +94,12 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
         // Wear screens keep a pure black background whichever scheme is used.
         scheme.copy(background = Color.Black)
     }
-    CompositionLocalProvider(LocalDensity provides density) {
+    CompositionLocalProvider(LocalDensity provides density, LocalConfiguration provides configuration) {
         MaterialTheme(colorScheme = colors) {
-            // The custom background is the global backdrop: black base, the image, then a dark
-            // dim overlay (backgroundDim). Surfaces (cards, buttons) sit opaque on top of it.
-            WearGlobalBackground(config) { content() }
+            // The custom background is the app backdrop: black base, the image, then a dark dim
+            // overlay (backgroundDim). Surfaces (cards, buttons) sit opaque on top of it.
+            WearBackground { content() }
         }
-    }
-}
-
-/** A full-screen backdrop of the black base plus the custom background image and its dim layer. */
-@Composable
-private fun WearGlobalBackground(config: ThemeConfig, content: @Composable () -> Unit) {
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        config.customBackgroundUri?.let { uri ->
-            AsyncImage(
-                model = uri, contentDescription = null, contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-            // Same dimming as the phone background: a black layer at the backgroundDim alpha.
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = config.backgroundDim)))
-        }
-        content()
     }
 }
 
