@@ -66,7 +66,7 @@ internal fun WearFilePage(title: String, mode: WearFileMode, onBack: () -> Unit,
     var editingName by rememberSaveable { mutableStateOf(false) }
     if (editingName) {
         WearSubPage({ editingName = false }) {
-            WearTextInputPage(stringResource(R.string.wear_file_name), state.name, { editingName = false }) {
+            WearTextInputPage(stringResource(R.string.wear_file_name), state.name) {
                 viewModel.setName(it); editingName = false
             }
         }
@@ -82,7 +82,7 @@ internal fun WearFilePage(title: String, mode: WearFileMode, onBack: () -> Unit,
         directory?.let { item {
             WearScaledItem(spec) {
                 Text(it.path, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyExtraSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.StartEllipsis)
             }
         } }

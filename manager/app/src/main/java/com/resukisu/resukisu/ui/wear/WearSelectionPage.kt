@@ -44,7 +44,7 @@ internal fun WearSelectionPage(route: String, state: SettingsUiState, preference
 private fun Locale.settingTag() = if (country.isEmpty()) language else "${language}_$country"
 
 private val PickerModes = listOf("auto", "builtin", "system")
-private val LinkModes = listOf("auto", "webview", "browser", "phone")
+private val LinkModes = listOf("auto", "webview", "phone")
 
 /** Labels shared by the choice pages and the current-value summaries in settings. */
 @Composable
@@ -57,7 +57,6 @@ internal fun pickerModeLabel(mode: String) = stringResource(when (mode) {
 @Composable
 internal fun linkModeLabel(mode: String) = stringResource(when (mode) {
     "webview" -> R.string.wear_webview
-    "browser" -> R.string.wear_browser
     "phone" -> R.string.wear_phone
     else -> R.string.wear_auto
 })

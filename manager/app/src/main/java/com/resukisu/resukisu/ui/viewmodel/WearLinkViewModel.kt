@@ -34,7 +34,6 @@ class WearLinkViewModel(private val repository: WearLinkRepository) : ViewModel(
             try { when (repository.resolve(url, mode)) {
                 WearLinkTarget.WEBVIEW -> mutableEvents.emit(WearLinkEvent.WebView(url))
                 WearLinkTarget.PHONE -> mutableEvents.emit(WearLinkEvent.SentToPhone)
-                WearLinkTarget.BROWSER -> Unit
             } }
             catch (error: CancellationException) { throw error }
             catch (error: Exception) { mutableEvents.emit(WearLinkEvent.Failed((error as? WearLinkException)?.reason)) }
@@ -44,13 +43,12 @@ class WearLinkViewModel(private val repository: WearLinkRepository) : ViewModel(
 
     /**
      * Module WebUI serves the watch's local module files through the `ksu` bridge, which only the
-     * watch's own WebView provides; a browser or the phone cannot reach them, so no external mode
-     * is attempted.
+     * watch's own WebView provides; the phone cannot reach them, so it is not attempted.
      */
     fun openWebUi(moduleId: String, moduleName: String, mode: String) {
         viewModelScope.launch {
             mutableEvents.emit(when {
-                mode == "browser" || mode == "phone" -> WearLinkEvent.Failed(null, webUi = true)
+                mode == "phone" -> WearLinkEvent.Failed(null, webUi = true)
                 repository.hasWebView() -> WearLinkEvent.WebUi(moduleId, moduleName)
                 else -> WearLinkEvent.Failed(WearLinkFailure.WEBVIEW_UNAVAILABLE, webUi = true)
             })

@@ -3,16 +3,11 @@ package com.resukisu.resukisu.ui.component.wear
 import android.os.SystemClock
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -27,28 +22,34 @@ import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import com.resukisu.resukisu.R
 import kotlin.math.abs
 
-/** Only touch drags beyond a list boundary participate; rotary and ordinary scrolling do not. */
+/**
+ * Only touch drags beyond a list boundary participate; rotary and ordinary scrolling do not.
+ *
+ * Apply it to the whole screen (list and edge button), so a pull that starts on the edge button at
+ * the end of the list still counts. [displacement] receives the damping offset; draw it on the list
+ * only, so it does not shift the coordinates this gesture measures.
+ */
 @Composable
 internal fun Modifier.wearRefreshGesture(
     listState: TransformingLazyColumnState,
+    displacement: MutableFloatState,
     enabled: Boolean,
     onRefresh: (() -> Unit)?,
     onOpenPanel: (() -> Unit)? = null,
     onClosePanel: (() -> Unit)? = null,
     panelLabel: String? = null,
 ): Modifier {
+    // Lists without any boundary action keep their gestures untouched.
+    if (onRefresh == null && onOpenPanel == null && onClosePanel == null) return this
     val active by rememberUpdatedState(enabled)
     val refresh by rememberUpdatedState(onRefresh)
     val open by rememberUpdatedState(onOpenPanel)
     val close by rememberUpdatedState(onClosePanel)
     val haptic = LocalHapticFeedback.current
     val threshold = with(LocalDensity.current) { 48.dp.toPx() }
-    var displacement by remember { mutableFloatStateOf(0f) }
-    val animatedDisplacement by animateFloatAsState(displacement,
-        animationSpec = tween(if (displacement == 0f) 150 else 2_000), label = "wear-panel-damping")
     val refreshLabel = stringResource(R.string.wear_refresh)
     val backLabel = stringResource(R.string.wear_back)
-    return this.graphicsLayer { translationY = animatedDisplacement }.pointerInput(listState, threshold) {
+    return this.pointerInput(listState, threshold) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             var anchorY: Float? = null
@@ -84,32 +85,35 @@ internal fun Modifier.wearRefreshGesture(
                         anchorY = null
                         holdStarted = null
                         pull = 0f
-                        displacement = 0f
+                        displacement.floatValue = 0f
                         continue
                     }
                     if (anchorY == null) anchorY = pointer.previousPosition.y
                     pull = direction * (pointer.position.y - anchorY)
                     if (abs(pointer.position.x - down.position.x) > maxOf(threshold / 2, pull)) canceled = true
-                    if (canceled || pull < 0) {
+                    // Small reverse jitter while holding still is tolerated; a real reverse drag cancels.
+                    if (canceled || pull < -threshold / 4) {
                         canceled = true
                         holdStarted = null
-                        displacement = 0f
+                        displacement.floatValue = 0f
                         continue
                     }
-                    if (pull >= threshold && (open != null || returning)) {
+                    // Once the hold has started, it survives the finger easing back slightly.
+                    val holding = pull >= threshold || (holdStarted != null && pull >= threshold * 0.75f)
+                    if (holding && (open != null || returning)) {
                         if (holdStarted == null) {
                             holdStarted = SystemClock.uptimeMillis()
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         }
-                        displacement = direction * threshold * 0.25f
+                        displacement.floatValue = direction * threshold * 0.25f
                     } else {
                         holdStarted = null
-                        displacement = 0f
+                        displacement.floatValue = 0f
                     }
                     if (pull > threshold / 2) pointer.consume()
                 }
             } finally {
-                displacement = 0f
+                displacement.floatValue = 0f
             }
         }
     }.semantics {

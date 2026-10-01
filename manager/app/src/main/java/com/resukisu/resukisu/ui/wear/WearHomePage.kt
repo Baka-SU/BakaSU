@@ -41,13 +41,14 @@ internal fun WearHomePage(
     onRebootPanel: () -> Unit,
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     onInstall: (() -> Unit)? = null,
+    backToTop: Boolean = false,
 ) {
     val unknown = stringResource(R.string.unknown)
     val status = state.systemStatus
     val info = state.systemInfo
-    WearList(isLoading = !state.isInitialDataLoaded && error == null,
-        onBack = onBack, onOpenPanel = onRebootPanel,
-        panelLabel = stringResource(R.string.reboot), listState = listState,
+    // The first load shows the branded loading screen in WearManagerScreen instead of this list.
+    WearList(onBack = onBack, onOpenPanel = onRebootPanel,
+        panelLabel = stringResource(R.string.reboot), listState = listState, backToTop = backToTop,
     ) { spec ->
         item { WearPageHeader(spec, null, stringResource(R.string.home)) }
         if (state.isInitialDataLoaded) {
@@ -62,15 +63,15 @@ internal fun WearHomePage(
             }
             // Notices are paragraphs, so they stay full-text cards instead of truncated chip labels.
             if (status.ksuVersion != null && !status.isRootAvailable) item {
-                WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.grant_root_failed), tone = WearStatusTone.ERROR)
+                WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.grant_root_failed), tone = WearStatusTone.ERROR, centered = false)
             }
             warnings.forEach { id ->
-                item { WearStatusItem(spec, Icons.TwoTone.Warning, stringResource(id), tone = WearStatusTone.WARNING) }
+                item { WearStatusItem(spec, Icons.TwoTone.Warning, stringResource(id), tone = WearStatusTone.WARNING, centered = false) }
             }
             if (!status.isOfficialSignature) item {
                 WearStatusItem(spec, Icons.TwoTone.Warning,
                     stringResource(R.string.unofficial_version_notice, stringResource(R.string.app_name)),
-                    tone = WearStatusTone.WARNING)
+                    tone = WearStatusTone.WARNING, centered = false)
             }
             // The running state is the screen's only high-emphasis chip.
             item {
@@ -161,6 +162,6 @@ internal fun WearHomePage(
                 } }
             }
         }
-        if (!error.isNullOrBlank()) item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR) }
+        if (!error.isNullOrBlank()) item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR, centered = false) }
     }
 }

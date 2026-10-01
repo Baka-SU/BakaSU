@@ -1,5 +1,8 @@
 package com.resukisu.resukisu.ui.wear
 
+import androidx.compose.material.icons.twotone.Warning
+import com.resukisu.resukisu.ui.component.wear.WearStatusTone
+import com.resukisu.resukisu.ui.component.wear.WearStatusItem
 import android.os.Build
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Build
@@ -54,6 +57,7 @@ internal fun WearSettingsPage(
     category: String? = null,
     preferences: WearPreferences = WearPreferences(),
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
+    backToTop: Boolean = false,
 ) {
     val themeConfig = koinInject<ThemeConfig>()
     val languageSummary = state.currentAppLocale?.let { it.getDisplayName(it) }
@@ -65,7 +69,7 @@ internal fun WearSettingsPage(
         else "#%06X".format(themeConfig.seedColor and 0xFFFFFF)
     val dpiSummary = stringResource(R.string.wear_ui_scale, state.currentDpi.toFloat() / state.systemDpi.coerceAtLeast(1))
     val version = wearAppVersion()
-    WearList(onBack = onBack, snap = true, listState = listState) { spec ->
+    WearList(onBack = onBack, snap = true, listState = listState, backToTop = backToTop) { spec ->
         item { WearPageHeader(spec, null, stringResource(settingsCategoryTitle(category))) }
         if (!message.isNullOrBlank()) item { WearScaledItem(spec) { Text(message) } }
         if (category == null) {
@@ -164,7 +168,7 @@ internal fun WearSettingsPage(
                 })
             }
             if (category == "security" && !status.isFullFeatured) item {
-                WearScaledItem(spec) { Text(stringResource(R.string.root_required)) }
+                WearStatusItem(spec, Icons.TwoTone.Warning, stringResource(R.string.root_required), tone = WearStatusTone.WARNING)
             }
         }
     }
