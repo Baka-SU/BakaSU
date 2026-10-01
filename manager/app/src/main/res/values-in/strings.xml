@@ -555,4 +555,10 @@
     <string name="install_upload_lkm_file_summary">Gunakan berkas .ko khusus sebagai pengganti LKM bawaan</string>
     <string name="skip_ksud">Jangan menginstal ksud</string>
     <string name="skip_ksud_summary">Batalkan instalasi ksud. Jangan aktifkan ini kecuali benar-benar diperlukan.</string>
+    <string name="settings_enable_swipe_dismiss_summary">Geser dari tepi untuk kembali ke halaman sebelumnya.</string>
+    <string name="settings_pager_gesture_mode">Mode gestur pager</string>
+    <string name="settings_pager_gesture_native">Bawaan</string>
+    <string name="settings_pager_gesture_ios_like">Seperti iOS</string>
+    <string name="settings_enable_swipe_dismiss">Gerakan menggeser ke belakang</string>
+    <string name="settings_pager_gesture_cross_axis">Sumbu silang</string>
 </resources>

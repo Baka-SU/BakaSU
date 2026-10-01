@@ -555,4 +555,10 @@
     <string name="install_upload_lkm_file_summary">Utilise un fichier .ko personnalisé au lieu du module LKM intégré</string>
     <string name="skip_ksud">Ne pas installer ksud</string>
     <string name="skip_ksud_summary">Annule l\'installation de ksud. N\'activer cette option qu\'en cas d\'absolue nécessité.</string>
+    <string name="settings_enable_swipe_dismiss">Geste de balayage Retour</string>
+    <string name="settings_enable_swipe_dismiss_summary">Permet de retourner à l\'écran précédent par un geste de balayage</string>
+    <string name="settings_pager_gesture_mode">Parcours des écrans par gestes</string>
+    <string name="settings_pager_gesture_native">Par défaut</string>
+    <string name="settings_pager_gesture_cross_axis">Transversal</string>
+    <string name="settings_pager_gesture_ios_like">Comme sur iOS</string>
 </resources>
