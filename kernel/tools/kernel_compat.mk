@@ -119,7 +119,7 @@ ccflags-y += -DKSU_COMPAT_HAS_MODERN_DENTRY_OPEN
 endif
 
 # Linux 6.11 renamed the arm64 compat syscall count and table declarations.
-ifeq ($(shell grep -q "__NR_compat32_syscalls" $(srctree)/arch/arm64/kernel/sys32.c; echo $$?),0)
+ifeq ($(shell grep -q "__NR_compat32_syscalls" $(srctree)/arch/arm64/kernel/sys32.c 2>/dev/null; echo $$?),0)
 $(info -- $(REPO_NAME)/compat: found __NR_compat32_syscalls)
 ccflags-y += -DKSU_COMPAT_HAS_NR_COMPAT32_SYSCALLS
 endif

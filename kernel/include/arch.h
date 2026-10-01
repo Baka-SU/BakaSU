@@ -125,11 +125,6 @@
     (*(is_compat_task() ? &__PT_REGS_CAST(x)->regs[7] : &__PT_REGS_CAST(x)->__PT_ORIG_SYSCALL_REG))
 #else
 #define __PT_REGS_READ(x, native, compat) (__PT_REGS_CAST(x)->native)
-#define PT_REGS_RET(x) (__PT_REGS_CAST(x)->__PT_RET_REG)
-#define PT_REGS_FP(x) (__PT_REGS_CAST(x)->__PT_FP_REG)
-#define PT_REGS_RC(x) (__PT_REGS_CAST(x)->__PT_RC_REG)
-#define PT_REGS_SP(x) (__PT_REGS_CAST(x)->__PT_SP_REG)
-#define PT_REGS_IP(x) (__PT_REGS_CAST(x)->__PT_IP_REG)
 #define PT_REGS_ORIG_SYSCALL(x) (__PT_REGS_CAST(x)->__PT_ORIG_SYSCALL_REG)
 #endif
 
