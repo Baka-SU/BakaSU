@@ -56,13 +56,16 @@ fun TransformingLazyColumnItemScope.WearPageHeader(
 @Composable
 fun TransformingLazyColumnItemScope.WearSectionHeader(
     transformationSpec: TransformationSpec,
-    icon: ImageVector,
+    icon: ImageVector?,
     title: String,
 ) {
     ListSubHeader(
         modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
         transformation = SurfaceTransformation(transformationSpec),
-    ) { WearIconText(icon, title, style = LocalTextStyle.current) }
+    ) {
+        if (icon == null) Text(title)
+        else WearIconText(icon, title, style = LocalTextStyle.current)
+    }
 }
 
 /**

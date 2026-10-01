@@ -57,6 +57,7 @@
         android:zygotePreloadName="com.resukisu.resukisu.magica.AppZygotePreload">
         <activity
             android:name=".ui.MainActivity"
+            android:configChanges="locale|layoutDirection"
             android:exported="true"
             android:enabled="true"
             android:launchMode="standard"

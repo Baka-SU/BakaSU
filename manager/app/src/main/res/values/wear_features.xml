@@ -6,7 +6,8 @@
     <string name="wear_webui" translatable="false">WebUI</string>
     <string name="scroll_to_top">Back to top</string>
     <string name="wear_display">Display</string>
-    <string name="wear_link_mode">Open links</string>
+    <string name="wear_link_mode">Open module WebUI</string>
+    <string name="wear_watch_webui">Open on watch</string>
     <string name="wear_picker_mode">File picker</string>
     <string name="wear_auto">Automatic</string>
     <string name="wear_builtin_picker">Built-in picker</string>
@@ -18,7 +19,6 @@
     <string name="wear_parent_directory">Parent directory</string>
     <string name="wear_invalid_color">Enter a colour as #RRGGBB.</string>
     <string name="wear_ui_scale" translatable="false">%1$.2fx</string>
-    <string name="wear_webview" translatable="false">WebView</string>
     <string name="wear_file_name">File name</string>
     <string name="wear_remove_background">Remove background</string>
     <string name="wear_link_unsupported">This type of link can\'t be opened.</string>
@@ -29,10 +29,31 @@
     <string name="wear_joined" translatable="false">%1$s · %2$s</string>
     <string name="wear_directory_empty">No matching files in this folder</string>
     <string name="wear_phone_disconnected">Phone not connected</string>
-    <string name="wear_phone_app_missing">App not on phone</string>
+    <string name="wear_phone_app_missing">No matching phone app</string>
     <string name="wear_phone_open_failed">Couldn\'t open on phone</string>
     <string name="wear_display_scaling">Display &amp; scaling</string>
     <string name="wear_screen_shape">Screen shape</string>
     <string name="wear_shape_round">Round</string>
     <string name="wear_shape_square">Square</string>
+    <string name="wear_page_animation">Page transitions</string>
+    <string name="wear_animation_fade_scale">Fade and scale</string>
+    <string name="wear_animation_slide">Horizontal slide</string>
+    <string name="wear_display_appearance_motion">Appearance and motion</string>
+    <string name="wear_display_screen_layout">Screen and layout</string>
+    <string name="wear_display_language">Language</string>
+    <string name="wear_settings_updates">Updates</string>
+    <string name="wear_settings_links_files">WebUI and files</string>
+    <string name="wear_settings_app_behavior">App behavior</string>
+    <string name="wear_settings_diagnostics">Logs and diagnostics</string>
+    <string name="wear_settings_access_profiles">Access and profiles</string>
+    <string name="wear_settings_mount_isolation">Mount isolation</string>
+    <string name="wear_settings_logging_privacy">Logging and privacy</string>
+    <string name="wear_settings_privileges_startup">Privileges and startup</string>
+    <string name="wear_settings_manager_mounts">Manager and mounts</string>
+    <string name="wear_settings_kernel_maintenance">Kernel maintenance</string>
+    <string name="wear_susfs_status_controls">Status and controls</string>
+    <string name="wear_susfs_features">Feature configuration</string>
+    <string name="wear_susfs_backup_restore">Backup and restore</string>
+    <string name="wear_filter_sort">Filter and sort</string>
+    <string name="wear_sort">Sort</string>
 </resources>

@@ -1,5 +1,9 @@
 package com.resukisu.resukisu.ui.component.wear
 
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.core.snap
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.LocalContentColor
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
@@ -10,8 +14,6 @@ import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -25,8 +27,10 @@ import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnDefaults
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
@@ -34,9 +38,12 @@ import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
 import androidx.wear.compose.material3.EdgeButton
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
+import androidx.wear.compose.material3.lazy.TransformationVariableSpec
+import androidx.wear.compose.material3.lazy.ResponsiveTransformationSpec
 import com.resukisu.resukisu.R
 import kotlinx.coroutines.launch
 
@@ -63,20 +70,24 @@ fun WearList(
     content: TransformingLazyColumnScope.(TransformationSpec) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val transformationSpec = rememberTransformationSpec()
+    // Round screens scale and fade items at the edges; square screens (including the screen shape
+    // setting) keep items at full size, as nothing is cut off there.
+    val transformationSpec = if (LocalConfiguration.current.isScreenRound) rememberTransformationSpec()
+        else rememberTransformationSpec(SquareSmallScreenSpec, SquareLargeScreenSpec)
     val pullOffset = remember { mutableFloatStateOf(0f) }
-    val crownProgress = remember { mutableFloatStateOf(0f) }
-    // The panel hold shows its progress: the 2 second touch hold, or the crown rotation past the end.
-    val holdProgress by animateFloatAsState(if (pullOffset.floatValue != 0f) 1f else 0f,
-        animationSpec = tween(if (pullOffset.floatValue != 0f) 2_000 else 150, easing = LinearEasing), label = "wear-panel-hold")
-    val panelProgress = maxOf(holdProgress, crownProgress.floatValue)
+    val pullProgress = remember { mutableFloatStateOf(0f) }
+    val motion = MaterialTheme.motionScheme
+    val reduceMotion = LocalReduceMotion.current
+    // The list follows a boundary pull closely and springs back with a small bounce when it ends.
     val animatedOffset by animateFloatAsState(pullOffset.floatValue,
-        animationSpec = tween(if (pullOffset.floatValue == 0f) 150 else 2_000), label = "wear-panel-damping")
+        animationSpec = if (reduceMotion) snap()
+            else if (pullOffset.floatValue == 0f) motion.defaultSpatialSpec()
+            else motion.fastSpatialSpec(), label = "wear-boundary-pull")
     // The gesture covers the whole screen, including the edge button shown at the end of the list.
     val gestureModifier = Modifier.wearRefreshGesture(
         listState,
         pullOffset,
-        crownProgress,
+        pullProgress,
         enabled = !isLoading && !isRefreshing,
         onRefresh = onRefresh,
         onOpenPanel = onOpenPanel,
@@ -86,21 +97,29 @@ fun WearList(
     // Loading shows a progress indicator instead of the content, as the phone does; the branded
     // loading screen is only for the manager's first load.
     val listContent: @Composable (PaddingValues) -> Unit = { contentPadding ->
-        TransformingLazyColumn(
-            modifier = Modifier.fillMaxSize().graphicsLayer { translationY = animatedOffset },
-            state = listState,
-            contentPadding = contentPadding,
-            flingBehavior = if (snap) TransformingLazyColumnDefaults.snapFlingBehavior(listState)
-                else ScrollableDefaults.flingBehavior(),
-            rotaryScrollableBehavior = if (snap) RotaryScrollableDefaults.snapBehavior(listState)
-                else RotaryScrollableDefaults.behavior(listState),
-        ) {
-            if (isLoading) wearLoadingItem(transformationSpec)
-            else content(transformationSpec)
+        Box(Modifier.fillMaxSize()) {
+            TransformingLazyColumn(
+                modifier = Modifier.fillMaxSize().graphicsLayer { translationY = animatedOffset },
+                state = listState,
+                contentPadding = contentPadding,
+                flingBehavior = if (snap) TransformingLazyColumnDefaults.snapFlingBehavior(listState)
+                    else ScrollableDefaults.flingBehavior(),
+                rotaryScrollableBehavior = if (snap) RotaryScrollableDefaults.snapBehavior(listState)
+                    else RotaryScrollableDefaults.behavior(listState),
+            ) {
+                if (isLoading) wearLoadingItem(transformationSpec)
+                else content(transformationSpec)
+            }
+            // Pulling down at the top shows the panel indicator in the room the list makes for it.
+            if (onOpenPanel != null || onClosePanel != null) WearPullIndicator(
+                pullProgress.floatValue, closing = onClosePanel != null,
+                Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
+            )
         }
     }
     if (onBack != null || onConfirm != null || backToTop) {
-        ScreenScaffold(scrollState = listState, modifier = gestureModifier, edgeButton = {
+        ScreenScaffold(scrollState = listState, modifier = gestureModifier,
+            scrollIndicator = { WearScrollIndicator(listState) }, edgeButton = {
             EdgeButton(
                 onClick = {
                     // While refreshing, the edge button only shows the progress of the pull refresh.
@@ -117,9 +136,10 @@ fun WearList(
                     overscrollEffect = rememberOverscrollEffect(),
                 ),
             ) {
-                // Gestures at the end of the list show their progress here, where the finger was:
-                // the panel hold fills a ring, and a pull refresh spins until it completes.
-                if (panelProgress > 0f) CircularProgressIndicator(progress = { panelProgress }, modifier = Modifier.size(24.dp),
+                // The pull refresh starts at the end of the list, so its progress shows here, where
+                // the finger is: a ring that fills with the pull, then a spinner while refreshing.
+                if (pullProgress.floatValue < 0f) CircularProgressIndicator(
+                    progress = { (-pullProgress.floatValue).coerceIn(0f, 1f) }, modifier = Modifier.size(24.dp),
                     colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current))
                 else if (isRefreshing) CircularProgressIndicator(Modifier.size(24.dp),
                     colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current))
@@ -130,5 +150,12 @@ fun WearList(
                 )
             }
         }) { listContent(it) }
-    } else ScreenScaffold(scrollState = listState, modifier = gestureModifier) { listContent(it) }
+    } else ScreenScaffold(scrollState = listState, modifier = gestureModifier,
+        scrollIndicator = { WearScrollIndicator(listState) }) { listContent(it) }
 }
+
+private val SquareItemSpec = TransformationVariableSpec(1f)
+private val SquareSmallScreenSpec = ResponsiveTransformationSpec.smallScreen(
+    containerAlpha = SquareItemSpec, contentAlpha = SquareItemSpec, scale = SquareItemSpec)
+private val SquareLargeScreenSpec = ResponsiveTransformationSpec.largeScreen(
+    containerAlpha = SquareItemSpec, contentAlpha = SquareItemSpec, scale = SquareItemSpec)

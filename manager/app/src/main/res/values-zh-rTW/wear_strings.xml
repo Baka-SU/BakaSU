@@ -21,7 +21,9 @@
     <string name="wear_manager_updates">應用程式更新</string>
     <string name="scroll_to_top">回到頂部</string>
     <string name="wear_display">顯示</string>
-    <string name="wear_link_mode">開啟連結</string>
+    <string name="wear_link_mode">模組 WebUI 開啟方式</string>
+    <string name="wear_watch_webui">在手錶上開啟</string>
+    <string name="wear_settings_links_files">WebUI 與檔案</string>
     <string name="wear_picker_mode">檔案選擇器</string>
     <string name="wear_auto">自動</string>
     <string name="wear_builtin_picker">內建選擇器</string>
@@ -43,7 +45,7 @@
     <string name="wear_clear_search">清除搜尋</string>
     <string name="wear_loading">正在載入</string>
     <string name="wear_phone_disconnected">手機未連線</string>
-    <string name="wear_phone_app_missing">手機未安裝管理器</string>
+    <string name="wear_phone_app_missing">未找到相符的手機管理器</string>
     <string name="wear_phone_open_failed">無法在手機上開啟</string>
     <string name="wear_display_scaling">顯示與縮放</string>
     <string name="wear_screen_shape">螢幕形狀</string>

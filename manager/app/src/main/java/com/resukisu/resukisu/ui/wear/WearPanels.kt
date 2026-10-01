@@ -33,7 +33,7 @@ import com.resukisu.resukisu.ui.viewmodel.SuperUserUiState
 @Composable
 internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onAction: (SuperUserUiAction) -> Unit) {
     WearList(onBack = onBack, onClosePanel = onBack, snap = true) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.advanced_options)) }
+        item { WearPageHeader(spec, null, stringResource(R.string.wear_filter_sort)) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.show_system_apps), state.showSystemApps,
             { onAction(SuperUserUiAction.SetShowSystemApps(it)) }) }
         LazySegmentedColumn(SortType.entries, { it }) { sort ->
@@ -55,7 +55,7 @@ internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onA
 @Composable
 internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction: (ModuleUiAction) -> Unit) {
     WearList(onBack = onBack, onClosePanel = onBack, snap = true) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.advanced_options)) }
+        item { WearPageHeader(spec, null, stringResource(R.string.wear_sort)) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_action_first), state.sortActionFirst,
             { onAction(ModuleUiAction.Sort(state.sortEnabledFirst, it)) }) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_enabled_first), state.sortEnabledFirst,

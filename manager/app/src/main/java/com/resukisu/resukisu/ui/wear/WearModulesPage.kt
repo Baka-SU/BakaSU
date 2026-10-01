@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.twotone.Sort
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.twotone.Add
@@ -35,6 +36,7 @@ import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.InstalledModule
+import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearIconAction
 import com.resukisu.resukisu.ui.component.wear.WearIconButtonGroup
 import com.resukisu.resukisu.ui.component.wear.WearList
@@ -61,7 +63,7 @@ internal fun WearModulesPage(
         isRefreshing = busy && state.moduleList.isNotEmpty(),
         onRefresh = onRefresh,
         backToTop = true, snap = true, listState = listState,
-        onOpenPanel = onSort, panelLabel = stringResource(R.string.advanced_options),
+        onOpenPanel = onSort, panelLabel = stringResource(R.string.wear_sort),
     ) { spec ->
         item { WearPageHeader(spec, null, stringResource(R.string.module)) }
         // Search on the left and install on the right, as one compact button group.
@@ -71,6 +73,7 @@ internal fun WearModulesPage(
                 WearIconAction(Icons.TwoTone.Add, stringResource(R.string.wear_install_module), onInstallClick),
             ))
         }
+        item { WearActionButton(spec, Icons.AutoMirrored.TwoTone.Sort, stringResource(R.string.wear_sort), onSort) }
         if (!error.isNullOrBlank()) item {
             WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
         }

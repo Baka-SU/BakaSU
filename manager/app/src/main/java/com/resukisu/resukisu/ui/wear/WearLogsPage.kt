@@ -182,7 +182,7 @@ internal fun WearLogOptionsPage(
             }
         }
         if (state.files.isNotEmpty()) {
-            item { WearSectionHeader(spec, Icons.AutoMirrored.TwoTone.Article, stringResource(R.string.sulog_log_files)) }
+            item { WearSectionHeader(spec, null, stringResource(R.string.sulog_log_files)) }
             LazySegmentedColumn(state.files, { it.path }) { file ->
                 RadioButton(
                     selected = file.path == selectedPath,
