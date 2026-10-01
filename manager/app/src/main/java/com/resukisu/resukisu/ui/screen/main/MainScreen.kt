@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.resukisu.resukisu.ui.activity.component.NavigationBar
+import com.resukisu.resukisu.ui.component.HorizontalPagerWithInteraction
 import com.resukisu.resukisu.ui.rememberMaterial3BlurBackdrop
 import com.resukisu.resukisu.ui.screen.BottomBarDestination
 import com.resukisu.resukisu.ui.theme.ThemeConfig
@@ -47,10 +48,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import top.yukonga.miuix.kmp.utils.PagerGestureNestedScrollConnection
+import top.yukonga.miuix.kmp.utils.PagerInterceptionMode
+import top.yukonga.miuix.kmp.utils.PagerNavigationSpringSpec
+import top.yukonga.miuix.kmp.utils.pagerGestureOverride
 
 
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    pagerInterceptionMode: Int = PagerInterceptionMode.CrossAxisInterceptor.ordinal,
+) {
     val themeConfig: ThemeConfig = koinInject()
     val homeViewModel = koinViewModel<HomeViewModel>()
     val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
@@ -68,6 +75,11 @@ fun MainScreen() {
     var animating by remember { mutableStateOf(false) }
     var animateJob by remember { mutableStateOf<Job?>(null) }
     var lastRequestedPage by remember { mutableIntStateOf(pagerState.currentPage) }
+
+    val pagerMode = PagerInterceptionMode.entries.getOrElse(pagerInterceptionMode) {
+        PagerInterceptionMode.Native
+    }
+    val interceptPagerGestures = pagerMode == PagerInterceptionMode.CrossAxisInterceptor
 
     val handlePageChange: (Int) -> Unit = remember(pagerState, coroutineScope) {
         { page ->
@@ -121,14 +133,32 @@ fun MainScreen() {
         LocalSelectedPage provides uiSelectedPage
     ) {
         val content = @Composable { paddingBottom: Dp ->
-            HorizontalPager(
+            HorizontalPagerWithInteraction(
+                enableGestureOverride = false,
                 modifier = Modifier
-                    .fillMaxSize(),
+                    .fillMaxSize()
+                    .pagerGestureOverride(
+                        pagerState = pagerState,
+                        mode = pagerMode,
+                        enabled = userScrollEnabled,
+                    ),
                 state = pagerState,
-                userScrollEnabled = userScrollEnabled,
+                userScrollEnabled = userScrollEnabled && !interceptPagerGestures,
                 beyondViewportPageCount = 1,
+                pageNestedScrollConnection = if (interceptPagerGestures) {
+                    PagerGestureNestedScrollConnection
+                } else {
+                    PagerDefaults.pageNestedScrollConnection(
+                        state = pagerState,
+                        orientation = androidx.compose.foundation.gestures.Orientation.Horizontal,
+                    )
+                },
+                flingBehavior = PagerDefaults.flingBehavior(
+                    state = pagerState,
+                    snapAnimationSpec = PagerNavigationSpringSpec,
+                ),
             ) { pageIndex ->
-                if (pages.isEmpty()) return@HorizontalPager
+                if (pages.isEmpty()) return@HorizontalPagerWithInteraction
 
                 val snackBarHostState = remember { SnackbarHostState() }
                 CompositionLocalProvider(
