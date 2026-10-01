@@ -26,7 +26,7 @@ import kotlin.math.abs
 
 /**
  * Pulls past the list boundaries. At the top, pulling down (or turning the crown up) opens the page's
- * panel, or closes the panel when this list is one; at the end, pulling up refreshes. Releasing past
+ * panel; at the end, pulling up closes the panel or refreshes the main list. Releasing past
  * the 48dp threshold commits; ordinary scrolling and shorter pulls do nothing.
  *
  * Apply it to the whole screen (list and edge button), so a pull that starts on the edge button at
@@ -49,7 +49,8 @@ internal fun Modifier.wearRefreshGesture(
     if (onRefresh == null && onOpenPanel == null && onClosePanel == null) return this
     val active by rememberUpdatedState(enabled)
     val refresh by rememberUpdatedState(onRefresh)
-    val panel by rememberUpdatedState(onClosePanel ?: onOpenPanel)
+    val panel by rememberUpdatedState(onOpenPanel)
+    val closePanel by rememberUpdatedState(onClosePanel)
     val haptic = LocalHapticFeedback.current
     val threshold = with(LocalDensity.current) { 48.dp.toPx() }
     val refreshLabel = stringResource(R.string.wear_refresh)
@@ -102,7 +103,7 @@ internal fun Modifier.wearRefreshGesture(
                     if (!pointer.pressed) {
                         if (!canceled && active) {
                             if (pullDown >= threshold) panel?.invoke()
-                            else if (pullUp >= threshold) refresh?.invoke()
+                            else if (pullUp >= threshold) (closePanel ?: refresh)?.invoke()
                         }
                         break
                     }
@@ -110,7 +111,7 @@ internal fun Modifier.wearRefreshGesture(
                     val dy = pointer.position.y - pointer.previousPosition.y
                     // A pull grows only while its boundary is held, and moving back shrinks it.
                     pullDown = if (panel != null && startedAtTop && !listState.canScrollBackward) (pullDown + dy).coerceAtLeast(0f) else 0f
-                    pullUp = if (refresh != null && startedAtEnd && !listState.canScrollForward) (pullUp - dy).coerceAtLeast(0f) else 0f
+                    pullUp = if ((closePanel != null || refresh != null) && startedAtEnd && !listState.canScrollForward) (pullUp - dy).coerceAtLeast(0f) else 0f
                     // Fingers drift sideways on a round screen; only a mostly horizontal drag cancels.
                     val dx = abs(pointer.position.x - down.position.x)
                     if (dx > threshold && dx > maxOf(pullDown, pullUp)) canceled = true

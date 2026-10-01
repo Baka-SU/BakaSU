@@ -68,4 +68,5 @@
     <string name="wear_susfs_backup_restore">Резервна копија и враћање</string>
     <string name="wear_filter_sort">Филтрирање и сортирање</string>
     <string name="wear_sort">Сортирање</string>
+    <string name="wear_online_templates">Онлајн шаблони</string>
 </resources>

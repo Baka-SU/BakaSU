@@ -68,4 +68,5 @@
     <string name="wear_susfs_backup_restore">Atsarginė kopija ir atkūrimas</string>
     <string name="wear_filter_sort">Filtravimas ir rikiavimas</string>
     <string name="wear_sort">Rikiavimas</string>
+    <string name="wear_online_templates">Internetiniai šablonai</string>
 </resources>

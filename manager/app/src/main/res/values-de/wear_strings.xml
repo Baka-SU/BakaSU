@@ -68,4 +68,5 @@
     <string name="wear_susfs_backup_restore">Sichern und wiederherstellen</string>
     <string name="wear_filter_sort">Filtern und sortieren</string>
     <string name="wear_sort">Sortieren</string>
+    <string name="wear_online_templates">Online-Vorlagen</string>
 </resources>

@@ -42,13 +42,13 @@ class ProfileTemplateRepository(
     val refreshing: StateFlow<Boolean> = mutableRefreshing.asStateFlow()
     val offline: StateFlow<Boolean> = mutableOffline.asStateFlow()
 
-    suspend fun refresh(synchronize: Boolean = false): Result<Unit> = refreshMutex.withLock {
+    suspend fun refresh(synchronize: Boolean = false, localOnly: Boolean = false): Result<Unit> = refreshMutex.withLock {
         mutableRefreshing.value = true
         try {
             withContext(Dispatchers.IO) {
                 runCatching {
                     val localIds = ksuCliRepository.listAppProfileTemplates()
-                    val shouldSynchronize = localIds.isEmpty() || synchronize
+                    val shouldSynchronize = !localOnly && (localIds.isEmpty() || synchronize)
                     val synchronized = !shouldSynchronize ||
                             networkStatusRepository.isAvailable() && fetchRemoteTemplates()
                     mutableOffline.value = shouldSynchronize && !synchronized
@@ -66,6 +66,18 @@ class ProfileTemplateRepository(
             }
         } finally {
             mutableRefreshing.value = false
+        }
+    }
+
+    /** Browsing online templates never writes them to the local template store. */
+    suspend fun browseOnline(): Result<List<ProfileTemplate>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val ids = JSONArray(networkRequestRepository.fetch(TEMPLATE_INDEX_URL).getOrThrow())
+            (0 until ids.length()).map { index ->
+                val body = networkRequestRepository.fetch(TEMPLATE_URL.format(ids.getString(index))).getOrThrow()
+                JSONObject(body).toTemplate()
+                    ?: throw ProfileTemplateException(ProfileTemplateFailure.Invalid)
+            }
         }
     }
 
