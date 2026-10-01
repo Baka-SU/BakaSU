@@ -111,12 +111,11 @@ fun WearList(
                 if (isLoading) wearLoadingItem(transformationSpec)
                 else content(transformationSpec)
             }
-            if (onClosePanel != null) WearPullIndicator(
-                pullProgress.floatValue.coerceAtLeast(0f), closing = true,
-                Modifier.align(Alignment.TopCenter).padding(top = 28.dp))
-            else if (onOpenPanel != null) WearPullIndicator(
-                (-pullProgress.floatValue).coerceAtLeast(0f), closing = false,
-                Modifier.align(Alignment.BottomCenter).padding(bottom = 28.dp))
+            // Pulling down at the top shows the panel indicator in the room the list makes for it.
+            if (onOpenPanel != null || onClosePanel != null) WearPullIndicator(
+                pullProgress.floatValue, closing = onClosePanel != null,
+                Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
+            )
         }
     }
     if (onBack != null || onConfirm != null || backToTop) {
@@ -141,7 +140,7 @@ fun WearList(
             ) {
                 // The pull refresh starts at the end of the list, so its progress shows here, where
                 // the finger is: a ring that fills with the pull, then a spinner while refreshing.
-                if (pullProgress.floatValue < 0f && onOpenPanel == null) CircularProgressIndicator(
+                if (pullProgress.floatValue < 0f) CircularProgressIndicator(
                     progress = { (-pullProgress.floatValue).coerceIn(0f, 1f) }, modifier = Modifier.size(24.dp),
                     colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current))
                 else if (isRefreshing) CircularProgressIndicator(Modifier.size(24.dp),
