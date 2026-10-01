@@ -9,7 +9,7 @@
   "addLabels": ["dependencies"],
   "commitMessagePrefix": "deps:",
   "schedule": [
-	"on Monday"
+	"every night"
   ],
   "packageRules": [
     {
