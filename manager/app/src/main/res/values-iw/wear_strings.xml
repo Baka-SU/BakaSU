@@ -68,4 +68,5 @@
     <string name="wear_susfs_backup_restore">גיבוי ושחזור</string>
     <string name="wear_filter_sort">סינון ומיון</string>
     <string name="wear_sort">מיון</string>
+    <string name="wear_online_templates">תבניות מקוונות</string>
 </resources>

@@ -68,4 +68,5 @@
     <string name="wear_susfs_backup_restore">Varundamine ja taastamine</string>
     <string name="wear_filter_sort">Filtreerimine ja sortimine</string>
     <string name="wear_sort">Sortimine</string>
+    <string name="wear_online_templates">Veebimallid</string>
 </resources>

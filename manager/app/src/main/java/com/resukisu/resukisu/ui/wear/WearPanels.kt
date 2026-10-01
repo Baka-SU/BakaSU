@@ -8,6 +8,9 @@ import androidx.compose.material.icons.twotone.RestartAlt
 import androidx.compose.material.icons.automirrored.twotone.Sort
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.wear.compose.foundation.LocalScreenIsActive
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material3.ButtonDefaults
@@ -32,7 +35,8 @@ import com.resukisu.resukisu.ui.viewmodel.SuperUserUiState
 
 @Composable
 internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onAction: (SuperUserUiAction) -> Unit) {
-    WearList(onBack = onBack, onClosePanel = onBack, snap = true) { spec ->
+    val listState = rememberPanelListState()
+    WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
         item { WearPageHeader(spec, null, stringResource(R.string.wear_filter_sort)) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.show_system_apps), state.showSystemApps,
             { onAction(SuperUserUiAction.SetShowSystemApps(it)) }) }
@@ -54,7 +58,8 @@ internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onA
 
 @Composable
 internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction: (ModuleUiAction) -> Unit) {
-    WearList(onBack = onBack, onClosePanel = onBack, snap = true) { spec ->
+    val listState = rememberPanelListState()
+    WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
         item { WearPageHeader(spec, null, stringResource(R.string.wear_sort)) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_action_first), state.sortActionFirst,
             { onAction(ModuleUiAction.Sort(state.sortEnabledFirst, it)) }) }
@@ -65,6 +70,7 @@ internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction:
 
 @Composable
 internal fun WearRebootPanel(rootAvailable: Boolean, onBack: () -> Unit, onReboot: (String) -> Unit) {
+    val listState = rememberPanelListState()
     val context = LocalContext.current
     val methods = linkedMapOf(
         R.string.reboot to "", R.string.reboot_soft to "soft_reboot", R.string.reboot_recovery to "recovery",
@@ -74,10 +80,20 @@ internal fun WearRebootPanel(rootAvailable: Boolean, onBack: () -> Unit, onReboo
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
         context.getSystemService(PowerManager::class.java)?.isRebootingUserspaceSupported == true)
         methods[R.string.reboot_userspace] = "userspace"
-    WearList(onBack = onBack, onClosePanel = onBack, snap = true) { spec ->
+    WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
         item { WearPageHeader(spec, null, stringResource(R.string.reboot)) }
         methods.forEach { (label, reason) -> item {
-            WearActionButton(spec, Icons.TwoTone.RestartAlt, stringResource(label), { onReboot(reason) }, rootAvailable)
+            WearActionButton(spec, Icons.TwoTone.RestartAlt, stringResource(label), { onReboot(reason) }, rootAvailable,
+                colors = ButtonDefaults.filledTonalButtonColors())
         } }
     }
+}
+
+@Composable
+private fun rememberPanelListState(): androidx.wear.compose.foundation.lazy.TransformingLazyColumnState {
+    val state = rememberTransformingLazyColumnState()
+    val active = LocalScreenIsActive.current
+    // A menu opens at its heading even when its saveable state survived a previous visit or exit animation.
+    LaunchedEffect(active) { if (active) state.scrollToItem(0) }
+    return state
 }

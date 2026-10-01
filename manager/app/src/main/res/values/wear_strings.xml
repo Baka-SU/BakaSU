@@ -21,4 +21,5 @@
     <string name="wear_app_version" translatable="false">%1$s (%2$d)</string>
     <string name="wear_clear_search">Clear search</string>
     <string name="wear_loading">Loading</string>
+    <string name="wear_online_templates">Online templates</string>
 </resources>

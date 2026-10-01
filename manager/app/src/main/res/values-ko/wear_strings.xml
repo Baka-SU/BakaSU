@@ -68,4 +68,5 @@
     <string name="wear_susfs_backup_restore">백업 및 복원</string>
     <string name="wear_filter_sort">필터 및 정렬</string>
     <string name="wear_sort">정렬</string>
+    <string name="wear_online_templates">온라인 템플릿</string>
 </resources>

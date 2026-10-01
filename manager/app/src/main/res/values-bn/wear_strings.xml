@@ -68,4 +68,5 @@
     <string name="wear_susfs_backup_restore">ব্যাকআপ ও পুনরুদ্ধার</string>
     <string name="wear_filter_sort">ফিল্টার ও সাজানো</string>
     <string name="wear_sort">সাজান</string>
+    <string name="wear_online_templates">অনলাইন টেমপ্লেট</string>
 </resources>
