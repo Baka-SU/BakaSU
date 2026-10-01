@@ -2,6 +2,7 @@ package com.resukisu.resukisu.data.network
 
 import android.app.Application
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.webkit.WebViewCompat
 import androidx.wear.remote.interactions.RemoteActivityHelper
@@ -14,43 +15,33 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-enum class WearLinkTarget { WEBVIEW, BROWSER, PHONE }
+enum class WearLinkTarget { WEBVIEW, PHONE }
 
 /** Why a link could not be opened, so the UI can show the actual reason and offer a mode switch. */
-enum class WearLinkFailure { UNSUPPORTED_URL, WEBVIEW_UNAVAILABLE, BROWSER_UNAVAILABLE, PHONE_UNAVAILABLE, PHONE_FAILED }
+enum class WearLinkFailure { UNSUPPORTED_URL, WEBVIEW_UNAVAILABLE, PHONE_UNAVAILABLE, PHONE_FAILED }
 class WearLinkException(val reason: WearLinkFailure, cause: Throwable? = null) : Exception(reason.name, cause)
 
+/**
+ * Links open in the watch's own WebView or are sent to the phone. Watches may ship without WebView,
+ * and handing links to an arbitrary watch browser is not offered.
+ */
 class WearLinkRepository(private val application: Application) {
-    fun hasWebView(): Boolean =
+    // Both the system feature and an installed provider are required; builds that remove WebView
+    // drop the feature, and a provider package alone does not prove WebView can be created.
+    fun hasWebView(): Boolean = application.packageManager.hasSystemFeature(PackageManager.FEATURE_WEBVIEW) &&
         runCatching { WebViewCompat.getCurrentWebViewPackage(application) != null }.getOrDefault(false)
 
     suspend fun resolve(url: String, mode: String): WearLinkTarget = withContext(Dispatchers.IO) {
         val uri = Uri.parse(url)
         if (uri.scheme !in listOf("https", "http")) throw WearLinkException(WearLinkFailure.UNSUPPORTED_URL)
         val hasWebView = hasWebView()
-        val intent = Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        val browserAvailable = intent.resolveActivity(application.packageManager) != null
         val target = when (mode) {
             "webview" -> if (hasWebView) WearLinkTarget.WEBVIEW else throw WearLinkException(WearLinkFailure.WEBVIEW_UNAVAILABLE)
-            "browser" -> if (browserAvailable) WearLinkTarget.BROWSER else throw WearLinkException(WearLinkFailure.BROWSER_UNAVAILABLE)
             "phone" -> WearLinkTarget.PHONE
-            "auto-external" -> if (browserAvailable) WearLinkTarget.BROWSER else WearLinkTarget.PHONE
-            else -> when {
-                hasWebView -> WearLinkTarget.WEBVIEW
-                browserAvailable -> WearLinkTarget.BROWSER
-                else -> WearLinkTarget.PHONE
-            }
+            // Automatic: the watch WebView when present, otherwise the phone.
+            else -> if (hasWebView) WearLinkTarget.WEBVIEW else WearLinkTarget.PHONE
         }
-        var actualTarget = target
-        if (actualTarget == WearLinkTarget.BROWSER) {
-            try { withContext(Dispatchers.Main) { application.startActivity(intent) } }
-            catch (error: android.content.ActivityNotFoundException) {
-                if (mode != "auto" && mode != "auto-external") throw WearLinkException(WearLinkFailure.BROWSER_UNAVAILABLE, error)
-                actualTarget = WearLinkTarget.PHONE
-            }
-        }
-        if (actualTarget == WearLinkTarget.PHONE) {
+        if (target == WearLinkTarget.PHONE) {
             val helper = RemoteActivityHelper(application, java.util.concurrent.Executor { it.run() })
             val availability = withTimeoutOrNull(1_000) { helper.availabilityStatus.first() }
             if (availability == RemoteActivityHelper.STATUS_UNAVAILABLE ||
@@ -73,6 +64,6 @@ class WearLinkRepository(private val application: Application) {
                 throw WearLinkException(WearLinkFailure.PHONE_FAILED, error)
             }
         }
-        actualTarget
+        target
     }
 }

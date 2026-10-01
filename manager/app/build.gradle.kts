@@ -245,6 +245,7 @@ dependencies {
     implementation(libs.markdown)
     implementation(libs.androidx.webkit)
     implementation(libs.androidx.wear.remote.interactions)
+    implementation(libs.androidx.wear.input)
 
     implementation(libs.lsposed.cxx)
 

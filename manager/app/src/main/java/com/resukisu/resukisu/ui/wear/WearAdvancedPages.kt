@@ -48,7 +48,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
         WearSubPage({ input = "" }) {
             WearTextInputPage(stringResource(when (input) {
                 "size" -> R.string.signature_size; "hash" -> R.string.signature_hash; else -> R.string.search_apps
-            }), when (input) { "size" -> size; "hash" -> hash; else -> state.search }, { input = "" }) {
+            }), when (input) { "size" -> size; "hash" -> hash; else -> state.search }) {
                 when (input) { "size" -> size = it; "hash" -> hash = it; else -> viewModel.dispatch(DynamicManagerUiAction.Search(it)) }
                 input = ""
             }
@@ -102,7 +102,7 @@ internal fun WearUmountPage(onBack: () -> Unit) {
     if (input.isNotEmpty()) {
         WearSubPage({ input = "" }) {
             WearTextInputPage(stringResource(if (input == "path") R.string.add_umount_path else R.string.umount_flags),
-                if (input == "path") path else flags, { input = "" }) {
+                if (input == "path") path else flags) {
                 if (input == "path") path = it else flags = it
                 input = ""
             }

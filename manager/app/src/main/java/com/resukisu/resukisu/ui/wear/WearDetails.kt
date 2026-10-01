@@ -1,5 +1,8 @@
 package com.resukisu.resukisu.ui.wear
 
+import androidx.compose.material.icons.twotone.Apps
+import androidx.compose.material.icons.twotone.Error
+import com.resukisu.resukisu.ui.component.wear.WearStatusTone
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
@@ -63,7 +66,7 @@ internal fun WearModuleDetail(
                 WearPageHeader(spec, Icons.TwoTone.Extension, stringResource(R.string.unknown_module))
             }
             if (!error.isNullOrBlank()) item {
-                WearStatusItem(spec, Icons.TwoTone.Warning, error)
+                WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
             }
         }
         return
@@ -84,7 +87,7 @@ internal fun WearModuleDetail(
             WearPageHeader(spec, Icons.TwoTone.Extension, module.name)
         }
         if (!error.isNullOrBlank()) item {
-            WearStatusItem(spec, Icons.TwoTone.Warning, error)
+            WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
         }
         item {
             WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
@@ -101,7 +104,7 @@ internal fun WearModuleDetail(
                             else -> R.string.wear_disabled
                         }
                     ),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 WearDetailField(
                     Icons.TwoTone.Tag,
@@ -169,13 +172,14 @@ internal fun WearAppDetail(
     group: InstalledAppGroup?,
     isManager: Boolean,
     onBack: () -> Unit,
+    onSaved: () -> Unit = {},
 ) {
     if (group == null) {
         WearList(onBack = onBack) { spec ->
             item {
                 WearPageHeader(spec, Icons.TwoTone.Android, stringResource(R.string.profile))
             }
-            item { WearScaledItem(spec) { Text(stringResource(R.string.wear_no_apps)) } }
+            item { WearStatusItem(spec, Icons.TwoTone.Apps, stringResource(R.string.wear_no_apps)) }
         }
         return
     }
@@ -190,6 +194,8 @@ internal fun WearAppDetail(
         viewModel.events.collect { event ->
             error = event is AppProfileUiEvent.Error ||
                 event is AppProfileUiEvent.SepolicyUpdateFailed
+            // The app list refreshes only when a saved profile changed it.
+            if (event is AppProfileUiEvent.Saved) onSaved()
         }
     }
 
@@ -237,9 +243,9 @@ internal fun WearAppDetail(
                     )
                 }
             } else {
-                item { WearScaledItem(spec) { Text(stringResource(R.string.operation_failed)) } }
+                item { WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
             }
         }
-        if (error) item { WearScaledItem(spec) { Text(stringResource(R.string.operation_failed)) } }
+        if (error) item { WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
     }
 }

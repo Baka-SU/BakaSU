@@ -26,7 +26,6 @@
     <string name="wear_auto">自動</string>
     <string name="wear_builtin_picker">內建選擇器</string>
     <string name="wear_system_picker">系統選擇器</string>
-    <string name="wear_browser">預設瀏覽器</string>
     <string name="wear_phone">在手機上開啟</string>
     <string name="wear_phone_sent">已向手機傳送開啟要求</string>
     <string name="wear_directory_unavailable">無法讀取此目錄，請檢查儲存空間存取權限。</string>
@@ -37,10 +36,11 @@
     <string name="wear_remove_background">移除背景</string>
     <string name="wear_link_unsupported">無法開啟此類型的連結。</string>
     <string name="wear_link_webview_unavailable">此手錶沒有可用的系統 WebView。</string>
-    <string name="wear_link_browser_unavailable">此手錶上沒有可以開啟此連結的瀏覽器。</string>
     <string name="wear_link_phone_unavailable">沒有已連線的手機可以開啟此連結。</string>
     <string name="wear_link_phone_failed">無法將連結傳送至手機。</string>
     <string name="wear_webui_local_only">模組 WebUI 依賴手錶本機的模組檔案與手錶內建的 WebView，瀏覽器或手機無法開啟。</string>
     <string name="wear_custom_color">自訂顏色</string>
     <string name="wear_directory_empty">此資料夾中沒有相符的檔案</string>
+    <string name="wear_clear_search">清除搜尋</string>
+    <string name="wear_loading">正在載入</string>
 </resources>

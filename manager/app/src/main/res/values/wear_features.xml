@@ -11,7 +11,6 @@
     <string name="wear_auto">Automatic</string>
     <string name="wear_builtin_picker">Built-in picker</string>
     <string name="wear_system_picker">System picker</string>
-    <string name="wear_browser">Default browser</string>
     <string name="wear_phone">Open on phone</string>
     <string name="wear_phone_sent">Open request sent to phone</string>
     <string name="wear_directory_unavailable">Cannot read this directory. Check storage access.</string>
@@ -24,7 +23,6 @@
     <string name="wear_remove_background">Remove background</string>
     <string name="wear_link_unsupported">This type of link can\'t be opened.</string>
     <string name="wear_link_webview_unavailable">System WebView isn\'t available on this watch.</string>
-    <string name="wear_link_browser_unavailable">No browser on this watch can open this link.</string>
     <string name="wear_link_phone_unavailable">No connected phone is available to open this link.</string>
     <string name="wear_link_phone_failed">Couldn\'t send the link to the phone.</string>
     <string name="wear_webui_local_only">Module WebUI runs from this watch\'s module files and needs the watch\'s own WebView. A browser or phone can\'t open it.</string>

@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.update
 data class WearPreferences(val picker: String = "auto", val link: String = "auto")
 class WearPreferencesViewModel(getPreference: GetStringPreferenceUseCase, private val setPreference: SetStringPreferenceUseCase) : ViewModel() {
     private val mutableState = MutableStateFlow(WearPreferences(
-        getPreference("wear_file_picker", "auto").orEmpty(), getPreference("wear_link_mode", "auto").orEmpty(),
+        getPreference("wear_file_picker", "auto").orEmpty(), getPreference("wear_link_mode", "auto").orEmpty().let { if (it in LinkModes) it else "auto" },
     ))
     val state = mutableState.asStateFlow()
     fun setPicker(mode: String) {
@@ -22,3 +22,6 @@ class WearPreferencesViewModel(getPreference: GetStringPreferenceUseCase, privat
         mutableState.update { it.copy(link = mode) }
     }
 }
+
+/** The saved link modes; the former "browser" mode was removed and falls back to automatic. */
+private val LinkModes = setOf("auto", "webview", "phone")

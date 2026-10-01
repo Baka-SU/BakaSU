@@ -1,5 +1,8 @@
 package com.resukisu.resukisu.ui.wear
 
+import androidx.compose.material.icons.twotone.Error
+import com.resukisu.resukisu.ui.component.wear.WearStatusTone
+import com.resukisu.resukisu.ui.component.wear.WearStatusItem
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -97,7 +100,7 @@ private fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean,
     var input by rememberSaveable { mutableIntStateOf(0) }
     if (input != 0) {
         WearSubPage({ input = 0 }) {
-            WearTextInputPage(stringResource(input), template.field(input), { input = 0 }, multiline = input == R.string.profile_selinux_rules) { text ->
+            WearTextInputPage(stringResource(input), template.field(input), multiline = input == R.string.profile_selinux_rules) { text ->
                 runCatching { template.withField(input, text) }.fold(
                     onSuccess = { viewModel.dispatch(TemplateEditorUiAction.Update(it)) }, onFailure = { message = failed })
                 input = 0
@@ -110,7 +113,7 @@ private fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean,
     }
     WearList(isLoading = state.loading, onBack = onBack) { spec ->
         item { WearPageHeader(spec, null, stringResource(if (readOnly) R.string.app_profile_template_view else R.string.app_profile_template_edit)) }
-        if (state.loadFailure != null) item { WearInfoCard(spec) { Text(failed) } }
+        if (state.loadFailure != null) item { WearStatusItem(spec, Icons.TwoTone.Error, failed, tone = WearStatusTone.ERROR) }
         message?.let { item { WearInfoCard(spec) { Text(it) } } }
         if (state.loadFailure == null) {
             // A TransformingLazyColumn item places only its last child, so the value is the widget's description.

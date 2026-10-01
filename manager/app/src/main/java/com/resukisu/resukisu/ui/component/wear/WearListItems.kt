@@ -1,5 +1,6 @@
 package com.resukisu.resukisu.ui.component.wear
 
+import androidx.wear.compose.material3.LocalTextStyle
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -45,9 +46,10 @@ fun TransformingLazyColumnItemScope.WearPageHeader(
             top = defaults.calculateTopPadding(), bottom = defaults.calculateBottomPadding(),
         ),
     ) {
-        if (icon == null) Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center,
+        // Titles keep the ListHeader title style, as the Wear typography guidance assigns titles to way-finding.
+        if (icon == null) Text(title, textAlign = TextAlign.Center,
             maxLines = 2, overflow = TextOverflow.Ellipsis)
-        else WearIconText(icon, title, style = MaterialTheme.typography.titleMedium)
+        else WearIconText(icon, title, style = LocalTextStyle.current)
     }
 }
 
@@ -60,7 +62,7 @@ fun TransformingLazyColumnItemScope.WearSectionHeader(
     ListSubHeader(
         modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
         transformation = SurfaceTransformation(transformationSpec),
-    ) { WearIconText(icon, title) }
+    ) { WearIconText(icon, title, style = LocalTextStyle.current) }
 }
 
 /**

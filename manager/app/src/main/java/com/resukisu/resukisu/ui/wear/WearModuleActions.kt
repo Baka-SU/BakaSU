@@ -1,5 +1,8 @@
 package com.resukisu.resukisu.ui.wear
 
+import androidx.compose.material.icons.twotone.Error
+import com.resukisu.resukisu.ui.component.wear.WearStatusTone
+import com.resukisu.resukisu.ui.component.wear.WearStatusItem
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Description
 import androidx.compose.material.icons.twotone.Update
@@ -55,7 +58,7 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
             item { WearSectionHeader(spec, Icons.TwoTone.Description, stringResource(R.string.module_changelog)) }
             when {
                 state.changelogError != null -> item {
-                    WearInfoCard(spec) { Text(stringResource(R.string.module_changelog_failed, state.changelogError.orEmpty())) }
+                    WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.module_changelog_failed, state.changelogError.orEmpty()), tone = WearStatusTone.ERROR)
                 }
                 state.changelog == null -> item {
                     WearScaledItem(spec) { CircularProgressIndicator(modifier = Modifier.size(24.dp)) }
@@ -66,7 +69,7 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
                 CircularProgressIndicator(progress = { (download?.progress ?: 0) / 100f }, modifier = Modifier.size(24.dp))
                 Text(stringResource(R.string.module_downloading, module.name))
             } }
-            if (download?.status == DownloadStatus.FAILED) item { WearInfoCard(spec) { Text(stringResource(R.string.operation_failed)) } }
+            if (download?.status == DownloadStatus.FAILED) item { WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
             // Like the phone, the update is offered only after its changelog has been read.
             item { WearActionButton(spec, Icons.TwoTone.Update, stringResource(R.string.module_update), { viewModel.start(module) },
                 !working && state.changelog != null) }
