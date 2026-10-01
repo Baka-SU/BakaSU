@@ -6,11 +6,13 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.rotary.onPreRotaryScrollEvent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -23,7 +25,7 @@ import com.resukisu.resukisu.R
 import kotlin.math.abs
 
 /**
- * Only touch drags beyond a list boundary participate; rotary and ordinary scrolling do not.
+ * Only touch drags and crown rotation beyond a list boundary participate; ordinary scrolling does not.
  *
  * Apply it to the whole screen (list and edge button), so a pull that starts on the edge button at
  * the end of the list still counts. [displacement] receives the damping offset; draw it on the list
@@ -33,6 +35,7 @@ import kotlin.math.abs
 internal fun Modifier.wearRefreshGesture(
     listState: TransformingLazyColumnState,
     displacement: MutableFloatState,
+    crownProgress: MutableFloatState,
     enabled: Boolean,
     onRefresh: (() -> Unit)?,
     onOpenPanel: (() -> Unit)? = null,
@@ -49,10 +52,33 @@ internal fun Modifier.wearRefreshGesture(
     val threshold = with(LocalDensity.current) { 48.dp.toPx() }
     val refreshLabel = stringResource(R.string.wear_refresh)
     val backLabel = stringResource(R.string.wear_back)
-    return this.pointerInput(listState, threshold) {
+    // The crown continues past the list boundary to open or close a panel: three times the touch
+    // threshold of extra rotation, shown as progress, with a pause of the crown resetting it.
+    val crownTarget = threshold * 3
+    val crown = remember { CrownPull() }
+    return this.onPreRotaryScrollEvent { event ->
+        val action = if (close != null) close else open
+        val delta = if (close != null) -event.verticalScrollPixels else event.verticalScrollPixels
+        val atBoundary = if (close != null) !listState.canScrollBackward else !listState.canScrollForward
+        val now = SystemClock.uptimeMillis()
+        if (action == null || !active || !atBoundary || delta <= 0f || now - crown.lastEvent > 600) crown.accumulated = 0f
+        crown.lastEvent = now
+        if (action != null && active && atBoundary && delta > 0f) {
+            if (crown.accumulated == 0f) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            crown.accumulated += delta
+            if (crown.accumulated >= crownTarget) {
+                crown.accumulated = 0f
+                crownProgress.floatValue = 0f
+                action()
+            } else crownProgress.floatValue = crown.accumulated / crownTarget
+        } else crownProgress.floatValue = 0f
+        // The list still receives the event; past its boundary it has nothing left to scroll.
+        false
+    }.pointerInput(listState, threshold) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             var anchorY: Float? = null
+            var anchorX = down.position.x
             var pull = 0f
             var holdStarted: Long? = null
             var canceled = !active
@@ -68,7 +94,8 @@ internal fun Modifier.wearRefreshGesture(
                         }
                     } else awaitPointerEvent(PointerEventPass.Initial)
                     if (event == null) {
-                        if (active && !canceled && pull >= threshold) {
+                        // The hold ran its full time without being canceled or released.
+                        if (active && !canceled && holdStarted != null) {
                             submitted = true
                             if (returning) close?.invoke() else open?.invoke()
                         }
@@ -88,9 +115,14 @@ internal fun Modifier.wearRefreshGesture(
                         displacement.floatValue = 0f
                         continue
                     }
-                    if (anchorY == null) anchorY = pointer.previousPosition.y
+                    if (anchorY == null) {
+                        anchorY = pointer.previousPosition.y
+                        anchorX = pointer.previousPosition.x
+                    }
                     pull = direction * (pointer.position.y - anchorY)
-                    if (abs(pointer.position.x - down.position.x) > maxOf(threshold / 2, pull)) canceled = true
+                    // Fingers drift sideways on a round screen; only a mostly horizontal drag from the
+                    // boundary cancels, measured from where the boundary was reached.
+                    if (abs(pointer.position.x - anchorX) > maxOf(threshold, pull)) canceled = true
                     // Small reverse jitter while holding still is tolerated; a real reverse drag cancels.
                     if (canceled || pull < -threshold / 4) {
                         canceled = true
@@ -123,4 +155,10 @@ internal fun Modifier.wearRefreshGesture(
             if (onClosePanel != null) add(CustomAccessibilityAction(backLabel) { onClosePanel(); true })
         }
     }
+}
+
+/** Crown rotation collected past the list boundary, and when it last arrived. */
+private class CrownPull {
+    var accumulated = 0f
+    var lastEvent = 0L
 }

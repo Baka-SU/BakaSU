@@ -107,6 +107,7 @@ androidx-wear-compose-foundation = { group = "androidx.wear.compose", name = "co
 androidx-wear-compose-material3 = { group = "androidx.wear.compose", name = "compose-material3", version.ref = "wear-compose" }
 androidx-wear-remote-interactions = { module = "androidx.wear:wear-remote-interactions", version = "1.1.0" }
 androidx-wear-input = { module = "androidx.wear:wear-input", version = "1.2.0" }
+play-services-wearable = { module = "com.google.android.gms:play-services-wearable", version = "20.0.1" }
 androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 

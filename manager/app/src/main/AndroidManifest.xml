@@ -132,6 +132,33 @@
             android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden"
             />
 
+        <!-- A watch module's WebUI shown on the phone; the watch opens it with RemoteActivityHelper. -->
+        <activity
+            android:name=".ui.webui.RemoteWebUIActivity"
+            android:autoRemoveFromRecents="true"
+            android:taskAffinity="${applicationId}.webui"
+            android:exported="true"
+            android:theme="@style/Theme.KernelSU.WebUI"
+            android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="resukisu-webui" android:host="open" />
+            </intent-filter>
+        </activity>
+
+        <!-- Serves a watch module's WebUI to the phone over the Wear Data Layer. -->
+        <service
+            android:name=".data.webui.WearWebUiService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.CHANNEL_EVENT" />
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/resukisu/webui" />
+            </intent-filter>
+        </service>
+
         <activity
             android:name=".ui.screen.themeSettings.crop.BackgroundCropActivity"
             android:exported="false"

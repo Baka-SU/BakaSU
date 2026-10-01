@@ -10,6 +10,7 @@ import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -64,12 +65,18 @@ fun WearList(
     val scope = rememberCoroutineScope()
     val transformationSpec = rememberTransformationSpec()
     val pullOffset = remember { mutableFloatStateOf(0f) }
+    val crownProgress = remember { mutableFloatStateOf(0f) }
+    // The panel hold shows its progress: the 2 second touch hold, or the crown rotation past the end.
+    val holdProgress by animateFloatAsState(if (pullOffset.floatValue != 0f) 1f else 0f,
+        animationSpec = tween(if (pullOffset.floatValue != 0f) 2_000 else 150, easing = LinearEasing), label = "wear-panel-hold")
+    val panelProgress = maxOf(holdProgress, crownProgress.floatValue)
     val animatedOffset by animateFloatAsState(pullOffset.floatValue,
         animationSpec = tween(if (pullOffset.floatValue == 0f) 150 else 2_000), label = "wear-panel-damping")
     // The gesture covers the whole screen, including the edge button shown at the end of the list.
     val gestureModifier = Modifier.wearRefreshGesture(
         listState,
         pullOffset,
+        crownProgress,
         enabled = !isLoading && !isRefreshing,
         onRefresh = onRefresh,
         onOpenPanel = onOpenPanel,
@@ -110,9 +117,11 @@ fun WearList(
                     overscrollEffect = rememberOverscrollEffect(),
                 ),
             ) {
-                // The pull refresh starts at the end of the list, so its progress shows here, where
-                // the finger was, instead of over the list items.
-                if (isRefreshing) CircularProgressIndicator(Modifier.size(24.dp),
+                // Gestures at the end of the list show their progress here, where the finger was:
+                // the panel hold fills a ring, and a pull refresh spins until it completes.
+                if (panelProgress > 0f) CircularProgressIndicator(progress = { panelProgress }, modifier = Modifier.size(24.dp),
+                    colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current))
+                else if (isRefreshing) CircularProgressIndicator(Modifier.size(24.dp),
                     colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current))
                 else Icon(
                     if (onConfirm != null) Icons.Default.Check

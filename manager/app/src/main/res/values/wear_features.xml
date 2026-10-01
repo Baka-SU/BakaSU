@@ -25,8 +25,14 @@
     <string name="wear_link_webview_unavailable">System WebView isn\'t available on this watch.</string>
     <string name="wear_link_phone_unavailable">No connected phone is available to open this link.</string>
     <string name="wear_link_phone_failed">Couldn\'t send the link to the phone.</string>
-    <string name="wear_webui_local_only">Module WebUI runs from this watch\'s module files and needs the watch\'s own WebView. A browser or phone can\'t open it.</string>
     <string name="wear_custom_color">Custom colour</string>
     <string name="wear_joined" translatable="false">%1$s · %2$s</string>
     <string name="wear_directory_empty">No matching files in this folder</string>
+    <string name="wear_phone_disconnected">Phone not connected</string>
+    <string name="wear_phone_app_missing">App not on phone</string>
+    <string name="wear_phone_open_failed">Couldn\'t open on phone</string>
+    <string name="wear_display_scaling">Display &amp; scaling</string>
+    <string name="wear_screen_shape">Screen shape</string>
+    <string name="wear_shape_round">Round</string>
+    <string name="wear_shape_square">Square</string>
 </resources>

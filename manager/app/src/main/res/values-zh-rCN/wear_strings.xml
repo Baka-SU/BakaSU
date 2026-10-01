@@ -38,9 +38,15 @@
     <string name="wear_link_webview_unavailable">此手表没有可用的系统 WebView。</string>
     <string name="wear_link_phone_unavailable">没有已连接的手机可以打开此链接。</string>
     <string name="wear_link_phone_failed">无法将链接发送到手机。</string>
-    <string name="wear_webui_local_only">模块 WebUI 依赖手表本地的模块文件和手表自带的 WebView，浏览器或手机无法打开。</string>
     <string name="wear_custom_color">自定义颜色</string>
     <string name="wear_directory_empty">此文件夹中没有匹配的文件</string>
     <string name="wear_clear_search">清除搜索</string>
     <string name="wear_loading">正在加载</string>
+    <string name="wear_phone_disconnected">手机未连接</string>
+    <string name="wear_phone_app_missing">手机未安装管理器</string>
+    <string name="wear_phone_open_failed">无法在手机上打开</string>
+    <string name="wear_display_scaling">显示与缩放</string>
+    <string name="wear_screen_shape">屏幕形状</string>
+    <string name="wear_shape_round">圆形</string>
+    <string name="wear_shape_square">方形</string>
 </resources>

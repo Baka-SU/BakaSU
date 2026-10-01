@@ -90,7 +90,7 @@ internal fun WearSettingsPage(
         } else if (category == "display") {
             SegmentedColumn(listOf("color", "dpi"), { it }) { name ->
                 WearSettingsJumpPageWidget(spec,
-                    stringResource(if (name == "color") R.string.theme_color else R.string.app_dpi_title),
+                    stringResource(if (name == "color") R.string.theme_color else R.string.wear_display_scaling),
                     { onOpenPage(name) }, description = if (name == "color") colorSummary else dpiSummary)
             }
         } else {
