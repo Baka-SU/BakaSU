@@ -9,15 +9,11 @@
     <string name="wear_enable_sulog">开启 SU 日志</string>
     <string name="wear_disable_sulog">关闭 SU 日志</string>
     <string name="wear_refresh">刷新</string>
-    <string name="wear_install_module">安装模块</string>
     <string name="wear_module_file_unreadable">无法读取所选模块 ZIP</string>
     <string name="wear_file_picker_unavailable">文件选择器不可用</string>
-    <string name="wear_back">返回</string>
     <string name="wear_apps">应用</string>
     <string name="wear_general">常规</string>
     <string name="wear_security">安全</string>
-    <string name="wear_advanced">高级</string>
-    <string name="wear_no_apps">未找到应用</string>
     <string name="wear_manager_updates">应用更新</string>
     <string name="scroll_to_top">回到顶部</string>
     <string name="wear_display">显示</string>
@@ -44,7 +40,9 @@
     <string name="wear_clear_search">清除搜索</string>
     <string name="wear_loading">正在加载</string>
     <string name="wear_phone_disconnected">手机未连接</string>
-    <string name="wear_phone_app_missing">未找到匹配的手机管理器</string>
+    <string name="wear_phone_app_missing">请安装配套手机端</string>
+    <string name="wear_phone_webui_requirement">在手机上打开手表模块需要安装配套 Manager，两端包名和签名必须一致。</string>
+    <string name="wear_close_panel">收起菜单</string>
     <string name="wear_phone_open_failed">无法在手机上打开</string>
     <string name="wear_display_scaling">显示与缩放</string>
     <string name="wear_screen_shape">屏幕形状</string>
@@ -55,7 +53,6 @@
     <string name="wear_animation_slide">水平滑动</string>
     <string name="wear_display_appearance_motion">外观与动画</string>
     <string name="wear_display_screen_layout">屏幕与布局</string>
-    <string name="wear_display_language">语言</string>
     <string name="wear_settings_updates">更新</string>
     <string name="wear_settings_links_files">WebUI 与文件</string>
     <string name="wear_settings_app_behavior">应用行为</string>

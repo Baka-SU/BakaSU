@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.Sort
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.twotone.Add
@@ -36,7 +35,6 @@ import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.InstalledModule
-import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearIconAction
 import com.resukisu.resukisu.ui.component.wear.WearIconButtonGroup
 import com.resukisu.resukisu.ui.component.wear.WearList
@@ -70,10 +68,9 @@ internal fun WearModulesPage(
         item {
             WearIconButtonGroup(spec, listOf(
                 WearIconAction(Icons.TwoTone.Search, stringResource(R.string.search_modules), onSearch),
-                WearIconAction(Icons.TwoTone.Add, stringResource(R.string.wear_install_module), onInstallClick),
+                WearIconAction(Icons.TwoTone.Add, stringResource(R.string.install), onInstallClick),
             ))
         }
-        item { WearActionButton(spec, Icons.AutoMirrored.TwoTone.Sort, stringResource(R.string.wear_sort), onSort) }
         if (!error.isNullOrBlank()) item {
             WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
         }

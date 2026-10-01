@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -110,11 +111,12 @@ fun WearList(
                 if (isLoading) wearLoadingItem(transformationSpec)
                 else content(transformationSpec)
             }
-            // Pulling down at the top shows the panel indicator in the room the list makes for it.
-            if (onOpenPanel != null || onClosePanel != null) WearPullIndicator(
-                pullProgress.floatValue, closing = onClosePanel != null,
-                Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
-            )
+            if (onClosePanel != null) WearPullIndicator(
+                pullProgress.floatValue.coerceAtLeast(0f), closing = true,
+                Modifier.align(Alignment.TopCenter).padding(top = 28.dp))
+            else if (onOpenPanel != null) WearPullIndicator(
+                (-pullProgress.floatValue).coerceAtLeast(0f), closing = false,
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 28.dp))
         }
     }
     if (onBack != null || onConfirm != null || backToTop) {
@@ -124,6 +126,7 @@ fun WearList(
                 onClick = {
                     // While refreshing, the edge button only shows the progress of the pull refresh.
                     if (isRefreshing) Unit
+                    else if (onClosePanel != null) onClosePanel()
                     else if (onConfirm != null) onConfirm()
                     else if (backToTop) scope.launch { listState.animateScrollToItem(0) }
                     else onBack?.invoke()
@@ -138,15 +141,17 @@ fun WearList(
             ) {
                 // The pull refresh starts at the end of the list, so its progress shows here, where
                 // the finger is: a ring that fills with the pull, then a spinner while refreshing.
-                if (pullProgress.floatValue < 0f) CircularProgressIndicator(
+                if (pullProgress.floatValue < 0f && onOpenPanel == null) CircularProgressIndicator(
                     progress = { (-pullProgress.floatValue).coerceIn(0f, 1f) }, modifier = Modifier.size(24.dp),
                     colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current))
                 else if (isRefreshing) CircularProgressIndicator(Modifier.size(24.dp),
                     colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current))
                 else Icon(
-                    if (onConfirm != null) Icons.Default.Check
+                    if (onClosePanel != null) Icons.Default.KeyboardArrowDown
+                    else if (onConfirm != null) Icons.Default.Check
                     else if (backToTop) Icons.Default.VerticalAlignTop else Icons.AutoMirrored.Default.ArrowBack,
-                    contentDescription = stringResource(if (onConfirm != null) R.string.confirm else if (backToTop) R.string.scroll_to_top else R.string.wear_back),
+                    contentDescription = stringResource(if (onClosePanel != null) R.string.wear_close_panel
+                        else if (onConfirm != null) R.string.confirm else if (backToTop) R.string.scroll_to_top else R.string.back),
                 )
             }
         }) { listContent(it) }

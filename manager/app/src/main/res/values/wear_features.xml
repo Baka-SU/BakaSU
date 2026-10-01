@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="wear_mode_builtin" translatable="false">Built-in</string>
     <string name="wear_uid" translatable="false">UID</string>
     <string name="wear_gid" translatable="false">GID</string>
@@ -13,6 +13,7 @@
     <string name="wear_builtin_picker">Built-in picker</string>
     <string name="wear_system_picker">System picker</string>
     <string name="wear_phone">Open on phone</string>
+    <string name="wear_close_panel">Close menu</string>
     <string name="wear_phone_sent">Open request sent to phone</string>
     <string name="wear_directory_unavailable">Cannot read this directory. Check storage access.</string>
     <string name="wear_file_exists">A file with this name already exists.</string>
@@ -29,7 +30,8 @@
     <string name="wear_joined" translatable="false">%1$s · %2$s</string>
     <string name="wear_directory_empty">No matching files in this folder</string>
     <string name="wear_phone_disconnected">Phone not connected</string>
-    <string name="wear_phone_app_missing">No matching phone app</string>
+    <string name="wear_phone_app_missing">Install the companion phone app</string>
+    <string name="wear_phone_webui_requirement">Opening a watch module on your phone requires the companion Manager, with the same package and signature as the watch app.</string>
     <string name="wear_phone_open_failed">Couldn\'t open on phone</string>
     <string name="wear_display_scaling">Display &amp; scaling</string>
     <string name="wear_screen_shape">Screen shape</string>
@@ -40,7 +42,6 @@
     <string name="wear_animation_slide">Horizontal slide</string>
     <string name="wear_display_appearance_motion">Appearance and motion</string>
     <string name="wear_display_screen_layout">Screen and layout</string>
-    <string name="wear_display_language">Language</string>
     <string name="wear_settings_updates">Updates</string>
     <string name="wear_settings_links_files">WebUI and files</string>
     <string name="wear_settings_app_behavior">App behavior</string>

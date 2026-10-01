@@ -301,7 +301,7 @@
     <string name="settings_pager_gesture_native">Default</string>
     <string name="settings_pager_gesture_cross_axis">Cross-axis</string>
     <string name="settings_pager_gesture_ios_like">iOS-like</string>
-    <string name="back">Comeback</string>
+    <string name="back">Back</string>
     <string name="background_set_success">Background set successfully</string>
     <string name="background_removed">Removed custom backgrounds</string>
     <string name="icon_switch_title">Alternate icon</string>

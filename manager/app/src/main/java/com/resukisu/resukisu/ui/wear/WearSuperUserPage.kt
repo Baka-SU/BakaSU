@@ -13,7 +13,6 @@ import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.twotone.Apps
-import androidx.compose.material.icons.twotone.FilterList
 import androidx.compose.material.icons.twotone.Search
 import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.runtime.Composable
@@ -37,7 +36,6 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.InstalledAppGroup
 import com.resukisu.resukisu.ui.component.PackageIcon
-import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearIconAction
 import com.resukisu.resukisu.ui.component.wear.WearIconButtonGroup
 import com.resukisu.resukisu.ui.component.wear.WearList
@@ -75,7 +73,6 @@ internal fun WearSuperUserPage(
                 WearIconAction(Icons.AutoMirrored.TwoTone.Article, stringResource(R.string.sulog), onLogs),
             ))
         }
-        item { WearActionButton(spec, Icons.TwoTone.FilterList, stringResource(R.string.wear_filter_sort), onFilter) }
         // The app list follows the actions directly, separated by the 8dp group gap of the Wear list guidance.
         wearGroupGap("apps-gap")
         if (!error.isNullOrBlank()) {
