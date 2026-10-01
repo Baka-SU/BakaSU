@@ -179,7 +179,7 @@ internal fun WearAppDetail(
             item {
                 WearPageHeader(spec, Icons.TwoTone.Android, stringResource(R.string.profile))
             }
-            item { WearStatusItem(spec, Icons.TwoTone.Apps, stringResource(R.string.wear_no_apps)) }
+            item { WearStatusItem(spec, Icons.TwoTone.Apps, stringResource(R.string.no_apps_found)) }
         }
         return
     }

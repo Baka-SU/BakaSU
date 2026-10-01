@@ -394,7 +394,7 @@ fun WearManagerScreen() {
     com.resukisu.resukisu.ui.component.wear.WearManagerUpdateDialog(home.stableManagerUpdate ?: home.betaManagerUpdate)
     WearPhoneWebUiDialogs(webUiOnPhone, { webUiOnPhone = false }, webUiPhoneFailure, webUiPhoneFailed) { webUiPhoneFailed = false }
     AppScaffold(timeText = { WearTimeText() }, containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface) {
-        WearPageTransition(detailType, parents.size) { route ->
+        WearPageTransition(detailType, parents.size, verticalRoutes = setOf("reboot", "app-filter", "module-sort")) { route ->
             if (linkLoading) {
                 // A waiting spinner; the branded loading screen is only shown at app startup.
                 androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
@@ -467,7 +467,7 @@ fun WearManagerScreen() {
                                 "boot" -> R.string.select_file
                                 "lkm" -> R.string.install_upload_lkm_file
                                 "ak3" -> R.string.horizon_kernel
-                                else -> R.string.wear_install_module
+                                else -> R.string.install
                             }),
                             mode = fileMode(fileTask),
                             onBack = { goBack() }, onSelected = { goBack(); onFileSelected(it) },

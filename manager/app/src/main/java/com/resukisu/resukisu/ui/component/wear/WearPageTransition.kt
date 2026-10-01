@@ -9,6 +9,8 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,7 +28,8 @@ internal val LocalWearPageAnimation = staticCompositionLocalOf { "fade-scale" }
 
 /** Connects parent and child surfaces with the selected transition and the theme's motion specs. */
 @Composable
-fun WearPageTransition(route: String, depth: Int, content: @Composable (String) -> Unit) {
+fun WearPageTransition(route: String, depth: Int, verticalRoutes: Set<String> = emptySet(),
+    content: @Composable (String) -> Unit) {
     val motion = MaterialTheme.motionScheme
     val reduceMotion = LocalReduceMotion.current
     val animation = LocalWearPageAnimation.current
@@ -37,11 +40,16 @@ fun WearPageTransition(route: String, depth: Int, content: @Composable (String) 
         transitionSpec = {
             if (reduceMotion) return@AnimatedContent (EnterTransition.None togetherWith ExitTransition.None).using(null)
             val forward = targetState.depth >= initialState.depth
-            val enter = if (animation == "slide")
+            val vertical = targetState.route in verticalRoutes || initialState.route in verticalRoutes
+            val enter = if (vertical)
+                slideInVertically(motion.defaultSpatialSpec()) { height -> if (forward) height else -height }
+            else if (animation == "slide")
                 slideInHorizontally(motion.defaultSpatialSpec()) { width -> if (forward) width else -width }
             else scaleIn(motion.defaultSpatialSpec(), initialScale = if (forward) 0.85f else 1.05f) +
                 fadeIn(motion.fastEffectsSpec())
-            val exit = if (animation == "slide")
+            val exit = if (vertical)
+                slideOutVertically(motion.defaultSpatialSpec()) { height -> if (forward) -height else height }
+            else if (animation == "slide")
                 slideOutHorizontally(motion.defaultSpatialSpec()) { width -> if (forward) -width else width }
             else scaleOut(motion.defaultSpatialSpec(), targetScale = if (forward) 1.05f else 0.85f) +
                 fadeOut(motion.fastEffectsSpec())

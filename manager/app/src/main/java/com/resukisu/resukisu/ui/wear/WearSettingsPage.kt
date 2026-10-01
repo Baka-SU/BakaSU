@@ -56,7 +56,7 @@ import org.koin.compose.koinInject
 internal fun settingsCategoryTitle(category: String?): Int = when (category) {
     "general" -> R.string.wear_general
     "security" -> R.string.wear_security
-    "advanced" -> R.string.wear_advanced
+    "advanced" -> R.string.advanced_options
     "display" -> R.string.wear_display
     "susfs" -> R.string.susfs_config_setting_title
     else -> R.string.settings
@@ -192,7 +192,7 @@ internal fun WearSettingsPage(
                     { onOpenPage(name) }, icon = settingsPageIcon(name),
                     description = if (name == "dpi") dpiSummary else shapeSummary)
             }
-            item { WearSectionHeader(spec, null, stringResource(R.string.wear_display_language)) }
+            item { WearSectionHeader(spec, null, stringResource(R.string.settings_language)) }
             item { WearSettingsJumpPageWidget(spec, stringResource(R.string.settings_language),
                 { onOpenPage("language") }, icon = settingsPageIcon("language"), description = languageSummary) }
         } else {

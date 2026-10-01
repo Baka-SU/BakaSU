@@ -9,7 +9,6 @@ import androidx.compose.material.icons.twotone.Extension
 import androidx.compose.material.icons.twotone.FilterList
 import androidx.compose.material.icons.twotone.Group
 import androidx.compose.material.icons.twotone.Memory
-import androidx.compose.material.icons.twotone.RestartAlt
 import androidx.compose.material.icons.twotone.Security
 import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.material.icons.twotone.Smartphone
@@ -25,7 +24,6 @@ import com.resukisu.resukisu.BuildConfig
 import com.resukisu.resukisu.Natives.KernelPatchImplementation
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.HomeDashboardState
-import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearChip
 import com.resukisu.resukisu.ui.component.wear.WearChipEmphasis
 import com.resukisu.resukisu.ui.component.wear.WearList
@@ -108,9 +106,6 @@ internal fun WearHomePage(
                     // As on the phone, the status opens installation when root or a GKI kernel allows it.
                     onClick = onInstall.takeIf { status.isRootAvailable || status.kernelVersion.isGKI() },
                 )
-            }
-            if (status.isRootAvailable) item {
-                WearActionButton(spec, Icons.TwoTone.RestartAlt, stringResource(R.string.reboot), onRebootPanel)
             }
             item { WearSectionHeader(spec, null, stringResource(R.string.home_version_info)) }
             val fields = buildList {
