@@ -542,4 +542,17 @@
     <string name="reverse_order">Ters sırala</string>
     <string name="enable_floating_bottom_bar">Yüzen alt çubuk</string>
     <string name="enable_floating_bottom_bar_summary">Apple tarzı yüzen alt çubuğu kullan.</string>
+    <string name="advanced_options">Gelişmiş Seçenekler</string>
+    <string name="allow_shell">Kabuğ\'a her zaman kök erişimi ver</string>
+    <string name="allow_shell_summary">Her zaman ADB Shell\'in root komutuna erişmesine izin vermek. Gerekli olmadığı sürece bunu etkinleştirmeyiniz.</string>
+    <string name="enable_adb">Zorla adb\'yi başlangıç sürecinde etkinleştirmek</string>
+    <string name="enable_adb_summary">USB hata ayıklamayı ve adb doğrulamasını kapat. Gerekli olmadığı sürece bunu etkinleştirmeyiniz.</string>
+    <string name="install_force_backup">Stok imajı yedeklemek</string>
+    <string name="install_force_backup_summary">Lütfen önyükleme imajının bir stok önyükleme imajı olduğundan emin olun</string>
+    <string name="ak3_select_zip">Lütfen bir AnyKernel3 zip dosyası seçiniz</string>
+    <string name="install_upload_lkm_file_summary">Yerleşik LKM yerine özel bir .ko dosyası kullanın</string>
+    <string name="skip_ksud">ksud\'u kurmayın</string>
+    <string name="skip_ksud_summary">ksud kurulumunu iptal edin. Gerekmedikçe kesinlikle etkinleştirmeyin.</string>
+    <string name="settings_soft_reboot_summary">Modülleri yüklerken, güncellerken veya etkinleştirip devre dışı bırakırken, tam bir yeniden başlatma yerine yumuşak yeniden başlatma işlemini kullanın.</string>
+    <string name="settings_soft_reboot">Yeniden başlatma yerine yumuşak yeniden başlatma</string>
 </resources>
