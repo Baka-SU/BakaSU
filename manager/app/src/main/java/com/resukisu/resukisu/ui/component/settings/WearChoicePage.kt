@@ -3,8 +3,10 @@ package com.resukisu.resukisu.ui.component.settings
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
@@ -15,7 +17,8 @@ import com.resukisu.resukisu.ui.component.wear.WearScaledItem
 
 @Composable
 fun WearChoicePage(title: String, choices: List<Pair<String, String>>, selected: String,
-    onBack: () -> Unit, enabled: Boolean = true, message: String? = null, onChoose: (String) -> Unit) {
+    onBack: () -> Unit, enabled: Boolean = true, message: String? = null,
+    icon: ((String) -> ImageVector)? = null, onChoose: (String) -> Unit) {
     WearList(onBack = onBack, snap = true) { spec ->
         item { WearPageHeader(spec, null, title) }
         if (!message.isNullOrBlank()) item { WearScaledItem(spec) { Text(message) } }
@@ -27,6 +30,7 @@ fun WearChoicePage(title: String, choices: List<Pair<String, String>>, selected:
                     .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
                 enabled = enabled,
                 transformation = SurfaceTransformation(spec),
+                icon = icon?.let { { Icon(it(value), contentDescription = null) } },
                 label = { Text(label, maxLines = 3, overflow = TextOverflow.Ellipsis) },
             )
         }

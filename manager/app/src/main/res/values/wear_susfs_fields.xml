@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wear_susfs_backup_file_name" translatable="false">susfs_backup.json</string>
+    <string name="susfs_kstat_field_ino" translatable="false">ino</string>
+    <string name="susfs_kstat_field_dev" translatable="false">dev</string>
+    <string name="susfs_kstat_field_nlink" translatable="false">nlink</string>
+    <string name="susfs_kstat_field_size" translatable="false">size</string>
+    <string name="susfs_kstat_field_atime" translatable="false">atime</string>
+    <string name="susfs_kstat_field_atime_nsec" translatable="false">atime_nsec</string>
+    <string name="susfs_kstat_field_mtime" translatable="false">mtime</string>
+    <string name="susfs_kstat_field_mtime_nsec" translatable="false">mtime_nsec</string>
+    <string name="susfs_kstat_field_ctime" translatable="false">ctime</string>
+    <string name="susfs_kstat_field_ctime_nsec" translatable="false">ctime_nsec</string>
+    <string name="susfs_kstat_field_blocks" translatable="false">blocks</string>
+    <string name="susfs_kstat_field_blksize" translatable="false">blksize</string>
+</resources>

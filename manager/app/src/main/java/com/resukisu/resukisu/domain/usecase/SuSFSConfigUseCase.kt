@@ -36,5 +36,7 @@ class SuSFSConfigUseCase(private val repository: SuSFSRepository) {
     suspend fun addSusMap(path: String) = repository.addSusMap(path)
     suspend fun removeSusMap(path: String) = repository.removeSusMap(path)
     suspend fun exportConfig(uri: String) = repository.exportConfig(uri)
+    suspend fun exportConfigDirectory(directory: String, name: String) = repository.exportConfigDirectory(directory, name)
     suspend fun importConfig(uri: String) = repository.importConfig(uri)
+    suspend fun readEntryFile(uri: String) = repository.readEntryFile(uri)
 }

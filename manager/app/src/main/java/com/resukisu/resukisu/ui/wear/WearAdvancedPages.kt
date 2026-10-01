@@ -2,7 +2,12 @@ package com.resukisu.resukisu.ui.wear
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Add
+import androidx.compose.material.icons.twotone.Apps
 import androidx.compose.material.icons.twotone.Delete
+import androidx.compose.material.icons.twotone.Fingerprint
+import androidx.compose.material.icons.twotone.Flag
+import androidx.compose.material.icons.twotone.Folder
+import androidx.compose.material.icons.twotone.FormatSize
 import androidx.compose.material.icons.twotone.Search
 import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.runtime.*
@@ -44,42 +49,45 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
         stringResource(R.string.dynamic_manager_grant_confirm_message)) { pending?.let(viewModel::dispatch); pending = null }
     val clear = rememberWearConfirmDialog(stringResource(R.string.dynamic_manager_clear_confirm_title),
         stringResource(R.string.dynamic_manager_clear_confirm_message)) { viewModel.dispatch(DynamicManagerUiAction.Clear) }
-    if (input.isNotEmpty()) {
-        WearSubPage({ input = "" }) {
-            WearTextInputPage(stringResource(when (input) {
-                "size" -> R.string.signature_size; "hash" -> R.string.signature_hash; else -> R.string.search_apps
-            }), when (input) { "size" -> size; "hash" -> hash; else -> state.search }) {
-                when (input) { "size" -> size = it; "hash" -> hash = it; else -> viewModel.dispatch(DynamicManagerUiAction.Search(it)) }
-                input = ""
+    WearPageTransition(input, if (input.isEmpty()) 0 else 1) { route ->
+        if (route.isNotEmpty()) {
+            WearSubPage({ input = "" }) {
+                WearTextInputPage(stringResource(when (route) {
+                    "size" -> R.string.signature_size; "hash" -> R.string.signature_hash; else -> R.string.search_apps
+                }), when (route) { "size" -> size; "hash" -> hash; else -> state.search }) {
+                    when (route) { "size" -> size = it; "hash" -> hash = it; else -> viewModel.dispatch(DynamicManagerUiAction.Search(it)) }
+                    input = ""
+                }
+            }
+        } else {
+            val invalidHash = stringResource(R.string.hash_must_be_64_chars)
+            WearList(isLoading = state.isLoading || state.isSubmitting, onBack = onBack) { spec ->
+                item { WearPageHeader(spec, null, stringResource(R.string.dynamic_manager_title)) }
+                message?.let { item { WearInfoCard(spec) { Text(it) } } }
+                item { WearInfoCard(spec) {
+                    Text(stringResource(R.string.dynamic_manager_current_status))
+                    val config = state.config
+                    Text(if (config?.isValid == true) stringResource(R.string.dynamic_manager_enabled_summary, config.size.toString())
+                        else stringResource(R.string.dynamic_manager_disabled))
+                    if (config?.isValid == true) Text(config.hash)
+                } }
+                item { WearActionButton(spec, Icons.TwoTone.Search, stringResource(R.string.search_apps), { input = "search" }) }
+                LazySegmentedColumn(state.apps, { it.packageName }) { app ->
+                    WearSettingsSwitchWidget(spec, app.label, app.isSelected || !app.isChangeable,
+                        { if (it) { pending = DynamicManagerUiAction.SelectApp(app); grant.show() } }, app.isChangeable,
+                        icon = Icons.TwoTone.Apps)
+                }
+                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.signature_size), { input = "size" }, icon = Icons.TwoTone.FormatSize) }
+                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.signature_hash), { input = "hash" }, icon = Icons.TwoTone.Fingerprint) }
+                item { WearActionButton(spec, Icons.TwoTone.Settings, stringResource(R.string.dynamic_manager_manual_config), {
+                    val length = size.toIntOrNull()
+                    if (length == null || length <= 0) message = failed
+                    else if (!hash.matches(Regex("[0-9a-fA-F]{64}"))) message = invalidHash
+                    else { pending = DynamicManagerUiAction.SetManual(length, hash); grant.show() }
+                }) }
+                item { WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.dynamic_manager_clear_config), clear::show) }
             }
         }
-        return
-    }
-    val invalidHash = stringResource(R.string.hash_must_be_64_chars)
-    WearList(isLoading = state.isLoading || state.isSubmitting, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.dynamic_manager_title)) }
-        message?.let { item { WearInfoCard(spec) { Text(it) } } }
-        item { WearInfoCard(spec) {
-            Text(stringResource(R.string.dynamic_manager_current_status))
-            val config = state.config
-            Text(if (config?.isValid == true) stringResource(R.string.dynamic_manager_enabled_summary, config.size.toString())
-                else stringResource(R.string.dynamic_manager_disabled))
-            if (config?.isValid == true) Text(config.hash)
-        } }
-        item { WearActionButton(spec, Icons.TwoTone.Search, stringResource(R.string.search_apps), { input = "search" }) }
-        LazySegmentedColumn(state.apps, { it.packageName }) { app ->
-            WearSettingsSwitchWidget(spec, app.label, app.isSelected || !app.isChangeable,
-                { if (it) { pending = DynamicManagerUiAction.SelectApp(app); grant.show() } }, app.isChangeable)
-        }
-        item { WearSettingsJumpPageWidget(spec, stringResource(R.string.signature_size), { input = "size" }) }
-        item { WearSettingsJumpPageWidget(spec, stringResource(R.string.signature_hash), { input = "hash" }) }
-        item { WearActionButton(spec, Icons.TwoTone.Settings, stringResource(R.string.dynamic_manager_manual_config), {
-            val length = size.toIntOrNull()
-            if (length == null || length <= 0) message = failed
-            else if (!hash.matches(Regex("[0-9a-fA-F]{64}"))) message = invalidHash
-            else { pending = DynamicManagerUiAction.SetManual(length, hash); grant.show() }
-        }) }
-        item { WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.dynamic_manager_clear_config), clear::show) }
     }
 }
 
@@ -99,34 +107,38 @@ internal fun WearUmountPage(onBack: () -> Unit) {
     var input by rememberSaveable { mutableStateOf("") }
     var path by rememberSaveable { mutableStateOf("") }
     var flags by rememberSaveable { mutableStateOf("0") }
-    if (input.isNotEmpty()) {
-        WearSubPage({ input = "" }) {
-            WearTextInputPage(stringResource(if (input == "path") R.string.add_umount_path else R.string.umount_flags),
-                if (input == "path") path else flags) {
-                if (input == "path") path = it else flags = it
-                input = ""
+    WearPageTransition(input, if (input.isEmpty()) 0 else 1) { route ->
+        if (route.isNotEmpty()) {
+            WearSubPage({ input = "" }) {
+                WearTextInputPage(stringResource(if (route == "path") R.string.add_umount_path else R.string.umount_flags),
+                    if (route == "path") path else flags) {
+                    if (route == "path") path = it else flags = it
+                    input = ""
+                }
+            }
+        } else {
+            val failed = stringResource(R.string.operation_failed)
+            WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
+                item { WearPageHeader(spec, null, stringResource(R.string.umount_path_manager)) }
+                message?.let { item { WearInfoCard(spec) { Text(it) } } }
+                // A TransformingLazyColumn item places only its last child, so each entry is a single button.
+                items(state.umountPaths, key = { it.path }) { entry ->
+                    WearActionButton(spec, Icons.TwoTone.Delete, entry.path, { selected = entry; remove.show() },
+                        secondaryText = entry.flags.toUmountFlagName())
+                }
+                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.add_umount_path), { input = "path" },
+                    icon = Icons.TwoTone.Folder,
+                    description = path.ifEmpty { null }) }
+                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.umount_flags), { input = "flags" },
+                    icon = Icons.TwoTone.Flag, description = flags) }
+                item { WearInfoCard(spec) { Text(stringResource(R.string.umount_flags_hint)) } }
+                item { WearActionButton(spec, Icons.TwoTone.Add, stringResource(R.string.add), {
+                    val parsed = flags.toIntOrNull()
+                    if (!path.startsWith('/') || parsed == null) message = failed
+                    else viewModel.dispatch(UmountManagerUiAction.Add(path, parsed))
+                }) }
             }
         }
-        return
-    }
-    val failed = stringResource(R.string.operation_failed)
-    WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.umount_path_manager)) }
-        message?.let { item { WearInfoCard(spec) { Text(it) } } }
-        // A TransformingLazyColumn item places only its last child, so each entry is a single button.
-        items(state.umountPaths, key = { it.path }) { entry ->
-            WearActionButton(spec, Icons.TwoTone.Delete, entry.path, { selected = entry; remove.show() },
-                secondaryText = entry.flags.toUmountFlagName())
-        }
-        item { WearSettingsJumpPageWidget(spec, stringResource(R.string.add_umount_path), { input = "path" },
-            description = path.ifEmpty { null }) }
-        item { WearSettingsJumpPageWidget(spec, stringResource(R.string.umount_flags), { input = "flags" }, description = flags) }
-        item { WearInfoCard(spec) { Text(stringResource(R.string.umount_flags_hint)) } }
-        item { WearActionButton(spec, Icons.TwoTone.Add, stringResource(R.string.add), {
-            val parsed = flags.toIntOrNull()
-            if (!path.startsWith('/') || parsed == null) message = failed
-            else viewModel.dispatch(UmountManagerUiAction.Add(path, parsed))
-        }) }
     }
 }
 

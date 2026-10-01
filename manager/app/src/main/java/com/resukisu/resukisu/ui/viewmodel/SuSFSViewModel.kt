@@ -98,7 +98,9 @@ sealed interface SuSFSUiAction {
     data class AddSusMap(val path: String, val reply: SuSFSCommandReply? = null) : SuSFSUiAction
     data class RemoveSusMap(val path: String, val reply: SuSFSCommandReply? = null) : SuSFSUiAction
     data class ExportConfig(val uri: String, val reply: SuSFSCommandReply? = null) : SuSFSUiAction
+    data class ExportConfigDirectory(val directory: String, val name: String, val reply: SuSFSCommandReply? = null) : SuSFSUiAction
     data class ImportConfig(val uri: String, val reply: SuSFSCommandReply? = null) : SuSFSUiAction
+    data class ReadEntryFile(val uri: String, val reply: SuSFSCommandReply? = null) : SuSFSUiAction
 }
 
 sealed interface SuSFSCommandResult {
@@ -106,6 +108,7 @@ sealed interface SuSFSCommandResult {
     data class ConfigValue(val value: SuSFSConfig) : SuSFSCommandResult
     data class StatusInfoValue(val value: SuSFSStatusInfo) : SuSFSCommandResult
     data class SlotInfoValue(val value: List<SuSFSSlotInfo>?) : SuSFSCommandResult
+    data class TextValue(val value: String) : SuSFSCommandResult
 }
 
 typealias SuSFSCommandReply = CompletableDeferred<SuSFSCommandResult>
@@ -238,8 +241,21 @@ class SuSFSViewModel(
                 executeBoolean(action.reply) { configUseCase.exportConfig(action.uri) }
             }
 
+            is SuSFSUiAction.ExportConfigDirectory -> viewModelScope.launch {
+                executeBoolean(action.reply) { configUseCase.exportConfigDirectory(action.directory, action.name) }
+            }
+
             is SuSFSUiAction.ImportConfig -> viewModelScope.launch {
                 executeBoolean(action.reply) { configUseCase.importConfig(action.uri) }
+            }
+
+            is SuSFSUiAction.ReadEntryFile -> viewModelScope.launch {
+                runCatching { configUseCase.readEntryFile(action.uri) }
+                    .onSuccess { action.reply?.complete(SuSFSCommandResult.TextValue(it)) }
+                    .onFailure {
+                        action.reply?.completeExceptionally(it)
+                        mutableEvents.tryEmit(SuSFSUiEvent.Error(it.message.orEmpty()))
+                    }
             }
         }
     }

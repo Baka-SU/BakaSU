@@ -20,7 +20,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /** What a picker selects: module or AnyKernel3 ZIPs, images, a save directory, boot images or LKM `.ko` files. */
-enum class WearFileMode { ZIP, IMAGE, DIRECTORY, BOOT_IMAGE, KERNEL_MODULE }
+enum class WearFileMode { ZIP, IMAGE, DIRECTORY, BOOT_IMAGE, KERNEL_MODULE, JSON, JSON_DIRECTORY, TEXT }
 data class WearFileEntry(val path: String, val name: String, val directory: Boolean, val size: Long)
 data class WearDirectory(val path: String, val parent: String?, val entries: List<WearFileEntry>, val writable: Boolean)
 
@@ -38,6 +38,9 @@ class WearFileRepository(
     suspend fun hasSystemPicker(mode: WearFileMode): Boolean = withContext(Dispatchers.IO) {
         val intent = when (mode) {
             WearFileMode.DIRECTORY -> Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/gzip")
+            WearFileMode.JSON_DIRECTORY -> Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/json")
+            WearFileMode.JSON -> Intent(Intent.ACTION_OPEN_DOCUMENT).setType("application/json")
+            WearFileMode.TEXT -> Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*")
             WearFileMode.IMAGE -> Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*")
             WearFileMode.ZIP, WearFileMode.BOOT_IMAGE -> Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*")
                 .putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/zip", "application/octet-stream"))
@@ -65,7 +68,9 @@ class WearFileRepository(
                 WearFileMode.IMAGE -> child.extension.lowercase() in setOf("png", "jpg", "jpeg", "webp", "gif", "bmp")
                 WearFileMode.BOOT_IMAGE -> child.extension.lowercase() in setOf("img", "zip")
                 WearFileMode.KERNEL_MODULE -> child.extension.equals("ko", true)
-                WearFileMode.DIRECTORY -> false
+                WearFileMode.JSON -> child.extension.equals("json", true)
+                WearFileMode.TEXT -> true
+                WearFileMode.DIRECTORY, WearFileMode.JSON_DIRECTORY -> false
             })
         }.sortedWith(compareBy<File> { !it.isDirectory }.thenBy { it.name.lowercase() })
             .map { WearFileEntry(it.path, it.name, it.isDirectory, if (it.isDirectory) 0 else it.length()) }, directory.canWrite())
