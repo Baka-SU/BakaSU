@@ -414,6 +414,12 @@
     <string name="predictive_back_exit_direction_follow_gesture">跟隨手勢</string>
     <string name="predictive_back_exit_direction_always_right">固定靠右</string>
     <string name="predictive_back_exit_direction_always_left">固定靠左</string>
+    <string name="settings_enable_swipe_dismiss">橫移返回手勢</string>
+    <string name="settings_enable_swipe_dismiss_summary">從螢幕邊緣橫移返回上一頁</string>
+    <string name="settings_pager_gesture_mode">頁面切換手勢</string>
+    <string name="settings_pager_gesture_native">預設</string>
+    <string name="settings_pager_gesture_cross_axis">跨軸攔截</string>
+    <string name="settings_pager_gesture_ios_like">iOS 風格</string>
     <string name="download_channel_name">模組下載</string>
     <string name="download_progress_title">正在下載 %s</string>
     <string name="download_complete_title">下載完成</string>
@@ -540,4 +546,17 @@
     <string name="enable_adb_summary">強制開啟 USB 偵錯並停用 adb 驗證，非必要請勿啟用</string>
     <string name="install_force_backup">備份為原廠映像</string>
     <string name="install_force_backup_summary">請確保你選擇的 boot 映像是原廠映像</string>
+    <string name="about_anime_character_sticker"><![CDATA[呢啲圖示係根據特別安排授權使用：由怡子曰曰繪製，版權由明风 OuO 持有，而向量化圖示就由本項目提供。]]></string>
+    <string name="navigation_bar_badge">導覽列徽章</string>
+    <string name="navigation_bar_badge_summary">喺導覽列度顯示超級用戶／模組數量</string>
+    <string name="home_card_icons">喺主頁卡片度顯示圖示</string>
+    <string name="home_card_icons_summary">喺主頁資訊卡片度加返啲圖示</string>
+    <string name="sort_name">名稱</string>
+    <string name="sort_install_time">安裝時間</string>
+    <string name="sort_update_time">更新時間</string>
+    <string name="sort_size">排序大小</string>
+    <string name="reverse_order">反向排序</string>
+    <string name="require_manager_version">需要更新管理器</string>
+    <string name="require_kernel_version">需要更新內核。撳一下嚟安裝。</string>
+    <string name="require_kernel_version_gki">需要更新內核</string>
 </resources>
