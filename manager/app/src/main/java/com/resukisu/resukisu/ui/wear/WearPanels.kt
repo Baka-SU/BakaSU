@@ -25,7 +25,7 @@ import com.resukisu.resukisu.R
 import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
 import com.resukisu.resukisu.ui.viewmodel.ModuleUiAction
 import com.resukisu.resukisu.ui.viewmodel.ModuleUiState
 import com.resukisu.resukisu.ui.viewmodel.SortType
@@ -41,7 +41,7 @@ import com.resukisu.resukisu.ui.viewmodel.SuperUserUiState
 internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onAction: (SuperUserUiAction) -> Unit) {
     val listState = rememberPanelListState()
     WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.wear_filter_sort)) }
+        item { WearPageHeader(spec, stringResource(R.string.wear_filter_sort)) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.show_system_apps), state.showSystemApps,
             { onAction(SuperUserUiAction.SetShowSystemApps(it)) }) }
         LazySegmentedColumn(SortType.entries, { it }) { sort ->
@@ -64,7 +64,7 @@ internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onA
 internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction: (ModuleUiAction) -> Unit) {
     val listState = rememberPanelListState()
     WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.wear_sort)) }
+        item { WearPageHeader(spec, stringResource(R.string.wear_sort)) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_action_first), state.sortActionFirst,
             { onAction(ModuleUiAction.Sort(state.sortEnabledFirst, it)) }) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_enabled_first), state.sortEnabledFirst,
@@ -85,7 +85,7 @@ internal fun WearRebootPanel(rootAvailable: Boolean, onBack: () -> Unit, onReboo
         context.getSystemService(PowerManager::class.java)?.isRebootingUserspaceSupported == true)
         methods[R.string.reboot_userspace] = "userspace"
     WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.reboot)) }
+        item { WearPageHeader(spec, stringResource(R.string.reboot)) }
         methods.forEach { (label, reason) -> item {
             WearActionButton(spec, Icons.TwoTone.RestartAlt, stringResource(label), { onReboot(reason) }, rootAvailable,
                 colors = ButtonDefaults.filledTonalButtonColors())

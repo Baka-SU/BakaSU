@@ -7,6 +7,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import com.resukisu.resukisu.ui.theme.ThemeConfig
+import org.koin.compose.koinInject
 import androidx.wear.compose.material3.SwipeToDismissBox
 
 /**
@@ -16,20 +20,26 @@ import androidx.wear.compose.material3.SwipeToDismissBox
 
 /**
  * The watchOS black page base. Custom images are drawn inside neutral content cards.
+ * The app's single backdrop, including the user's cropped image and chosen dimming.
+ * Rendered by WearManagerTheme outside all page and swipe-dismiss transitions.
  */
 @Composable
 fun WearBackground(content: @Composable BoxScope.() -> Unit) {
+    val config = koinInject<ThemeConfig>()
     Box(Modifier.fillMaxSize().background(Color.Black)) {
+        config.customBackgroundUri?.let { uri ->
+            AsyncImage(model = uri, contentDescription = null, contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = config.backgroundDim.coerceIn(0f, 1f))))
+        }
         content()
     }
 }
 
 /**
- * Both the foreground and the layer revealed during swipe dismiss keep the same black page base.
+ * Swipe-dismiss layers contain only page content; the theme owns the stationary backdrop.
  */
 @Composable
 fun WearSwipeToDismissBox(onDismissed: () -> Unit, content: @Composable BoxScope.(isBackground: Boolean) -> Unit) {
-    SwipeToDismissBox(onDismissed = onDismissed) { isBackground ->
-        WearBackground { content(isBackground) }
-    }
+    SwipeToDismissBox(onDismissed = onDismissed, content = content)
 }

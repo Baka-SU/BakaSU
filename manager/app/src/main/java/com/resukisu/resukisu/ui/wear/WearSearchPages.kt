@@ -75,7 +75,7 @@ internal fun WearModuleSearchResults(
 }
 
 private fun TransformingLazyColumnScope.searchHeader(spec: TransformationSpec, title: String, query: String, onEdit: () -> Unit) {
-    item { WearPageHeader(spec, null, title) }
+    item { WearPageHeader(spec, title) }
     item {
         WearActionButton(spec, Icons.TwoTone.Search, query, onEdit, colors = ButtonDefaults.filledTonalButtonColors())
     }

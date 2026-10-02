@@ -27,6 +27,7 @@ class ProfileTemplateRepository(
     private val networkStatusRepository: NetworkStatusRepository,
     private val networkRequestRepository: NetworkRequestRepository,
     private val ksuCliRepository: KsuCliRepository,
+    private val templateNetwork: ProfileTemplateNetworkRepository,
 ) {
     private companion object {
         const val TEMPLATE_INDEX_URL = "https://kernelsu.org/templates/index.json"
@@ -72,12 +73,14 @@ class ProfileTemplateRepository(
     /** Browsing online templates never writes them to the local template store. */
     suspend fun browseOnline(): Result<List<ProfileTemplate>> = withContext(Dispatchers.IO) {
         runCatching {
-            val ids = JSONArray(networkRequestRepository.fetch(TEMPLATE_INDEX_URL).getOrThrow())
-            (0 until ids.length()).map { index ->
-                val body = networkRequestRepository.fetch(TEMPLATE_URL.format(ids.getString(index))).getOrThrow()
+            templateNetwork.fetchBodies().map { body ->
                 JSONObject(body).toTemplate()
                     ?: throw ProfileTemplateException(ProfileTemplateFailure.Invalid)
             }
+        }.recoverCatching {
+            // Without a network or a reachable phone, report being offline rather than the raw error.
+            throw if (it !is ProfileTemplateException && !networkStatusRepository.isAvailable())
+                ProfileTemplateException(ProfileTemplateFailure.Offline) else it
         }
     }
 

@@ -22,7 +22,7 @@ import com.resukisu.resukisu.ui.component.wear.WearDetailField
 import com.resukisu.resukisu.ui.component.wear.WearInfoCard
 import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
 import com.resukisu.resukisu.ui.viewmodel.ModuleUiState
 
 @Preview(
@@ -77,7 +77,7 @@ private fun WearDetailsAndSettingsPreview() {
     WearManagerTheme {
         AppScaffold {
             WearList { spec ->
-                item { WearPageHeader(spec, Icons.TwoTone.Info, stringResource(R.string.about)) }
+                item { WearPageHeader(spec, stringResource(R.string.about)) }
                 item {
                     WearInfoCard(spec, Modifier.fillMaxWidth()) {
                         WearDetailField(

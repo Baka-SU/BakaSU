@@ -65,11 +65,11 @@ internal fun WearSuperUserPage(
     // As on the phone: an empty list shows the loading indicator in place of its content; once it
     // has content, loading and refreshing show at the pull refresh, in the edge button.
     val busy = state.isLoading || state.isRefreshing
-    WearList(isRefreshing = busy && state.appGroupList.isNotEmpty(), onRefresh = onRefresh,
+    WearList(isBusy = busy, isRefreshing = busy && state.appGroupList.isNotEmpty(), onRefresh = onRefresh,
         onBack = onBack, onOpenPanel = onFilter, panelLabel = stringResource(R.string.wear_filter_sort),
         snap = true, listState = listState, backToTop = backToTop,
     ) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.superuser)) }
+        item { WearPageHeader(spec, stringResource(R.string.superuser)) }
         // Search and SU log as one compact button group, matching the Modules page actions.
         item {
             WearIconButtonGroup(spec, listOf(

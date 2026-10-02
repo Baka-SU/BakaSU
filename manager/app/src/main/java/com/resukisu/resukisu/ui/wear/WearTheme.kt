@@ -113,7 +113,7 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalDensity provides density, LocalConfiguration provides configuration,
         LocalWearPageAnimation provides preferences.pageAnimation) {
         MaterialTheme(colorScheme = colors, motionScheme = MotionScheme.expressive()) {
-            // Keep the root black; neutral content cards render the selected image and dim layer.
+            // The selected image and dim layer belong to the shared page background.
             // A language change swaps the texts in place; the content fades back in over it.
             val locales = LocalConfiguration.current.locales
             val motion = MaterialTheme.motionScheme
@@ -141,7 +141,7 @@ fun WearStartupStatus(error: String? = null) {
     AppScaffold(timeText = { WearTimeText() }, containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface) {
         if (error == null) WearLoadingScreen()
         else WearList { spec ->
-            item { WearPageHeader(spec, null, stringResource(R.string.app_name)) }
+            item { WearPageHeader(spec, stringResource(R.string.app_name)) }
             item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR) }
         }
     }

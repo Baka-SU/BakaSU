@@ -26,7 +26,7 @@ import com.resukisu.resukisu.ui.component.wear.WearInfoCard
 import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearPageTransition
-import com.resukisu.resukisu.ui.component.wear.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
 import com.resukisu.resukisu.ui.component.wear.WearSubPage
 import com.resukisu.resukisu.ui.component.wear.WearTextInputPage
 import com.resukisu.resukisu.ui.viewmodel.SuSFSUiAction
@@ -75,7 +75,7 @@ internal fun WearSuSFSStandardPage(config: SuSFSConfig, busy: Boolean, message: 
                             else ({ SuSFSUiAction.SetCmdlineOrBootconfig(cmdline, it) })
                         onCommand(command) { page = "" }
                     })) { spec ->
-                    item { WearPageHeader(spec, null, stringResource(when (shownPage) {
+                    item { WearPageHeader(spec, stringResource(when (shownPage) {
                         "uname" -> R.string.susfs_standard_uname
                         "slots" -> R.string.susfs_standard_uname_tab_slot_info
                         else -> R.string.susfs_standard_cmdline_or_bootconfig
@@ -117,7 +117,7 @@ internal fun WearSuSFSStandardPage(config: SuSFSConfig, busy: Boolean, message: 
                 }
             }
         } else WearList(isLoading = busy, onBack = onBack) { spec ->
-            item { WearPageHeader(spec, null, stringResource(R.string.susfs_tab_standard)) }
+            item { WearPageHeader(spec, stringResource(R.string.susfs_tab_standard)) }
             message?.let { item { WearInfoCard(spec) { Text(it) } } }
             SegmentedColumn(listOf(
                 Triple(R.string.susfs_standard_logging, R.string.susfs_standard_logging_desc, config.logging),

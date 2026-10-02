@@ -298,6 +298,13 @@ fun WearManagerScreen() {
         homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = true))
     }
 
+    // Start loading at launch, as the phone does, rather than waiting for the first page visit.
+    LaunchedEffect(home.systemStatus.isFullFeatured) {
+        if (home.systemStatus.isFullFeatured) {
+            if (superuser.isLoading) superUserViewModel.dispatch(SuperUserUiAction.Refresh)
+            if (modules.isLoading) moduleViewModel.dispatch(ModuleUiAction.Refresh())
+        }
+    }
     // Lists load once, as on the phone: later changes refresh through their own events (status
     // changes, module install and toggles) and the pull gesture, not on every page visit. Pages
     // restored on their own after process death still start the first load they need.
@@ -461,7 +468,7 @@ fun WearManagerScreen() {
                             else { linkMessage = R.string.wear_link_webview_unavailable; openPage("link-result") }
                         }
                         "link-result" -> WearList(onBack = { goBack() }) { spec ->
-                            item { WearPageHeader(spec, null, stringResource(R.string.operation_failed)) }
+                            item { WearPageHeader(spec, stringResource(R.string.operation_failed)) }
                             item { WearInfoCard(spec) { Text(stringResource(linkMessage)) } }
                             item { WearActionButton(spec, Icons.TwoTone.Settings, stringResource(R.string.wear_link_mode), { openPage("link-mode") }) }
                         }
@@ -481,7 +488,7 @@ fun WearManagerScreen() {
                         )
                         "bugreport" -> WearList(isLoading = fileState.loading, onBack = { goBack() }) { spec ->
                             val fileError = fileState.error ?: if (fileState.failed) operationFailedText else null
-                            item { WearPageHeader(spec, null, stringResource(R.string.send_log)) }
+                            item { WearPageHeader(spec, stringResource(R.string.send_log)) }
                             (fileError ?: settingsMessage)?.let { item { WearInfoCard(spec) { Text(it) } } }
                             item { WearActionButton(spec, Icons.TwoTone.Save, stringResource(R.string.save_log), {
                                 settingsError = null; fileViewModel.clearError(); selectFile("bugreport")
@@ -491,7 +498,7 @@ fun WearManagerScreen() {
                             }) }
                         }
                         "saved-log" -> WearList(onBack = { goBack() }) { spec ->
-                            item { WearPageHeader(spec, null, stringResource(R.string.save_log)) }
+                            item { WearPageHeader(spec, stringResource(R.string.save_log)) }
                             item { WearInfoCard(spec) { Text(savedPath) } }
                         }
                         "settings-general", "settings-security", "settings-advanced", "settings-display" -> WearSettingsPage(
@@ -639,6 +646,8 @@ fun WearManagerScreen() {
                                                     openPage("module")
                                                 },
                                                 onInstallClick = { selectFile("module") },
+                                                onWebUi = { module -> linkViewModel.openWebUi(module.id, module.name, preferences.link) },
+                                                onExecute = { module -> selectedId = module.id; actionRequestId++; openPage("module-action") },
                                             )
                                             SETTINGS -> WearSettingsPage(settings, home.systemStatus, settingsMessage,
                                                 dispatchSettings, { openPage(it) }, { activity?.finish() },

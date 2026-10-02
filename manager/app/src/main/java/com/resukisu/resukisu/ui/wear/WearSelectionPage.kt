@@ -45,7 +45,7 @@ internal fun WearSelectionPage(route: String, state: SettingsUiState, preference
             icon = { selectionIcon(route, it) }, onChoose = preferenceViewModel::setPageAnimation)
         "link-mode" -> WearChoicePage(stringResource(R.string.wear_link_mode),
             LinkModes.map { it to linkModeLabel(it) },
-            preferences.link, onBack, message = message ?: stringResource(R.string.wear_phone_webui_requirement),
+            preferences.link, onBack, message = message,
             icon = { selectionIcon(route, it) },
             onChoose = preferenceViewModel::setLink)
         "language" -> {

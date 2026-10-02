@@ -54,7 +54,7 @@ internal fun WearHomePage(
     WearList(onBack = onBack, onOpenPanel = onRebootPanel.takeIf { status.isRootAvailable },
         panelLabel = stringResource(R.string.reboot), listState = listState, backToTop = backToTop,
     ) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.home)) }
+        item { WearPageHeader(spec, stringResource(R.string.home)) }
         if (state.isInitialDataLoaded) {
             // Build and compatibility notices are yellow warnings; failing to obtain root is a red error.
             val warnings = buildList {
@@ -109,7 +109,7 @@ internal fun WearHomePage(
                     onClick = onInstall.takeIf { status.isRootAvailable || status.kernelVersion.isGKI() },
                 )
             }
-            item { WearSectionHeader(spec, null, stringResource(R.string.home_version_info)) }
+            item { WearSectionHeader(spec, stringResource(R.string.home_version_info)) }
             val fields = buildList {
                 add(Triple(Icons.TwoTone.Smartphone, R.string.home_device_model, info.deviceModel))
                 add(Triple(Icons.TwoTone.DeveloperBoard, R.string.home_kernel, info.kernelRelease))
@@ -123,7 +123,7 @@ internal fun WearHomePage(
             fields.forEach { (icon, label, value) -> item {
                 WearChip(spec, stringResource(label), secondaryLabel = value.ifBlank { unknown }, icon = icon)
             } }
-            item { WearSectionHeader(spec, null, stringResource(R.string.home_status_info)) }
+            item { WearSectionHeader(spec, stringResource(R.string.home_status_info)) }
             item {
                 WearChip(spec, stringResource(R.string.home_selinux_status),
                     secondaryLabel = info.selinuxStatus.ifBlank { unknown }, icon = Icons.TwoTone.Security)
