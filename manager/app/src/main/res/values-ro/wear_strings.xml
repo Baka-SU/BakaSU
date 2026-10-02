@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filtrare și sortare</string>
     <string name="wear_sort">Sortare</string>
     <string name="wear_online_templates">Șabloane online</string>
+    <string name="wear_operation_interrupted">Starea operației nu a putut fi restabilită. Verifică starea actuală înainte de a începe din nou.</string>
+    <string name="wear_log_tail">Se afișează cele mai recente înregistrări din jurnal</string>
 </resources>

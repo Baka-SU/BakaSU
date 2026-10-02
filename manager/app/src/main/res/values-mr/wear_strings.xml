@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">फिल्टर आणि क्रमवारी</string>
     <string name="wear_sort">क्रमवारी</string>
     <string name="wear_online_templates">ऑनलाइन टेम्पलेट</string>
+    <string name="wear_operation_interrupted">कार्याची स्थिती पुनर्संचयित करता आली नाही. पुन्हा सुरू करण्यापूर्वी सध्याची स्थिती तपासा.</string>
+    <string name="wear_log_tail">सर्वात अलीकडील लॉग आउटपुट दाखवले जात आहे</string>
 </resources>

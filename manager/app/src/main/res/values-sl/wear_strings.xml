@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filtriranje in razvrščanje</string>
     <string name="wear_sort">Razvrščanje</string>
     <string name="wear_online_templates">Spletne predloge</string>
+    <string name="wear_operation_interrupted">Stanja operacije ni bilo mogoče obnoviti. Pred ponovnim zagonom preverite trenutno stanje.</string>
+    <string name="wear_log_tail">Prikazani so najnovejši izpisi dnevnika</string>
 </resources>

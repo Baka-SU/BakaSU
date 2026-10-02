@@ -5,6 +5,7 @@ import com.resukisu.resukisu.data.shell.KsuCliRepository
 import com.resukisu.resukisu.domain.model.ModuleActionUpdate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
@@ -22,11 +23,12 @@ class ModuleActionRepository(
             val successful = runCatching {
                 ksuCliRepository.runModuleAction(
                     moduleId = moduleId,
-                    onStdout = { trySend(ModuleActionUpdate.Output(it)) },
-                    onStderr = { trySend(ModuleActionUpdate.Output(it, isError = true)) },
+                    onStdout = { trySendBlocking(ModuleActionUpdate.Output(it)) },
+                    onStderr = { trySendBlocking(ModuleActionUpdate.Output(it, isError = true)) },
                 )
             }.getOrDefault(false)
-            trySend(ModuleActionUpdate.Completed(successful))
+            // A full output channel must not drop the terminal result and leave the UI running.
+            send(ModuleActionUpdate.Completed(successful))
             close()
         }
         awaitClose { task.cancel() }

@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">फ़िल्टर और क्रमबद्ध करें</string>
     <string name="wear_sort">क्रमबद्ध करें</string>
     <string name="wear_online_templates">ऑनलाइन टेम्पलेट</string>
+    <string name="wear_operation_interrupted">कार्रवाई की स्थिति बहाल नहीं हो सकी। दोबारा शुरू करने से पहले वर्तमान स्थिति जाँचें।</string>
+    <string name="wear_log_tail">सबसे हाल का लॉग आउटपुट दिखाया जा रहा है</string>
 </resources>

@@ -21,7 +21,14 @@ import androidx.wear.compose.material3.ArcProgressIndicatorDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import com.resukisu.resukisu.R
-import com.resukisu.resukisu.ui.component.PackageIcon
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import com.resukisu.resukisu.ui.viewmodel.SettingsViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Shown inside [androidx.wear.compose.material3.AppScaffold], which already draws the system time.
@@ -31,6 +38,10 @@ import com.resukisu.resukisu.ui.component.PackageIcon
 @Composable
 fun WearLoadingScreen() {
     val context = LocalContext.current
+    val settings by koinViewModel<SettingsViewModel>().uiState.collectAsStateWithLifecycle()
+    val icon = remember(context, settings.useAltIcon) {
+        ContextCompat.getDrawable(context, if (settings.useAltIcon) R.mipmap.ic_launcher_alt else R.mipmap.ic_launcher)
+    }
     val loading = stringResource(R.string.wear_loading)
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
         val iconSize = (minOf(maxWidth, maxHeight) * 0.27f).coerceIn(48.dp, 72.dp)
@@ -39,7 +50,7 @@ fun WearLoadingScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
         ) {
-            PackageIcon(context.packageName, null, Modifier.size(iconSize))
+            Image(rememberDrawablePainter(icon), null, Modifier.size(iconSize))
             Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center)
         }

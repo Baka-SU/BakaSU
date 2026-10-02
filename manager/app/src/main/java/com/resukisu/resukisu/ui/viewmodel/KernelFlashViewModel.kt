@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class KernelFlashUiState(
+    val sessionLoaded: Boolean = false,
     val requestUri: String? = null,
     val selectedSlot: String? = null,
     val flash: FlashProgress = FlashProgress(),
@@ -49,6 +50,7 @@ class KernelFlashViewModel(
         autoExit,
     ) { session, shouldAutoExit ->
         KernelFlashUiState(
+            sessionLoaded = true,
             requestUri = session.requestUri,
             selectedSlot = session.selectedSlot,
             flash = session.progress,

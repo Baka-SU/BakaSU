@@ -70,7 +70,7 @@ fun TransformingLazyColumnScope.wearLogLines(transformationSpec: TransformationS
             Text(
                 lines[index],
                 modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.bodyExtraSmall,
+                style = MaterialTheme.typography.bodySmall,
                 fontFamily = MonospaceFontFamily(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -86,6 +86,6 @@ fun String.toLogLines(): List<String> = if (isEmpty()) emptyList() else trimEnd(
 fun WearFollowLog(listState: TransformingLazyColumnState, lineCount: Int, following: Boolean) {
     LaunchedEffect(lineCount, following) {
         val last = listState.layoutInfo.totalItemsCount - 1
-        if (following && last > 0 && !listState.isScrollInProgress) listState.animateScrollToItem(last)
+        if (following && last > 0 && !listState.isScrollInProgress) listState.scrollToItem(last)
     }
 }

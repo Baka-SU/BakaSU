@@ -28,6 +28,7 @@ data class TemplateEditorUiState(
     val loadFailure: ProfileTemplateFailure? = null,
     val readOnly: Boolean = true,
     val isCreation: Boolean = false,
+    val pendingWrites: Int = 0,
 )
 
 sealed interface TemplateEditorUiAction {
@@ -80,7 +81,7 @@ class TemplateEditorViewModel(
                 save(create = isCreation)
             }
 
-            TemplateEditorUiAction.Delete -> viewModelScope.launch {
+            TemplateEditorUiAction.Delete -> write {
                 autoSaveJob?.cancel()
                 deleteTemplate(mutableState.value.template.id).fold(
                     onSuccess = { mutableEvents.tryEmit(TemplateEditorUiEvent.Deleted) },
@@ -127,8 +128,16 @@ class TemplateEditorViewModel(
     }
 
     private fun save(create: Boolean) {
-        viewModelScope.launch {
+        write {
             persist(create, true)
+        }
+    }
+
+    private fun write(block: suspend () -> Unit) {
+        mutableState.update { it.copy(pendingWrites = it.pendingWrites + 1) }
+        viewModelScope.launch {
+            try { block() }
+            finally { mutableState.update { it.copy(pendingWrites = it.pendingWrites - 1) } }
         }
     }
 

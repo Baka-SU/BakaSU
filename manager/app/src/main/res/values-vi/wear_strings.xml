@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Lọc và sắp xếp</string>
     <string name="wear_sort">Sắp xếp</string>
     <string name="wear_online_templates">Mẫu trực tuyến</string>
+    <string name="wear_operation_interrupted">Không thể khôi phục trạng thái thao tác. Hãy kiểm tra trạng thái hiện tại trước khi bắt đầu lại.</string>
+    <string name="wear_log_tail">Hiển thị đầu ra nhật ký gần đây nhất</string>
 </resources>

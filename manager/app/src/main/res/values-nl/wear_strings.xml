@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filteren en sorteren</string>
     <string name="wear_sort">Sorteren</string>
     <string name="wear_online_templates">Online sjablonen</string>
+    <string name="wear_operation_interrupted">De status van de bewerking kon niet worden hersteld. Controleer de huidige status voordat je opnieuw begint.</string>
+    <string name="wear_log_tail">De meest recente loguitvoer wordt weergegeven</string>
 </resources>

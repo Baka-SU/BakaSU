@@ -18,6 +18,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.translate
+import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
+import com.resukisu.resukisu.ui.theme.ThemeConfig
+import org.koin.compose.koinInject
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -34,8 +44,7 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 
 /**
  * A non-interactive information container for Wear Material 3 version 1.5.0.
- * A null [containerColor] uses the surface container. The custom app background is drawn at the
- * screen root, not behind individual cards.
+ * A null [containerColor] uses the neutral surface, optionally with the selected background image.
  */
 @Composable
 fun TransformingLazyColumnItemScope.WearInfoCard(
@@ -50,8 +59,25 @@ fun TransformingLazyColumnItemScope.WearInfoCard(
 ) {
     val transformation = SurfaceTransformation(transformationSpec)
     val color = containerColor ?: MaterialTheme.colorScheme.surfaceContainer
-    val painter = remember(transformation, shape, color, border) {
-        transformation.createContainerPainter(ColorPainter(color), shape, border)
+    val config = koinInject<ThemeConfig>()
+    val context = LocalContext.current
+    val windowSize = LocalWindowInfo.current.containerSize
+    val imageRequest = config.customBackgroundUri?.let { uri ->
+        remember(context, uri, windowSize) {
+            ImageRequest.Builder(context).data(uri)
+                .size(maxOf(1, windowSize.width), maxOf(1, windowSize.height)).build()
+        }
+    }
+    val image = if (containerColor == null && config.customBackgroundUri != null)
+        rememberAsyncImagePainter(imageRequest) else null
+    // Preserve readable Wear text even when the chosen image is white. The user can darken it
+    // further; explicit authorization/warning/error colors retain their original color pairs.
+    val dim = 0.75f + 0.25f * config.backgroundDim.coerceIn(0f, 1f)
+    val background = remember(image, color, dim) {
+        if (image == null) ColorPainter(color) else WearCardImagePainter(image, color, dim)
+    }
+    val painter = remember(transformation, shape, background, border) {
+        transformation.createContainerPainter(background, shape, border)
     }
     Column(
         modifier = Modifier
@@ -70,6 +96,27 @@ fun TransformingLazyColumnItemScope.WearInfoCard(
         verticalArrangement = verticalArrangement,
         content = content,
     )
+}
+
+private class WearCardImagePainter(
+    private val image: Painter,
+    private val fallback: Color,
+    private val dim: Float,
+) : Painter() {
+    override val intrinsicSize = Size.Unspecified
+
+    override fun DrawScope.onDraw() {
+        drawRect(fallback)
+        val source = image.intrinsicSize
+        if (source.width > 0 && source.height > 0) {
+            val scale = maxOf(size.width / source.width, size.height / source.height)
+            val target = Size(source.width * scale, source.height * scale)
+            translate((size.width - target.width) / 2, (size.height - target.height) / 2) {
+                with(image) { draw(target) }
+            }
+            drawRect(Color.Black.copy(alpha = dim))
+        }
+    }
 }
 
 /** How a status card is colored: neutral surface, yellow warning or red error. */

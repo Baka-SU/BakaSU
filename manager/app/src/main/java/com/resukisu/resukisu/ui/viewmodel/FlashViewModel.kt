@@ -9,6 +9,7 @@ import com.resukisu.resukisu.domain.usecase.ExecuteFlashOperationUseCase
 import com.resukisu.resukisu.domain.usecase.IsSoftRebootPreferredUseCase
 import com.resukisu.resukisu.domain.usecase.RebootUseCase
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 enum class FlashingStatus { FLASHING, SUCCESS, FAILED }
@@ -29,6 +31,8 @@ data class ModuleInstallStatus(
 )
 
 data class FlashUiState(
+    val started: Boolean = false,
+    val outputTruncated: Boolean = false,
     val flashingStatus: FlashingStatus = FlashingStatus.FLASHING,
     val moduleInstallStatus: ModuleInstallStatus = ModuleInstallStatus(),
     val output: String = "",
@@ -37,6 +41,7 @@ data class FlashUiState(
 )
 
 sealed interface FlashUiAction {
+    data class StartOnce(val operation: FlashOperation) : FlashUiAction
     data class Start(val operation: FlashOperation) : FlashUiAction
     data class SetStatus(val status: FlashingStatus) : FlashUiAction
     data class ResetModules(val totalModules: Int) : FlashUiAction
@@ -69,6 +74,7 @@ class FlashViewModel(
     private val isSoftRebootPreferred: IsSoftRebootPreferredUseCase,
     private val executeFlashOperation: ExecuteFlashOperationUseCase? = null,
     private val checkFlashModuleMount: CheckFlashModuleMountUseCase? = null,
+    displayLogLimit: Int = Int.MAX_VALUE,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(FlashUiState())
     val state: StateFlow<FlashUiState> = mutableState.asStateFlow()
@@ -76,14 +82,23 @@ class FlashViewModel(
     private val mutableEvents = MutableSharedFlow<FlashUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<FlashUiEvent> = mutableEvents.asSharedFlow()
     private var operationJob: Job? = null
+    private var outputJob: Job? = null
+    private val displayLog = DisplayLogBuffer(displayLogLimit)
 
     fun dispatch(action: FlashUiAction) {
         when (action) {
+            is FlashUiAction.StartOnce -> {
+                if (!mutableState.value.started) dispatch(FlashUiAction.Start(action.operation))
+            }
             is FlashUiAction.Start -> {
                 operationJob?.cancel()
+                outputJob?.cancel()
+                displayLog.clear()
+                mutableState.update { it.copy(started = true, outputTruncated = false) }
                 operationJob = viewModelScope.launch {
                     val useCase = executeFlashOperation
                     if (useCase == null) {
+                        mutableState.update { it.copy(flashingStatus = FlashingStatus.FAILED, exitCode = -1) }
                         mutableEvents.emit(FlashUiEvent.Error("Flash operation is unavailable"))
                         return@launch
                     }
@@ -95,23 +110,24 @@ class FlashViewModel(
                             exitCode = null,
                         )
                     }
-                    useCase(action.operation).collect { update ->
+                    useCase(action.operation).catch { error ->
+                        flushOutput()
+                        mutableState.update { it.copy(flashingStatus = FlashingStatus.FAILED, exitCode = -1) }
+                        mutableEvents.emit(FlashUiEvent.Error(error.message.orEmpty()))
+                    }.collect { update ->
                         when (update) {
                             is FlashOperationUpdate.Output -> {
-                                mutableState.update {
-                                    it.copy(output = it.output + update.line + "\n")
-                                }
+                                appendOutput(update.line)
                                 mutableEvents.emit(FlashUiEvent.Output(update.line))
                             }
 
                             is FlashOperationUpdate.ErrorOutput -> {
-                                mutableState.update {
-                                    it.copy(output = it.output + update.line + "\n")
-                                }
+                                appendOutput(update.line)
                                 mutableEvents.emit(FlashUiEvent.ErrorOutput(update.line))
                             }
 
                             is FlashOperationUpdate.Completed -> {
+                                flushOutput()
                                 val moduleNeedsMount = if (
                                     update.code == 0 && action.operation is FlashOperation.Module
                                 ) {
@@ -180,5 +196,22 @@ class FlashViewModel(
                 }
             }
         }
+    }
+
+    private fun appendOutput(line: String) {
+        displayLog.append("$line\n")
+        if (outputJob?.isActive != true) outputJob = viewModelScope.launch {
+            delay(100)
+            publishOutput()
+        }
+    }
+
+    private fun publishOutput() {
+        mutableState.update { it.copy(output = displayLog.snapshot(), outputTruncated = displayLog.truncated) }
+    }
+
+    private fun flushOutput() {
+        outputJob?.cancel()
+        publishOutput()
     }
 }

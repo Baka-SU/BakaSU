@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Süzgəc və sıralama</string>
     <string name="wear_sort">Sırala</string>
     <string name="wear_online_templates">Onlayn şablonlar</string>
+    <string name="wear_operation_interrupted">Əməliyyatın vəziyyətini bərpa etmək mümkün olmadı. Yenidən başlamazdan əvvəl cari vəziyyəti yoxlayın.</string>
+    <string name="wear_log_tail">Ən son jurnal çıxışı göstərilir</string>
 </resources>

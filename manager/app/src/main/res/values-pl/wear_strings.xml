@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filtrowanie i sortowanie</string>
     <string name="wear_sort">Sortowanie</string>
     <string name="wear_online_templates">Szablony online</string>
+    <string name="wear_operation_interrupted">Nie udało się przywrócić stanu operacji. Sprawdź aktualny stan przed ponownym rozpoczęciem.</string>
+    <string name="wear_log_tail">Wyświetlanie najnowszych wpisów dziennika</string>
 </resources>

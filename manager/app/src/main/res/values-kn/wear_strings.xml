@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">ಫಿಲ್ಟರ್ ಮತ್ತು ವಿಂಗಡಣೆ</string>
     <string name="wear_sort">ವಿಂಗಡಿಸಿ</string>
     <string name="wear_online_templates">ಆನ್‌ಲೈನ್ ಟೆಂಪ್ಲೇಟ್‌ಗಳು</string>
+    <string name="wear_operation_interrupted">ಕಾರ್ಯಾಚರಣೆಯ ಸ್ಥಿತಿಯನ್ನು ಮರುಸ್ಥಾಪಿಸಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಾರಂಭಿಸುವ ಮೊದಲು ಪ್ರಸ್ತುತ ಸ್ಥಿತಿಯನ್ನು ಪರಿಶೀಲಿಸಿ.</string>
+    <string name="wear_log_tail">ಇತ್ತೀಚಿನ ಲಾಗ್ ಔಟ್‌ಪುಟ್ ತೋರಿಸಲಾಗುತ್ತಿದೆ</string>
 </resources>

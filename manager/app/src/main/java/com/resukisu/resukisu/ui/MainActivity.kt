@@ -47,7 +47,7 @@ import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
-class MainActivity : ComponentActivity() {
+open class MainActivity : ComponentActivity() {
     private val isWearDevice by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)
     }

@@ -13,15 +13,21 @@ import com.resukisu.resukisu.domain.model.KernelFlashSession
 import com.resukisu.resukisu.getKernelVersion
 import com.topjohnwu.superuser.io.SuFile
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -44,20 +50,23 @@ class FlashRepository(
     private var worker: HorizonKernelWorker? = null
     private val installEnvironmentMutex = Mutex()
 
+    @OptIn(FlowPreview::class)
     fun startKernelFlash(uri: String, selectedSlot: String?, skipKsud: Boolean = false) {
-        val current = mutableSession.value
-        if (current.requestUri == uri && current.selectedSlot == selectedSlot && worker != null) return
+        if (worker?.isAlive == true) return
+        observationJob?.cancel()
         workerState.reset()
         mutableSession.value = KernelFlashSession(
             requestUri = uri,
             selectedSlot = selectedSlot,
             progress = FlashProgress(),
         )
-        observationJob?.cancel()
         observationJob = applicationScope.launch {
-            workerState.state.collectLatest { progress ->
+            workerState.state.sample(100).collectLatest { progress ->
+                val observerContext = currentCoroutineContext()
+                val fullLog = workerState.getFullLog()
                 mutableSession.update {
-                    it.copy(progress = progress, fullLog = workerState.getFullLog())
+                    observerContext.ensureActive()
+                    it.copy(progress = progress, fullLog = fullLog)
                 }
             }
         }
@@ -109,10 +118,11 @@ class FlashRepository(
     }
 
     fun execute(operation: FlashOperation): Flow<FlashOperationUpdate> = callbackFlow {
-        val onStdout: (String) -> Unit = { trySend(FlashOperationUpdate.Output(it)) }
-        val onStderr: (String) -> Unit = { trySend(FlashOperationUpdate.ErrorOutput(it)) }
+        val onStdout: (String) -> Unit = { trySendBlocking(FlashOperationUpdate.Output(it)) }
+        val onStderr: (String) -> Unit = { trySendBlocking(FlashOperationUpdate.ErrorOutput(it)) }
+        var completed: FlashOperationUpdate.Completed? = null
         val onFinish: (Boolean, Int) -> Unit = { showReboot, code ->
-            trySend(FlashOperationUpdate.Completed(showReboot, code))
+            completed = FlashOperationUpdate.Completed(showReboot, code)
         }
 
         try {
@@ -153,9 +163,14 @@ class FlashRepository(
                     )
                 }
             }
+            // Deliver completion after the synchronous CLI callback returns. Unlike trySend,
+            // send waits for a full log channel instead of silently losing the terminal result.
+            send(completed ?: FlashOperationUpdate.Completed(showReboot = false, code = -1))
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (error: Throwable) {
-            trySend(FlashOperationUpdate.ErrorOutput(error.message.orEmpty()))
-            trySend(FlashOperationUpdate.Completed(showReboot = false, code = -1))
+            send(FlashOperationUpdate.ErrorOutput(error.message.orEmpty()))
+            send(FlashOperationUpdate.Completed(showReboot = false, code = -1))
         } finally {
             close()
         }

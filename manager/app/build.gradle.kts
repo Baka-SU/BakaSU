@@ -251,4 +251,7 @@ dependencies {
     implementation(libs.lsposed.cxx)
 
     implementation(libs.accompanist.drawablepainter)
+    testImplementation(libs.junit)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

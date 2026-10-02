@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filter dan urutkan</string>
     <string name="wear_sort">Urutkan</string>
     <string name="wear_online_templates">Templat daring</string>
+    <string name="wear_operation_interrupted">Status operasi tidak dapat dipulihkan. Periksa status saat ini sebelum memulai lagi.</string>
+    <string name="wear_log_tail">Menampilkan keluaran log terbaru</string>
 </resources>

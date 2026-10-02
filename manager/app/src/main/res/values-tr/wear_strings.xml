@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filtreleme ve sıralama</string>
     <string name="wear_sort">Sırala</string>
     <string name="wear_online_templates">Çevrimiçi şablonlar</string>
+    <string name="wear_operation_interrupted">İşlem durumu geri yüklenemedi. Yeniden başlamadan önce mevcut durumu kontrol edin.</string>
+    <string name="wear_log_tail">En son günlük çıktıları gösteriliyor</string>
 </resources>

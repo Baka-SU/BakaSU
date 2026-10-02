@@ -83,19 +83,16 @@ internal fun WearHomePage(
                         status.kernelVersion.isGKI() -> R.string.home_not_installed
                         else -> R.string.home_unsupported
                     }),
-                    secondaryLabel = listOfNotNull(
-                        stringResource(when {
-                            working -> R.string.home_short_info
-                            status.kernelVersion.isGKI() -> R.string.home_click_to_install
-                            else -> R.string.home_unsupported_reason
-                        }, info.superuserCount, info.moduleCount),
-                        // Mode and jailbreak share one line so the clickable chip stays within three lines.
-                        if (!working) null
-                        else stringResource(if (status.lkmMode == true) R.string.wear_mode_lkm else R.string.wear_mode_builtin).let { mode ->
-                            if (status.isLateLoadMode) stringResource(R.string.wear_joined, mode, stringResource(R.string.jailbreak_mode))
-                            else mode
-                        },
-                    ).joinToString("\n"),
+                    secondaryLabel = stringResource(when {
+                        working -> R.string.home_short_info
+                        status.kernelVersion.isGKI() -> R.string.home_click_to_install
+                        else -> R.string.home_unsupported_reason
+                    }, info.superuserCount, info.moduleCount),
+                    // Match the phone status card: mode badges belong beside the headline, not in the description.
+                    headlineBadges = if (working) listOfNotNull(
+                        stringResource(if (status.lkmMode == true) R.string.wear_mode_lkm else R.string.wear_mode_builtin),
+                        if (status.isLateLoadMode) stringResource(R.string.jailbreak_mode) else null,
+                    ) else emptyList(),
                     icon = when {
                         working -> Icons.TwoTone.TaskAlt
                         status.kernelVersion.isGKI() -> Icons.TwoTone.Warning

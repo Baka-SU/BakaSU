@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">篩選與排序</string>
     <string name="wear_sort">排序</string>
     <string name="wear_online_templates">線上範本</string>
+    <string name="wear_operation_interrupted">操作狀態未恢復，請檢查目前狀態後再重新執行。</string>
+    <string name="wear_log_tail">僅顯示最近的日誌輸出</string>
 </resources>

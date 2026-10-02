@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,15 +47,17 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.ui.component.settings.SettingsTextFieldWidget
+import com.resukisu.resukisu.ui.wear.HandleWearWebUIEvent
 
 @Composable
-fun WebUIScreen(webUIState: WebUIState) {
+fun WebUIScreen(webUIState: WebUIState, modifier: Modifier = Modifier, isWear: Boolean = false) {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
     val drawingInsets = WindowInsets.safeDrawing
     val systemBarsInsets = WindowInsets.systemBars
     val imeInsets = WindowInsets.ime
-    val innerPadding = if (webUIState.isInsetsEnabled) imeInsets.asPaddingValues() else drawingInsets.asPaddingValues()
+    val innerPadding = if (isWear) PaddingValues(0.dp)
+        else if (webUIState.isInsetsEnabled) imeInsets.asPaddingValues() else drawingInsets.asPaddingValues()
 
     LaunchedEffect(density, layoutDirection, systemBarsInsets, webUIState.isInsetsEnabled) {
         if (!webUIState.isInsetsEnabled) {
@@ -85,7 +88,7 @@ fun WebUIScreen(webUIState: WebUIState) {
     ) {
         if (webUIState.webView != null) {
             AndroidView(
-                modifier = Modifier.fillMaxSize(),
+                modifier = modifier.fillMaxSize(),
                 factory = { _ ->
                     webUIState.webView!!.apply {
                         layoutParams = ViewGroup.LayoutParams(
@@ -121,13 +124,13 @@ fun WebUIScreen(webUIState: WebUIState) {
         }
     }
 
-    HandleWebUIEvent(webUIState)
+    HandleWebUIEvent(webUIState, isWear)
     HandleWebViewLifecycle(webUIState)
     HandleConfigurationChanges(webUIState)
 }
 
 @Composable
-private fun HandleWebUIEvent(webUIState: WebUIState) {
+private fun HandleWebUIEvent(webUIState: WebUIState, isWear: Boolean) {
 
     val fileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -144,6 +147,10 @@ private fun HandleWebUIEvent(webUIState: WebUIState) {
         webUIState.onFileChooserResult(uris)
     }
 
+    if (isWear && webUIState.uiEvent !is WebUIEvent.ShowFileChooser) {
+        HandleWearWebUIEvent(webUIState)
+        return
+    }
     when (val event = webUIState.uiEvent) {
         is WebUIEvent.ShowAlert -> {
             var showDialog by remember(event) { mutableStateOf(true) }

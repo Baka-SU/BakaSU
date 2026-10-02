@@ -6,6 +6,7 @@ import com.resukisu.resukisu.domain.model.ModuleActionUpdate
 import com.resukisu.resukisu.domain.usecase.ExecuteModuleActionUseCase
 import com.resukisu.resukisu.domain.usecase.SaveModuleActionLogUseCase
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -13,14 +14,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 data class ExecuteModuleActionUiState(
     val output: String = "",
-    val running: Boolean = true,
+    val started: Boolean = false,
+    val running: Boolean = false,
+    val successful: Boolean? = null,
+    val outputTruncated: Boolean = false,
 )
 
 sealed interface ExecuteModuleActionUiAction {
+    data object Start : ExecuteModuleActionUiAction
     data object SaveLog : ExecuteModuleActionUiAction
 }
 
@@ -34,34 +40,45 @@ class ExecuteModuleActionViewModel(
     private val moduleId: String,
     private val executeModuleAction: ExecuteModuleActionUseCase,
     private val saveModuleActionLog: SaveModuleActionLogUseCase,
+    autoStart: Boolean = true,
+    displayLogLimit: Int = Int.MAX_VALUE,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ExecuteModuleActionUiState())
     private val mutableEvents =
         MutableSharedFlow<ExecuteModuleActionUiEvent>(extraBufferCapacity = 1)
     private val log = StringBuilder()
+    private val displayLog = DisplayLogBuffer(displayLogLimit)
     private var actionJob: Job? = null
+    private var outputJob: Job? = null
 
     val state: StateFlow<ExecuteModuleActionUiState> = mutableState.asStateFlow()
     val events: SharedFlow<ExecuteModuleActionUiEvent> = mutableEvents.asSharedFlow()
 
     init {
-        execute()
+        if (autoStart) execute()
     }
 
     fun dispatch(action: ExecuteModuleActionUiAction) {
         when (action) {
+            ExecuteModuleActionUiAction.Start -> execute()
             ExecuteModuleActionUiAction.SaveLog -> saveLog()
         }
     }
 
     private fun execute() {
-        if (actionJob?.isActive == true) return
+        if (mutableState.value.started) return
+        mutableState.update { it.copy(started = true, running = true) }
         actionJob = viewModelScope.launch {
-            executeModuleAction(moduleId).collect { update ->
+            executeModuleAction(moduleId).catch { error ->
+                flushOutput()
+                mutableState.update { it.copy(running = false, successful = false) }
+                mutableEvents.emit(ExecuteModuleActionUiEvent.Error(error.message.orEmpty()))
+            }.collect { update ->
                 when (update) {
                     is ModuleActionUpdate.Output -> appendOutput(update.text, update.isError)
                     is ModuleActionUpdate.Completed -> {
-                        mutableState.update { it.copy(running = false) }
+                        flushOutput()
+                        mutableState.update { it.copy(running = false, successful = update.successful) }
                         mutableEvents.emit(ExecuteModuleActionUiEvent.Completed(update.successful))
                     }
                 }
@@ -73,11 +90,21 @@ class ExecuteModuleActionViewModel(
         val line = "$text\n"
         log.append(line)
         if (isError) return
-        mutableState.update { current ->
-            val output =
-                if (line.startsWith(CLEAR_SCREEN)) line.removePrefix(CLEAR_SCREEN) else current.output + line
-            current.copy(output = output)
+        if (line.startsWith(CLEAR_SCREEN)) displayLog.clear()
+        displayLog.append(line.removePrefix(CLEAR_SCREEN))
+        if (outputJob?.isActive != true) outputJob = viewModelScope.launch {
+            delay(100)
+            publishOutput()
         }
+    }
+
+    private fun publishOutput() {
+        mutableState.update { it.copy(output = displayLog.snapshot(), outputTruncated = displayLog.truncated) }
+    }
+
+    private fun flushOutput() {
+        outputJob?.cancel()
+        publishOutput()
     }
 
     private fun saveLog() {

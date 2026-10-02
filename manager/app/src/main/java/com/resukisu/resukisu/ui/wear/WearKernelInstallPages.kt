@@ -266,12 +266,14 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
         viewModel.events.collect { event -> if (event is KernelFlashUiEvent.Error) error = event.message }
     }
     LaunchedEffect(flash.isCompleted, state.autoExit) {
-        if (flash.isCompleted && state.autoExit) {
+        if (state.requestUri == uri && state.selectedSlot == slot && flash.isCompleted && state.autoExit) {
             viewModel.dispatch(KernelFlashUiAction.ConsumeAutoExit)
             onBack()
         }
     }
+    val interrupted = started && state.sessionLoaded && (state.requestUri != uri || state.selectedSlot != slot)
     val status = when {
+        interrupted -> WearFlashStatus.FAILED
         flash.error.isNotEmpty() -> WearFlashStatus.FAILED
         flash.isCompleted -> WearFlashStatus.SUCCESS
         else -> WearFlashStatus.RUNNING
@@ -281,7 +283,9 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
     WearList(onBack = onBack, listState = listState) { spec ->
         item { WearPageHeader(spec, null, stringResource(R.string.horizon_kernel)) }
         item {
-            WearFlashStatusChip(spec, status, stringResource(when (status) {
+            if (interrupted) WearStatusItem(spec, Icons.TwoTone.Warning,
+                stringResource(R.string.wear_operation_interrupted), tone = WearStatusTone.ERROR)
+            else WearFlashStatusChip(spec, status, stringResource(when (status) {
                 WearFlashStatus.RUNNING -> R.string.flashing
                 WearFlashStatus.SUCCESS -> R.string.horizon_flash_complete
                 WearFlashStatus.FAILED -> R.string.flash_failed
@@ -295,6 +299,7 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
         error?.let { message ->
             item { WearStatusItem(spec, Icons.TwoTone.Warning, message.ifBlank { stringResource(R.string.failed_reboot) }, tone = WearStatusTone.ERROR) }
         }
-        wearLogLines(spec, flash.logs)
+        if (!interrupted) wearLogLines(spec, flash.logs)
+        if (!interrupted && flash.logsTruncated) item { WearSectionHeader(spec, null, stringResource(R.string.wear_log_tail)) }
     }
 }

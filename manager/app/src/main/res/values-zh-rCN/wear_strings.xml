@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">筛选与排序</string>
     <string name="wear_sort">排序</string>
     <string name="wear_online_templates">线上模板</string>
+    <string name="wear_operation_interrupted">操作状态未恢复，请检查当前状态后再重新发起。</string>
+    <string name="wear_log_tail">仅显示最近的日志输出</string>
 </resources>

@@ -17,6 +17,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import kotlinx.coroutines.flow.map
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -47,6 +49,8 @@ import com.resukisu.resukisu.ui.component.wear.wearGroupGap
 import com.resukisu.resukisu.ui.viewmodel.WearFileEvent
 import com.resukisu.resukisu.ui.viewmodel.WearFileViewModel
 import org.koin.compose.viewmodel.koinViewModel
+import com.resukisu.resukisu.ui.component.wear.rememberWearPageViewModelOwner
+import com.resukisu.resukisu.ui.component.wear.ReleaseWearPageViewModels
 
 /**
  * The built-in picker as a Wear list: the task title, the current path as a caption, a low-emphasis
@@ -56,13 +60,17 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 internal fun WearFilePage(title: String, mode: WearFileMode, onBack: () -> Unit, onSelected: (String) -> Unit, onSaved: (String) -> Unit,
     requestId: Int, onSelectDirectory: ((String, String) -> Unit)? = null, message: String? = null, busy: Boolean = false) {
-    val viewModel = koinViewModel<WearFileViewModel>(key = "wear-picker-$mode-$requestId")
+    val key = "wear-picker-$mode-$requestId"
+    val viewModel = koinViewModel<WearFileViewModel>(viewModelStoreOwner = rememberWearPageViewModelOwner(key))
+    ReleaseWearPageViewModels(key, remember(viewModel) { viewModel.state.map { it.loading } })
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val backupFileName = stringResource(R.string.wear_susfs_backup_file_name)
     LaunchedEffect(viewModel, mode) {
-        if (mode == WearFileMode.JSON_DIRECTORY) viewModel.setName(backupFileName)
-        viewModel.load(null, mode)
+        if (viewModel.state.value.directory == null) {
+            if (mode == WearFileMode.JSON_DIRECTORY) viewModel.setName(backupFileName)
+            viewModel.load(null, mode)
+        }
     }
     LaunchedEffect(viewModel) { viewModel.events.collect { event -> when (event) {
         is WearFileEvent.Selected -> onSelected(event.uri)

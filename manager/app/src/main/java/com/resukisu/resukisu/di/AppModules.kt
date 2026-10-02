@@ -157,6 +157,7 @@ import com.resukisu.resukisu.ui.viewmodel.AppProfileViewModel
 import com.resukisu.resukisu.ui.viewmodel.DynamicManagerViewModel
 import com.resukisu.resukisu.ui.viewmodel.ExecuteModuleActionViewModel
 import com.resukisu.resukisu.ui.viewmodel.FlashViewModel
+import com.resukisu.resukisu.ui.viewmodel.WearPageStoresViewModel
 import com.resukisu.resukisu.ui.viewmodel.HomeViewModel
 import com.resukisu.resukisu.ui.viewmodel.InstallViewModel
 import com.resukisu.resukisu.ui.viewmodel.KernelFlashViewModel
@@ -448,13 +449,18 @@ val viewModelModule = module {
     }
     viewModelOf(::SulogViewModel)
     viewModelOf(::DynamicManagerViewModel)
-    viewModelOf(::FlashViewModel)
+    viewModelOf(::WearPageStoresViewModel)
+    viewModel { parameters ->
+        FlashViewModel(get(), get(), get(), get(), parameters.getOrNull<Int>() ?: Int.MAX_VALUE)
+    }
     viewModelOf(::UmountManagerScreenViewModel)
     viewModel { parameters ->
         ExecuteModuleActionViewModel(
             moduleId = parameters[0],
             executeModuleAction = get(),
             saveModuleActionLog = get(),
+            autoStart = parameters.getOrNull<Boolean>() ?: true,
+            displayLogLimit = parameters.getOrNull<Int>() ?: Int.MAX_VALUE,
         )
     }
 }

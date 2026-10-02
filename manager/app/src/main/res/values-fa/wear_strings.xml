@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">پالایش و مرتب‌سازی</string>
     <string name="wear_sort">مرتب‌سازی</string>
     <string name="wear_online_templates">الگوهای آنلاین</string>
+    <string name="wear_operation_interrupted">وضعیت عملیات بازیابی نشد. پیش از شروع دوباره، وضعیت فعلی را بررسی کنید.</string>
+    <string name="wear_log_tail">نمایش تازه‌ترین خروجی گزارش</string>
 </resources>
