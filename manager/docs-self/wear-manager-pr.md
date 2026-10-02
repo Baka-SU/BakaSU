@@ -31,7 +31,7 @@ The interface uses Wear Compose Foundation and Material 3. `AppScaffold` owns ti
 
 `WearRefreshGesture` handles boundary pulls: a downward pull at the main list's top opens its menu, an upward pull at a menu's bottom closes it, and an upward pull at the Superuser or Modules list's bottom refreshes that list. Crossing the threshold and releasing commits the action. Only the active screen handles boundary gestures, and menus open at their heading.
 
-`WearPageTransition` moves the menu and its parent through the same full-size container. Opening moves both screens downward; returning moves both upward. The departing screen remains until both transitions finish. Menu motion uses the theme's spatial animation independently of the page animation preference and respects system reduced motion.
+`WearPageTransition` measures every page in a fixed full-screen `Box` and uses a shared `Transition` to animate only graphics-layer position, scale, and opacity. Pages keep their route keys and remain composed until the transition finishes. Menu opening moves both screens downward; returning moves both upward. Menu motion uses the theme's spatial animation independently of the page animation preference and respects system reduced motion.
 
 ## State and business operations
 
