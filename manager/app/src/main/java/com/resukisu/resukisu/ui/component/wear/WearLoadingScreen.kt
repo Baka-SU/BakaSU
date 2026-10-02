@@ -31,6 +31,11 @@ import com.resukisu.resukisu.ui.viewmodel.SettingsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * Shown inside [androidx.wear.compose.material3.AppScaffold], which already draws the system time.
  * The icon and name sit centered, and the official indeterminate [ArcProgressIndicator] runs along
  * the bottom of the screen at its recommended diameter, as in the Wear progress indicator sample.

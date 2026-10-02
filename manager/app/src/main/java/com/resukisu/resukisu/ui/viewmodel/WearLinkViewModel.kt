@@ -14,6 +14,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
 sealed interface WearLinkEvent {
     data class WebView(val url: String) : WearLinkEvent
     data class WebUi(val moduleId: String, val moduleName: String) : WearLinkEvent

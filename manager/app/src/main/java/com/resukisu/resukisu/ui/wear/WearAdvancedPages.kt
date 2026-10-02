@@ -27,6 +27,11 @@ import com.resukisu.resukisu.ui.screen.main.UninstallType
 import com.resukisu.resukisu.ui.screen.toUmountFlagName
 import org.koin.compose.viewmodel.koinViewModel
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 @Composable
 internal fun WearDynamicManagerPage(onBack: () -> Unit) {
     val viewModel = koinViewModel<DynamicManagerViewModel>()

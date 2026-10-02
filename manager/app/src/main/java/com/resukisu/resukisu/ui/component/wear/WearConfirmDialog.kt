@@ -7,6 +7,11 @@ import androidx.wear.compose.material3.Text
 import com.resukisu.resukisu.ui.component.DialogHandle
 import com.resukisu.resukisu.ui.component.rememberCustomDialog
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 @Composable
 fun rememberWearConfirmDialog(title: String, message: String, onConfirm: () -> Unit): DialogHandle =
     rememberCustomDialog { dismiss ->

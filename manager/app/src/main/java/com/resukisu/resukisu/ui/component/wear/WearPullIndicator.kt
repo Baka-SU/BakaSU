@@ -24,6 +24,11 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * Feedback for pulling down at the top of a list: a round indicator slides in from the top edge and
  * fills its ring with the pull. Once the pull is far enough to commit on release, the arrow flips
  * up (or the close mark grows) with a small bounce, telling the user to let go.

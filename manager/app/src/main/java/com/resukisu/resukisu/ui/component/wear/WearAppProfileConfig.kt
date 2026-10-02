@@ -25,6 +25,11 @@ import com.resukisu.resukisu.ui.viewmodel.TemplateViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 /** Wear presentation of the shared Manager profile modes and fields. */
 @Composable
 fun WearAppProfileConfig(

@@ -43,6 +43,11 @@ import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * A non-interactive information container for Wear Material 3 version 1.5.0.
  * A null [containerColor] uses the neutral surface, optionally with the selected background image.
  */

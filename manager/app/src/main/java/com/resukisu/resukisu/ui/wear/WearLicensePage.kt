@@ -22,6 +22,11 @@ import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 @Composable
 internal fun WearLicensePage(onBack: () -> Unit, onOpenLink: (String) -> Unit) {
     val context = LocalContext.current

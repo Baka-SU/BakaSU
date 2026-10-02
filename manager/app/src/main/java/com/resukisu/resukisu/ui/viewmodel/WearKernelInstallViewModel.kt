@@ -10,6 +10,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 /** The phone's LKM install methods: patch a selected image, patch the current slot, or the inactive slot after OTA. */
 enum class WearLkmMethod { SELECT_FILE, DIRECT, INACTIVE_SLOT }
 

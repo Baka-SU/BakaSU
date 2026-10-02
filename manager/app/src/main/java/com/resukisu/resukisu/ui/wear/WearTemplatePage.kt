@@ -38,6 +38,11 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import kotlinx.coroutines.flow.map
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 @Composable
 internal fun WearTemplatePage(onBack: () -> Unit) {
     val viewModel = koinViewModel<TemplateViewModel>(key = "wear-templates",

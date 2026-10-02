@@ -52,6 +52,11 @@ import com.resukisu.resukisu.ui.viewmodel.WearKernelInstallViewModel
 import com.resukisu.resukisu.ui.viewmodel.WearLkmMethod
 import org.koin.compose.viewmodel.koinViewModel
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 /** The phone Install screen's two tabs become two entries: LKM patching and AnyKernel3 flashing. */
 @Composable
 internal fun WearInstallPage(environment: InstallEnvironment, loading: Boolean, onBack: () -> Unit, onOpenPage: (String) -> Unit) {

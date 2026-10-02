@@ -47,6 +47,11 @@ import com.resukisu.resukisu.ui.viewmodel.SuSFSCommandResult
 import com.resukisu.resukisu.ui.viewmodel.awaitSuSFSCommand
 import kotlinx.coroutines.launch
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 private val KstatFields = listOf(
     R.string.susfs_kstat_field_ino, R.string.susfs_kstat_field_dev, R.string.susfs_kstat_field_nlink,
     R.string.susfs_kstat_field_size, R.string.susfs_kstat_field_atime, R.string.susfs_kstat_field_atime_nsec,

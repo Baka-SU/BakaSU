@@ -25,6 +25,11 @@ import com.resukisu.resukisu.R
 import kotlin.math.abs
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * Pulls past the list boundaries. At the top, pulling down (or turning the crown up) opens the page's
  * panel; at the end, pulling up closes the panel or refreshes the main list. Releasing past
  * the 48dp threshold commits; ordinary scrolling and shorter pulls do nothing.

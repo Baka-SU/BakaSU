@@ -29,6 +29,11 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 /** Titles keep a 7.3% internal side margin so they are not clipped by a round screen, and take at most two lines. */
 @Composable
 fun TransformingLazyColumnItemScope.WearPageHeader(

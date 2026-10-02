@@ -14,6 +14,11 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 /** A settings switch; per the Wear switch button guidance the label takes up to 3 lines and the summary up to 2. */
 @Composable
 fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(

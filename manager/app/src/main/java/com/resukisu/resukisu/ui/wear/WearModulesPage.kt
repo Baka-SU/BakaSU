@@ -43,6 +43,11 @@ import com.resukisu.resukisu.ui.component.wear.WearStatusItem
 import com.resukisu.resukisu.ui.component.wear.wearLoadingItem
 import com.resukisu.resukisu.ui.viewmodel.ModuleUiState
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 @Composable
 internal fun WearModulesPage(
     state: ModuleUiState,

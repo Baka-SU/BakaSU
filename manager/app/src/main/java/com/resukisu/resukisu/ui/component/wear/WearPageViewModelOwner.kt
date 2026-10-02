@@ -9,6 +9,11 @@ import org.koin.compose.viewmodel.koinViewModel
 import com.resukisu.resukisu.ui.viewmodel.WearPageStoresViewModel
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 @Composable
 fun rememberWearPageViewModelOwner(key: String): ViewModelStoreOwner {
     val stores = koinViewModel<WearPageStoresViewModel>()

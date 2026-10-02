@@ -15,13 +15,15 @@ import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 /** One icon action of a [WearIconButtonGroup]; [label] is its accessibility description. */
 data class WearIconAction(val icon: ImageVector, val label: String, val onClick: () -> Unit)
 
-/**
- * A list row of up to three equal icon buttons in an M3 [ButtonGroup]: compact, with full touch
- * targets, and the pressed button grows while its neighbors shrink.
- */
+
 @Composable
 fun TransformingLazyColumnItemScope.WearIconButtonGroup(
     transformationSpec: TransformationSpec,
