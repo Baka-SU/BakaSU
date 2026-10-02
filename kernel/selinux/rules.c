@@ -91,28 +91,36 @@ static struct mutex *ksu_sel_mutex_ptr = NULL;
 rwlock_t *ksu_policy_rwlock_ptr = NULL;
 #endif // #ifndef KSU_COMPAT_USE_SELINUX_STATE
 
+static DEFINE_MUTEX(ksu_rules_mutex);
+static struct mutex *active_sel_mutex = NULL;
+
 static inline void ksu_lock_sel_mutex_legacy(void)
 {
-// 4.14 - 5.10
+    mutex_lock(&ksu_rules_mutex);
 #if defined(KSU_COMPAT_USE_SELINUX_STATE) && !defined(SELINUX_POLICY_INSTEAD_SELINUX_SS)
-    struct selinux_fs_info *fsi = selinuxfs_mount->mnt_sb->s_fs_info;
-    mutex_lock(&fsi->mutex);
-// 4.14-
+    if (selinuxfs_mount && selinuxfs_mount->mnt_sb && selinuxfs_mount->mnt_sb->s_fs_info) {
+        struct selinux_fs_info *fsi = selinuxfs_mount->mnt_sb->s_fs_info;
+        mutex_lock(&fsi->mutex);
+        active_sel_mutex = &fsi->mutex;
+        return;
+    }
 #else
-    mutex_lock(ksu_sel_mutex_ptr);
+    if (ksu_sel_mutex_ptr) {
+        mutex_lock(ksu_sel_mutex_ptr);
+        active_sel_mutex = ksu_sel_mutex_ptr;
+        return;
+    }
 #endif
+    active_sel_mutex = NULL;
 }
 
 static inline void ksu_unlock_sel_mutex_legacy(void)
 {
-// 4.14 - 5.10
-#if defined(KSU_COMPAT_USE_SELINUX_STATE) && !defined(SELINUX_POLICY_INSTEAD_SELINUX_SS)
-    struct selinux_fs_info *fsi = selinuxfs_mount->mnt_sb->s_fs_info;
-    mutex_unlock(&fsi->mutex);
-// 4.14-
-#else
-    mutex_unlock(ksu_sel_mutex_ptr);
-#endif
+    if (active_sel_mutex) {
+        mutex_unlock(active_sel_mutex);
+        active_sel_mutex = NULL;
+    }
+    mutex_unlock(&ksu_rules_mutex);
 }
 
 static inline void ksu_lock_sepolicy_legacy(void)
