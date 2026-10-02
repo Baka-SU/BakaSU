@@ -124,15 +124,23 @@ static struct security_hook_list ksu_hooks[] = {
 
 void __init ksu_lsm_hook_built_in_init(void)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
+    // On Linux >= 4.18, security_hook_heads is marked __lsm_ro_after_init.
+    // By the time module_init runs, the memory is already write-protected,
+    // so calling security_add_hooks() will trigger a kernel panic.
+    (void)ksu_hooks;
+    return;
+#else
     if (ARRAY_SIZE(ksu_hooks) == 0)
         return;
 
-        // https://github.com/torvalds/linux/commit/d69dece5f5b6bc7a5e39d2b6136ddc69469331fe
+    // https://github.com/torvalds/linux/commit/d69dece5f5b6bc7a5e39d2b6136ddc69469331fe
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0) || defined(KSU_COMPAT_REQUIRE_PROVIDE_LSM_NAME)
     security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks), "ksu");
 #else
     // https://elixir.bootlin.com/linux/v4.10.17/source/include/linux/lsm_hooks.h#L1892
     security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks));
+#endif
 #endif
 }
 #else // linux kernel >= 4.2 || KSU_COMPAT_HAS_LIST_OF_LSM_HOOKS
