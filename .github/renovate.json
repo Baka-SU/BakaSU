@@ -1,0 +1,43 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "ignorePresets": ["workarounds:javaLTSVersions"],
+  "ignoreDeps": ["java-jdk"],
+  "timezone": "Asia/Shanghai",
+  "addLabels": ["dependencies"],
+  "commitMessagePrefix": "deps:",
+  "schedule": [
+    "after 6pm",
+    "before 10am"
+  ],
+  "packageRules": [
+    {
+      "matchManagers":["maven","gradle"],
+      "matchFileNames": ["manager/**"],
+      "groupName": "maven group in manager",
+      "labels": ["manager","java"]
+    },
+    {
+      "matchManagers":["cargo"],
+      "matchFileNames": ["userspace/ksud/**"],
+      "groupName": "cargo group in ksud",
+      "labels": ["rust","ksud"]
+    },
+        {
+      "matchManagers":["cargo"],
+      "matchFileNames": ["userspace/ksuinit/**"],
+      "groupName": "cargo group in ksuinit",
+      "labels": ["rust","ksuinit"]
+    },
+    {
+      "matchCategories":["ci"],
+      "matchDepTypes":["action"],
+      "matchDatasources":["github-tags"],
+      "matchUpdateTypes":"major",
+      "groupName": "action group",
+      "labels": ["github_actions"]
+    }
+  ]
+}

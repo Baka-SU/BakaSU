@@ -363,6 +363,7 @@ jobs:
 
   telegram-bot-api:
     name: Telegram Bot API
+    if: github.event_name != 'pull_request' && github.event_name != 'workflow_call'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
