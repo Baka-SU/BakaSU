@@ -17,6 +17,7 @@ import com.resukisu.resukisu.profile.Groups
 import com.resukisu.resukisu.toRawFlags
 import com.resukisu.resukisu.toRootProfileFlags
 import com.resukisu.resukisu.ui.component.settings.LazySegmentedColumn
+import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
 import com.resukisu.resukisu.ui.component.settings.SegmentedColumn
 import com.resukisu.resukisu.ui.component.settings.WearChoicePage
 import com.resukisu.resukisu.ui.component.settings.WearSettingsJumpPageWidget
@@ -114,7 +115,7 @@ fun WearAppProfileConfig(
                     if (shownRulesInput) WearTextInputPage(stringResource(R.string.profile_selinux_rules), rules, true) {
                         rules = it; onValidateSepolicy(it); rulesInput = false
                     } else WearList(onBack = back) { spec ->
-                        item { WearPageHeader(spec, Icons.TwoTone.Security, stringResource(shownPage)) }
+                        item { WearPageHeader(spec, stringResource(shownPage)) }
                         message?.let { item { WearInfoCard(spec) { Text(it) } } }
                         SegmentedColumn(listOf(R.string.profile_selinux_domain, R.string.profile_selinux_rules), { it }) { field ->
                             WearSettingsJumpPageWidget(spec, stringResource(field), {
@@ -131,7 +132,7 @@ fun WearAppProfileConfig(
                     domain = it; page = R.string.profile_selinux_context
                 }
                 else -> WearList(onBack = back) { spec ->
-                    item { WearPageHeader(spec, null, stringResource(shownPage)) }
+                    item { WearPageHeader(spec, stringResource(shownPage)) }
                     message?.let { item { WearInfoCard(spec) { Text(it) } } }
                     when (shownPage) {
                         R.string.profile_groups -> LazySegmentedColumn(Groups.entries.toList(), { it.gid }) { group ->
@@ -157,7 +158,7 @@ fun WearAppProfileConfig(
                 }
             }
         } else WearList(onBack = onBack) { spec ->
-            item { WearPageHeader(spec, null, stringResource(R.string.profile)) }
+            item { WearPageHeader(spec, stringResource(R.string.profile)) }
             (message ?: if (inputError) failed else null)?.let { item { WearInfoCard(spec) { Text(it) } } }
             item { WearSettingsJumpPageWidget(spec, stringResource(R.string.profile), { page = R.string.profile },
                 description = stringResource(mode), icon = Icons.TwoTone.Security) }

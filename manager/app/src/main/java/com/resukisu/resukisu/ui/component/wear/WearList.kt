@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalScrollCaptureInProgress
 import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.LocalReduceMotion
@@ -66,6 +67,7 @@ import kotlinx.coroutines.launch
 fun WearList(
     isLoading: Boolean = false,
     isRefreshing: Boolean = false,
+    isBusy: Boolean = false,
     onRefresh: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
     onConfirm: (() -> Unit)? = null,
@@ -103,7 +105,7 @@ fun WearList(
         listState,
         pullOffset,
         pullProgress,
-        enabled = screenActive && !isLoading && !isRefreshing,
+        enabled = screenActive && !isLoading && !isRefreshing && !isBusy,
         onRefresh = onRefresh,
         onOpenPanel = onOpenPanel,
         onClosePanel = onClosePanel,
@@ -134,7 +136,7 @@ fun WearList(
     }
     if (onBack != null || onConfirm != null || backToTop) {
         ScreenScaffold(scrollState = listState, modifier = gestureModifier,
-            scrollIndicator = { WearScrollIndicator(listState) }, edgeButton = {
+            scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) }, edgeButton = {
             EdgeButton(
                 onClick = {
                     // While refreshing, the edge button only shows the progress of the pull refresh.
@@ -171,7 +173,7 @@ fun WearList(
             }
         }) { listContent(it) }
     } else ScreenScaffold(scrollState = listState, modifier = gestureModifier,
-        scrollIndicator = { WearScrollIndicator(listState) }) { listContent(it) }
+        scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) }) { listContent(it) }
 }
 
 private val SquareItemSpec = TransformationVariableSpec(1f)

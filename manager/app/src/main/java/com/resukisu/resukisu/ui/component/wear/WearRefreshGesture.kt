@@ -31,7 +31,8 @@ import kotlin.math.abs
 
 /**
  * Pulls past the list boundaries. At the top, pulling down (or turning the crown up) opens the page's
- * panel; at the end, pulling up closes the panel or refreshes the main list. Releasing past
+ * panel; at the end, pulling up (or, in a panel, turning the crown down) closes the panel, and
+ * pulling up refreshes the main list. Releasing past
  * the 48dp threshold commits; ordinary scrolling and shorter pulls do nothing.
  *
  * Apply it to the whole screen (list and edge button), so a pull that starts on the edge button at
@@ -60,18 +61,22 @@ internal fun Modifier.wearRefreshGesture(
     val threshold = with(LocalDensity.current) { 48.dp.toPx() }
     val refreshLabel = stringResource(R.string.wear_refresh)
     val backLabel = stringResource(R.string.back)
-    // The crown turned up past the top: three times the touch threshold of extra rotation, with a
+    // The crown turned past the boundary: three times the touch threshold of extra rotation, with a
     // pause of the crown resetting it.
     val crownTarget = threshold * 3
     val crown = remember { CrownPull() }
     return this.onPreRotaryScrollEvent { event ->
-        val action = panel
+        // A panel closes past its end with the crown turned down; a page opens its panel past the
+        // top with the crown turned up, mirroring the touch pulls.
+        val closing = closePanel != null
+        val action = closePanel ?: panel
         val now = SystemClock.uptimeMillis()
-        val atTop = !listState.canScrollBackward
-        val delta = -event.verticalScrollPixels
-        if (action == null || !active || !atTop || delta <= 0f || now - crown.lastEvent > 600) crown.accumulated = 0f
+        val atBoundary = if (closing) !listState.canScrollForward else !listState.canScrollBackward
+        val delta = if (closing) event.verticalScrollPixels else -event.verticalScrollPixels
+        val sign = if (closing) -1f else 1f
+        if (action == null || !active || !atBoundary || delta <= 0f || now - crown.lastEvent > 600) crown.accumulated = 0f
         crown.lastEvent = now
-        if (action != null && active && atTop && delta > 0f) {
+        if (action != null && active && atBoundary && delta > 0f) {
             if (crown.accumulated == 0f) haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
             crown.accumulated += delta
             if (crown.accumulated >= crownTarget) {
@@ -81,7 +86,7 @@ internal fun Modifier.wearRefreshGesture(
                 haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                 action()
             } else {
-                pullProgress.floatValue = crown.accumulated / crownTarget
+                pullProgress.floatValue = sign * crown.accumulated / crownTarget
                 displacement.floatValue = pullProgress.floatValue * threshold * 0.75f
             }
         } else {

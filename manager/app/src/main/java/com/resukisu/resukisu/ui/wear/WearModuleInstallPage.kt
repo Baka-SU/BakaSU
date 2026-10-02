@@ -98,7 +98,7 @@ internal fun WearModuleInstallPage(
     WearFollowLog(listState, lines.size, following = status == WearFlashStatus.RUNNING)
 
     WearList(onBack = onBack, listState = listState) { spec ->
-        item { WearPageHeader(spec, null, stringResource(when (operation) {
+        item { WearPageHeader(spec, stringResource(when (operation) {
             FlashOperation.Uninstall -> R.string.settings_uninstall_permanent
             FlashOperation.Restore -> R.string.settings_restore_stock_image
             is FlashOperation.Boot -> R.string.install
@@ -123,6 +123,6 @@ internal fun WearModuleInstallPage(
             }
         }
         if (!fileError) wearLogLines(spec, lines)
-        if (state.outputTruncated) item { WearSectionHeader(spec, null, stringResource(R.string.wear_log_tail)) }
+        if (state.outputTruncated) item { WearSectionHeader(spec, stringResource(R.string.wear_log_tail)) }
     }
 }

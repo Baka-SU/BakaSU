@@ -36,7 +36,7 @@ import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearPageTransition
 import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
-import com.resukisu.resukisu.ui.component.wear.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
 import com.resukisu.resukisu.ui.component.wear.WearSubPage
 import com.resukisu.resukisu.ui.component.wear.rememberWearConfirmDialog
 import com.resukisu.resukisu.ui.util.ActivityResumeEffect
@@ -190,9 +190,9 @@ internal fun WearSuSFSPage(pickerMode: String, onBack: () -> Unit) {
                 }
             }
         } else WearList(isLoading = state.isLoading || busy, onBack = onBack) { spec ->
-            item { WearPageHeader(spec, null, stringResource(R.string.susfs_config_title)) }
+            item { WearPageHeader(spec, stringResource(R.string.susfs_config_title)) }
             message?.let { item { WearInfoCard(spec) { Text(it) } } }
-            item { WearSectionHeader(spec, null, stringResource(R.string.wear_susfs_status_controls)) }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_status_controls)) }
             item {
                 WearSettingsSwitchWidget(spec, stringResource(R.string.susfs_enable_config), config?.enabled == true,
                     { enabled -> submit({ SuSFSUiAction.SetEnabled(enabled, it) }) }, enabled = config != null && !busy,
@@ -213,13 +213,13 @@ internal fun WearSuSFSPage(pickerMode: String, onBack: () -> Unit) {
                 }
             }
             if (config?.enabled == true) item {
-                WearSectionHeader(spec, null, stringResource(R.string.wear_susfs_features))
+                WearSectionHeader(spec, stringResource(R.string.wear_susfs_features))
             }
             LazySegmentedColumn(if (config?.enabled == true) WearSuSFSSection.entries else emptyList(), { it.name }) { entry ->
                 WearSettingsJumpPageWidget(spec, stringResource(entry.title), { sectionName = entry.name; page = "section" },
                     icon = entry.icon)
             }
-            item { WearSectionHeader(spec, null, stringResource(R.string.wear_susfs_backup_restore)) }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_backup_restore)) }
             SegmentedColumn(listOf("export", "import", "reset"), { it }) { action ->
                 when (action) {
                     "export" -> WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_backup_export), { launchPicker(true) },

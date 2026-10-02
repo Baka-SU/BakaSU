@@ -6,6 +6,7 @@ import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
 import com.resukisu.resukisu.data.packageinfo.AppIconDataSource
 import com.resukisu.resukisu.data.packageinfo.InstalledPackageRepository
+import com.resukisu.resukisu.data.profile.ProfileTemplateNetworkRepository
 import com.resukisu.resukisu.domain.usecase.RefreshInstalledModulesUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,17 +16,22 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 /**
- * Answers a phone showing one of this watch's module WebUIs (see [WearWebUiProtocol]). Calls are
- * served off the binder thread in a process-wide scope, since the service may be unbound as soon as
- * a callback returns.
+ * Answers a phone showing a watch module's WebUI (see [WearWebUiProtocol]) and serves
+ * phone-assisted online template downloads. Calls run off the binder thread in a process-wide
+ * scope, since the service may be unbound as soon as a callback returns.
  */
 class WearWebUiService : WearableListenerService(), KoinComponent {
     private val webUiRepository: WebUiRepository by inject()
     private val packageRepository: InstalledPackageRepository by inject()
     private val appIconDataSource: AppIconDataSource by inject()
     private val refreshModules: RefreshInstalledModulesUseCase by inject()
+    private val templateNetwork: ProfileTemplateNetworkRepository by inject()
 
     override fun onChannelOpened(channel: ChannelClient.Channel) {
+        if (channel.path == ProfileTemplateNetworkRepository.PATH) {
+            bridgeScope.launch { templateNetwork.serve(Wearable.getChannelClient(applicationContext), channel) }
+            return
+        }
         if (channel.path != WearWebUiProtocol.RPC_PATH) return
         val client = Wearable.getChannelClient(applicationContext)
         bridgeScope.launch {

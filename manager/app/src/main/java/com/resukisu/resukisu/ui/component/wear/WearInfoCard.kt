@@ -18,21 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.painter.ColorPainter
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.translate
-import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalWindowInfo
-import com.resukisu.resukisu.ui.theme.ThemeConfig
-import org.koin.compose.koinInject
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.Icon
@@ -48,8 +40,8 @@ import androidx.wear.compose.material3.lazy.transformedHeight
  */
 
 /**
- * A non-interactive information container for Wear Material 3 version 1.5.0.
- * A null [containerColor] uses the neutral surface, optionally with the selected background image.
+ * A non-interactive information container using the Wear surface transformation.
+ * A null [containerColor] uses the neutral surface; custom images belong to the page background.
  */
 @Composable
 fun TransformingLazyColumnItemScope.WearInfoCard(
@@ -64,23 +56,7 @@ fun TransformingLazyColumnItemScope.WearInfoCard(
 ) {
     val transformation = SurfaceTransformation(transformationSpec)
     val color = containerColor ?: MaterialTheme.colorScheme.surfaceContainer
-    val config = koinInject<ThemeConfig>()
-    val context = LocalContext.current
-    val windowSize = LocalWindowInfo.current.containerSize
-    val imageRequest = config.customBackgroundUri?.let { uri ->
-        remember(context, uri, windowSize) {
-            ImageRequest.Builder(context).data(uri)
-                .size(maxOf(1, windowSize.width), maxOf(1, windowSize.height)).build()
-        }
-    }
-    val image = if (containerColor == null && config.customBackgroundUri != null)
-        rememberAsyncImagePainter(imageRequest) else null
-    // Preserve readable Wear text even when the chosen image is white. The user can darken it
-    // further; explicit authorization/warning/error colors retain their original color pairs.
-    val dim = 0.75f + 0.25f * config.backgroundDim.coerceIn(0f, 1f)
-    val background = remember(image, color, dim) {
-        if (image == null) ColorPainter(color) else WearCardImagePainter(image, color, dim)
-    }
+    val background = remember(color) { ColorPainter(color) }
     val painter = remember(transformation, shape, background, border) {
         transformation.createContainerPainter(background, shape, border)
     }
@@ -101,27 +77,6 @@ fun TransformingLazyColumnItemScope.WearInfoCard(
         verticalArrangement = verticalArrangement,
         content = content,
     )
-}
-
-private class WearCardImagePainter(
-    private val image: Painter,
-    private val fallback: Color,
-    private val dim: Float,
-) : Painter() {
-    override val intrinsicSize = Size.Unspecified
-
-    override fun DrawScope.onDraw() {
-        drawRect(fallback)
-        val source = image.intrinsicSize
-        if (source.width > 0 && source.height > 0) {
-            val scale = maxOf(size.width / source.width, size.height / source.height)
-            val target = Size(source.width * scale, source.height * scale)
-            translate((size.width - target.width) / 2, (size.height - target.height) / 2) {
-                with(image) { draw(target) }
-            }
-            drawRect(Color.Black.copy(alpha = dim))
-        }
-    }
 }
 
 /** How a status card is colored: neutral surface, yellow warning or red error. */
@@ -186,5 +141,31 @@ fun TransformingLazyColumnItemScope.WearStatusItem(
             modifier = Modifier.size(24.dp).align(Alignment.CenterHorizontally))
         Text(message, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium,
             color = if (neutral) MaterialTheme.colorScheme.onSurface else content, textAlign = TextAlign.Center)
+    }
+}
+
+/** A one-line pill strip for short persistent states such as being offline. */
+@Composable
+fun TransformingLazyColumnItemScope.WearStatusLabel(
+    transformationSpec: TransformationSpec,
+    icon: ImageVector,
+    message: String,
+    modifier: Modifier = Modifier,
+    tone: WearStatusTone = WearStatusTone.NEUTRAL,
+) {
+    val (container, content) = wearStatusColors(tone)
+    WearInfoCard(
+        transformationSpec,
+        modifier,
+        containerColor = container,
+        shape = CircleShape,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Row(Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp), tint = content)
+            Spacer(Modifier.width(4.dp))
+            Text(message, style = MaterialTheme.typography.labelSmall, color = content,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }

@@ -20,7 +20,7 @@ fun WearChoicePage(title: String, choices: List<Pair<String, String>>, selected:
     onBack: () -> Unit, enabled: Boolean = true, message: String? = null,
     icon: ((String) -> ImageVector)? = null, onChoose: (String) -> Unit) {
     WearList(onBack = onBack, snap = true) { spec ->
-        item { WearPageHeader(spec, null, title) }
+        item { WearPageHeader(spec, title) }
         if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
         LazySegmentedColumn(choices, { it.first }) { (value, label) ->
             RadioButton(

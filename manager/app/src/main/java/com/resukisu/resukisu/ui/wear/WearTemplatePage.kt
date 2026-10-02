@@ -19,6 +19,7 @@ import androidx.compose.material.icons.twotone.Numbers
 import androidx.compose.material.icons.twotone.Person
 import androidx.compose.material.icons.twotone.Refresh
 import androidx.compose.material.icons.twotone.Save
+import androidx.compose.material.icons.twotone.SignalWifiOff
 import androidx.compose.material.icons.twotone.Security
 import androidx.compose.material.icons.twotone.Storage
 import androidx.compose.runtime.*
@@ -32,6 +33,7 @@ import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.ProfileTemplate
 import com.resukisu.resukisu.ui.component.settings.WearSettingsJumpPageWidget
 import com.resukisu.resukisu.ui.component.settings.LazySegmentedColumn
+import com.resukisu.resukisu.ui.component.settings.SegmentedColumn
 import com.resukisu.resukisu.ui.component.wear.*
 import com.resukisu.resukisu.ui.viewmodel.*
 import org.koin.compose.viewmodel.koinViewModel
@@ -51,6 +53,7 @@ internal fun WearTemplatePage(onBack: () -> Unit) {
     val context = LocalContext.current
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     var message by remember { mutableStateOf<String?>(null) }
+    var onlineOffline by remember { mutableStateOf(false) }
     val imported = stringResource(R.string.app_profile_template_import_success)
     val emptyExport = stringResource(R.string.app_profile_template_export_empty)
     val emptyClipboard = stringResource(R.string.app_profile_template_import_empty)
@@ -60,6 +63,7 @@ internal fun WearTemplatePage(onBack: () -> Unit) {
         TemplateUiEvent.ImportCompleted -> { message = imported; viewModel.dispatch(TemplateUiAction.Refresh()) }
         is TemplateUiEvent.Exported -> { clipboard.setPrimaryClip(ClipData.newPlainText(exported, event.json)); message = exported }
         TemplateUiEvent.ExportEmpty -> message = emptyExport
+        TemplateUiEvent.Offline -> { message = null; onlineOffline = true }
         is TemplateUiEvent.Error -> message = event.message.ifBlank { failed }
     } } }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
@@ -77,11 +81,13 @@ internal fun WearTemplatePage(onBack: () -> Unit) {
             val back = { if (onlineSelection != null) onlineSelection = null else online = false }
             WearSubPage(back) {
                 WearList(isLoading = state.isLoadingOnline && state.onlineTemplates.isEmpty(), onBack = back) { spec ->
-                    item { WearPageHeader(spec, null, stringResource(R.string.wear_online_templates)) }
+                    item { WearPageHeader(spec, stringResource(R.string.wear_online_templates)) }
+                    if (onlineOffline) item { WearStatusLabel(spec, Icons.TwoTone.SignalWifiOff,
+                        stringResource(R.string.wear_template_offline), tone = WearStatusTone.WARNING) }
                     message?.let { item { WearInfoCard(spec) { Text(it) } } }
                     if (template == null) {
                         item { WearActionButton(spec, Icons.TwoTone.Refresh, stringResource(R.string.wear_refresh),
-                            { message = null; viewModel.dispatch(TemplateUiAction.BrowseOnline) }, !state.isLoadingOnline) }
+                            { message = null; onlineOffline = false; viewModel.dispatch(TemplateUiAction.BrowseOnline) }, !state.isLoadingOnline) }
                         LazySegmentedColumn(state.onlineTemplates, { it.id }) { entry ->
                             WearSettingsJumpPageWidget(spec, entry.name.ifBlank { entry.id },
                                 { onlineSelection = entry.id; message = null }, icon = Icons.TwoTone.Description,
@@ -110,13 +116,15 @@ internal fun WearTemplatePage(onBack: () -> Unit) {
                 }
             }
         } else WearList(isLoading = state.isRefreshing && state.templateList.none { it.local }, onBack = onBack, listState = listState) { spec ->
-            item { WearPageHeader(spec, null, stringResource(R.string.settings_profile_template)) }
+            item { WearPageHeader(spec, stringResource(R.string.settings_profile_template)) }
+            if (state.isOffline) item { WearStatusLabel(spec, Icons.TwoTone.SignalWifiOff,
+                stringResource(R.string.wear_template_offline), tone = WearStatusTone.WARNING) }
             message?.let { item { WearInfoCard(spec) { Text(it) } } }
             item { WearActionButton(spec, Icons.TwoTone.Add, stringResource(R.string.app_profile_template_create), {
                 creation = true; readOnly = false; selected = ""; editRequest++
             }) }
             item { WearActionButton(spec, Icons.TwoTone.Description, stringResource(R.string.wear_online_templates), {
-                message = null; online = true; onlineSelection = null
+                message = null; onlineOffline = false; online = true; onlineSelection = null
                 viewModel.dispatch(TemplateUiAction.BrowseOnline)
             }) }
             item { WearActionButton(spec, Icons.TwoTone.ContentPaste, stringResource(R.string.app_profile_import_from_clipboard), {
@@ -160,24 +168,30 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
         val shownInput = route.toInt()
         if (shownInput != 0) {
             WearSubPage({ input = 0 }) {
-                WearTextInputPage(stringResource(shownInput), template.field(shownInput), multiline = shownInput == R.string.profile_selinux_rules) { text ->
+                if (readOnly || shownInput == R.string.app_profile_template_id && !creation) {
+                    WearList(onBack = { input = 0 }) { spec ->
+                        item { WearPageHeader(spec, stringResource(shownInput)) }
+                        template.field(shownInput).chunked(350).forEach { chunk ->
+                            item { WearInfoCard(spec) { Text(chunk) } }
+                        }
+                    }
+                } else WearTextInputPage(stringResource(shownInput), template.field(shownInput), multiline = shownInput == R.string.profile_selinux_rules) { text ->
                     runCatching { template.withField(shownInput, text) }.fold(
                         onSuccess = { viewModel.dispatch(TemplateEditorUiAction.Update(it)) }, onFailure = { message = failed })
                     input = 0
                 }
             }
         } else WearList(isLoading = state.loading, onBack = onBack) { spec ->
-            item { WearPageHeader(spec, null, stringResource(if (readOnly) R.string.app_profile_template_view else R.string.app_profile_template_edit)) }
+            item { WearPageHeader(spec, stringResource(if (readOnly) R.string.app_profile_template_view else R.string.app_profile_template_edit)) }
             if (state.loadFailure != null) item { WearStatusItem(spec, Icons.TwoTone.Error, failed, tone = WearStatusTone.ERROR) }
             message?.let { item { WearInfoCard(spec) { Text(it) } } }
             if (state.loadFailure == null) {
                 // A TransformingLazyColumn item places only its last child, so the value is the widget's description.
-                fields.forEach { field -> item {
+                SegmentedColumn(fields, { it }) { field ->
                     WearSettingsJumpPageWidget(spec, stringResource(field), { input = field },
                         icon = templateFieldIcon(field),
-                        enabled = !readOnly && (field != R.string.app_profile_template_id || creation),
                         description = template.field(field).ifEmpty { null })
-                } }
+                }
                 if (!readOnly) {
                     item { WearActionButton(spec, Icons.TwoTone.Save, stringResource(R.string.app_profile_template_save), { viewModel.dispatch(TemplateEditorUiAction.Save) }) }
                     if (!creation) item { WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.app_profile_template_delete), delete::show) }

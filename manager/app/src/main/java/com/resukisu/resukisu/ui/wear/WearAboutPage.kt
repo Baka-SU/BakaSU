@@ -41,7 +41,7 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
     val context = LocalContext.current
     val projectUrl = stringResource(R.string.wear_project_url)
     WearList(onBack = onBack, snap = true) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.about)) }
+        item { WearPageHeader(spec, stringResource(R.string.about)) }
         item {
             WearScaledItem(spec) {
                 Column(

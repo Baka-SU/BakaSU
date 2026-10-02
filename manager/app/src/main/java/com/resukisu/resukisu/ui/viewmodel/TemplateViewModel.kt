@@ -3,6 +3,8 @@ package com.resukisu.resukisu.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.resukisu.resukisu.domain.model.ProfileTemplate
+import com.resukisu.resukisu.domain.model.ProfileTemplateException
+import com.resukisu.resukisu.domain.model.ProfileTemplateFailure
 import com.resukisu.resukisu.domain.usecase.ExportProfileTemplatesUseCase
 import com.resukisu.resukisu.domain.usecase.BrowseOnlineProfileTemplatesUseCase
 import com.resukisu.resukisu.domain.usecase.SaveProfileTemplateUseCase
@@ -43,6 +45,7 @@ sealed interface TemplateUiEvent {
     data object ImportCompleted : TemplateUiEvent
     data class Exported(val json: String) : TemplateUiEvent
     data object ExportEmpty : TemplateUiEvent
+    data object Offline : TemplateUiEvent
     data class Error(val message: String) : TemplateUiEvent
 }
 
@@ -102,7 +105,13 @@ class TemplateViewModel(
                     try {
                         browseOnlineTemplates().fold(
                             onSuccess = { onlineTemplates.value = it },
-                            onFailure = { mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty())) },
+                            onFailure = {
+                                mutableEvents.emit(
+                                    if ((it as? ProfileTemplateException)?.reason == ProfileTemplateFailure.Offline)
+                                        TemplateUiEvent.Offline
+                                    else TemplateUiEvent.Error(it.message.orEmpty())
+                                )
+                            },
                         )
                     } finally { loadingOnline.value = false }
                 }

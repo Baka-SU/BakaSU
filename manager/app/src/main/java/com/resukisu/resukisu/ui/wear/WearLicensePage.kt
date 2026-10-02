@@ -35,7 +35,7 @@ internal fun WearLicensePage(onBack: () -> Unit, onOpenLink: (String) -> Unit) {
     }
     var selected by rememberSaveable { mutableIntStateOf(-1) }
     WearList(isLoading = libraries == null, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.open_source_license)) }
+        item { WearPageHeader(spec, stringResource(R.string.open_source_license)) }
         libraries?.libraries?.forEachIndexed { index, library ->
             item(key = "library-$index") {
                 WearActionButton(spec, Icons.TwoTone.Copyright, library.name, { selected = if (selected == index) -1 else index })
