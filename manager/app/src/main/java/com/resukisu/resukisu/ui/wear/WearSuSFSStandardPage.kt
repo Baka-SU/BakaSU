@@ -34,6 +34,11 @@ import com.resukisu.resukisu.ui.viewmodel.SuSFSViewModel
 import com.resukisu.resukisu.ui.viewmodel.awaitSuSFSSlotInfo
 import kotlinx.coroutines.launch
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 @Composable
 internal fun WearSuSFSStandardPage(config: SuSFSConfig, busy: Boolean, message: String?, viewModel: SuSFSViewModel,
     onBack: () -> Unit, onCommand: (WearSuSFSCommand, () -> Unit) -> Unit) {

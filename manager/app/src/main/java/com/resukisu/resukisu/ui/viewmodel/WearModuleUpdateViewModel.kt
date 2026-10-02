@@ -18,7 +18,10 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** [changelogError] carries the raw failure message, formatted by `module_changelog_failed` like the phone. */
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
 data class WearModuleUpdateUiState(
     val changelog: String? = null,
     val changelogError: String? = null,

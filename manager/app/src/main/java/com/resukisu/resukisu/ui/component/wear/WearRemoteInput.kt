@@ -10,6 +10,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.wear.input.RemoteInputIntentHelper
 import androidx.wear.input.wearableExtender
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 private const val RemoteInputKey = "wear_text_input"
 
 /**

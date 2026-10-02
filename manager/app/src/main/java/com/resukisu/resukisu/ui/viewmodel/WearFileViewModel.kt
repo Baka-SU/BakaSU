@@ -18,6 +18,11 @@ import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 /** [error] is a localized message; [failed] without it means an unexpected, generic failure. */
 data class WearFileUiState(val directory: WearDirectory? = null, val loading: Boolean = false,
     val error: String? = null, val failed: Boolean = false, val name: String = "KernelSU_bugreport_" +

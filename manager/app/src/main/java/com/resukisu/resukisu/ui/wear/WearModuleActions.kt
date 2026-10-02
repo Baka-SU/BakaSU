@@ -45,6 +45,11 @@ import com.resukisu.resukisu.ui.viewmodel.WearModuleUpdateViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 @Composable
 internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, onReady: (String) -> Unit) {
     val key = "wear-update-${module?.id}"

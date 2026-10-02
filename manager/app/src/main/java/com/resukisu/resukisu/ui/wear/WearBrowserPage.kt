@@ -33,6 +33,11 @@ import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ScreenScaffold
 import com.resukisu.resukisu.R
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 internal fun WearBrowserPage(url: String, onBack: () -> Unit, onUnavailable: () -> Unit) {

@@ -10,6 +10,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 /** Retains page models across configuration changes, releasing them after leaving the page. */
 class WearPageStoresViewModel : ViewModel() {
     private val owners = mutableMapOf<String, ViewModelStoreOwner>()

@@ -42,6 +42,11 @@ import com.resukisu.resukisu.ui.webui.WebUIEvent
 import com.resukisu.resukisu.ui.webui.WebUIScreen
 import com.resukisu.resukisu.ui.webui.WebUIState
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 /** Keeps the module's existing local WebView and root bridge inside a watch navigation surface. */
 @Composable
 internal fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {

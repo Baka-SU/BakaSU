@@ -14,6 +14,11 @@ import androidx.wear.compose.material3.lazy.TransformationSpec
 import com.resukisu.resukisu.R
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * The loading state of a list, as the phone shows a centered LoadingIndicator in place of its
  * content: an indeterminate progress indicator in its own list slot below the title and actions,
  * so it never covers other items.

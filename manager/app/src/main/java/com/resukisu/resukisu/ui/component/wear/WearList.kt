@@ -51,6 +51,11 @@ import com.resukisu.resukisu.R
 import kotlinx.coroutines.launch
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * A Wear screen whose crown and vertical touch gestures scroll only its own content.
  *
  * The list uses the [ScreenScaffold] content padding (5.2% side and 10% vertical margins); items

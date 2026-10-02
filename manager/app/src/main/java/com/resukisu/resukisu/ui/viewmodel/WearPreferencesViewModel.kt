@@ -7,6 +7,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
 data class WearPreferences(val picker: String = "auto", val link: String = "auto", val shape: String = "auto",
     val pageAnimation: String = "fade-scale")
 class WearPreferencesViewModel(getPreference: GetStringPreferenceUseCase, private val setPreference: SetStringPreferenceUseCase) : ViewModel() {

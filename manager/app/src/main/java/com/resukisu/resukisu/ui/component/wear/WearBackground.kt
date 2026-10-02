@@ -10,7 +10,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.wear.compose.material3.SwipeToDismissBox
 
 /**
- * The watch's black page base. Custom images are drawn inside neutral content cards.
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
+ * The watchOS black page base. Custom images are drawn inside neutral content cards.
  */
 @Composable
 fun WearBackground(content: @Composable BoxScope.() -> Unit) {

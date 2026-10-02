@@ -22,6 +22,11 @@ import com.resukisu.resukisu.ui.viewmodel.ModuleUiState
 import com.resukisu.resukisu.ui.viewmodel.SuperUserUiState
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * The results of an app search on their own page, as Wear search flows do: the title, the query as a
  * button that reopens the input, then the matching apps. Leaving the page clears the query, so the
  * main list stays unfiltered.

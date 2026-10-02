@@ -1,6 +1,5 @@
 package com.resukisu.resukisu.ui.wear
 
-import android.content.Context
 import android.os.Build
 import android.os.PowerManager
 import androidx.compose.material.icons.Icons
@@ -32,6 +31,11 @@ import com.resukisu.resukisu.ui.viewmodel.ModuleUiState
 import com.resukisu.resukisu.ui.viewmodel.SortType
 import com.resukisu.resukisu.ui.viewmodel.SuperUserUiAction
 import com.resukisu.resukisu.ui.viewmodel.SuperUserUiState
+
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
 
 @Composable
 internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onAction: (SuperUserUiAction) -> Unit) {

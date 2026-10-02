@@ -49,6 +49,11 @@ import com.resukisu.resukisu.ui.screen.sulogFilterLabel
 import com.resukisu.resukisu.ui.viewmodel.SulogUiState
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * The SU log: a compact action group (search, refresh, options), the on/off entry and the status of
  * the log, then one Wear Material 3 [TitleCard] per entry that opens its full fields. Log files,
  * type filters and cleaning live in [WearLogOptionsPage], as the phone keeps them in the app bar.

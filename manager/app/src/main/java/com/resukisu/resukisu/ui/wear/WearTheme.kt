@@ -48,6 +48,11 @@ import com.resukisu.resukisu.ui.viewmodel.SettingsViewModel
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 @Composable
 fun WearManagerTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current

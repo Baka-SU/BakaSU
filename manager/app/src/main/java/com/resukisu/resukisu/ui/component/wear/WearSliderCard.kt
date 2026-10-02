@@ -20,6 +20,11 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * A slider wrapped in one card together with its information: an icon, a one-line label and the
  * current value on top, and the Wear Material 3 [Slider] (with its decrease and increase buttons)
  * below, following the inline slider anatomy of the Wear slider guidance.

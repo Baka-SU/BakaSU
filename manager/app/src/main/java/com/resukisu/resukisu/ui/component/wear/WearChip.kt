@@ -32,17 +32,15 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 /** Chip emphasis levels; a screen should lead with at most one [HIGH] chip. [ERROR] marks a failed state in red. */
 enum class WearChipEmphasis { HIGH, MEDIUM, OUTLINED, LOW, ERROR }
 
-/**
- * A full-width chip: an optional 24dp icon, a primary label and an optional secondary label. With
- * [onClick] and no badges it is a Wear button of at most three lines (a one-line label over a
- * two-line secondary label). Without [onClick] it only shows status, exposes no click semantics,
- * and allows up to three secondary lines. Labels are start-aligned when an icon or secondary label
- * is present. Optional headline badges wrap alongside the label independently of the secondary
- * label, so status information is not lost when the description is truncated.
- */
+
 @Composable
 fun TransformingLazyColumnItemScope.WearChip(
     transformationSpec: TransformationSpec,
