@@ -24,6 +24,11 @@ import com.resukisu.resukisu.ui.viewmodel.WearPreferences
 import com.resukisu.resukisu.ui.viewmodel.WearPreferencesViewModel
 import java.util.Locale
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 @Composable
 internal fun WearSelectionPage(route: String, state: SettingsUiState, preferences: WearPreferences,
     preferenceViewModel: WearPreferencesViewModel, message: String?, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit) {

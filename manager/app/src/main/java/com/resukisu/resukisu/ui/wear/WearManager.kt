@@ -78,6 +78,11 @@ import com.resukisu.resukisu.ui.viewmodel.SuperUserViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import com.resukisu.resukisu.ui.util.ActivityResumeEffect
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 private const val HOME = 0
 private const val SUPERUSER = 1
 private const val MODULES = 2

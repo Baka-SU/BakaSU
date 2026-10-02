@@ -21,6 +21,10 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import com.resukisu.resukisu.ui.theme.MonospaceFontFamily
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
 enum class WearFlashStatus { RUNNING, SUCCESS, FAILED }
 
 /**

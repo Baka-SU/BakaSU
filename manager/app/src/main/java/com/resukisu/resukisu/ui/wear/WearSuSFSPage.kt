@@ -49,6 +49,10 @@ import com.resukisu.resukisu.ui.viewmodel.awaitSuSFSConfig
 import com.resukisu.resukisu.ui.viewmodel.awaitSuSFSStatusInfo
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
 
 internal enum class WearSuSFSSection(val title: Int, val icon: ImageVector) {
     Standard(R.string.susfs_tab_standard, Icons.TwoTone.Tune),

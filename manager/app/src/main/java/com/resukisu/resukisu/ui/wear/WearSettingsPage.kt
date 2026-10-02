@@ -53,6 +53,11 @@ import com.resukisu.resukisu.ui.viewmodel.SettingsUiState
 import com.resukisu.resukisu.ui.viewmodel.WearPreferences
 import org.koin.compose.koinInject
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 internal fun settingsCategoryTitle(category: String?): Int = when (category) {
     "general" -> R.string.wear_general
     "security" -> R.string.wear_security

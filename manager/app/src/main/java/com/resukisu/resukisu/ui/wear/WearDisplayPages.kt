@@ -61,6 +61,11 @@ import com.resukisu.resukisu.ui.viewmodel.SettingsUiState
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 private val SwatchColors = listOf(0xFF9FCAFF, 0xFFBEC2FF, 0xFFD6BBFF, 0xFFBF8D9D, 0xFFE6ACCC, 0xFFFFB3A5,
     0xFFFFD166, 0xFFE9EF80, 0xFF9ACB78, 0xFF75CBBA, 0xFF44CBE0, 0xFFB5C4CD)
 

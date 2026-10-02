@@ -53,6 +53,11 @@ import com.resukisu.resukisu.ui.component.wear.rememberWearPageViewModelOwner
 import com.resukisu.resukisu.ui.component.wear.ReleaseWearPageViewModels
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * The built-in picker as a Wear list: the task title, the current path as a caption, a low-emphasis
  * entry to the parent folder, then folders and matching files as tonal buttons. In save mode the file
  * name follows and the edge button confirms; otherwise picking a file returns it.

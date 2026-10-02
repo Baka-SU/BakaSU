@@ -41,6 +41,11 @@ import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
 import com.resukisu.resukisu.ui.component.wear.WearStatusItem
 import com.resukisu.resukisu.ui.component.wear.WearStatusTone
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 @Composable
 internal fun WearModuleInstallPage(
     uri: String,

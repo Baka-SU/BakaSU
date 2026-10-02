@@ -20,6 +20,10 @@ import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.hierarchicalFocusGroup
 import androidx.wear.compose.material3.MaterialTheme
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
 private data class WearPageState(val route: String, val depth: Int)
 internal val LocalWearPageAnimation = staticCompositionLocalOf { "fade-scale" }
 

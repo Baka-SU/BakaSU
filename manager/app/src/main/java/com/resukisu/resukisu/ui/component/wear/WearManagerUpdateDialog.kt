@@ -29,6 +29,11 @@ import com.resukisu.resukisu.ui.component.rememberCustomDialog
 import org.koin.compose.koinInject
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * Asks once per version whether to update the manager, when an update check finds one. It shows the
  * phone's update texts in a Wear alert dialog (the message, version details and changelog scroll
  * inside it) and confirming starts the same download as the phone's update card.

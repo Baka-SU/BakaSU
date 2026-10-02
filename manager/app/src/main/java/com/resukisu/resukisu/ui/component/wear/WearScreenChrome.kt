@@ -44,6 +44,11 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.TimeText
 import androidx.wear.compose.material3.TimeTextDefaults
 
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
 /** M3 chrome is curved; rectangular screens use the same scaffold slots and time source. */
 @Composable
 fun WearTimeText() {

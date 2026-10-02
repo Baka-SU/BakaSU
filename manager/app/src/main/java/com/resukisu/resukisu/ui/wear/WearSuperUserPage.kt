@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.twotone.Apps
 import androidx.compose.material.icons.twotone.Search
-import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +43,11 @@ import com.resukisu.resukisu.ui.component.wear.WearStatusItem
 import com.resukisu.resukisu.ui.component.wear.wearLoadingItem
 import com.resukisu.resukisu.ui.component.wear.wearAppButtonColors
 import com.resukisu.resukisu.ui.viewmodel.SuperUserUiState
+
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
 
 @Composable
 internal fun WearSuperUserPage(

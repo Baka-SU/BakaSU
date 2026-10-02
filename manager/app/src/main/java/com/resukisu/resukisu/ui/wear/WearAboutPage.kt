@@ -28,6 +28,11 @@ import com.resukisu.resukisu.ui.component.wear.WearScaledItem
 import com.resukisu.resukisu.ui.component.wear.wearGroupGap
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * Title, app identity (icon, name, version), then the project, community and license entries with
  * the phone's descriptions, and the sticker attribution as a footnote; the edge button returns.
  */

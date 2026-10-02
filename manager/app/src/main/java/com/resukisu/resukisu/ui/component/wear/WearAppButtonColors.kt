@@ -12,6 +12,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
  * Icon tints by package. List rows leave and re-enter composition while scrolling, so the icon is
  * decoded and averaged once per package instead of on every appearance.
  */
