@@ -13,8 +13,8 @@ kotlin {
 }
 
 dependencies {
-    compileOnly("com.android.tools.lint:lint-api:32.2.1")
-    compileOnly("com.android.tools.lint:lint-checks:32.2.1")
+    compileOnly("com.android.tools.lint:lint-api:32.4.1")
+    compileOnly("com.android.tools.lint:lint-checks:32.4.1")
 }
 
 tasks.jar {
