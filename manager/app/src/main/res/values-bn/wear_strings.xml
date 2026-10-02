@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">ফিল্টার ও সাজানো</string>
     <string name="wear_sort">সাজান</string>
     <string name="wear_online_templates">অনলাইন টেমপ্লেট</string>
+    <string name="wear_operation_interrupted">কার্যক্রমের অবস্থা পুনরুদ্ধার করা যায়নি। আবার শুরু করার আগে বর্তমান অবস্থা পরীক্ষা করুন।</string>
+    <string name="wear_log_tail">সর্বশেষ লগ আউটপুট দেখানো হচ্ছে</string>
 </resources>

@@ -34,7 +34,8 @@ class HorizonKernelState {
     fun addLog(log: String) {
         fullLogs.add(log)
         _state.update {
-            it.copy(logs = it.logs + log)
+            it.copy(logs = (it.logs + log.takeLast(4096)).takeLast(256),
+                logsTruncated = it.logsTruncated || it.logs.size >= 256 || log.length > 4096)
         }
     }
 
@@ -57,6 +58,7 @@ class HorizonKernelState {
                 progress = 0f,
                 currentStep = "",
                 logs = emptyList(),
+                logsTruncated = false,
                 error = ""
             )
         }

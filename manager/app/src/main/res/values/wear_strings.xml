@@ -22,4 +22,6 @@
     <string name="wear_clear_search">Clear search</string>
     <string name="wear_loading">Loading</string>
     <string name="wear_online_templates">Online templates</string>
+    <string name="wear_operation_interrupted">Operation status could not be restored. Check the current state before starting again.</string>
+    <string name="wear_log_tail">Showing the most recent log output</string>
 </resources>

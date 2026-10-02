@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Süzmek we tertiplemek</string>
     <string name="wear_sort">Tertiple</string>
     <string name="wear_online_templates">Onlaýn şablonlar</string>
+    <string name="wear_operation_interrupted">Amalyň ýagdaýyny dikeldip bolmady. Täzeden başlamazdan ozal häzirki ýagdaýy barlaň.</string>
+    <string name="wear_log_tail">Iň soňky žurnal ýazgylary görkezilýär</string>
 </resources>

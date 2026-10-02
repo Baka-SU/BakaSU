@@ -4,6 +4,10 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.view.ViewGroup
+import android.webkit.RenderProcessGoneDetail
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -168,6 +172,25 @@ internal fun createWebView(
 
     // WebViewClient
     webView.webViewClient = object : WebViewClient() {
+        override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+            webUIState.pageLoaded = false
+        }
+
+        override fun onPageFinished(view: WebView, url: String?) {
+            webUIState.pageLoaded = true
+        }
+
+        override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+            if (!activity.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) {
+                return super.onRenderProcessGone(view, detail)
+            }
+            (view.parent as? ViewGroup)?.removeView(view)
+            view.destroy()
+            webUIState.webView = null
+            webUIState.uiEvent = WebUIEvent.Error(activity.getString(R.string.operation_failed))
+            return true
+        }
+
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
             val url = request.url
             if (url.scheme.equals("ksu", ignoreCase = true) && url.host.equals("icon", ignoreCase = true)) {

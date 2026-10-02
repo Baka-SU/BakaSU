@@ -2,6 +2,7 @@ package com.resukisu.resukisu.ui.wear
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.PowerSettingsNew
+import androidx.compose.material.icons.twotone.Error
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,14 +28,18 @@ import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.toLogLines
 import com.resukisu.resukisu.ui.component.wear.wearLogLines
 import com.resukisu.resukisu.ui.viewmodel.FlashUiAction
-import com.resukisu.resukisu.ui.viewmodel.FlashUiEvent
 import com.resukisu.resukisu.ui.viewmodel.FlashViewModel
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
+import kotlinx.coroutines.flow.map
+import com.resukisu.resukisu.ui.component.wear.rememberWearPageViewModelOwner
+import com.resukisu.resukisu.ui.component.wear.ReleaseWearPageViewModels
+import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
+import com.resukisu.resukisu.ui.component.wear.WearStatusItem
+import com.resukisu.resukisu.ui.component.wear.WearStatusTone
 
 @Composable
 internal fun WearModuleInstallPage(
@@ -44,25 +49,23 @@ internal fun WearModuleInstallPage(
     onInstalled: () -> Unit,
     operation: FlashOperation = FlashOperation.Module(uri),
 ) {
-    val viewModel = koinViewModel<FlashViewModel>(key = "wear-module-install-$requestId")
+    val key = "wear-module-install-$requestId"
+    val owner = rememberWearPageViewModelOwner(key)
+    val viewModel = koinViewModel<FlashViewModel>(viewModelStoreOwner = owner,
+        parameters = { parametersOf(64 * 1024) })
+    ReleaseWearPageViewModels(key, remember(viewModel) {
+        viewModel.state.map { it.started && it.exitCode == null }
+    })
     val isUriAccessible = koinInject<IsModuleUriAccessibleUseCase>()
     val takeUriPermission = koinInject<TakeModuleUriPermissionUseCase>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     var fileError by rememberSaveable(requestId) { mutableStateOf(false) }
-    var installError by rememberSaveable(requestId) { mutableStateOf(false) }
     // FlashUiAction.Start cancels and restarts a running operation, so it must be sent only once per
     // request, even when the page re-enters composition after the Activity is recreated.
     var started by rememberSaveable(requestId) { mutableStateOf(false) }
 
     LaunchedEffect(uri, viewModel) {
-        launch(start = CoroutineStart.UNDISPATCHED) {
-            viewModel.events.collect { event ->
-                if (event is FlashUiEvent.Completed && event.code == 0) onInstalled()
-                if (event is FlashUiEvent.Error) installError = true
-            }
-        }
         if (started) return@LaunchedEffect
-        started = true
         val accessible = operation !is FlashOperation.Module || withContext(Dispatchers.IO) {
             runCatching {
                 if (!isUriAccessible(uri)) false
@@ -72,11 +75,14 @@ internal fun WearModuleInstallPage(
                 }
             }.getOrDefault(false)
         }
-        if (accessible) viewModel.dispatch(FlashUiAction.Start(operation))
+        started = true
+        if (accessible) viewModel.dispatch(FlashUiAction.StartOnce(operation))
         else fileError = true
     }
+    LaunchedEffect(state.exitCode) { if (state.exitCode == 0) onInstalled() }
 
-    val failed = fileError || installError || state.exitCode.let { it != null && it != 0 }
+    val interrupted = started && !state.started && !fileError
+    val failed = interrupted || fileError || state.exitCode.let { it != null && it != 0 }
     val status = when {
         failed -> WearFlashStatus.FAILED
         state.exitCode == 0 -> WearFlashStatus.SUCCESS
@@ -94,9 +100,10 @@ internal fun WearModuleInstallPage(
             is FlashOperation.Module -> R.string.install
         })) }
         item {
-            WearFlashStatusChip(spec, status, stringResource(when {
+            if (interrupted) WearStatusItem(spec, Icons.TwoTone.Error,
+                stringResource(R.string.wear_operation_interrupted), tone = WearStatusTone.ERROR)
+            else WearFlashStatusChip(spec, status, stringResource(when {
                 fileError -> R.string.wear_module_file_unreadable
-                installError -> R.string.operation_failed
                 status == WearFlashStatus.FAILED -> R.string.flash_failed
                 status == WearFlashStatus.SUCCESS -> R.string.flash_success
                 else -> R.string.flashing
@@ -111,5 +118,6 @@ internal fun WearModuleInstallPage(
             }
         }
         if (!fileError) wearLogLines(spec, lines)
+        if (state.outputTruncated) item { WearSectionHeader(spec, null, stringResource(R.string.wear_log_tail)) }
     }
 }

@@ -102,7 +102,9 @@ fun KernelFlashScreen(
     val flashState = uiState.flash
     val logSavedString = stringResource(R.string.log_saved)
     val horizonFlashComplete = stringResource(R.string.horizon_flash_complete)
+    val logTail = stringResource(R.string.wear_log_tail)
     val logText = buildString {
+        if (flashState.logsTruncated) append("$logTail\n")
         append(flashState.logs.joinToString("\n"))
         if (flashState.error.isNotEmpty()) append("\n${flashState.error}\n")
         if (flashState.isCompleted) append("\n$horizonFlashComplete\n\n\n")

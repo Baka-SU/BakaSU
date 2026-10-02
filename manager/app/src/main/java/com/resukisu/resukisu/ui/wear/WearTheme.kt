@@ -108,8 +108,7 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalDensity provides density, LocalConfiguration provides configuration,
         LocalWearPageAnimation provides preferences.pageAnimation) {
         MaterialTheme(colorScheme = colors, motionScheme = MotionScheme.expressive()) {
-            // The custom background is the app backdrop: black base, the image, then a dark dim
-            // overlay (backgroundDim). Surfaces (cards, buttons) sit opaque on top of it.
+            // Keep the root black; neutral content cards render the selected image and dim layer.
             // A language change swaps the texts in place; the content fades back in over it.
             val locales = LocalConfiguration.current.locales
             val motion = MaterialTheme.motionScheme

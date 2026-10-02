@@ -335,7 +335,8 @@ class DownloadService : Service() {
             .setAutoCancel(true)
 
         // Add "Install" action button
-        val installIntent = Intent(this, MainActivity::class.java).apply {
+        val installIntent = (packageManager.getLaunchIntentForPackage(packageName)
+            ?: Intent(this, MainActivity::class.java)).apply {
             action = ACTION_INSTALL_MODULE
             putExtra(EXTRA_MODULE_URI, uri.toString())
             putExtra(EXTRA_DOWNLOAD_ID, id)

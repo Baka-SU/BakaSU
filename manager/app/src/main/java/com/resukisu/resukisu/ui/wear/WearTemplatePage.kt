@@ -36,6 +36,7 @@ import com.resukisu.resukisu.ui.component.wear.*
 import com.resukisu.resukisu.ui.viewmodel.*
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import kotlinx.coroutines.flow.map
 
 @Composable
 internal fun WearTemplatePage(onBack: () -> Unit) {
@@ -130,8 +131,10 @@ internal fun WearTemplatePage(onBack: () -> Unit) {
 @Composable
 internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean, request: Int,
     onBack: () -> Unit, onSaved: () -> Unit) {
-    val viewModel = koinViewModel<TemplateEditorViewModel>(key = "wear-template-$id-$request",
+    val key = "wear-template-$id-$request"
+    val viewModel = koinViewModel<TemplateEditorViewModel>(viewModelStoreOwner = rememberWearPageViewModelOwner(key),
         parameters = { parametersOf(id, readOnly, creation) })
+    ReleaseWearPageViewModels(key, remember(viewModel) { viewModel.state.map { it.pendingWrites > 0 } })
     val state by viewModel.state.collectAsStateWithLifecycle()
     val failed = stringResource(R.string.app_profile_template_save_failed)
     var message by remember { mutableStateOf<String?>(null) }

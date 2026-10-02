@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">סינון ומיון</string>
     <string name="wear_sort">מיון</string>
     <string name="wear_online_templates">תבניות מקוונות</string>
+    <string name="wear_operation_interrupted">לא ניתן לשחזר את מצב הפעולה. יש לבדוק את המצב הנוכחי לפני התחלה מחדש.</string>
+    <string name="wear_log_tail">מוצג הפלט האחרון של היומן</string>
 </resources>

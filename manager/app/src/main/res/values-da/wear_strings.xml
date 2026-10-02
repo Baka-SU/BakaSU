@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filtrér og sortér</string>
     <string name="wear_sort">Sortér</string>
     <string name="wear_online_templates">Onlineskabeloner</string>
+    <string name="wear_operation_interrupted">Handlingens status kunne ikke gendannes. Kontrollér den aktuelle status, før du starter igen.</string>
+    <string name="wear_log_tail">Viser det seneste logoutput</string>
 </resources>

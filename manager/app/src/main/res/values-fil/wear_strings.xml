@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">I-filter at ayusin</string>
     <string name="wear_sort">Ayusin</string>
     <string name="wear_online_templates">Mga online na template</string>
+    <string name="wear_operation_interrupted">Hindi naibalik ang katayuan ng operasyon. Suriin ang kasalukuyang katayuan bago magsimulang muli.</string>
+    <string name="wear_log_tail">Ipinapakita ang pinakabagong output ng log</string>
 </resources>

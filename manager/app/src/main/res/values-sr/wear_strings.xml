@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Филтрирање и сортирање</string>
     <string name="wear_sort">Сортирање</string>
     <string name="wear_online_templates">Онлајн шаблони</string>
+    <string name="wear_operation_interrupted">Није могуће вратити стање операције. Проверите тренутно стање пре поновног покретања.</string>
+    <string name="wear_log_tail">Приказују се најновији записи дневника</string>
 </resources>
