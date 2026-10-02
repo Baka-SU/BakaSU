@@ -158,7 +158,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Serves a watch module's WebUI to the phone over the Wear Data Layer. -->
+        <!-- Serves watch WebUIs and phone-assisted template downloads over the Wear Data Layer. -->
         <service
             android:name=".data.webui.WearWebUiService"
             android:exported="true">
@@ -166,6 +166,7 @@
                 <action android:name="com.google.android.gms.wearable.CHANNEL_EVENT" />
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/resukisu/webui" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/resukisu/templates" />
             </intent-filter>
         </service>
 

@@ -86,7 +86,7 @@ internal fun WearSuSFSEntriesPage(section: WearSuSFSSection, config: SuSFSConfig
         else -> emptyList()
     }
     WearList(isLoading = busy, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(section.title)) }
+        item { WearPageHeader(spec, stringResource(section.title)) }
         message?.let { item { WearInfoCard(spec) { Text(it) } } }
         if (section == WearSuSFSSection.Redirect) item {
             WearInfoCard(spec) {
@@ -128,7 +128,7 @@ internal fun WearSuSFSDetailPage(section: WearSuSFSSection, config: SuSFSConfig,
         } }
     }
     WearList(isLoading = busy, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.susfs_entry_detail)) }
+        item { WearPageHeader(spec, stringResource(R.string.susfs_entry_detail)) }
         message?.let { item { WearInfoCard(spec) { Text(it) } } }
         item { WearInfoCard(spec) {
             Text(stringResource(R.string.susfs_entry_path_label))
@@ -261,7 +261,7 @@ internal fun WearSuSFSAddPage(section: WearSuSFSSection, busy: Boolean, message:
                     else -> SuSFSUiAction.AddSusMap(entry, reply)
                 } } })
             }) { spec ->
-                item { WearPageHeader(spec, null, stringResource(R.string.susfs_entry_manual_add)) }
+                item { WearPageHeader(spec, stringResource(R.string.susfs_entry_manual_add)) }
                 if (invalid || fileError != null || message != null) item {
                     WearInfoCard(spec) { Text(if (invalid) stringResource(R.string.susfs_operation_failed) else fileError ?: message.orEmpty()) }
                 }

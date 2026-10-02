@@ -1,4 +1,4 @@
-package com.resukisu.resukisu.ui.component.wear
+package com.resukisu.resukisu.ui.component.settings
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable

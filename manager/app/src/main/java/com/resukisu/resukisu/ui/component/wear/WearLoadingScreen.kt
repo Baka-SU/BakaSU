@@ -1,6 +1,5 @@
 package com.resukisu.resukisu.ui.component.wear
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -48,7 +46,7 @@ fun WearLoadingScreen() {
         ContextCompat.getDrawable(context, if (settings.useAltIcon) R.mipmap.ic_launcher_alt else R.mipmap.ic_launcher)
     }
     val loading = stringResource(R.string.wear_loading)
-    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
         val iconSize = (minOf(maxWidth, maxHeight) * 0.27f).coerceIn(48.dp, 72.dp)
         Column(
             Modifier.fillMaxSize(),

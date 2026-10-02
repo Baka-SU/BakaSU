@@ -63,10 +63,10 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
     }
     val working = download?.status in listOf(DownloadStatus.PENDING, DownloadStatus.DOWNLOADING)
     WearList(onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.module_update)) }
+        item { WearPageHeader(spec, stringResource(R.string.module_update)) }
         if (module?.moduleUpdate != null) {
             item { WearInfoCard(spec) { Text(module.name); Text(module.moduleUpdate.version) } }
-            item { WearSectionHeader(spec, Icons.TwoTone.Description, stringResource(R.string.module_changelog)) }
+            item { WearSectionHeader(spec, stringResource(R.string.module_changelog)) }
             when {
                 state.changelogError != null -> item {
                     WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.module_changelog_failed, state.changelogError.orEmpty()), tone = WearStatusTone.ERROR)
@@ -114,7 +114,7 @@ internal fun WearExecuteModulePage(moduleId: String, requestId: Int, onBack: () 
     val listState = rememberTransformingLazyColumnState()
     WearFollowLog(listState, lines.size, following = state.running)
     WearList(onBack = onBack, listState = listState) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.action)) }
+        item { WearPageHeader(spec, stringResource(R.string.action)) }
         item {
             if (interrupted) WearStatusItem(spec, Icons.TwoTone.Error,
                 stringResource(R.string.wear_operation_interrupted), tone = WearStatusTone.ERROR)
@@ -125,7 +125,7 @@ internal fun WearExecuteModulePage(moduleId: String, requestId: Int, onBack: () 
             }))
         }
         if (state.running) item { WearFlashProgress(spec) }
-        if (state.outputTruncated) item { WearSectionHeader(spec, null, stringResource(R.string.wear_log_tail)) }
+        if (state.outputTruncated) item { WearSectionHeader(spec, stringResource(R.string.wear_log_tail)) }
         wearLogLines(spec, lines)
     }
 }

@@ -33,6 +33,7 @@ import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.ui.component.rememberCustomDialog
+import com.resukisu.resukisu.ui.component.wear.WearBackground
 import com.resukisu.resukisu.ui.component.wear.WearLoadingScreen
 import com.resukisu.resukisu.ui.component.wear.WearSubPage
 import com.resukisu.resukisu.ui.component.wear.WearSwipeToDismissBox
@@ -60,9 +61,10 @@ internal fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
                         // Keep the WebView attached while a prompt is open, including its history,
                         // file result launcher and lifecycle observer.
                         WearWebContent(state, back)
-                        if (!state.pageLoaded) WearLoadingScreen()
+                        // Pages over the WebView take the opaque app backdrop so it does not show through.
+                        if (!state.pageLoaded) WearBackground { WearLoadingScreen() }
                         if (event is WebUIEvent.ShowPrompt) WearSubPage({ state.onPromptResult(null) }) {
-                            WearTextInputPage(event.message, event.defaultValue) { state.onPromptResult(it) }
+                            WearBackground { WearTextInputPage(event.message, event.defaultValue) { state.onPromptResult(it) } }
                         }
                     }
                 }

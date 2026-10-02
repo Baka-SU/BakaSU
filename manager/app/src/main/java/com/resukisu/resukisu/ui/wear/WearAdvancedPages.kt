@@ -1,5 +1,7 @@
 package com.resukisu.resukisu.ui.wear
 
+import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Add
 import androidx.compose.material.icons.twotone.Apps
@@ -67,7 +69,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
         } else {
             val invalidHash = stringResource(R.string.hash_must_be_64_chars)
             WearList(isLoading = state.isLoading || state.isSubmitting, onBack = onBack) { spec ->
-                item { WearPageHeader(spec, null, stringResource(R.string.dynamic_manager_title)) }
+                item { WearPageHeader(spec, stringResource(R.string.dynamic_manager_title)) }
                 message?.let { item { WearInfoCard(spec) { Text(it) } } }
                 item { WearInfoCard(spec) {
                     Text(stringResource(R.string.dynamic_manager_current_status))
@@ -124,7 +126,7 @@ internal fun WearUmountPage(onBack: () -> Unit) {
         } else {
             val failed = stringResource(R.string.operation_failed)
             WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
-                item { WearPageHeader(spec, null, stringResource(R.string.umount_path_manager)) }
+                item { WearPageHeader(spec, stringResource(R.string.umount_path_manager)) }
                 message?.let { item { WearInfoCard(spec) { Text(it) } } }
                 // A TransformingLazyColumn item places only its last child, so each entry is a single button.
                 items(state.umountPaths, key = { it.path }) { entry ->
@@ -154,7 +156,7 @@ internal fun WearUninstallPage(onBack: () -> Unit, onStart: (FlashOperation) -> 
         onStart(if (selected == UninstallType.PERMANENT) FlashOperation.Uninstall else FlashOperation.Restore)
     }
     WearList(onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.settings_uninstall)) }
+        item { WearPageHeader(spec, stringResource(R.string.settings_uninstall)) }
         listOf(UninstallType.PERMANENT, UninstallType.RESTORE_STOCK_IMAGE).forEach { option -> item {
             WearActionButton(spec, option.icon, stringResource(option.title), { selected = option; confirm.show() })
         } }

@@ -43,10 +43,11 @@ import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearDetailField
 import com.resukisu.resukisu.ui.component.wear.WearIconText
 import com.resukisu.resukisu.ui.component.wear.WearInfoCard
+import com.resukisu.resukisu.ui.component.wear.WearModuleInfoCard
 import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearScaledItem
-import com.resukisu.resukisu.ui.component.wear.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
 import com.resukisu.resukisu.ui.component.wear.WearStatusItem
 import com.resukisu.resukisu.ui.component.wear.rememberWearConfirmDialog
 import com.resukisu.resukisu.ui.viewmodel.AppProfileUiAction
@@ -74,7 +75,7 @@ internal fun WearModuleDetail(
     if (module == null) {
         WearList(onBack = onBack) { spec ->
             item {
-                WearPageHeader(spec, Icons.TwoTone.Extension, stringResource(R.string.unknown_module))
+                WearPageHeader(spec, stringResource(R.string.unknown_module))
             }
             if (!error.isNullOrBlank()) item {
                 WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
@@ -95,28 +96,13 @@ internal fun WearModuleDetail(
     )
     WearList(onBack = onBack) { spec ->
         item {
-            WearPageHeader(spec, Icons.TwoTone.Extension, module.name)
+            WearPageHeader(spec, module.name)
         }
         if (!error.isNullOrBlank()) item {
             WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
         }
         item {
-            WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
-                WearIconText(
-                    when {
-                        module.remove -> Icons.TwoTone.Delete
-                        module.enabled -> Icons.Default.CheckCircle
-                        else -> Icons.Default.Block
-                    },
-                    stringResource(
-                        when {
-                            module.remove -> R.string.wear_pending_removal
-                            module.enabled -> R.string.wear_enabled
-                            else -> R.string.wear_disabled
-                        }
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+            WearModuleInfoCard(spec) {
                 WearDetailField(
                     Icons.TwoTone.Tag,
                     stringResource(R.string.module_version),
@@ -136,8 +122,8 @@ internal fun WearModuleDetail(
         }
         if (module.description.isNotBlank()) {
             item {
-                WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
-                    Text(module.description, style = MaterialTheme.typography.bodySmall)
+                WearModuleInfoCard(spec) {
+                    Text(module.description, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -188,7 +174,7 @@ internal fun WearAppDetail(
     if (group == null) {
         WearList(onBack = onBack) { spec ->
             item {
-                WearPageHeader(spec, Icons.TwoTone.Android, stringResource(R.string.profile))
+                WearPageHeader(spec, stringResource(R.string.profile))
             }
             item { WearStatusItem(spec, Icons.TwoTone.Apps, stringResource(R.string.no_apps_found)) }
         }
@@ -238,7 +224,7 @@ internal fun WearAppDetail(
                     templateId?.let { WearTemplateEditor(it, true, false, 0, back, back) }
                 }
                 else -> WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
-                    item { WearPageHeader(spec, Icons.TwoTone.Android, group.mainApp.label) }
+                    item { WearPageHeader(spec, group.mainApp.label) }
                     if (!state.isLoading) {
                         val profile = state.profile
                         if (profile != null) {

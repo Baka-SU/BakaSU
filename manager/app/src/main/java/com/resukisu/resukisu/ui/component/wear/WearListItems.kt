@@ -1,6 +1,5 @@
 package com.resukisu.resukisu.ui.component.wear
 
-import androidx.wear.compose.material3.LocalTextStyle
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -38,7 +37,6 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 @Composable
 fun TransformingLazyColumnItemScope.WearPageHeader(
     transformationSpec: TransformationSpec,
-    icon: ImageVector?,
     title: String,
 ) {
     val side = maxOf(14.dp, (LocalConfiguration.current.screenWidthDp * 0.073f).dp)
@@ -53,16 +51,14 @@ fun TransformingLazyColumnItemScope.WearPageHeader(
         ),
     ) {
         // Titles keep the ListHeader title style, as the Wear typography guidance assigns titles to way-finding.
-        if (icon == null) Text(title, textAlign = TextAlign.Center,
+        Text(title, textAlign = TextAlign.Center,
             maxLines = 2, overflow = TextOverflow.Ellipsis)
-        else WearIconText(icon, title, style = LocalTextStyle.current)
     }
 }
 
 @Composable
 fun TransformingLazyColumnItemScope.WearSectionHeader(
     transformationSpec: TransformationSpec,
-    icon: ImageVector?,
     title: String,
 ) {
     ListSubHeader(
@@ -70,8 +66,7 @@ fun TransformingLazyColumnItemScope.WearSectionHeader(
         transformation = SurfaceTransformation(transformationSpec),
     ) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            if (icon == null) Text(title, Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-            else WearIconText(icon, title, style = LocalTextStyle.current)
+            Text(title, Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         }
     }
 }

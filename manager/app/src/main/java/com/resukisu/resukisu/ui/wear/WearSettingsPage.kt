@@ -45,7 +45,7 @@ import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearScaledItem
 import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
-import com.resukisu.resukisu.ui.component.wear.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
 import com.resukisu.resukisu.ui.component.wear.wearGroupGap
 import com.resukisu.resukisu.ui.theme.ThemeConfig
 import com.resukisu.resukisu.ui.viewmodel.SettingsUiAction
@@ -163,7 +163,7 @@ internal fun WearSettingsPage(
     val shapeSummary = screenShapeLabel(preferences.shape)
     val version = wearAppVersion()
     WearList(onBack = onBack, snap = true, listState = listState, backToTop = backToTop) { spec ->
-        item { WearPageHeader(spec, null, stringResource(settingsCategoryTitle(category))) }
+        item { WearPageHeader(spec, stringResource(settingsCategoryTitle(category))) }
         if (!message.isNullOrBlank()) item { WearScaledItem(spec) { Text(message) } }
         if (category == null) {
             val categories = buildList {
@@ -185,19 +185,19 @@ internal fun WearSettingsPage(
                     icon = Icons.TwoTone.Info, description = version)
             }
         } else if (category == "display") {
-            item { WearSectionHeader(spec, null, stringResource(R.string.wear_display_appearance_motion)) }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_display_appearance_motion)) }
             SegmentedColumn(listOf("color", "page-animation"), { it }) { name ->
                 WearSettingsJumpPageWidget(spec, stringResource(if (name == "color") R.string.theme_color else R.string.wear_page_animation),
                     { onOpenPage(name) }, icon = settingsPageIcon(name),
                     description = if (name == "color") colorSummary else animationSummary)
             }
-            item { WearSectionHeader(spec, null, stringResource(R.string.wear_display_screen_layout)) }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_display_screen_layout)) }
             SegmentedColumn(listOf("dpi", "screen-shape"), { it }) { name ->
                 WearSettingsJumpPageWidget(spec, stringResource(if (name == "dpi") R.string.wear_display_scaling else R.string.wear_screen_shape),
                     { onOpenPage(name) }, icon = settingsPageIcon(name),
                     description = if (name == "dpi") dpiSummary else shapeSummary)
             }
-            item { WearSectionHeader(spec, null, stringResource(R.string.settings_language)) }
+            item { WearSectionHeader(spec, stringResource(R.string.settings_language)) }
             item { WearSettingsJumpPageWidget(spec, stringResource(R.string.settings_language),
                 { onOpenPage("language") }, icon = settingsPageIcon("language"), description = languageSummary) }
         } else {
@@ -256,7 +256,7 @@ internal fun WearSettingsPage(
                 val sectionToggles = toggles.filter { it.section == section }
                 val sectionPages = pages.filter { it.section == section }
                 if (sectionToggles.isNotEmpty() || sectionPages.isNotEmpty()) {
-                    item(key = section.name) { WearSectionHeader(spec, null, stringResource(section.title)) }
+                    item(key = section.name) { WearSectionHeader(spec, stringResource(section.title)) }
                     LazySegmentedColumn(sectionToggles, { it.label }) { toggle ->
                         val enabled = when (toggle.label) {
                             R.string.settings_kernel_umount -> state.kernelUmountStatus == "supported"

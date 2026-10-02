@@ -28,6 +28,7 @@ import com.resukisu.resukisu.domain.model.SulogEntry
 import com.resukisu.resukisu.domain.model.SulogEventFilter
 import com.resukisu.resukisu.domain.model.toSulogDisplayName
 import com.resukisu.resukisu.ui.component.settings.LazySegmentedColumn
+import com.resukisu.resukisu.ui.component.settings.SegmentedColumn
 import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearIconAction
 import com.resukisu.resukisu.ui.component.wear.WearIconButtonGroup
@@ -35,7 +36,7 @@ import com.resukisu.resukisu.ui.component.wear.WearInfoCard
 import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
-import com.resukisu.resukisu.ui.component.wear.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
 import com.resukisu.resukisu.ui.component.wear.WearStatusItem
 import com.resukisu.resukisu.ui.component.wear.wearLoadingItem
 import com.resukisu.resukisu.ui.component.wear.WearStatusTone
@@ -72,8 +73,9 @@ internal fun WearLogsPage(
 ) {
     // As on the phone: the log refreshes by the pull gesture, whose progress shows in the edge
     // button, and the first load shows only the loading indicator below the title and actions.
-    WearList(isRefreshing = state.isRefreshing && !state.isLoading, onRefresh = onRefresh, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.sulog)) }
+    WearList(isBusy = state.isLoading || state.isRefreshing,
+        isRefreshing = state.isRefreshing && !state.isLoading, onRefresh = onRefresh, onBack = onBack) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.sulog)) }
         item {
             WearIconButtonGroup(spec, listOf(
                 WearIconAction(Icons.TwoTone.Search, stringResource(R.string.sulog_search_placeholder), onSearch),
@@ -156,7 +158,7 @@ internal fun WearLogEntryPage(entry: SulogEntry?, onBack: () -> Unit) {
             item { WearStatusItem(spec, Icons.AutoMirrored.TwoTone.Article, stringResource(R.string.wear_no_logs)) }
             return@WearList
         }
-        item { WearPageHeader(spec, null, sulogEntryTitle(entry)) }
+        item { WearPageHeader(spec, sulogEntryTitle(entry)) }
         item {
             WearInfoCard(spec) {
                 Text(sulogEntryDetailText(entry), style = MaterialTheme.typography.bodySmall,
@@ -179,15 +181,13 @@ internal fun WearLogOptionsPage(
         stringResource(R.string.confirm_delete), onClean)
     val selectedPath = state.selectedFilePath ?: state.files.firstOrNull()?.path
     WearList(onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.sulog_filter_title)) }
-        SulogEventFilter.entries.forEach { filter ->
-            item(key = "filter-$filter") {
-                WearSettingsSwitchWidget(spec, sulogFilterLabel(filter), filter in state.selectedFilters,
-                    { onToggleFilter(filter) })
-            }
+        item { WearPageHeader(spec, stringResource(R.string.sulog_filter_title)) }
+        SegmentedColumn(SulogEventFilter.entries, { "filter-$it" }) { filter ->
+            WearSettingsSwitchWidget(spec, sulogFilterLabel(filter), filter in state.selectedFilters,
+                { onToggleFilter(filter) })
         }
         if (state.files.isNotEmpty()) {
-            item { WearSectionHeader(spec, null, stringResource(R.string.sulog_log_files)) }
+            item { WearSectionHeader(spec, stringResource(R.string.sulog_log_files)) }
             LazySegmentedColumn(state.files, { it.path }) { file ->
                 RadioButton(
                     selected = file.path == selectedPath,

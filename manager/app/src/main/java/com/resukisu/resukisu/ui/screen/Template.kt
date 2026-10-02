@@ -111,6 +111,7 @@ fun AppProfileTemplateScreen() {
     val appProfileTemplateExportEmpty =
         stringResource(R.string.app_profile_template_export_empty)
 
+    val networkOffline = stringResource(R.string.network_offline)
     LaunchedEffect(viewModel, clipboardManager) {
         viewModel.events.collect { event ->
             when (event) {
@@ -133,6 +134,10 @@ fun AppProfileTemplateScreen() {
                         appProfileTemplateExportEmpty,
                         Toast.LENGTH_SHORT,
                     ).show()
+                }
+
+                TemplateUiEvent.Offline -> {
+                    Toast.makeText(context, networkOffline, Toast.LENGTH_SHORT).show()
                 }
 
                 is TemplateUiEvent.Error -> if (event.message.isNotBlank()) {

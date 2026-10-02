@@ -38,7 +38,7 @@ import com.resukisu.resukisu.ui.component.wear.WearFollowLog
 import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
-import com.resukisu.resukisu.ui.component.wear.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
 import com.resukisu.resukisu.ui.component.wear.WearStatusItem
 import com.resukisu.resukisu.ui.component.wear.WearStatusTone
 import com.resukisu.resukisu.ui.component.wear.rememberWearConfirmDialog
@@ -61,7 +61,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 internal fun WearInstallPage(environment: InstallEnvironment, loading: Boolean, onBack: () -> Unit, onOpenPage: (String) -> Unit) {
     WearList(isLoading = loading, onBack = onBack, snap = true) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.install)) }
+        item { WearPageHeader(spec, stringResource(R.string.install)) }
         item {
             WearSettingsJumpPageWidget(spec, stringResource(R.string.Lkm_install_methods), { onOpenPage("kernel-install-lkm") },
                 icon = Icons.TwoTone.Memory,
@@ -105,7 +105,7 @@ internal fun WearLkmInstallPage(
     val partition = state.partition ?: defaultPartition(environment)
     val ready = state.method != null && (state.method != WearLkmMethod.SELECT_FILE || state.bootUri != null)
     WearList(onBack = onBack, snap = true) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.Lkm_install_methods)) }
+        item { WearPageHeader(spec, stringResource(R.string.Lkm_install_methods)) }
         methods.forEach { method ->
             item(key = method) {
                 RadioButton(
@@ -134,7 +134,7 @@ internal fun WearLkmInstallPage(
                 )
             }
         }
-        item { WearSectionHeader(spec, Icons.TwoTone.Settings, stringResource(R.string.advanced_options)) }
+        item { WearSectionHeader(spec, stringResource(R.string.advanced_options)) }
         if (canSelectPartition && environment.availablePartitions.isNotEmpty()) item {
             WearSettingsJumpPageWidget(spec, stringResource(R.string.install_select_partition), { onOpenPage("install-partition") },
                 icon = Icons.TwoTone.AutoFixHigh, description = "$partition ($suffix)")
@@ -213,14 +213,14 @@ internal fun WearAk3InstallPage(
     }
     val ready = state.ak3Uri != null && (!environment.isAbDevice || state.slot != null)
     WearList(onBack = onBack, snap = true) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.GKI_install_methods)) }
+        item { WearPageHeader(spec, stringResource(R.string.GKI_install_methods)) }
         item {
             WearSettingsJumpPageWidget(spec, stringResource(R.string.horizon_kernel), onSelectZip,
                 icon = Icons.TwoTone.FileUpload, description = state.ak3Name ?: stringResource(R.string.ak3_select_zip))
         }
         if (environment.isAbDevice) {
             item {
-                WearSectionHeader(spec, Icons.TwoTone.Memory, stringResource(R.string.selected_slot,
+                WearSectionHeader(spec, stringResource(R.string.selected_slot,
                     stringResource(if (state.slot == "b") R.string.slot_b else R.string.slot_a)))
             }
             listOf("a" to R.string.slot_a, "b" to R.string.slot_b).forEach { (slot, label) ->
@@ -236,7 +236,7 @@ internal fun WearAk3InstallPage(
                 }
             }
         }
-        item { WearSectionHeader(spec, Icons.TwoTone.Settings, stringResource(R.string.advanced_options)) }
+        item { WearSectionHeader(spec, stringResource(R.string.advanced_options)) }
         item {
             WearSettingsSwitchWidget(spec, stringResource(R.string.skip_ksud), state.skipKsud, viewModel::setSkipKsud,
                 secondaryLabel = stringResource(R.string.skip_ksud_summary))
@@ -286,7 +286,7 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
     val listState = rememberTransformingLazyColumnState()
     WearFollowLog(listState, flash.logs.size, following = status == WearFlashStatus.RUNNING)
     WearList(onBack = onBack, listState = listState) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.horizon_kernel)) }
+        item { WearPageHeader(spec, stringResource(R.string.horizon_kernel)) }
         item {
             if (interrupted) WearStatusItem(spec, Icons.TwoTone.Warning,
                 stringResource(R.string.wear_operation_interrupted), tone = WearStatusTone.ERROR)
@@ -305,6 +305,6 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
             item { WearStatusItem(spec, Icons.TwoTone.Warning, message.ifBlank { stringResource(R.string.failed_reboot) }, tone = WearStatusTone.ERROR) }
         }
         if (!interrupted) wearLogLines(spec, flash.logs)
-        if (!interrupted && flash.logsTruncated) item { WearSectionHeader(spec, null, stringResource(R.string.wear_log_tail)) }
+        if (!interrupted && flash.logsTruncated) item { WearSectionHeader(spec, stringResource(R.string.wear_log_tail)) }
     }
 }

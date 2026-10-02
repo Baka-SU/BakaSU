@@ -4,7 +4,6 @@ import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,8 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
@@ -50,7 +48,7 @@ import com.resukisu.resukisu.ui.component.wear.WearList
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearScaledItem
 import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
-import com.resukisu.resukisu.ui.component.wear.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
 import com.resukisu.resukisu.ui.component.wear.WearSliderCard
 import com.resukisu.resukisu.ui.component.wear.WearSubPage
 import com.resukisu.resukisu.ui.component.wear.WearPageTransition
@@ -91,27 +89,25 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
                 }
             }
         } else {
-            BoxWithConstraints(Modifier.fillMaxSize()) {
-                // Measure in the active density: the app's scale can differ from the device configuration.
-                // Reserve the scaffold side margins and at least 48dp plus spacing for each swatch.
-                val sideMargin = (LocalConfiguration.current.screenWidthDp * 0.052f).dp
-                val columns = ((maxWidth - sideMargin * 2) / 56.dp).toInt().coerceIn(1, 3)
+            Box(Modifier.fillMaxSize()) {
+                // Keep three equally sized cells; each toggle leaves 5% space on each side.
+                val columns = 3
                 WearList(onBack = onBack) { spec ->
-                    item { WearPageHeader(spec, null, stringResource(R.string.theme_color)) }
+                    item { WearPageHeader(spec, stringResource(R.string.theme_color)) }
                     if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
                     item {
                         WearSettingsSwitchWidget(spec, stringResource(R.string.dynamic_color_title), state.useDynamicColor,
                             { onAction(SettingsUiAction.SetDynamicColor(it)) }, icon = Icons.TwoTone.Palette,
                             secondaryLabel = stringResource(R.string.dynamic_color_summary))
                     }
-                    item { WearSectionHeader(spec, null, stringResource(R.string.choose_theme_color)) }
+                    item { WearSectionHeader(spec, stringResource(R.string.choose_theme_color)) }
                     // Swatches share the row equally so they fill the screen width (margins stretch evenly).
                     SwatchColors.chunked(columns).forEachIndexed { index, row ->
                         item(key = "swatches-$index") {
                             WearScaledItem(spec) {
                                 Row(Modifier.fillMaxWidth()) {
                                     row.forEach { value ->
-                                        Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
+                                        Box(Modifier.weight(1f).heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
                                             ColorSwatch(Color(value), !state.useDynamicColor && config.seedColor == Color(value).toArgb()) {
                                                 hex = Color(value).toArgb().toHex()
                                                 onAction(SettingsUiAction.SetDynamicColor(false))
@@ -123,7 +119,7 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
                             }
                         }
                     }
-                    item { WearSectionHeader(spec, null, stringResource(R.string.wear_custom_color)) }
+                    item { WearSectionHeader(spec, stringResource(R.string.wear_custom_color)) }
                     item { HexColorButton(spec, hex, valid) { editingHex = true } }
                     item {
                         WearActionButton(spec, Icons.TwoTone.Check, stringResource(R.string.background_crop_apply), {
@@ -131,7 +127,7 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
                             onAction(SettingsUiAction.SetThemeColor(hex.toColorInt()))
                         }, enabled = valid, colors = ButtonDefaults.buttonColors())
                     }
-                    item { WearSectionHeader(spec, null, stringResource(R.string.settings_custom_background)) }
+                    item { WearSectionHeader(spec, stringResource(R.string.settings_custom_background)) }
                     item {
                         WearActionButton(spec, Icons.TwoTone.Image, stringResource(R.string.settings_custom_background_summary), onImage,
                             colors = ButtonDefaults.filledTonalButtonColors())
@@ -160,8 +156,8 @@ private fun ColorSwatch(color: Color, selected: Boolean, onSelect: () -> Unit) {
     IconToggleButton(
         checked = selected,
         onCheckedChange = { onSelect() },
-        // Fill the weighted cell; the cell keeps a 1:1 aspect so the swatch stays round.
-        modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(3.dp),
+        // Fill the wider weighted cell while retaining the Wear toggle's selection animation.
+        modifier = Modifier.fillMaxWidth(0.9f).heightIn(min = 48.dp),
         colors = IconToggleButtonDefaults.colors(
             checkedContainerColor = color, checkedContentColor = Color.Black,
             uncheckedContainerColor = color, uncheckedContentColor = Color.Black,
@@ -211,7 +207,7 @@ internal fun WearDpiPage(state: SettingsUiState, message: String?, onBack: () ->
     val systemDpi = state.systemDpi.coerceAtLeast(1)
     val pending = (state.tempDpi.toFloat() / systemDpi).coerceIn(0.75f, 1.5f)
     WearList(onBack = onBack) { spec ->
-        item { WearPageHeader(spec, null, stringResource(R.string.wear_display_scaling)) }
+        item { WearPageHeader(spec, stringResource(R.string.wear_display_scaling)) }
         if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
         // The scale label and value sit inside the slider card, above its track.
         item {

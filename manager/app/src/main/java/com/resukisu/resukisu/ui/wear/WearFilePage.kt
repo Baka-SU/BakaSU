@@ -101,7 +101,7 @@ internal fun WearFilePage(title: String, mode: WearFileMode, onBack: () -> Unit,
                     }
                 }) else null,
             ) { spec ->
-                item { WearPageHeader(spec, null, title) }
+                item { WearPageHeader(spec, title) }
                 directory?.let { item {
                     WearScaledItem(spec) {
                         Text(it.path, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),

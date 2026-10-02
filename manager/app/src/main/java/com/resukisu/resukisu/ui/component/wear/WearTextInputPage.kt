@@ -32,7 +32,7 @@ fun WearTextInputPage(title: String, initialValue: String, multiline: Boolean = 
     var value by rememberSaveable(title, initialValue) { mutableStateOf(initialValue) }
     // Confirming is the page's primary action, so it takes the edge button; Back and swipe dismiss it.
     WearList(onConfirm = { onSubmit(value) }) { spec ->
-        item { WearPageHeader(spec, null, title) }
+        item { WearPageHeader(spec, title) }
         item {
             WearScaledItem(spec) {
                 BasicTextField(
