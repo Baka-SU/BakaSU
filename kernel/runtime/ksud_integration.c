@@ -590,7 +590,7 @@ static bool is_init_rc(struct file *fp)
     return true;
 }
 
-#ifdef CONFIG_KSU_MANUAL_HOOK
+#if defined(CONFIG_KSU_MANUAL_HOOK) || defined(CONFIG_KSU_SUSFS)
 
 // NOTE: https://github.com/tiann/KernelSU/commit/df640917d11dd0eff1b34ea53ec3c0dc49667002
 // - added 260110, seems needed for A16 QPR 3
@@ -677,7 +677,7 @@ void ksu_handle_fstat64_ret(unsigned long *fd, struct stat64 __user **statbuf_pt
 }
 #endif
 
-#endif
+#endif // #if defined(CONFIG_KSU_MANUAL_HOOK) || defined(CONFIG_KSU_SUSFS)
 
 #ifdef CONFIG_KSU_SUSFS
 void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr)
