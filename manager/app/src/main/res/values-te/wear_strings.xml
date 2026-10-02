@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">ఫిల్టర్ మరియు క్రమబద్ధీకరణ</string>
     <string name="wear_sort">క్రమబద్ధీకరించండి</string>
     <string name="wear_online_templates">ఆన్‌లైన్ టెంప్లేట్‌లు</string>
+    <string name="wear_operation_interrupted">ఆపరేషన్ స్థితిని పునరుద్ధరించలేకపోయాము. మళ్లీ ప్రారంభించే ముందు ప్రస్తుత స్థితిని తనిఖీ చేయండి.</string>
+    <string name="wear_log_tail">అత్యంత ఇటీవలి లాగ్ అవుట్‌పుట్ చూపబడుతోంది</string>
 </resources>

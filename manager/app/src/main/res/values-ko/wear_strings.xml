@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">필터 및 정렬</string>
     <string name="wear_sort">정렬</string>
     <string name="wear_online_templates">온라인 템플릿</string>
+    <string name="wear_operation_interrupted">작업 상태를 복원하지 못했습니다. 다시 시작하기 전에 현재 상태를 확인하세요.</string>
+    <string name="wear_log_tail">최근 로그 출력 표시</string>
 </resources>

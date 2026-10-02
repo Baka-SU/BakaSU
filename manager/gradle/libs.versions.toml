@@ -88,6 +88,9 @@ io-coil-kt-coil-compose = { group = "io.coil-kt", name = "coil-compose", version
 ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+junit = { module = "junit:junit", version = "4.13.2" }
+mockito-core = { module = "org.mockito:mockito-core", version = "5.18.0" }
 
 me-zhanghai-android-appiconloader = { group = "me.zhanghai.android.appiconloader", name = "appiconloader", version.ref = "appiconloader" }
 me-zhanghai-android-appiconloader-coil = { group = "me.zhanghai.android.appiconloader", name = "appiconloader-coil", version.ref = "appiconloader" }

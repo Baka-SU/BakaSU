@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Tapis dan isih</string>
     <string name="wear_sort">Isih</string>
     <string name="wear_online_templates">Templat dalam talian</string>
+    <string name="wear_operation_interrupted">Status operasi tidak dapat dipulihkan. Semak status semasa sebelum bermula semula.</string>
+    <string name="wear_log_tail">Memaparkan output log terkini</string>
 </resources>

@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Фільтрування й сортування</string>
     <string name="wear_sort">Сортування</string>
     <string name="wear_online_templates">Онлайн-шаблони</string>
+    <string name="wear_operation_interrupted">Не вдалося відновити стан операції. Перевірте поточний стан перед повторним запуском.</string>
+    <string name="wear_log_tail">Показано останні записи журналу</string>
 </resources>

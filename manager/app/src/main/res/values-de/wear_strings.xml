@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filtern und sortieren</string>
     <string name="wear_sort">Sortieren</string>
     <string name="wear_online_templates">Online-Vorlagen</string>
+    <string name="wear_operation_interrupted">Der Vorgangsstatus konnte nicht wiederhergestellt werden. Prüfe den aktuellen Status, bevor du erneut startest.</string>
+    <string name="wear_log_tail">Die neuesten Protokollausgaben werden angezeigt</string>
 </resources>

@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filtra e ordina</string>
     <string name="wear_sort">Ordina</string>
     <string name="wear_online_templates">Modelli online</string>
+    <string name="wear_operation_interrupted">Impossibile ripristinare lo stato dell’operazione. Verifica lo stato attuale prima di ricominciare.</string>
+    <string name="wear_log_tail">Visualizzazione delle ultime voci del registro</string>
 </resources>

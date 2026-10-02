@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filtreerimine ja sortimine</string>
     <string name="wear_sort">Sortimine</string>
     <string name="wear_online_templates">Veebimallid</string>
+    <string name="wear_operation_interrupted">Toimingu olekut ei saanud taastada. Enne uuesti alustamist kontrollige praegust olekut.</string>
+    <string name="wear_log_tail">Kuvatakse uusimad logikirjed</string>
 </resources>

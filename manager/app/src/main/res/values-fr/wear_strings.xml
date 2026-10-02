@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filtrer et trier</string>
     <string name="wear_sort">Trier</string>
     <string name="wear_online_templates">Modèles en ligne</string>
+    <string name="wear_operation_interrupted">Impossible de restaurer l’état de l’opération. Vérifiez l’état actuel avant de recommencer.</string>
+    <string name="wear_log_tail">Affichage des dernières sorties du journal</string>
 </resources>

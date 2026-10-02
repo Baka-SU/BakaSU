@@ -1,24 +1,31 @@
 package com.resukisu.resukisu.ui.component.wear
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.LocalTextStyle
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
@@ -30,10 +37,11 @@ enum class WearChipEmphasis { HIGH, MEDIUM, OUTLINED, LOW, ERROR }
 
 /**
  * A full-width chip: an optional 24dp icon, a primary label and an optional secondary label. With
- * [onClick] it is a Wear button of at most three lines (a one-line label over a two-line secondary
- * label). Without [onClick] it only shows status, exposes no click semantics, and keeps a one-line
- * label over a secondary label of up to three lines. Labels are start-aligned when an icon or
- * secondary label is present.
+ * [onClick] and no badges it is a Wear button of at most three lines (a one-line label over a
+ * two-line secondary label). Without [onClick] it only shows status, exposes no click semantics,
+ * and allows up to three secondary lines. Labels are start-aligned when an icon or secondary label
+ * is present. Optional headline badges wrap alongside the label independently of the secondary
+ * label, so status information is not lost when the description is truncated.
  */
 @Composable
 fun TransformingLazyColumnItemScope.WearChip(
@@ -43,6 +51,7 @@ fun TransformingLazyColumnItemScope.WearChip(
     secondaryLabel: String? = null,
     icon: ImageVector? = null,
     emphasis: WearChipEmphasis = WearChipEmphasis.MEDIUM,
+    headlineBadges: List<String> = emptyList(),
     onClick: (() -> Unit)? = null,
 ) {
     val labelLines = if (secondaryLabel != null) 1 else if (onClick != null) 3 else 2
@@ -68,16 +77,12 @@ fun TransformingLazyColumnItemScope.WearChip(
             },
             border = border,
             icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize)) } },
-            // A Wear button grows to at most three lines: one label line and two for the description.
+            // Keep the description to two lines; mode badges are measured separately in the headline.
             secondaryLabel = secondaryLabel?.let { text ->
                 { Text(text, maxLines = 2, overflow = TextOverflow.Ellipsis) }
             },
         ) {
-            Text(
-                label, maxLines = labelLines, overflow = TextOverflow.Ellipsis,
-                modifier = if (centered) Modifier.fillMaxWidth() else Modifier,
-                textAlign = if (centered) TextAlign.Center else TextAlign.Start,
-            )
+            WearChipHeadline(label, labelLines, centered, headlineBadges)
         }
         return
     }
@@ -106,17 +111,53 @@ fun TransformingLazyColumnItemScope.WearChip(
                 Spacer(Modifier.width(ButtonDefaults.IconSpacing))
             }
             Column(Modifier.weight(1f)) {
-                Text(
-                    label, color = content, style = MaterialTheme.typography.labelMedium,
-                    maxLines = labelLines, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = if (centered) TextAlign.Center else TextAlign.Start,
-                )
+                WearChipHeadline(label, labelLines, centered, headlineBadges, content, MaterialTheme.typography.labelMedium)
                 if (secondaryLabel != null) Text(
                     secondaryLabel, color = secondaryContent, style = MaterialTheme.typography.labelSmall,
                     maxLines = 3, overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun WearChipHeadline(
+    label: String,
+    maxLines: Int,
+    centered: Boolean,
+    badges: List<String>,
+    contentColor: Color = Color.Unspecified,
+    style: TextStyle = LocalTextStyle.current,
+) {
+    if (badges.isEmpty()) {
+        Text(
+            label, color = contentColor, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis,
+            modifier = if (centered) Modifier.fillMaxWidth() else Modifier,
+            textAlign = if (centered) TextAlign.Center else TextAlign.Start,
+        )
+        return
+    }
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            label, color = contentColor, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.CenterVertically),
+        )
+        badges.forEach { badge ->
+            Text(
+                badge,
+                modifier = Modifier.align(Alignment.CenterVertically)
+                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

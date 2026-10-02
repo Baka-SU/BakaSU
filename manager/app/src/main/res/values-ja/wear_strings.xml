@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">絞り込みと並べ替え</string>
     <string name="wear_sort">並べ替え</string>
     <string name="wear_online_templates">オンラインテンプレート</string>
+    <string name="wear_operation_interrupted">操作の状態を復元できませんでした。再実行する前に現在の状態を確認してください。</string>
+    <string name="wear_log_tail">最新のログ出力を表示しています</string>
 </resources>

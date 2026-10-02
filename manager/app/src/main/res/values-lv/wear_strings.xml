@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filtrēšana un kārtošana</string>
     <string name="wear_sort">Kārtošana</string>
     <string name="wear_online_templates">Tiešsaistes veidnes</string>
+    <string name="wear_operation_interrupted">Neizdevās atjaunot darbības statusu. Pirms atkārtotas sākšanas pārbaudiet pašreizējo statusu.</string>
+    <string name="wear_log_tail">Tiek rādīti jaunākie žurnāla ieraksti</string>
 </resources>

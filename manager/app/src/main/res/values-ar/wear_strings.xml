@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">التصفية والترتيب</string>
     <string name="wear_sort">ترتيب</string>
     <string name="wear_online_templates">القوالب عبر الإنترنت</string>
+    <string name="wear_operation_interrupted">تعذرت استعادة حالة العملية. تحقق من الحالة الحالية قبل البدء مجددًا.</string>
+    <string name="wear_log_tail">عرض أحدث مخرجات السجل</string>
 </resources>

@@ -69,4 +69,6 @@
     <string name="wear_filter_sort">Filtravimas ir rikiavimas</string>
     <string name="wear_sort">Rikiavimas</string>
     <string name="wear_online_templates">Internetiniai šablonai</string>
+    <string name="wear_operation_interrupted">Nepavyko atkurti operacijos būsenos. Prieš pradėdami iš naujo, patikrinkite dabartinę būseną.</string>
+    <string name="wear_log_tail">Rodomi naujausi žurnalo įrašai</string>
 </resources>

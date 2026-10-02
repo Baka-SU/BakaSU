@@ -11,6 +11,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.flow.map
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,7 +37,9 @@ import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import com.resukisu.resukisu.ui.component.wear.WearPageHeader
 import com.resukisu.resukisu.ui.component.wear.WearScaledItem
 import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
-import com.resukisu.resukisu.ui.viewmodel.ExecuteModuleActionUiEvent
+import com.resukisu.resukisu.ui.viewmodel.ExecuteModuleActionUiAction
+import com.resukisu.resukisu.ui.component.wear.rememberWearPageViewModelOwner
+import com.resukisu.resukisu.ui.component.wear.ReleaseWearPageViewModels
 import com.resukisu.resukisu.ui.viewmodel.ExecuteModuleActionViewModel
 import com.resukisu.resukisu.ui.viewmodel.WearModuleUpdateViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -43,7 +47,9 @@ import org.koin.core.parameter.parametersOf
 
 @Composable
 internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, onReady: (String) -> Unit) {
-    val viewModel = koinViewModel<WearModuleUpdateViewModel>(key = "wear-update-${module?.id}")
+    val key = "wear-update-${module?.id}"
+    val viewModel = koinViewModel<WearModuleUpdateViewModel>(viewModelStoreOwner = rememberWearPageViewModelOwner(key))
+    ReleaseWearPageViewModels(key)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val download = state.download
     LaunchedEffect(module?.id) { module?.let(viewModel::loadChangelog) }
@@ -79,19 +85,25 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
 
 @Composable
 internal fun WearExecuteModulePage(moduleId: String, requestId: Int, onBack: () -> Unit, onCompleted: () -> Unit) {
-    val viewModel = koinViewModel<ExecuteModuleActionViewModel>(key = "wear-action-$moduleId-$requestId",
-        parameters = { parametersOf(moduleId) })
+    val key = "wear-action-$moduleId-$requestId"
+    val owner = rememberWearPageViewModelOwner(key)
+    val viewModel = koinViewModel<ExecuteModuleActionViewModel>(viewModelStoreOwner = owner,
+        parameters = { parametersOf(moduleId, false, 64 * 1024) })
+    ReleaseWearPageViewModels(key, remember(viewModel) { viewModel.state.map { it.running } })
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var successful by remember { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(viewModel) { viewModel.events.collect { event -> when (event) {
-        is ExecuteModuleActionUiEvent.Completed -> { successful = event.successful; onCompleted() }
-        is ExecuteModuleActionUiEvent.Error -> successful = false
-        else -> Unit
-    } } }
-    val status = when (successful) {
+    var entered by rememberSaveable(requestId) { mutableStateOf(false) }
+    LaunchedEffect(viewModel) {
+        if (!entered) {
+            entered = true
+            viewModel.dispatch(ExecuteModuleActionUiAction.Start)
+        }
+    }
+    LaunchedEffect(state.successful) { if (state.successful != null) onCompleted() }
+    val interrupted = entered && !state.started
+    val status = when (state.successful) {
         true -> WearFlashStatus.SUCCESS
         false -> WearFlashStatus.FAILED
-        null -> if (state.running) WearFlashStatus.RUNNING else WearFlashStatus.SUCCESS
+        null -> if (interrupted) WearFlashStatus.FAILED else WearFlashStatus.RUNNING
     }
     val lines = remember(state.output) { state.output.toLogLines() }
     val listState = rememberTransformingLazyColumnState()
@@ -99,13 +111,16 @@ internal fun WearExecuteModulePage(moduleId: String, requestId: Int, onBack: () 
     WearList(onBack = onBack, listState = listState) { spec ->
         item { WearPageHeader(spec, null, stringResource(R.string.action)) }
         item {
-            WearFlashStatusChip(spec, status, stringResource(when (status) {
+            if (interrupted) WearStatusItem(spec, Icons.TwoTone.Error,
+                stringResource(R.string.wear_operation_interrupted), tone = WearStatusTone.ERROR)
+            else WearFlashStatusChip(spec, status, stringResource(when (status) {
                 WearFlashStatus.RUNNING -> R.string.action
                 WearFlashStatus.SUCCESS -> R.string.module_action_success
                 WearFlashStatus.FAILED -> R.string.operation_failed
             }))
         }
         if (state.running) item { WearFlashProgress(spec) }
+        if (state.outputTruncated) item { WearSectionHeader(spec, null, stringResource(R.string.wear_log_tail)) }
         wearLogLines(spec, lines)
     }
 }
