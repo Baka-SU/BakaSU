@@ -243,7 +243,10 @@ fn build_mkbootfs(out_directory: &Path) {
             format!("x86_64-linux-android{API_LEVEL}"),
             Path::new("bin/x86_64"),
         ),
-        "riscv64-linux-android" => (format!("riscv64-linux-android35"), Path::new("bin/riscv")),
+        "riscv64-linux-android" => (
+            "riscv64-linux-android35".to_string(),
+            Path::new("bin/riscv"),
+        ),
         _ => panic!("mkbootfs is not configured for Android target {target}"),
     };
 
