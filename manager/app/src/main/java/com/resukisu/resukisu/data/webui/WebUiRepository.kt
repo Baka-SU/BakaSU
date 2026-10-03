@@ -30,7 +30,6 @@ class WebUiRepository(
 
     fun listModules(): String = ksuCliRepository.listModules()
 
-    // Opening a WebUI only needs this module's local launch prerequisites, not update checks.
     fun getModuleInfo(moduleId: String): WebUiModuleInfo? =
         ksuCliRepository.withNewRootShell(globalMnt = true) {
             val rootShell = this
