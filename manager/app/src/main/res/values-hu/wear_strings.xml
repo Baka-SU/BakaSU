@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">SU-napló kikapcsolása</string>
     <string name="wear_refresh">Frissítés</string>
     <string name="wear_module_file_unreadable">A kiválasztott modul ZIP-fájlja nem olvasható</string>
-    <string name="wear_file_picker_unavailable">A fájlválasztó nem érhető el</string>
     <string name="wear_apps">Alkalmazások</string>
     <string name="wear_general">Általános</string>
     <string name="wear_security">Biztonság</string>

@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">Dezactivează jurnalul SU</string>
     <string name="wear_refresh">Reîmprospătează</string>
     <string name="wear_module_file_unreadable">Fișierul ZIP al modulului selectat nu poate fi citit</string>
-    <string name="wear_file_picker_unavailable">Selectorul de fișiere nu este disponibil</string>
     <string name="wear_apps">Aplicații</string>
     <string name="wear_general">General</string>
     <string name="wear_security">Securitate</string>

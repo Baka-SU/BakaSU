@@ -114,15 +114,22 @@ internal suspend fun prepareWebView(
                 webUIState,
                 LocalWebUiBackend(webUiRepository, packageRepository, appIconDataSource),
                 settingsRepository,
-                colorsCssProvider,
+                colorsCssProvider = colorsCssProvider,
             )
         }
     }
 }
 
+private fun Uri.isModuleOrigin() = scheme == "https" && host == MODULE_HOST ||
+    scheme.equals("ksu", ignoreCase = true) && host.equals("icon", ignoreCase = true)
+
+private const val MODULE_HOST = "mui.kernelsu.org"
+
 /**
  * Creates the module WebView for [webUIState], whose module name and directory are already set,
- * serving files, commands and the `ksu` bridge from [backend]. Must run on the main thread.
+ * serving files, commands and the `ksu` bridge from [backend]. With [restrictToModule] nothing
+ * outside the module's own origin loads into the page, so no other site can reach the bridge; links
+ * elsewhere open in the browser. Must run on the main thread.
  */
 @SuppressLint("SetJavaScriptEnabled")
 internal fun createWebView(
@@ -130,6 +137,7 @@ internal fun createWebView(
     webUIState: WebUIState,
     backend: WebUiBackend,
     settingsRepository: AppSettingsRepository,
+    restrictToModule: Boolean = false,
     colorsCssProvider: () -> String,
 ) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -157,7 +165,7 @@ internal fun createWebView(
 
     val webRoot = File("${webUIState.modDir}/webroot")
     val webViewAssetLoader = WebViewAssetLoader.Builder()
-        .setDomain("mui.kernelsu.org")
+        .setDomain(MODULE_HOST)
         .addPathHandler(
             "/",
             SuFilePathHandler(
@@ -206,7 +214,17 @@ internal fun createWebView(
                     }
                 }
             }
-            return webViewAssetLoader.shouldInterceptRequest(url)
+            return webViewAssetLoader.shouldInterceptRequest(url) ?: if (restrictToModule && !url.isModuleOrigin()) {
+                WebResourceResponse("text/plain", null, 403, "Forbidden", emptyMap(), ByteArrayInputStream(ByteArray(0)))
+            } else null
+        }
+
+        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+            if (!restrictToModule || request.url.isModuleOrigin()) return false
+            if (request.isForMainFrame && request.url.scheme in listOf("https", "http")) {
+                runCatching { activity.startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
+            }
+            return true
         }
 
         override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {

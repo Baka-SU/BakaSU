@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">SU ログを無効にする</string>
     <string name="wear_refresh">更新</string>
     <string name="wear_module_file_unreadable">選択したモジュールの ZIP を読み取れません</string>
-    <string name="wear_file_picker_unavailable">ファイル選択機能が利用できません</string>
     <string name="wear_apps">アプリ</string>
     <string name="wear_general">一般</string>
     <string name="wear_security">セキュリティ</string>

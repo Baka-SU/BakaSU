@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">I-disable ang SU log</string>
     <string name="wear_refresh">I-refresh</string>
     <string name="wear_module_file_unreadable">Hindi mabasa ang napiling ZIP ng module</string>
-    <string name="wear_file_picker_unavailable">Hindi available ang tagapili ng file</string>
     <string name="wear_apps">Mga app</string>
     <string name="wear_general">Pangkalahatan</string>
     <string name="wear_security">Seguridad</string>

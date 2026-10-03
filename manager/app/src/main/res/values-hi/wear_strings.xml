@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">SU लॉग अक्षम करें</string>
     <string name="wear_refresh">रीफ़्रेश करें</string>
     <string name="wear_module_file_unreadable">चुने गए मॉड्यूल की ZIP फ़ाइल पढ़ी नहीं जा सकी</string>
-    <string name="wear_file_picker_unavailable">फ़ाइल चयनकर्ता उपलब्ध नहीं है</string>
     <string name="wear_apps">ऐप्स</string>
     <string name="wear_general">सामान्य</string>
     <string name="wear_security">सुरक्षा</string>

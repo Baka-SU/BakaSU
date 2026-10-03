@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">Isključi SU dnevnik</string>
     <string name="wear_refresh">Osvježi</string>
     <string name="wear_module_file_unreadable">Nije moguće pročitati odabrani ZIP modula</string>
-    <string name="wear_file_picker_unavailable">Odabir datoteka nije dostupan</string>
     <string name="wear_apps">Aplikacije</string>
     <string name="wear_general">Općenito</string>
     <string name="wear_security">Sigurnost</string>

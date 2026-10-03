@@ -47,8 +47,7 @@ import kotlinx.coroutines.flow.map
 
 @Composable
 internal fun WearTemplatePage(onBack: () -> Unit) {
-    val viewModel = koinViewModel<TemplateViewModel>(key = "wear-templates",
-        parameters = { parametersOf(true) })
+    val viewModel = koinViewModel<TemplateViewModel>(key = "wear-templates")
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

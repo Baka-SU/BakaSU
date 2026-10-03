@@ -1,5 +1,6 @@
 package com.resukisu.resukisu.ui.wear
 
+import android.net.Uri
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,14 +12,12 @@ import androidx.compose.material.icons.twotone.Folder
 import androidx.compose.material.icons.twotone.FolderOff
 import androidx.compose.material.icons.twotone.FolderZip
 import androidx.compose.material.icons.twotone.Image
-import androidx.compose.material.icons.twotone.Memory
 import androidx.compose.material.icons.twotone.SubdirectoryArrowLeft
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import kotlinx.coroutines.flow.map
+import androidx.core.net.toUri
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -33,7 +32,8 @@ import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import com.resukisu.resukisu.R
-import com.resukisu.resukisu.data.file.WearFileMode
+import com.resukisu.resukisu.data.file.matchesMimeType
+import com.resukisu.resukisu.data.file.wearFileMimeType
 import com.resukisu.resukisu.ui.component.wear.WearActionButton
 import com.resukisu.resukisu.ui.component.wear.WearChip
 import com.resukisu.resukisu.ui.component.wear.WearChipEmphasis
@@ -49,8 +49,6 @@ import com.resukisu.resukisu.ui.component.wear.wearGroupGap
 import com.resukisu.resukisu.ui.viewmodel.WearFileEvent
 import com.resukisu.resukisu.ui.viewmodel.WearFileViewModel
 import org.koin.compose.viewmodel.koinViewModel
-import com.resukisu.resukisu.ui.component.wear.rememberWearPageViewModelOwner
-import com.resukisu.resukisu.ui.component.wear.ReleaseWearPageViewModels
 
 /**
  * @author Hanhan_awa
@@ -58,30 +56,26 @@ import com.resukisu.resukisu.ui.component.wear.ReleaseWearPageViewModels
  */
 
 /**
- * The built-in picker as a Wear list: the task title, the current path as a caption, a low-emphasis
- * entry to the parent folder, then folders and matching files as tonal buttons. In save mode the file
- * name follows and the edge button confirms; otherwise picking a file returns it.
+ * The built-in picker as a Wear list: the title, the current path as a caption, a low-emphasis
+ * entry to the parent folder, then folders and the files matching [mimeTypes] as tonal buttons. In
+ * save mode the file name follows and the edge button confirms; otherwise picking a file returns it.
+ * [onPicked] receives the file as a content URI.
  */
 @Composable
-internal fun WearFilePage(title: String, mode: WearFileMode, onBack: () -> Unit, onSelected: (String) -> Unit, onSaved: (String) -> Unit,
-    requestId: Int, onSelectDirectory: ((String, String) -> Unit)? = null, message: String? = null, busy: Boolean = false) {
-    val key = "wear-picker-$mode-$requestId"
-    val viewModel = koinViewModel<WearFileViewModel>(viewModelStoreOwner = rememberWearPageViewModelOwner(key))
-    ReleaseWearPageViewModels(key, remember(viewModel) { viewModel.state.map { it.loading } })
+internal fun WearFilePage(mimeTypes: List<String>, saving: Boolean, initialName: String, onBack: () -> Unit,
+    onPicked: (Uri) -> Unit) {
+    val viewModel = koinViewModel<WearFileViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val backupFileName = stringResource(R.string.wear_susfs_backup_file_name)
-    LaunchedEffect(viewModel, mode) {
+    LaunchedEffect(viewModel) {
         if (viewModel.state.value.directory == null) {
-            if (mode == WearFileMode.JSON_DIRECTORY) viewModel.setName(backupFileName)
-            viewModel.load(null, mode)
+            viewModel.setName(initialName)
+            viewModel.load(null, mimeTypes, saving)
         }
     }
-    LaunchedEffect(viewModel) { viewModel.events.collect { event -> when (event) {
-        is WearFileEvent.Selected -> onSelected(event.uri)
-        is WearFileEvent.Saved -> onSaved(event.path)
-        else -> Unit
-    } } }
+    LaunchedEffect(viewModel) { viewModel.events.collect { event ->
+        if (event is WearFileEvent.Picked) onPicked(event.uri.toUri())
+    } }
     var editingName by rememberSaveable { mutableStateOf(false) }
     WearPageTransition(if (editingName) "name" else "", if (editingName) 1 else 0) { route ->
         if (route == "name") {
@@ -91,17 +85,12 @@ internal fun WearFilePage(title: String, mode: WearFileMode, onBack: () -> Unit,
                 }
             }
         } else {
-            val error = state.error ?: if (state.failed) stringResource(R.string.operation_failed) else message
+            val error = state.error ?: if (state.failed) stringResource(R.string.operation_failed) else null
             val directory = state.directory
-            val saving = mode == WearFileMode.DIRECTORY || mode == WearFileMode.JSON_DIRECTORY
-            WearList(isLoading = busy || state.loading || directory == null && !state.failed, onBack = onBack, snap = true,
-                onConfirm = if (saving && directory?.writable == true) ({
-                    if (!busy) {
-                        if (onSelectDirectory != null) onSelectDirectory(directory.path, state.name) else viewModel.save()
-                    }
-                }) else null,
+            WearList(isLoading = state.loading || directory == null && !state.failed, onBack = onBack, snap = true,
+                onConfirm = if (saving && directory?.writable == true) ({ viewModel.create() }) else null,
             ) { spec ->
-                item { WearPageHeader(spec, title) }
+                item { WearPageHeader(spec, stringResource(R.string.wear_picker_mode)) }
                 directory?.let { item {
                     WearScaledItem(spec) {
                         Text(it.path, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
@@ -112,22 +101,22 @@ internal fun WearFilePage(title: String, mode: WearFileMode, onBack: () -> Unit,
                 error?.let { item { WearStatusItem(spec, Icons.TwoTone.Error, it, tone = WearStatusTone.ERROR) } }
                 directory?.parent?.let { parent -> item {
                     WearChip(spec, stringResource(R.string.wear_parent_directory), icon = Icons.TwoTone.SubdirectoryArrowLeft, emphasis = WearChipEmphasis.HIGH,
-                        onClick = { viewModel.load(parent, mode) })
+                        onClick = { viewModel.load(parent, mimeTypes, saving) })
                 } }
                 if (directory != null && directory.entries.isEmpty()) item {
                     WearStatusItem(spec, Icons.TwoTone.FolderOff, stringResource(R.string.wear_directory_empty))
                 }
                 items(directory?.entries.orEmpty(), key = { it.path }) { entry ->
+                    val mimeType = wearFileMimeType(entry.name)
                     WearActionButton(spec,
                         icon = when {
                             entry.directory -> Icons.TwoTone.Folder
-                            mode == WearFileMode.IMAGE -> Icons.TwoTone.Image
-                            mode == WearFileMode.KERNEL_MODULE -> Icons.TwoTone.Memory
-                            entry.name.endsWith(".zip", ignoreCase = true) -> Icons.TwoTone.FolderZip
+                            matchesMimeType(mimeType, listOf("image/*")) -> Icons.TwoTone.Image
+                            mimeType == "application/zip" -> Icons.TwoTone.FolderZip
                             else -> Icons.TwoTone.FilePresent
                         },
                         label = entry.name,
-                        onClick = { if (entry.directory) viewModel.load(entry.path, mode) else viewModel.select(entry.path) },
+                        onClick = { if (entry.directory) viewModel.load(entry.path, mimeTypes, saving) else viewModel.select(entry.path) },
                         secondaryText = if (entry.directory) null else Formatter.formatShortFileSize(context, entry.size),
                         colors = ButtonDefaults.filledTonalButtonColors())
                 }

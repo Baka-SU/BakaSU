@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">Desactivar o rexistro SU</string>
     <string name="wear_refresh">Actualizar</string>
     <string name="wear_module_file_unreadable">Non se pode ler o ZIP do módulo seleccionado</string>
-    <string name="wear_file_picker_unavailable">Selector de ficheiros non dispoñible</string>
     <string name="wear_apps">Aplicacións</string>
     <string name="wear_general">Xeral</string>
     <string name="wear_security">Seguridade</string>

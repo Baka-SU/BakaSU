@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">SU 로그 비활성화</string>
     <string name="wear_refresh">새로고침</string>
     <string name="wear_module_file_unreadable">선택한 모듈 ZIP을 읽을 수 없습니다</string>
-    <string name="wear_file_picker_unavailable">파일 선택기를 사용할 수 없습니다</string>
     <string name="wear_apps">앱</string>
     <string name="wear_general">일반</string>
     <string name="wear_security">보안</string>

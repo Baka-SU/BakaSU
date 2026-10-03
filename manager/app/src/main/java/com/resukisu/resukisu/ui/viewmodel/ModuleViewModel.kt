@@ -78,6 +78,7 @@ private data class ModuleControls(
     val search: String = "",
     val isNeedRefresh: Boolean = false,
     val moduleSizes: Map<String, String> = emptyMap(),
+    val loaded: Boolean = false,
 )
 
 class ModuleViewModel(
@@ -111,8 +112,9 @@ class ModuleViewModel(
                 sortActionFirst = preferences.sortActionFirst,
             ),
             moduleSizes = local.moduleSizes,
-            isLoading = !source.isInitialDataLoaded,
-            isRefreshing = source.refreshing && source.isInitialDataLoaded,
+            // Loading until this model's first refresh ends, unless modules are already known.
+            isLoading = !local.loaded && source.modules.isEmpty(),
+            isRefreshing = source.refreshing,
             search = local.search,
             sortEnabledFirst = preferences.sortEnabledFirst,
             sortActionFirst = preferences.sortActionFirst,
@@ -187,6 +189,7 @@ class ModuleViewModel(
             .onFailure { error ->
                 mutableEvents.tryEmit(ModuleUiEvent.Error(error.message.orEmpty()))
             }
+        controls.update { it.copy(loaded = true) }
     }
 
     private fun buildModuleList(

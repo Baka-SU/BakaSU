@@ -21,7 +21,6 @@ data class InstalledModule(
 )
 
 data class InstalledModulesState(
-    val isInitialDataLoaded: Boolean = false,
     val modules: List<InstalledModule> = emptyList(),
     val refreshing: Boolean = false,
     val hasModuleRequireMount: Boolean = false,

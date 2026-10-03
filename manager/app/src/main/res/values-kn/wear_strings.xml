@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">SU ಲಾಗ್ ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಿ</string>
     <string name="wear_refresh">ರಿಫ್ರೆಶ್ ಮಾಡಿ</string>
     <string name="wear_module_file_unreadable">ಆಯ್ಕೆ ಮಾಡಿದ ಮಾಡ್ಯೂಲ್ ZIP ಓದಲು ಸಾಧ್ಯವಿಲ್ಲ</string>
-    <string name="wear_file_picker_unavailable">ಫೈಲ್ ಆಯ್ಕೆ ಸಾಧನ ಲಭ್ಯವಿಲ್ಲ</string>
     <string name="wear_apps">ಅಪ್ಲಿಕೇಶನ್‌ಗಳು</string>
     <string name="wear_general">ಸಾಮಾನ್ಯ</string>
     <string name="wear_security">ಭದ್ರತೆ</string>

@@ -1,7 +1,10 @@
 package com.resukisu.resukisu.data.webui
 
 import android.content.Context
+import android.os.SystemClock
+import android.util.Log
 import com.google.android.gms.tasks.Tasks
+import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.Wearable
 import com.resukisu.resukisu.domain.model.WebUiCommandResult
@@ -11,18 +14,21 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
 import java.io.InputStream
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /**
- * Showing a watch module's WebUI on the phone. The watch opens the phone's WebUI activity with
- * RemoteActivityHelper; the phone then sends each file read and command of the page back to the
- * watch over a Data Layer channel, where the watch serves it with its own root access. Every call
- * carries the one-time token of the session the watch started, limited to that module.
+ * Showing a watch module's WebUI on the phone. The watch offers a session for one module to the
+ * phone it chose and opens the phone's WebUI activity with RemoteActivityHelper. That link carries
+ * no session data: the phone activity claims the session from the watch over the Data Layer, which
+ * only connects this app on devices signed with the same key, and then sends each file read and
+ * command of the page back to the watch, where the watch serves it with its own root access.
  *
  * Frames on a channel are a type byte, a 4 byte length and the payload.
  */
 object WearWebUiProtocol {
+    const val CLAIM_PATH = "/resukisu/webui/claim"
     const val RPC_PATH = "/resukisu/webui/rpc"
     const val CLOSED_PATH = "/resukisu/webui/closed"
     /** Advertised by the app on every device, through `android_wear_capabilities`. */
@@ -43,9 +49,13 @@ object WearWebUiProtocol {
         flush()
     }
 
+    private const val MAX_FRAME_SIZE = 64 * 1024 * 1024
+
     fun DataInputStream.readFrame(): Pair<Byte, ByteArray> {
         val type = readByte()
-        val payload = ByteArray(readInt())
+        val size = readInt()
+        require(size in 0..MAX_FRAME_SIZE) { "Invalid frame size" }
+        val payload = ByteArray(size)
         readFully(payload)
         return type to payload
     }
@@ -58,22 +68,54 @@ object WearWebUiProtocol {
     }
 }
 
-/** The phone session the watch accepts calls for: one module, identified by a random token. */
+/**
+ * The watch's only WebUI session: one module, offered to one phone node. That node may claim it once
+ * within [CLAIM_WINDOW_MS] of the offer; afterwards only calls from the same node carrying the
+ * session's random token are served. A new offer or the phone closing the page ends it.
+ */
 object WearWebUiSession {
-    private data class Session(val token: String, val moduleId: String)
+    private const val CLAIM_WINDOW_MS = 30_000L
 
-    @Volatile
-    private var current: Session? = null
-
-    fun start(token: String, moduleId: String) {
-        current = Session(token, moduleId)
+    private class Session(
+        val token: String,
+        val moduleId: String,
+        val moduleName: String,
+        val phoneNodeId: String,
+        val offeredAt: Long,
+    ) {
+        var claimed = false
     }
 
-    /** The module of the session [token] belongs to, or null when it is not the current session. */
-    fun moduleFor(token: String): String? = current?.takeIf { it.token == token }?.moduleId
+    private var current: Session? = null
 
-    fun end(token: String) {
-        if (current?.token == token) current = null
+    /** Offers a session for [moduleId] to [phoneNodeId]; the returned token withdraws it. */
+    @Synchronized
+    fun offer(moduleId: String, moduleName: String, phoneNodeId: String): String =
+        UUID.randomUUID().toString().also {
+            current = Session(it, moduleId, moduleName, phoneNodeId, SystemClock.elapsedRealtime())
+        }
+
+    /** The pending session as JSON for the node it was offered to, at most once; otherwise null. */
+    @Synchronized
+    fun claim(nodeId: String): JSONObject? {
+        val session = current?.takeIf {
+            !it.claimed && it.phoneNodeId == nodeId &&
+                SystemClock.elapsedRealtime() - it.offeredAt < CLAIM_WINDOW_MS
+        } ?: return null
+        session.claimed = true
+        return JSONObject().put("token", session.token).put("module", session.moduleId).put("name", session.moduleName)
+    }
+
+    /** The module of the claimed session when [token] and [nodeId] both match it, otherwise null. */
+    @Synchronized
+    fun moduleFor(token: String, nodeId: String): String? =
+        current?.takeIf { it.claimed && it.token == token && it.phoneNodeId == nodeId }?.moduleId
+
+    /** Ends the session of [token]; a phone may only end the session it claimed. */
+    @Synchronized
+    fun end(token: String, nodeId: String? = null) {
+        val session = current ?: return
+        if (session.token == token && (nodeId == null || session.phoneNodeId == nodeId)) current = null
     }
 }
 
@@ -82,7 +124,13 @@ object WearWebUiSession {
  * answered by the watch. Calls block, as the WebView calls its bridge and file handler off the main
  * thread.
  */
-class RemoteWebUiBackend(context: Context, private val nodeId: String, private val token: String) : WebUiBackend {
+class RemoteWebUiBackend private constructor(
+    context: Context,
+    private val nodeId: String,
+    private val token: String,
+    val moduleId: String,
+    val moduleName: String,
+) : WebUiBackend {
     private val client = Wearable.getChannelClient(context)
 
     private fun <T> call(op: String, arg: String, extra: Int = 0, read: (DataInputStream) -> T): T {
@@ -155,11 +203,59 @@ class RemoteWebUiBackend(context: Context, private val nodeId: String, private v
     fun close(context: Context) {
         Wearable.getMessageClient(context).sendMessage(nodeId, WearWebUiProtocol.CLOSED_PATH, token.toByteArray())
     }
+
+    companion object {
+        /**
+         * Claims the session a reachable watch offered to this phone, or returns null when none did.
+         * Blocks, so it must run off the main thread.
+         */
+        fun claim(context: Context): RemoteWebUiBackend? = runCatching {
+            val localId = Tasks.await(Wearable.getNodeClient(context).localNode, 5, TimeUnit.SECONDS).id
+            val client = Wearable.getChannelClient(context)
+            Tasks.await(Wearable.getCapabilityClient(context)
+                .getCapability(WearWebUiProtocol.CAPABILITY, CapabilityClient.FILTER_REACHABLE), 5, TimeUnit.SECONDS)
+                .nodes.filter { it.id != localId }
+                .firstNotNullOfOrNull { node -> runCatching { claimFrom(context, client, node.id) }.getOrNull() }
+        }.onFailure { Log.w("RemoteWebUi", "Session claim failed", it) }.getOrNull()
+
+        private fun claimFrom(context: Context, client: ChannelClient, nodeId: String): RemoteWebUiBackend? {
+            val channel = Tasks.await(client.openChannel(nodeId, WearWebUiProtocol.CLAIM_PATH), 5, TimeUnit.SECONDS)
+            try {
+                val input = DataInputStream(Tasks.await(client.getInputStream(channel), 5, TimeUnit.SECONDS).buffered())
+                val (type, payload) = with(WearWebUiProtocol) { input.readFrame() }
+                if (type != WearWebUiProtocol.FRAME_OK) return null
+                val session = JSONObject(payload.decodeToString())
+                val moduleId = session.getString("module")
+                require(moduleId.isNotEmpty() && '/' !in moduleId && moduleId != "..") { "Invalid module" }
+                return RemoteWebUiBackend(context, nodeId, session.getString("token"), moduleId,
+                    session.optString("name").ifEmpty { moduleId })
+            } finally {
+                client.close(channel)
+            }
+        }
+    }
+}
+
+/** The watch's answer to a phone claiming its pending session on [channel]. */
+internal fun serveWebUiClaim(client: ChannelClient, channel: ChannelClient.Channel) {
+    try {
+        val output = DataOutputStream(Tasks.await(client.getOutputStream(channel)).buffered())
+        val session = WearWebUiSession.claim(channel.nodeId)
+        with(WearWebUiProtocol) {
+            if (session == null) output.writeFrame(FRAME_ERROR, ByteArray(0))
+            else output.writeFrame(FRAME_OK, session.toString().toByteArray())
+        }
+    } catch (_: Exception) {
+        // The phone closed the channel or the connection dropped; the claim simply fails.
+    } finally {
+        client.close(channel)
+    }
 }
 
 /**
- * The watch's answer to one phone call on [channel], served by [backend]. File reads are limited to
- * the session module's webroot.
+ * The watch's answer to one phone call on [channel], served by [backend]. Only the phone node that
+ * claimed the session, presenting its token, is answered; file reads are limited to the session
+ * module's webroot.
  */
 internal suspend fun serveWebUiCall(
     client: ChannelClient,
@@ -172,7 +268,7 @@ internal suspend fun serveWebUiCall(
         val output = DataOutputStream(Tasks.await(client.getOutputStream(channel)).buffered())
         with(WearWebUiProtocol) {
             val request = JSONObject(input.readFrame().second.decodeToString())
-            val moduleId = WearWebUiSession.moduleFor(request.optString("token"))
+            val moduleId = WearWebUiSession.moduleFor(request.optString("token"), channel.nodeId)
             if (moduleId == null) {
                 output.writeFrame(FRAME_ERROR, ByteArray(0))
                 return

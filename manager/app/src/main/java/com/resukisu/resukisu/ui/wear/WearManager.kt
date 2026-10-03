@@ -1,14 +1,12 @@
 package com.resukisu.resukisu.ui.wear
 
 import android.content.Intent
-import android.os.SystemClock
 import android.net.Uri
 import androidx.wear.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Save
 import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.material.icons.twotone.Share
-import com.resukisu.resukisu.data.file.WearFileMode
 import com.resukisu.resukisu.data.network.WearLinkFailure
 import com.resukisu.resukisu.ui.viewmodel.WearFileEvent
 import com.resukisu.resukisu.ui.viewmodel.WearFileViewModel
@@ -28,7 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -59,6 +56,8 @@ import androidx.wear.compose.material3.FailureConfirmationDialog
 import androidx.wear.compose.material3.ConfirmationDialogDefaults
 import androidx.wear.compose.material3.PagerScaffoldDefaults
 import com.resukisu.resukisu.R
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import com.resukisu.resukisu.ui.viewmodel.HomeUiAction
 import com.resukisu.resukisu.ui.viewmodel.HomeUiEvent
 import com.resukisu.resukisu.ui.viewmodel.HomeViewModel
@@ -191,7 +190,6 @@ fun WearManagerScreen() {
     var webUiPhoneFailed by remember { mutableStateOf(false) }
     var webUiPhoneFailure by remember { mutableStateOf<WearLinkFailure?>(null) }
     var fileTask by rememberSaveable { mutableStateOf("module") }
-    var pickerRequest by rememberSaveable { mutableIntStateOf(0) }
     var savedPath by rememberSaveable { mutableStateOf("") }
     var installRequestId by rememberSaveable { mutableIntStateOf(0) }
     var moduleError by remember { mutableStateOf<String?>(null) }
@@ -219,48 +217,26 @@ fun WearManagerScreen() {
             }
         }
     }
-    // Some watches ship a document picker that starts but closes at once without a result. In
-    // automatic mode an empty result that quick counts as a failed picker and opens the built-in
-    // one; a later empty result is the user canceling.
-    var systemPickerStartedAt by rememberSaveable { mutableLongStateOf(0L) }
-    fun onSystemPickerEmpty() {
-        if (preferences.picker == "auto" && SystemClock.elapsedRealtime() - systemPickerStartedAt < 2_000) openPage("file-picker")
-    }
+    // Plain SAF requests; on watches without a usable DocumentsUI the activity routes them to the
+    // built-in picker (see withDocumentPickerFallback).
     val selectModuleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) onFileSelected(uri.toString()) else onSystemPickerEmpty()
+        if (uri != null) onFileSelected(uri.toString())
     }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gzip")) { uri ->
-        if (uri != null) fileViewModel.exportTo(uri.toString()) else onSystemPickerEmpty()
+        if (uri != null) fileViewModel.exportTo(uri.toString())
     }
     val operationFailedText = stringResource(R.string.operation_failed)
-    val pickerUnavailableText = stringResource(R.string.wear_file_picker_unavailable)
-    fun fileMode(task: String) = when (task) {
-        "image" -> WearFileMode.IMAGE
-        "bugreport" -> WearFileMode.DIRECTORY
-        "boot" -> WearFileMode.BOOT_IMAGE
-        "lkm" -> WearFileMode.KERNEL_MODULE
-        else -> WearFileMode.ZIP
-    }
-    fun pickerUnavailable() {
-        if (preferences.picker == "auto") openPage("file-picker")
-        else { openPage("picker-mode"); settingsError = pickerUnavailableText }
-    }
     fun selectFile(task: String) {
         fileTask = task
-        pickerRequest++
-        if (preferences.picker == "builtin") openPage("file-picker")
-        else fileViewModel.checkSystemPicker(fileMode(task))
-    }
-    fun launchSystemPicker() {
-        systemPickerStartedAt = SystemClock.elapsedRealtime()
         runCatching {
-            if (fileTask == "bugreport") exportLauncher.launch("KernelSU_bugreport.tar.gz")
-            else selectModuleLauncher.launch(when (fileTask) {
+            if (task == "bugreport") exportLauncher.launch("KernelSU_bugreport_" +
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm_ss")) + ".tar.gz")
+            else selectModuleLauncher.launch(when (task) {
                 "image" -> arrayOf("image/*")
                 "lkm" -> arrayOf("application/octet-stream")
                 else -> arrayOf("application/zip", "application/octet-stream")
             })
-        }.onFailure { pickerUnavailable() }
+        }.onFailure { settingsError = operationFailedText }
     }
     val dispatchSettings: (SettingsUiAction) -> Unit = {
         settingsError = null
@@ -377,15 +353,14 @@ fun WearManagerScreen() {
 
     LaunchedEffect(fileViewModel) {
         fileViewModel.events.collect { event -> when (event) {
-            is WearFileEvent.SystemPicker -> if (event.available) launchSystemPicker() else pickerUnavailable()
-            is WearFileEvent.Saved -> { savedPath = event.path; openPage("saved-log") }
+            is WearFileEvent.Saved -> { savedPath = event.name; openPage("saved-log") }
             is WearFileEvent.Share -> runCatching {
                 val uri = Uri.parse(event.uri)
                 context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND)
                     .putExtra(Intent.EXTRA_STREAM, uri).setDataAndType(uri, "application/gzip")
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), sendLogText))
             }.onFailure { fileViewModel.clearError(); settingsError = operationFailedText }
-            is WearFileEvent.Selected -> Unit
+            is WearFileEvent.Picked -> Unit
         } }
     }
     LaunchedEffect(linkViewModel) {
@@ -473,20 +448,6 @@ fun WearManagerScreen() {
                             item { WearInfoCard(spec) { Text(stringResource(linkMessage)) } }
                             item { WearActionButton(spec, Icons.TwoTone.Settings, stringResource(R.string.wear_link_mode), { openPage("link-mode") }) }
                         }
-                        "file-picker" -> WearFilePage(
-                            title = stringResource(when (fileTask) {
-                                "image" -> R.string.settings_custom_background
-                                "bugreport" -> R.string.save_log
-                                "boot" -> R.string.select_file
-                                "lkm" -> R.string.install_upload_lkm_file
-                                "ak3" -> R.string.horizon_kernel
-                                else -> R.string.install
-                            }),
-                            mode = fileMode(fileTask),
-                            onBack = { goBack() }, onSelected = { goBack(); onFileSelected(it) },
-                            onSaved = { savedPath = it; detailType = "saved-log" },
-                            requestId = pickerRequest,
-                        )
                         "bugreport" -> WearList(isLoading = fileState.loading, onBack = { goBack() }) { spec ->
                             val fileError = fileState.error ?: if (fileState.failed) operationFailedText else null
                             item { WearPageHeader(spec, stringResource(R.string.send_log)) }
@@ -507,7 +468,7 @@ fun WearManagerScreen() {
                             route.removePrefix("settings-"), preferences)
                         "templates" -> WearTemplatePage { goBack() }
                         "susfs" -> if (home.systemStatus.isFullFeatured && home.systemInfo.susfsEnabled) {
-                            WearSuSFSPage(preferences.picker) { goBack() }
+                            WearSuSFSPage { goBack() }
                         }
                         "dynamic-manager" -> WearDynamicManagerPage { goBack() }
                         "umount" -> WearUmountPage { goBack() }

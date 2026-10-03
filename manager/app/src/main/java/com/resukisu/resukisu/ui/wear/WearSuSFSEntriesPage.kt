@@ -1,6 +1,5 @@
 package com.resukisu.resukisu.ui.wear
 
-import android.os.SystemClock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
@@ -15,7 +14,6 @@ import androidx.compose.material.icons.twotone.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -24,7 +22,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.material3.Text
 import com.resukisu.resukisu.R
-import com.resukisu.resukisu.data.file.WearFileMode
 import com.resukisu.resukisu.domain.model.SuSFSConfig
 import com.resukisu.resukisu.domain.model.SusKstatStatically
 import com.resukisu.resukisu.domain.model.SusKstatType
@@ -43,9 +40,11 @@ import com.resukisu.resukisu.ui.component.wear.rememberWearConfirmDialog
 import com.resukisu.resukisu.ui.viewmodel.SuSFSUiAction
 import com.resukisu.resukisu.ui.viewmodel.SusKstatOperation
 import com.resukisu.resukisu.ui.viewmodel.SuSFSViewModel
-import com.resukisu.resukisu.ui.viewmodel.SuSFSCommandResult
-import com.resukisu.resukisu.ui.viewmodel.awaitSuSFSCommand
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.nio.charset.CharacterCodingException
 
 /**
  * @author Hanhan_awa
@@ -161,7 +160,7 @@ internal fun WearSuSFSDetailPage(section: WearSuSFSSection, config: SuSFSConfig,
 }
 
 @Composable
-internal fun WearSuSFSAddPage(section: WearSuSFSSection, busy: Boolean, message: String?, pickerMode: String,
+internal fun WearSuSFSAddPage(section: WearSuSFSSection, busy: Boolean, message: String?,
     viewModel: SuSFSViewModel, onBack: () -> Unit, onCommand: (List<WearSuSFSCommand>) -> Unit) {
     var field by rememberSaveable { mutableIntStateOf(-1) }
     var path by rememberSaveable { mutableStateOf("") }
@@ -172,42 +171,38 @@ internal fun WearSuSFSAddPage(section: WearSuSFSSection, busy: Boolean, message:
     var staticValues by rememberSaveable { mutableStateOf(List(12) { "" }) }
     var choosing by rememberSaveable { mutableStateOf("") }
     var invalid by remember { mutableStateOf(false) }
-    var pickingFile by rememberSaveable { mutableStateOf(false) }
     var readingFile by remember { mutableStateOf(false) }
     var fileError by remember { mutableStateOf<String?>(null) }
-    var pickerStartedAt by remember { mutableLongStateOf(0L) }
     val scope = rememberCoroutineScope()
     val readFailed = stringResource(R.string.susfs_entry_import_file_failed)
-    val pickerUnavailable = stringResource(R.string.wear_file_picker_unavailable)
-    fun readFile(uri: String) {
+    val notText = stringResource(R.string.susfs_entry_import_file_not_text)
+    val context = LocalContext.current
+    // Reads the picked file as the phone's entry dialog does.
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
         readingFile = true
         fileError = null
         scope.launch {
             try {
-                val result = awaitSuSFSCommand(viewModel) { SuSFSUiAction.ReadEntryFile(uri, it) }
-                if (result is SuSFSCommandResult.TextValue) { path = result.value; invalid = false }
-                else fileError = readFailed
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        checkNotNull(context.contentResolver.openInputStream(uri)).use { stream ->
+                            stream.readBytes().decodeToString(throwOnInvalidSequence = true)
+                        }
+                    }
+                }.onSuccess { path = it; invalid = false }
+                    .onFailure { fileError = if (it is CharacterCodingException) notText else readFailed }
             } finally { readingFile = false }
         }
     }
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) readFile(uri.toString())
-        else if (pickerMode == "auto" && SystemClock.elapsedRealtime() - pickerStartedAt < 2_000) pickingFile = true
-    }
     val type = SusKstatType.valueOf(subtype)
     val route = when {
-        pickingFile -> "file"
         field >= 0 -> "field:$field"
         choosing.isNotEmpty() -> "choice:$choosing"
         else -> ""
     }
     WearPageTransition(route, if (route.isEmpty()) 0 else 1) { shownPage ->
-        if (shownPage == "file") {
-            WearSubPage({ pickingFile = false }) {
-                WearFilePage(stringResource(R.string.susfs_entry_import_from_file), WearFileMode.TEXT,
-                    onBack = { pickingFile = false }, onSelected = { pickingFile = false; readFile(it) }, onSaved = {}, requestId = 0)
-            }
-        } else if (shownPage.startsWith("field:")) {
+        if (shownPage.startsWith("field:")) {
             val shownField = shownPage.removePrefix("field:").toInt()
             WearSubPage({ field = -1 }) {
                 WearTextInputPage(stringResource(when (shownField) {
@@ -270,13 +265,7 @@ internal fun WearSuSFSAddPage(section: WearSuSFSSection, busy: Boolean, message:
                     description = path.ifBlank { default }) }
                 if (section != WearSuSFSSection.Redirect) item {
                     WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_entry_import_from_file), {
-                        if (pickerMode == "builtin") pickingFile = true
-                        else {
-                            pickerStartedAt = SystemClock.elapsedRealtime()
-                            runCatching { importLauncher.launch(arrayOf("*/*")) }.onFailure {
-                                if (pickerMode == "auto") pickingFile = true else fileError = pickerUnavailable
-                            }
-                        }
+                        runCatching { importLauncher.launch(arrayOf("*/*")) }.onFailure { fileError = readFailed }
                     }, icon = Icons.TwoTone.FileOpen, description = stringResource(R.string.susfs_entry_import_hint))
                 }
                 if (section == WearSuSFSSection.Path || section == WearSuSFSSection.Kstat) item {

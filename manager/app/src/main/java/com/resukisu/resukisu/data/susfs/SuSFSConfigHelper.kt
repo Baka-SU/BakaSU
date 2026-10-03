@@ -12,8 +12,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
-import com.topjohnwu.superuser.io.SuFile
-import com.topjohnwu.superuser.io.SuFileOutputStream
 
 class SuSFSConfigHelper(
     private val ksuCliRepository: KsuCliRepository,
@@ -325,8 +323,7 @@ class SuSFSConfigHelper(
         withContext(Dispatchers.IO) {
             val tempFile = File.createTempFile("susfs_restore", ".json", context.cacheDir)
         try {
-            val fileName = if (uri.scheme == "file") uri.lastPathSegment.orEmpty()
-                else DocumentFile.fromSingleUri(context, uri)?.name.orEmpty()
+            val fileName = DocumentFile.fromSingleUri(context, uri)?.name.orEmpty()
             if (!fileName.endsWith(".json", ignoreCase = true)) {
                 Log.e(TAG, "Rejected SUSFS backup with invalid extension: $fileName")
                 return@withContext false
@@ -342,27 +339,6 @@ class SuSFSConfigHelper(
             false
         } finally {
             tempFile.delete()
-        }
-    }
-
-    /** Watches without DocumentsUI export through the same config backup command to a picked directory. */
-    suspend fun exportConfigToDirectory(directory: String, name: String): Boolean = withContext(Dispatchers.IO) {
-        if (name.isBlank() || '/' in name || '\\' in name || !name.endsWith(".json", ignoreCase = true)) return@withContext false
-        val result = executeSusfsCommand("config backup")
-        if (!result.success || result.stdout.isBlank()) return@withContext false
-        try {
-            ksuCliRepository.withNewRootShell(true) {
-                val target = SuFile(File(directory, name).path).apply { shell = this@withNewRootShell }
-                if (target.exists()) return@withNewRootShell false
-                SuFileOutputStream.open(target).bufferedWriter().use {
-                    it.write(result.stdout)
-                    it.newLine()
-                }
-                true
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to export SUSFS config", e)
-            false
         }
     }
 

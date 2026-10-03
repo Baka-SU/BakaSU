@@ -197,9 +197,13 @@ internal fun WearSettingsPage(
                     { onOpenPage(name) }, icon = settingsPageIcon(name),
                     description = if (name == "dpi") dpiSummary else shapeSummary)
             }
-            item { WearSectionHeader(spec, stringResource(R.string.settings_language)) }
-            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.settings_language),
-                { onOpenPage("language") }, icon = settingsPageIcon("language"), description = languageSummary) }
+            // Android 13+ keeps the app language in the system's per-app settings, which Wear does not
+            // offer, so the in-app choice is only shown where the shared locale handling applies it.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                item { WearSectionHeader(spec, stringResource(R.string.settings_language)) }
+                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.settings_language),
+                    { onOpenPage("language") }, icon = settingsPageIcon("language"), description = languageSummary) }
+            }
         } else {
             val toggles = buildList {
                 if (category == "general") {
