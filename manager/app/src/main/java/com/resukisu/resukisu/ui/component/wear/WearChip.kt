@@ -50,6 +50,7 @@ fun TransformingLazyColumnItemScope.WearChip(
     icon: ImageVector? = null,
     emphasis: WearChipEmphasis = WearChipEmphasis.MEDIUM,
     headlineBadges: List<String> = emptyList(),
+    secondaryLabelStyle: TextStyle? = null,
     onClick: (() -> Unit)? = null,
 ) {
     val labelLines = if (secondaryLabel != null) 1 else if (onClick != null) 3 else 2
@@ -76,8 +77,9 @@ fun TransformingLazyColumnItemScope.WearChip(
             border = border,
             icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize)) } },
             // Keep the description to two lines; mode badges are measured separately in the headline.
+            // A [secondaryLabelStyle] from the theme typography lets a dense summary fit one line.
             secondaryLabel = secondaryLabel?.let { text ->
-                { Text(text, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                { Text(text, style = secondaryLabelStyle ?: LocalTextStyle.current, maxLines = 2, overflow = TextOverflow.Ellipsis) }
             },
         ) {
             WearChipHeadline(label, labelLines, centered, headlineBadges)
@@ -111,7 +113,7 @@ fun TransformingLazyColumnItemScope.WearChip(
             Column(Modifier.weight(1f)) {
                 WearChipHeadline(label, labelLines, centered, headlineBadges, content, MaterialTheme.typography.labelMedium)
                 if (secondaryLabel != null) Text(
-                    secondaryLabel, color = secondaryContent, style = MaterialTheme.typography.labelSmall,
+                    secondaryLabel, color = secondaryContent, style = secondaryLabelStyle ?: MaterialTheme.typography.labelSmall,
                     maxLines = 3, overflow = TextOverflow.Ellipsis,
                 )
             }

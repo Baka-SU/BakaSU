@@ -46,8 +46,11 @@ class WearFileRepository(
                 .putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/zip", "application/octet-stream"))
             WearFileMode.KERNEL_MODULE -> Intent(Intent.ACTION_OPEN_DOCUMENT).setType("application/octet-stream")
         }.addCategory(Intent.CATEGORY_OPENABLE)
-        application.packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
-            .any { !it.activityInfo.name.endsWith("DocumentsStub") }
+        // A launch opens the best match, not any match: the Wear framework stub resolves with a
+        // higher priority than installed file managers, so it alone would show "no app can handle
+        // this action" before the built-in picker opens.
+        application.packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            ?.activityInfo?.name?.endsWith("DocumentsStub") == false
     }
 
     suspend fun list(path: String?, mode: WearFileMode): WearDirectory = withContext(Dispatchers.IO) {

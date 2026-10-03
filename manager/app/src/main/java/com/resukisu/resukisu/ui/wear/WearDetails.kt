@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.twotone.Android
+import androidx.compose.material.icons.twotone.Badge
 import androidx.compose.material.icons.twotone.Delete
 import androidx.compose.material.icons.twotone.Extension
 import androidx.compose.material.icons.twotone.Folder
@@ -231,7 +231,7 @@ internal fun WearAppDetail(
                             item {
                                 WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
                                     WearDetailField(
-                                        Icons.TwoTone.Android,
+                                        Icons.TwoTone.Badge,
                                         group.mainApp.label,
                                         group.mainApp.displayIdentifier,
                                     )

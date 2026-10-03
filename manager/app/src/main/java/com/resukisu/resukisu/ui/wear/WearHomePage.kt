@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.MaterialTheme
 import com.resukisu.resukisu.BuildConfig
 import com.resukisu.resukisu.Natives.KernelPatchImplementation
 import com.resukisu.resukisu.R
@@ -98,6 +99,8 @@ internal fun WearHomePage(
                         stringResource(if (status.lkmMode == true) R.string.wear_mode_lkm else R.string.wear_mode_builtin),
                         if (status.isLateLoadMode) stringResource(R.string.jailbreak_mode) else null,
                     ) else emptyList(),
+                    // The superuser and module counts fit one line in the theme's smallest body style.
+                    secondaryLabelStyle = if (working) MaterialTheme.typography.bodyExtraSmall else null,
                     icon = when {
                         working -> Icons.TwoTone.TaskAlt
                         status.kernelVersion.isGKI() -> Icons.TwoTone.Warning
