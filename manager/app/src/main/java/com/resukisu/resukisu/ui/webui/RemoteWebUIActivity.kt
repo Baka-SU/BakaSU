@@ -71,7 +71,7 @@ class RemoteWebUIActivity : ComponentActivity() {
                     webUIState.moduleName = remote.moduleName
                     webUIState.modDir = "/data/adb/modules/${remote.moduleId}"
                     createWebView(this@RemoteWebUIActivity, webUIState, remote, settingsRepository,
-                        restrictToModule = true) { currentColorsCss.value }
+                        restrictToModule = true, colorsCssProvider = { currentColorsCss.value })
                 }
                 DisposableEffect(Unit) { onDispose { webUIState.dispose() } }
 

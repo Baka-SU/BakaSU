@@ -61,7 +61,6 @@
         android:zygotePreloadName="com.resukisu.resukisu.magica.AppZygotePreload">
         <activity
             android:name=".ui.MainActivity"
-            android:configChanges="locale|layoutDirection"
             android:exported="true"
             android:enabled="true"
             android:launchMode="standard"
@@ -97,7 +96,6 @@
         <activity
             android:name=".ui.AltIconMainActivity"
             android:icon="@mipmap/ic_launcher_alt"
-            android:configChanges="locale|layoutDirection"
             android:exported="false"
             android:launchMode="standard"
             android:documentLaunchMode="intoExisting"
@@ -146,6 +144,21 @@
             android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden"
             />
 
+        <!-- The Manager on watches; MainActivity hands watch launches over to it. -->
+        <activity
+            android:name=".ui.wear.WearMainActivity"
+            android:exported="false"
+            android:theme="@style/Theme.KernelSU.Wear" />
+
+        <activity
+            android:name=".ui.wear.WearWebUIActivity"
+            android:autoRemoveFromRecents="true"
+            android:documentLaunchMode="intoExisting"
+            android:taskAffinity="${applicationId}.webui"
+            android:exported="false"
+            android:theme="@style/Theme.KernelSU.Wear"
+            android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden" />
+
         <!-- A watch module's WebUI shown on the phone; the watch opens it with RemoteActivityHelper,
              which needs it exported. The link carries no data: the activity only shows a session it
              claims from the paired watch over the Data Layer. -->
@@ -170,7 +183,7 @@
         <activity
             android:name=".ui.wear.WearFilePickerActivity"
             android:exported="false"
-            android:theme="@style/Theme.KernelSU.WebUI"
+            android:theme="@style/Theme.KernelSU.Wear"
             android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden">
             <intent-filter android:priority="-1000">
                 <action android:name="android.intent.action.OPEN_DOCUMENT" />

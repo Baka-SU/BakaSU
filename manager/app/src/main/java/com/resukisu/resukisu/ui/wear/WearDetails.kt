@@ -2,7 +2,7 @@ package com.resukisu.resukisu.ui.wear
 
 import androidx.compose.material.icons.twotone.Apps
 import androidx.compose.material.icons.twotone.Error
-import com.resukisu.resukisu.ui.component.wear.WearStatusTone
+import com.resukisu.resukisu.ui.wear.component.WearStatusTone
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
@@ -24,7 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -35,21 +34,20 @@ import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.InstalledAppGroup
 import com.resukisu.resukisu.domain.model.InstalledModule
 import com.resukisu.resukisu.domain.model.AppProfile
-import com.resukisu.resukisu.ui.component.settings.WearSettingsJumpPageWidget
-import com.resukisu.resukisu.ui.component.wear.WearAppProfileConfig
-import com.resukisu.resukisu.ui.component.wear.WearPageTransition
-import com.resukisu.resukisu.ui.component.wear.WearSubPage
-import com.resukisu.resukisu.ui.component.wear.WearActionButton
-import com.resukisu.resukisu.ui.component.wear.WearDetailField
-import com.resukisu.resukisu.ui.component.wear.WearIconText
-import com.resukisu.resukisu.ui.component.wear.WearInfoCard
-import com.resukisu.resukisu.ui.component.wear.WearModuleInfoCard
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearScaledItem
-import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
-import com.resukisu.resukisu.ui.component.wear.WearStatusItem
-import com.resukisu.resukisu.ui.component.wear.rememberWearConfirmDialog
+import com.resukisu.resukisu.ui.wear.component.settings.WearSettingsJumpPageWidget
+import com.resukisu.resukisu.ui.wear.component.WearAppProfileConfig
+import com.resukisu.resukisu.ui.wear.component.WearSubPage
+import com.resukisu.resukisu.ui.wear.component.WearActionButton
+import com.resukisu.resukisu.ui.wear.component.WearDetailField
+import com.resukisu.resukisu.ui.wear.component.WearIconText
+import com.resukisu.resukisu.ui.wear.component.WearInfoCard
+import com.resukisu.resukisu.ui.wear.component.WearModuleInfoCard
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearScaledItem
+import com.resukisu.resukisu.ui.wear.component.settings.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.wear.component.WearStatusItem
+import com.resukisu.resukisu.ui.wear.component.rememberWearConfirmDialog
 import com.resukisu.resukisu.ui.viewmodel.AppProfileUiAction
 import com.resukisu.resukisu.ui.viewmodel.AppProfileUiEvent
 import com.resukisu.resukisu.ui.viewmodel.AppProfileViewModel
@@ -169,7 +167,8 @@ internal fun WearAppDetail(
     group: InstalledAppGroup?,
     isManager: Boolean,
     onBack: () -> Unit,
-    onSaved: () -> Unit = {},
+    onSaved: () -> Unit,
+    onOpen: (WearRoute) -> Unit,
 ) {
     if (group == null) {
         WearList(onBack = onBack) { spec ->
@@ -187,9 +186,7 @@ internal fun WearAppDetail(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     var error by remember { mutableStateOf<String?>(null) }
-    var page by rememberSaveable { mutableStateOf("") }
-    var templateId by rememberSaveable { mutableStateOf<String?>(null) }
-    val pageState = rememberSaveableStateHolder()
+    var editingProfile by rememberSaveable { mutableStateOf(false) }
     val failed = stringResource(R.string.failed_to_update_app_profile, group.mainApp.label)
     val failedSepolicy = stringResource(R.string.failed_to_update_sepolicy, group.mainApp.label)
     val suNotAllowed = stringResource(R.string.su_not_allowed, group.mainApp.label)
@@ -209,61 +206,44 @@ internal fun WearAppDetail(
         }
     }
 
-    WearPageTransition(page, if (page == "") 0 else if (page == "profile") 1 else 2) { route ->
-        pageState.SaveableStateProvider(route) {
-            val back = { page = "profile" }
-            when (route) {
-                "profile" -> WearSubPage({ page = "" }) {
-                    state.profile?.let { profile -> WearAppProfileConfig(profile, state.defaultUmountModules,
-                        state.sepolicyValid, error,
-                        { viewModel.dispatch(AppProfileUiAction.ValidateSepolicy(it)) }, save,
-                        { page = "templates" }, { templateId = it; page = "view-template" }, { page = "" }) }
-                }
-                "templates" -> WearSubPage(back) { WearTemplatePage(back) }
-                "view-template" -> WearSubPage(back) {
-                    templateId?.let { WearTemplateEditor(it, true, false, 0, back, back) }
-                }
-                else -> WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
-                    item { WearPageHeader(spec, group.mainApp.label) }
-                    if (!state.isLoading) {
-                        val profile = state.profile
-                        if (profile != null) {
-                            item {
-                                WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
-                                    WearDetailField(
-                                        Icons.TwoTone.Badge,
-                                        group.mainApp.label,
-                                        group.mainApp.displayIdentifier,
-                                    )
-                                    WearIconText(
-                                        Icons.TwoTone.Security,
-                                        if (profile.allowSu) stringResource(R.string.wear_allowed)
-                                        else stringResource(R.string.wear_denied),
-                                    )
-                                }
-                            }
-                            item {
-                                WearSettingsSwitchWidget(spec,
-                                    label = stringResource(R.string.superuser),
-                                    checked = profile.allowSu,
-                                    onCheckedChange = {
-                                        save(profile.copy(allowSu = it))
-                                    },
-                                    enabled = !isManager && !group.isWebViewZygote,
-                                    icon = Icons.TwoTone.Security,
-                                )
-                            }
-                            item {
-                                WearSettingsJumpPageWidget(spec, stringResource(R.string.profile), { page = "profile" },
-                                    icon = Icons.TwoTone.Security, enabled = !isManager)
-                            }
-                        } else {
-                            item { WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
-                        }
-                    }
-                    error?.let { item { WearStatusItem(spec, Icons.TwoTone.Error, it, tone = WearStatusTone.ERROR) } }
+    if (editingProfile) WearSubPage({ editingProfile = false }) {
+        state.profile?.let { profile ->
+            WearAppProfileConfig(profile, state.defaultUmountModules, state.sepolicyValid, error,
+                { viewModel.dispatch(AppProfileUiAction.ValidateSepolicy(it)) }, save,
+                onManageTemplates = { onOpen(WearRoute.Templates) },
+                onViewTemplate = { onOpen(WearRoute.TemplateEditor(it, readOnly = true, creation = false)) },
+                onBack = { editingProfile = false })
+        }
+    } else WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
+        item { WearPageHeader(spec, group.mainApp.label) }
+        val profile = state.profile
+        if (profile != null) {
+            item {
+                WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
+                    WearDetailField(Icons.TwoTone.Badge, group.mainApp.label, group.mainApp.displayIdentifier)
+                    WearIconText(
+                        Icons.TwoTone.Security,
+                        stringResource(if (profile.allowSu) R.string.wear_allowed else R.string.wear_denied),
+                    )
                 }
             }
+            item {
+                WearSettingsSwitchWidget(
+                    spec,
+                    label = stringResource(R.string.superuser),
+                    checked = profile.allowSu,
+                    onCheckedChange = { save(profile.copy(allowSu = it)) },
+                    enabled = !isManager && !group.isWebViewZygote,
+                    icon = Icons.TwoTone.Security,
+                )
+            }
+            item {
+                WearSettingsJumpPageWidget(spec, stringResource(R.string.profile), { editingProfile = true },
+                    icon = Icons.TwoTone.Security, enabled = !isManager)
+            }
+        } else {
+            item { WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
         }
+        error?.let { item { WearStatusItem(spec, Icons.TwoTone.Error, it, tone = WearStatusTone.ERROR) } }
     }
 }

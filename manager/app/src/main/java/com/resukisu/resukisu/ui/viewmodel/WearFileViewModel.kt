@@ -1,6 +1,5 @@
 package com.resukisu.resukisu.ui.viewmodel
 
-import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.resukisu.resukisu.data.file.WearDirectory
@@ -27,8 +26,6 @@ data class WearFileUiState(val directory: WearDirectory? = null, val loading: Bo
 sealed interface WearFileEvent {
     /** A picked or newly named file, as a URI of [WearFileProvider]. */
     data class Picked(val uri: String) : WearFileEvent
-    data class Saved(val name: String) : WearFileEvent
-    data class Share(val uri: String) : WearFileEvent
 }
 
 class WearFileViewModel(private val repository: WearFileRepository) : ViewModel() {
@@ -48,8 +45,6 @@ class WearFileViewModel(private val repository: WearFileRepository) : ViewModel(
         val path = repository.newFile(requireNotNull(current.directory).path, current.name)
         mutableEvents.emit(WearFileEvent.Picked(WearFileProvider.uriFor(path).toString()))
     }
-    fun exportTo(uri: String) = submit { mutableEvents.emit(WearFileEvent.Saved(repository.export(uri.toUri()))) }
-    fun share() = submit { mutableEvents.emit(WearFileEvent.Share(repository.shareUri())) }
     fun clearError() { mutableState.update { it.copy(error = null, failed = false) } }
     private fun submit(block: suspend () -> Unit) {
         if (task?.isActive == true) return

@@ -1,33 +1,24 @@
 package com.resukisu.resukisu.ui.wear
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.animation.core.Animatable
 import com.resukisu.resukisu.ui.viewmodel.WearPreferencesViewModel
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
 import androidx.compose.ui.res.stringResource
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Error
-import com.resukisu.resukisu.ui.component.wear.WearStatusTone
-import com.resukisu.resukisu.ui.component.wear.WearStatusItem
+import com.resukisu.resukisu.ui.wear.component.WearStatusTone
+import com.resukisu.resukisu.ui.wear.component.WearStatusItem
 import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme
@@ -37,12 +28,10 @@ import androidx.wear.compose.material3.dynamicColorScheme
 import com.materialkolor.ktx.toColor
 import com.materialkolor.ktx.toHct
 import com.resukisu.resukisu.R
-import com.resukisu.resukisu.ui.component.wear.WearBackground
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearLoadingScreen
-import com.resukisu.resukisu.ui.component.wear.WearScaledItem
-import com.resukisu.resukisu.ui.component.wear.WearTimeText
-import com.resukisu.resukisu.ui.component.wear.LocalWearPageAnimation
+import com.resukisu.resukisu.ui.wear.component.WearBackground
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearLoadingScreen
+import com.resukisu.resukisu.ui.wear.component.WearTimeText
 import com.resukisu.resukisu.ui.theme.ThemeConfig
 import com.resukisu.resukisu.ui.viewmodel.SettingsViewModel
 import org.koin.compose.koinInject
@@ -110,28 +99,10 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
         // Wear screens keep a pure black background whichever scheme is used.
         scheme.copy(background = Color.Black)
     }
-    CompositionLocalProvider(LocalDensity provides density, LocalConfiguration provides configuration,
-        LocalWearPageAnimation provides preferences.pageAnimation) {
+    CompositionLocalProvider(LocalDensity provides density, LocalConfiguration provides configuration) {
         MaterialTheme(colorScheme = colors, motionScheme = MotionScheme.expressive()) {
             // The selected image and dim layer belong to the shared page background.
-            // A language change swaps the texts in place; the content fades back in over it.
-            val locales = LocalConfiguration.current.locales
-            val motion = MaterialTheme.motionScheme
-            val reduceMotion = LocalReduceMotion.current
-            val fade = remember { Animatable(1f) }
-            var shownLocales by remember { mutableStateOf(locales) }
-            LaunchedEffect(locales, reduceMotion) {
-                if (locales != shownLocales) {
-                    shownLocales = locales
-                    if (!reduceMotion) {
-                        fade.snapTo(0f)
-                        fade.animateTo(1f, motion.fastEffectsSpec())
-                    } else fade.snapTo(1f)
-                } else if (reduceMotion) {
-                    fade.snapTo(1f)
-                }
-            }
-            WearBackground { Box(Modifier.fillMaxSize().graphicsLayer { alpha = fade.value }) { content() } }
+            WearBackground { content() }
         }
     }
 }

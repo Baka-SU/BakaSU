@@ -21,11 +21,11 @@ import androidx.wear.compose.material3.Text
 import com.resukisu.resukisu.BuildConfig
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.ui.component.PackageIcon
-import com.resukisu.resukisu.ui.component.wear.WearChip
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearScaledItem
-import com.resukisu.resukisu.ui.component.wear.wearGroupGap
+import com.resukisu.resukisu.ui.wear.component.WearChip
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearScaledItem
+import com.resukisu.resukisu.ui.wear.component.wearGroupGap
 
 /**
  * @author Hanhan_awa

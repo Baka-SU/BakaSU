@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.view.ViewGroup
 import android.webkit.RenderProcessGoneDetail
@@ -55,6 +54,7 @@ internal suspend fun prepareWebView(
     appIconDataSource: AppIconDataSource,
     webUiRepository: WebUiRepository,
     colorsCssProvider: () -> String,
+    recoverFromRenderCrash: Boolean = false,
 ) {
     withContext(Dispatchers.IO) {
         val refreshEvent = async(start = CoroutineStart.UNDISPATCHED) {
@@ -115,6 +115,7 @@ internal suspend fun prepareWebView(
                 LocalWebUiBackend(webUiRepository, packageRepository, appIconDataSource),
                 settingsRepository,
                 colorsCssProvider = colorsCssProvider,
+                recoverFromRenderCrash = recoverFromRenderCrash,
             )
         }
     }
@@ -129,7 +130,8 @@ private const val MODULE_HOST = "mui.kernelsu.org"
  * Creates the module WebView for [webUIState], whose module name and directory are already set,
  * serving files, commands and the `ksu` bridge from [backend]. With [restrictToModule] nothing
  * outside the module's own origin loads into the page, so no other site can reach the bridge; links
- * elsewhere open in the browser. Must run on the main thread.
+ * elsewhere open in the browser. With [recoverFromRenderCrash] a crashed renderer closes the page
+ * with an error instead of killing the app, as low-memory watches need. Must run on the main thread.
  */
 @SuppressLint("SetJavaScriptEnabled")
 internal fun createWebView(
@@ -139,6 +141,7 @@ internal fun createWebView(
     settingsRepository: AppSettingsRepository,
     restrictToModule: Boolean = false,
     colorsCssProvider: () -> String,
+    recoverFromRenderCrash: Boolean = false,
 ) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         @Suppress("DEPRECATION")
@@ -189,7 +192,7 @@ internal fun createWebView(
         }
 
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
-            if (!activity.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) {
+            if (!recoverFromRenderCrash) {
                 return super.onRenderProcessGone(view, detail)
             }
             (view.parent as? ViewGroup)?.removeView(view)

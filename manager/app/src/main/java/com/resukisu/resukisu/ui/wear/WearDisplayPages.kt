@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
@@ -42,17 +44,16 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import com.resukisu.resukisu.R
-import com.resukisu.resukisu.ui.component.wear.WearActionButton
-import com.resukisu.resukisu.ui.component.wear.WearInfoCard
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearScaledItem
-import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
-import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
-import com.resukisu.resukisu.ui.component.wear.WearSliderCard
-import com.resukisu.resukisu.ui.component.wear.WearSubPage
-import com.resukisu.resukisu.ui.component.wear.WearPageTransition
-import com.resukisu.resukisu.ui.component.wear.WearTextInputPage
+import com.resukisu.resukisu.ui.wear.component.WearActionButton
+import com.resukisu.resukisu.ui.wear.component.WearInfoCard
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearScaledItem
+import com.resukisu.resukisu.ui.wear.component.WearSectionHeader
+import com.resukisu.resukisu.ui.wear.component.settings.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.wear.component.WearSliderCard
+import com.resukisu.resukisu.ui.wear.component.WearSubPage
+import com.resukisu.resukisu.ui.wear.component.WearTextInputPage
 import com.resukisu.resukisu.ui.theme.ThemeConfig
 import com.resukisu.resukisu.ui.viewmodel.SettingsUiAction
 import com.resukisu.resukisu.ui.viewmodel.SettingsUiState
@@ -64,9 +65,6 @@ import kotlin.math.roundToInt
  * @date 2026/10/1.
  */
 
-private val SwatchColors = listOf(0xFF9FCAFF, 0xFFBEC2FF, 0xFFD6BBFF, 0xFFBF8D9D, 0xFFE6ACCC, 0xFFFFB3A5,
-    0xFFFFD166, 0xFFE9EF80, 0xFF9ACB78, 0xFF75CBBA, 0xFF44CBE0, 0xFFB5C4CD)
-
 private fun Int.toHex() = "#%06X".format(this and 0xFFFFFF)
 
 /**
@@ -77,72 +75,76 @@ private fun Int.toHex() = "#%06X".format(this and 0xFFFFFF)
 @Composable
 internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit, onImage: () -> Unit) {
     val config = koinInject<ThemeConfig>()
+    val resources = LocalResources.current
+    val swatches = remember(resources) {
+        resources.obtainTypedArray(R.array.wear_theme_swatches).run {
+            try { List(length()) { getColor(it, 0) } } finally { recycle() }
+        }
+    }
     var hex by rememberSaveable { mutableStateOf(config.seedColor.toHex()) }
     var editingHex by rememberSaveable { mutableStateOf(false) }
     val valid = hex.matches(Regex("#[0-9a-fA-F]{6}"))
-    WearPageTransition(if (editingHex) "hex" else "", if (editingHex) 1 else 0) { route ->
-        if (route == "hex") {
-            WearSubPage({ editingHex = false }) {
-                WearTextInputPage(stringResource(R.string.wear_custom_color), hex) { text ->
-                    hex = text.trim().uppercase().let { if (it.startsWith("#")) it else "#$it" }
-                    editingHex = false
-                }
+    if (editingHex) {
+        WearSubPage({ editingHex = false }) {
+            WearTextInputPage(stringResource(R.string.wear_custom_color), hex) { text ->
+                hex = text.trim().uppercase().let { if (it.startsWith("#")) it else "#$it" }
+                editingHex = false
             }
-        } else {
-            Box(Modifier.fillMaxSize()) {
-                // Keep three equally sized cells; each toggle leaves 5% space on each side.
-                val columns = 3
-                WearList(onBack = onBack) { spec ->
-                    item { WearPageHeader(spec, stringResource(R.string.theme_color)) }
-                    if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
-                    item {
-                        WearSettingsSwitchWidget(spec, stringResource(R.string.dynamic_color_title), state.useDynamicColor,
-                            { onAction(SettingsUiAction.SetDynamicColor(it)) }, icon = Icons.TwoTone.Palette,
-                            secondaryLabel = stringResource(R.string.dynamic_color_summary))
-                    }
-                    item { WearSectionHeader(spec, stringResource(R.string.choose_theme_color)) }
-                    // Swatches share the row equally so they fill the screen width (margins stretch evenly).
-                    SwatchColors.chunked(columns).forEachIndexed { index, row ->
-                        item(key = "swatches-$index") {
-                            WearScaledItem(spec) {
-                                Row(Modifier.fillMaxWidth()) {
-                                    row.forEach { value ->
-                                        Box(Modifier.weight(1f).heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
-                                            ColorSwatch(Color(value), !state.useDynamicColor && config.seedColor == Color(value).toArgb()) {
-                                                hex = Color(value).toArgb().toHex()
-                                                onAction(SettingsUiAction.SetDynamicColor(false))
-                                                onAction(SettingsUiAction.SetThemeColor(Color(value).toArgb()))
-                                            }
+        }
+    } else {
+        Box(Modifier.fillMaxSize()) {
+            // Keep three equally sized cells; each toggle leaves 5% space on each side.
+            val columns = 3
+            WearList(onBack = onBack) { spec ->
+                item { WearPageHeader(spec, stringResource(R.string.theme_color)) }
+                if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
+                item {
+                    WearSettingsSwitchWidget(spec, stringResource(R.string.dynamic_color_title), state.useDynamicColor,
+                        { onAction(SettingsUiAction.SetDynamicColor(it)) }, icon = Icons.TwoTone.Palette,
+                        secondaryLabel = stringResource(R.string.dynamic_color_summary))
+                }
+                item { WearSectionHeader(spec, stringResource(R.string.choose_theme_color)) }
+                // Swatches share the row equally so they fill the screen width (margins stretch evenly).
+                swatches.chunked(columns).forEachIndexed { index, row ->
+                    item(key = "swatches-$index") {
+                        WearScaledItem(spec) {
+                            Row(Modifier.fillMaxWidth()) {
+                                row.forEach { value ->
+                                    Box(Modifier.weight(1f).heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
+                                        ColorSwatch(Color(value), !state.useDynamicColor && config.seedColor == Color(value).toArgb()) {
+                                            hex = Color(value).toArgb().toHex()
+                                            onAction(SettingsUiAction.SetDynamicColor(false))
+                                            onAction(SettingsUiAction.SetThemeColor(Color(value).toArgb()))
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    item { WearSectionHeader(spec, stringResource(R.string.wear_custom_color)) }
-                    item { HexColorButton(spec, hex, valid) { editingHex = true } }
+                }
+                item { WearSectionHeader(spec, stringResource(R.string.wear_custom_color)) }
+                item { HexColorButton(spec, hex, valid) { editingHex = true } }
+                item {
+                    WearActionButton(spec, Icons.TwoTone.Check, stringResource(R.string.background_crop_apply), {
+                        onAction(SettingsUiAction.SetDynamicColor(false))
+                        onAction(SettingsUiAction.SetThemeColor(hex.toColorInt()))
+                    }, enabled = valid, colors = ButtonDefaults.buttonColors())
+                }
+                item { WearSectionHeader(spec, stringResource(R.string.settings_custom_background)) }
+                item {
+                    WearActionButton(spec, Icons.TwoTone.Image, stringResource(R.string.settings_custom_background_summary), onImage,
+                        colors = ButtonDefaults.filledTonalButtonColors())
+                }
+                // Dimming only affects the custom background image, so it appears with one.
+                if (state.isCustomBackgroundEnabled) {
                     item {
-                        WearActionButton(spec, Icons.TwoTone.Check, stringResource(R.string.background_crop_apply), {
-                            onAction(SettingsUiAction.SetDynamicColor(false))
-                            onAction(SettingsUiAction.SetThemeColor(hex.toColorInt()))
-                        }, enabled = valid, colors = ButtonDefaults.buttonColors())
+                        WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.wear_remove_background),
+                            { onAction(SettingsUiAction.RemoveCustomBackground) }, colors = ButtonDefaults.filledTonalButtonColors())
                     }
-                    item { WearSectionHeader(spec, stringResource(R.string.settings_custom_background)) }
                     item {
-                        WearActionButton(spec, Icons.TwoTone.Image, stringResource(R.string.settings_custom_background_summary), onImage,
-                            colors = ButtonDefaults.filledTonalButtonColors())
-                    }
-                    // Dimming only affects the custom background image, so it appears with one.
-                    if (state.isCustomBackgroundEnabled) {
-                        item {
-                            WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.wear_remove_background),
-                                { onAction(SettingsUiAction.RemoveCustomBackground) }, colors = ButtonDefaults.filledTonalButtonColors())
-                        }
-                        item {
-                            WearSliderCard(spec, Icons.TwoTone.Image, stringResource(R.string.settings_background_dim),
-                                "${(state.backgroundDim * 100).roundToInt()}%", state.backgroundDim,
-                                { onAction(SettingsUiAction.SetBackgroundDim(it)) }, valueRange = 0f..1f, steps = 19)
-                        }
+                        WearSliderCard(spec, Icons.TwoTone.Image, stringResource(R.string.settings_background_dim),
+                            "${(state.backgroundDim * 100).roundToInt()}%", state.backgroundDim,
+                            { onAction(SettingsUiAction.SetBackgroundDim(it)) }, valueRange = 0f..1f, steps = 19)
                     }
                 }
             }

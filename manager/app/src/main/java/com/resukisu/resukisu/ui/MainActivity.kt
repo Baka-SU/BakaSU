@@ -1,7 +1,5 @@
 package com.resukisu.resukisu.ui
 
-import android.os.LocaleList
-import android.content.res.Configuration
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -25,7 +23,6 @@ import androidx.lifecycle.lifecycleScope
 import com.resukisu.resukisu.domain.model.StartupState
 import com.resukisu.resukisu.domain.usecase.ApplyLanguageUseCase
 import com.resukisu.resukisu.domain.usecase.EnsureManagerInstalledUseCase
-import com.resukisu.resukisu.domain.usecase.GetStringPreferenceUseCase
 import com.resukisu.resukisu.domain.usecase.ObserveStartupStateUseCase
 import com.resukisu.resukisu.ui.activity.util.ThemeChangeContentObserver
 import com.resukisu.resukisu.ui.activity.util.ThemeUtils
@@ -40,19 +37,13 @@ import com.resukisu.resukisu.ui.viewmodel.SettingsUiEvent
 import com.resukisu.resukisu.ui.viewmodel.SettingsViewModel
 import com.resukisu.resukisu.ui.viewmodel.SuperUserUiAction
 import com.resukisu.resukisu.ui.viewmodel.SuperUserViewModel
-import com.resukisu.resukisu.ui.wear.WearManagerScreen
-import com.resukisu.resukisu.ui.wear.WearManagerTheme
-import com.resukisu.resukisu.ui.wear.WearStartupStatus
-import com.resukisu.resukisu.ui.wear.withDocumentPickerFallback
+import com.resukisu.resukisu.ui.wear.WearMainActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 open class MainActivity : ComponentActivity() {
-    private val isWearDevice by lazy {
-        packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)
-    }
     private val superUserViewModel: SuperUserViewModel by viewModel()
     private val homeViewModel: HomeViewModel by viewModel()
     private val moduleViewModel: ModuleViewModel by viewModel()
@@ -61,15 +52,6 @@ open class MainActivity : ComponentActivity() {
     private val ensureManagerInstalled: EnsureManagerInstalledUseCase by inject()
     private val themeUtils: ThemeUtils by inject()
     private val applyLanguage: ApplyLanguageUseCase by inject()
-
-    private val getPreference: GetStringPreferenceUseCase by inject()
-
-    // Standard SAF requests fall back to the app's own picker where the device has no usable one.
-    @Deprecated("Deprecated in Java")
-    @Suppress("DEPRECATION")
-    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
-        super.startActivityForResult(withDocumentPickerFallback(intent, getPreference("wear_file_picker")), requestCode, options)
-    }
     private val startupState by lazy { observeStartupState() }
 
     private var showConfirmationDialog: MutableState<Boolean> = mutableStateOf(false)
@@ -84,21 +66,14 @@ open class MainActivity : ComponentActivity() {
 
     private val intentState = MutableStateFlow(0)
 
-    /**
-     * A language change reaches the activity here instead of relaunching it. Wear recomposes in
-     * place with a short fade; the phone recreates itself, as the system relaunch did before.
-     */
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        val localeChanged = newConfig.locales != shownLocales
-        super.onConfigurationChanged(newConfig)
-        shownLocales = newConfig.locales
-        if (localeChanged && !isWearDevice) recreate()
-    }
-
-    private var shownLocales: LocaleList? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
-        shownLocales = resources.configuration.locales
+        // Watches use their own activity; the launcher entries and alias stay shared with the phone.
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) {
+            super.onCreate(savedInstanceState)
+            startActivity(Intent(intent).setClass(this, WearMainActivity::class.java))
+            finish()
+            return
+        }
         try {
             val splashScreen = installSplashScreen()
 
@@ -110,26 +85,6 @@ open class MainActivity : ComponentActivity() {
             }
 
             super.onCreate(savedInstanceState)
-
-            if (isWearDevice) {
-                lifecycleScope.launch { ensureManagerInstalled() }
-                // As on the phone, Home and the app list start loading at launch, so the superuser
-                // page already has its list once the startup screen is gone.
-                if (savedInstanceState == null) {
-                    homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
-                    superUserViewModel.dispatch(SuperUserUiAction.Refresh)
-                }
-                setContent {
-                    WearManagerTheme {
-                        when (val state = startupState.collectAsStateWithLifecycle().value) {
-                            StartupState.Loading -> WearStartupStatus()
-                            is StartupState.Failed -> WearStartupStatus(state.message)
-                            StartupState.Ready -> WearManagerScreen()
-                        }
-                    }
-                }
-                return
-            }
 
             splashScreen.setKeepOnScreenCondition {
                 shouldKeepStartupSplash(
@@ -248,7 +203,6 @@ open class MainActivity : ComponentActivity() {
     override fun onResume() {
         try {
             super.onResume()
-            if (isWearDevice) return
             themeUtils.onActivityResume(this)
             synchronizeUiSettings()
         } catch (e: Exception) {
@@ -266,7 +220,6 @@ open class MainActivity : ComponentActivity() {
     override fun onPause() {
         try {
             super.onPause()
-            if (isWearDevice) return
             themeUtils.onActivityPause()
         } catch (e: Exception) {
             e.printStackTrace()

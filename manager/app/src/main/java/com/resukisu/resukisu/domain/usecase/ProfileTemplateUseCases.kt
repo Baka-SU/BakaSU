@@ -19,10 +19,6 @@ class RefreshProfileTemplatesUseCase(private val repository: ProfileTemplateRepo
     suspend operator fun invoke(synchronize: Boolean = false) = repository.refresh(synchronize)
 }
 
-class BrowseOnlineProfileTemplatesUseCase(private val repository: ProfileTemplateRepository) {
-    suspend operator fun invoke() = repository.browseOnline()
-}
-
 class GetProfileTemplateUseCase(private val repository: ProfileTemplateRepository) {
     suspend operator fun invoke(id: String) = repository.get(id)
 }

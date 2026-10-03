@@ -1,14 +1,8 @@
 package com.resukisu.resukisu.data.file
 
 import android.app.Application
-import android.net.Uri
 import android.os.Environment
-import android.provider.OpenableColumns
-import androidx.core.content.FileProvider
-import androidx.core.net.toUri
-import com.resukisu.resukisu.BuildConfig
 import com.resukisu.resukisu.R
-import com.resukisu.resukisu.data.logging.BugreportRepository
 import com.resukisu.resukisu.data.shell.KsuCliRepository
 import com.resukisu.resukisu.ui.webui.MimeUtil
 import com.topjohnwu.superuser.io.SuFile
@@ -36,7 +30,6 @@ fun matchesMimeType(mimeType: String, filters: List<String>): Boolean = filters.
 class WearFileRepository(
     private val application: Application,
     private val cli: KsuCliRepository,
-    private val bugreport: BugreportRepository,
 ) {
     private fun fail(resource: Int): Nothing = throw WearFileException(application.getString(resource))
 
@@ -97,27 +90,5 @@ class WearFileRepository(
         } finally {
             staged.delete()
         }
-    }
-
-    suspend fun export(uri: Uri): String = withContext(Dispatchers.IO) {
-        val source = bugreport.create()
-        val output = application.contentResolver.openOutputStream(uri) ?: fail(R.string.operation_failed)
-        output.use { target -> source.inputStream().use { it.copyTo(target) } }
-        displayName(uri.toString()) ?: uri.toString()
-    }
-
-    /** The user-facing file name of a picked URI, or null when the provider does not report one. */
-    suspend fun displayName(uri: String): String? = withContext(Dispatchers.IO) {
-        val parsed = uri.toUri()
-        runCatching {
-            application.contentResolver.query(parsed, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) cursor.getString(0) else null
-            }
-        }.getOrNull() ?: parsed.lastPathSegment
-    }
-
-    /** Creates a bugreport and returns a content URI that a share target can read. */
-    suspend fun shareUri(): String = withContext(Dispatchers.IO) {
-        FileProvider.getUriForFile(application, "${BuildConfig.APPLICATION_ID}.fileprovider", bugreport.create()).toString()
     }
 }
