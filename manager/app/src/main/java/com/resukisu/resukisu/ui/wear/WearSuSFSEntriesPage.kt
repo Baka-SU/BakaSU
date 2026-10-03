@@ -26,17 +26,16 @@ import com.resukisu.resukisu.domain.model.SuSFSConfig
 import com.resukisu.resukisu.domain.model.SusKstatStatically
 import com.resukisu.resukisu.domain.model.SusKstatType
 import com.resukisu.resukisu.domain.model.UidScheme
-import com.resukisu.resukisu.ui.component.settings.LazySegmentedColumn
-import com.resukisu.resukisu.ui.component.settings.SegmentedColumn
-import com.resukisu.resukisu.ui.component.settings.WearChoicePage
-import com.resukisu.resukisu.ui.component.settings.WearSettingsJumpPageWidget
-import com.resukisu.resukisu.ui.component.wear.WearInfoCard
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearPageTransition
-import com.resukisu.resukisu.ui.component.wear.WearSubPage
-import com.resukisu.resukisu.ui.component.wear.WearTextInputPage
-import com.resukisu.resukisu.ui.component.wear.rememberWearConfirmDialog
+import com.resukisu.resukisu.ui.wear.component.settings.LazySegmentedColumn
+import com.resukisu.resukisu.ui.wear.component.settings.SegmentedColumn
+import com.resukisu.resukisu.ui.wear.component.settings.WearChoicePage
+import com.resukisu.resukisu.ui.wear.component.settings.WearSettingsJumpPageWidget
+import com.resukisu.resukisu.ui.wear.component.WearInfoCard
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearSubPage
+import com.resukisu.resukisu.ui.wear.component.WearTextInputPage
+import com.resukisu.resukisu.ui.wear.component.rememberWearConfirmDialog
 import com.resukisu.resukisu.ui.viewmodel.SuSFSUiAction
 import com.resukisu.resukisu.ui.viewmodel.SusKstatOperation
 import com.resukisu.resukisu.ui.viewmodel.SuSFSViewModel
@@ -201,94 +200,93 @@ internal fun WearSuSFSAddPage(section: WearSuSFSSection, busy: Boolean, message:
         choosing.isNotEmpty() -> "choice:$choosing"
         else -> ""
     }
-    WearPageTransition(route, if (route.isEmpty()) 0 else 1) { shownPage ->
-        if (shownPage.startsWith("field:")) {
-            val shownField = shownPage.removePrefix("field:").toInt()
-            WearSubPage({ field = -1 }) {
-                WearTextInputPage(stringResource(when (shownField) {
-                    0 -> R.string.susfs_entry_path_label
-                    1 -> R.string.susfs_redirect_redirected_path
-                    else -> KstatFields[shownField - 2]
-                }), when (shownField) { 0 -> path; 1 -> redirected; else -> staticValues[shownField - 2] },
-                    multiline = shownField == 0 && section != WearSuSFSSection.Redirect) {
-                    when (shownField) {
-                        0 -> path = it.trim()
-                        1 -> redirected = it.trim()
-                        else -> staticValues = staticValues.toMutableList().also { values -> values[shownField - 2] = it.trim() }
-                    }
-                    invalid = false
-                    field = -1
+    val shownPage = route
+    if (shownPage.startsWith("field:")) {
+        val shownField = shownPage.removePrefix("field:").toInt()
+        WearSubPage({ field = -1 }) {
+            WearTextInputPage(stringResource(when (shownField) {
+                0 -> R.string.susfs_entry_path_label
+                1 -> R.string.susfs_redirect_redirected_path
+                else -> KstatFields[shownField - 2]
+            }), when (shownField) { 0 -> path; 1 -> redirected; else -> staticValues[shownField - 2] },
+                multiline = shownField == 0 && section != WearSuSFSSection.Redirect) {
+                when (shownField) {
+                    0 -> path = it.trim()
+                    1 -> redirected = it.trim()
+                    else -> staticValues = staticValues.toMutableList().also { values -> values[shownField - 2] = it.trim() }
                 }
+                invalid = false
+                field = -1
             }
-        } else if (shownPage.startsWith("choice:")) {
-            val shownChoice = shownPage.removePrefix("choice:")
-            WearSubPage({ choosing = "" }) {
-                val choices = when (shownChoice) {
-                    "uid" -> UidScheme.entries.map { it.name to stringResource(uidLabel(it)) }
-                    "path" -> listOf("normal" to stringResource(R.string.susfs_path_subtype_path),
-                        "loop" to stringResource(R.string.susfs_path_subtype_loop))
-                    else -> SusKstatType.entries.map { it.name to stringResource(kstatLabel(it)) }
-                }
-                WearChoicePage(stringResource(if (shownChoice == "uid") R.string.susfs_redirect_uid_scheme else R.string.susfs_entry_select_subtype),
-                    choices, when (shownChoice) { "uid" -> uid; "path" -> if (loop) "loop" else "normal"; else -> subtype },
-                    onBack = { choosing = "" },
-                    icon = { if (shownChoice == "uid") Icons.TwoTone.Security else section.icon }) {
-                    when (shownChoice) { "uid" -> uid = it; "path" -> loop = it == "loop"; else -> subtype = it }
-                    choosing = ""
-                }
+        }
+    } else if (shownPage.startsWith("choice:")) {
+        val shownChoice = shownPage.removePrefix("choice:")
+        WearSubPage({ choosing = "" }) {
+            val choices = when (shownChoice) {
+                "uid" -> UidScheme.entries.map { it.name to stringResource(uidLabel(it)) }
+                "path" -> listOf("normal" to stringResource(R.string.susfs_path_subtype_path),
+                    "loop" to stringResource(R.string.susfs_path_subtype_loop))
+                else -> SusKstatType.entries.map { it.name to stringResource(kstatLabel(it)) }
             }
-        } else {
-            val default = stringResource(R.string.susfs_value_default)
-            WearList(isLoading = busy || readingFile, onBack = onBack, onConfirm = {
-                val paths = path.lineSequence().map { it.replace("\uFEFF", "").trim() }
-                    .filter { it.isNotEmpty() && !it.startsWith("//") && !it.startsWith('#') }.toList()
-                val values = staticValues.map { it.toLongOrNull() }
-                invalid = paths.isEmpty() || paths.any { !it.startsWith('/') } ||
-                    (section == WearSuSFSSection.Redirect && (!redirected.startsWith('/') || paths.size != 1)) ||
-                    (section == WearSuSFSSection.Kstat && type == SusKstatType.Statically &&
-                        staticValues.withIndex().any { (index, value) -> value.isNotBlank() && values[index] == null })
-                if (!invalid && !readingFile) onCommand(paths.map { entry -> { reply -> when (section) {
-                    WearSuSFSSection.Path -> SuSFSUiAction.AddSusPath(entry, loop, reply)
-                    WearSuSFSSection.Kstat -> SuSFSUiAction.AddSusKstat(entry, SusKstatOperation.valueOf(subtype),
-                        if (type == SusKstatType.Statically) SusKstatStatically(values[0], values[1], values[2], values[3],
-                            values[4], values[5], values[6], values[7], values[8], values[9], values[10], values[11]) else null, reply)
-                    WearSuSFSSection.Redirect -> SuSFSUiAction.AddOpenRedirect(entry, redirected, UidScheme.valueOf(uid), reply)
-                    else -> SuSFSUiAction.AddSusMap(entry, reply)
-                } } })
-            }) { spec ->
-                item { WearPageHeader(spec, stringResource(R.string.susfs_entry_manual_add)) }
-                if (invalid || fileError != null || message != null) item {
-                    WearInfoCard(spec) { Text(if (invalid) stringResource(R.string.susfs_operation_failed) else fileError ?: message.orEmpty()) }
-                }
-                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_entry_path_label), { field = 0 },
-                    icon = Icons.TwoTone.Folder,
-                    description = path.ifBlank { default }) }
-                if (section != WearSuSFSSection.Redirect) item {
-                    WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_entry_import_from_file), {
-                        runCatching { importLauncher.launch(arrayOf("*/*")) }.onFailure { fileError = readFailed }
-                    }, icon = Icons.TwoTone.FileOpen, description = stringResource(R.string.susfs_entry_import_hint))
-                }
-                if (section == WearSuSFSSection.Path || section == WearSuSFSSection.Kstat) item {
-                    WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_entry_select_subtype), {
-                        choosing = if (section == WearSuSFSSection.Path) "path" else "kstat"
-                    }, icon = Icons.TwoTone.Tune, description = stringResource(if (section == WearSuSFSSection.Kstat) kstatLabel(type)
-                        else if (loop) R.string.susfs_path_subtype_loop else R.string.susfs_path_subtype_path))
-                }
-                if (section == WearSuSFSSection.Redirect) {
-                    item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_redirect_redirected_path), { field = 1 },
-                        icon = Icons.AutoMirrored.TwoTone.AltRoute,
-                        description = redirected.ifBlank { default }) }
-                    item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_redirect_uid_scheme), { choosing = "uid" },
-                        icon = Icons.TwoTone.Security,
-                        description = stringResource(uidLabel(UidScheme.valueOf(uid)))) }
-                }
-                if (section == WearSuSFSSection.Kstat && type == SusKstatType.Statically) {
-                    item { WearInfoCard(spec) { Text(stringResource(R.string.susfs_kstat_statically_fields)) } }
-                    SegmentedColumn(KstatFields.withIndex().toList(), { it.value }) { (index, label) ->
-                        WearSettingsJumpPageWidget(spec, stringResource(label), { field = index + 2 },
-                            icon = Icons.TwoTone.Storage,
-                            description = staticValues[index].ifBlank { default })
-                    }
+            WearChoicePage(stringResource(if (shownChoice == "uid") R.string.susfs_redirect_uid_scheme else R.string.susfs_entry_select_subtype),
+                choices, when (shownChoice) { "uid" -> uid; "path" -> if (loop) "loop" else "normal"; else -> subtype },
+                onBack = { choosing = "" },
+                icon = { if (shownChoice == "uid") Icons.TwoTone.Security else section.icon }) {
+                when (shownChoice) { "uid" -> uid = it; "path" -> loop = it == "loop"; else -> subtype = it }
+                choosing = ""
+            }
+        }
+    } else {
+        val default = stringResource(R.string.susfs_value_default)
+        WearList(isLoading = busy || readingFile, onBack = onBack, onConfirm = {
+            val paths = path.lineSequence().map { it.replace("\uFEFF", "").trim() }
+                .filter { it.isNotEmpty() && !it.startsWith("//") && !it.startsWith('#') }.toList()
+            val values = staticValues.map { it.toLongOrNull() }
+            invalid = paths.isEmpty() || paths.any { !it.startsWith('/') } ||
+                (section == WearSuSFSSection.Redirect && (!redirected.startsWith('/') || paths.size != 1)) ||
+                (section == WearSuSFSSection.Kstat && type == SusKstatType.Statically &&
+                    staticValues.withIndex().any { (index, value) -> value.isNotBlank() && values[index] == null })
+            if (!invalid && !readingFile) onCommand(paths.map { entry -> { reply -> when (section) {
+                WearSuSFSSection.Path -> SuSFSUiAction.AddSusPath(entry, loop, reply)
+                WearSuSFSSection.Kstat -> SuSFSUiAction.AddSusKstat(entry, SusKstatOperation.valueOf(subtype),
+                    if (type == SusKstatType.Statically) SusKstatStatically(values[0], values[1], values[2], values[3],
+                        values[4], values[5], values[6], values[7], values[8], values[9], values[10], values[11]) else null, reply)
+                WearSuSFSSection.Redirect -> SuSFSUiAction.AddOpenRedirect(entry, redirected, UidScheme.valueOf(uid), reply)
+                else -> SuSFSUiAction.AddSusMap(entry, reply)
+            } } })
+        }) { spec ->
+            item { WearPageHeader(spec, stringResource(R.string.susfs_entry_manual_add)) }
+            if (invalid || fileError != null || message != null) item {
+                WearInfoCard(spec) { Text(if (invalid) stringResource(R.string.susfs_operation_failed) else fileError ?: message.orEmpty()) }
+            }
+            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_entry_path_label), { field = 0 },
+                icon = Icons.TwoTone.Folder,
+                description = path.ifBlank { default }) }
+            if (section != WearSuSFSSection.Redirect) item {
+                WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_entry_import_from_file), {
+                    runCatching { importLauncher.launch(arrayOf("*/*")) }.onFailure { fileError = readFailed }
+                }, icon = Icons.TwoTone.FileOpen, description = stringResource(R.string.susfs_entry_import_hint))
+            }
+            if (section == WearSuSFSSection.Path || section == WearSuSFSSection.Kstat) item {
+                WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_entry_select_subtype), {
+                    choosing = if (section == WearSuSFSSection.Path) "path" else "kstat"
+                }, icon = Icons.TwoTone.Tune, description = stringResource(if (section == WearSuSFSSection.Kstat) kstatLabel(type)
+                    else if (loop) R.string.susfs_path_subtype_loop else R.string.susfs_path_subtype_path))
+            }
+            if (section == WearSuSFSSection.Redirect) {
+                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_redirect_redirected_path), { field = 1 },
+                    icon = Icons.AutoMirrored.TwoTone.AltRoute,
+                    description = redirected.ifBlank { default }) }
+                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_redirect_uid_scheme), { choosing = "uid" },
+                    icon = Icons.TwoTone.Security,
+                    description = stringResource(uidLabel(UidScheme.valueOf(uid)))) }
+            }
+            if (section == WearSuSFSSection.Kstat && type == SusKstatType.Statically) {
+                item { WearInfoCard(spec) { Text(stringResource(R.string.susfs_kstat_statically_fields)) } }
+                SegmentedColumn(KstatFields.withIndex().toList(), { it.value }) { (index, label) ->
+                    WearSettingsJumpPageWidget(spec, stringResource(label), { field = index + 2 },
+                        icon = Icons.TwoTone.Storage,
+                        description = staticValues[index].ifBlank { default })
                 }
             }
         }

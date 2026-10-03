@@ -1,7 +1,7 @@
 package com.resukisu.resukisu.ui.wear
 
 import androidx.compose.material.icons.twotone.Error
-import com.resukisu.resukisu.ui.component.wear.WearStatusTone
+import com.resukisu.resukisu.ui.wear.component.WearStatusTone
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Search
 import androidx.compose.material.icons.twotone.SearchOff
@@ -13,11 +13,10 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import com.resukisu.resukisu.R
-import com.resukisu.resukisu.ui.component.wear.WearActionButton
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearStatusItem
-import com.resukisu.resukisu.ui.component.wear.wearLoadingItem
+import com.resukisu.resukisu.ui.wear.component.WearActionButton
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearStatusItem
 import com.resukisu.resukisu.ui.viewmodel.ModuleUiState
 import com.resukisu.resukisu.ui.viewmodel.SuperUserUiState
 
@@ -43,11 +42,10 @@ internal fun WearAppSearchResults(
     WearList(onBack = onBack, snap = true) { spec ->
         searchHeader(spec, title, state.search, onEdit)
         when {
-            state.isLoading -> wearLoadingItem(spec)
             !error.isNullOrBlank() -> item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR) }
             state.appGroupList.isEmpty() -> item { WearStatusItem(spec, Icons.TwoTone.SearchOff, stringResource(R.string.no_apps_found)) }
         }
-        if (!state.isLoading) items(state.appGroupList, key = { "${it.uid}:${it.primaryPackageName}" }) { group ->
+        items(state.appGroupList, key = { "${it.uid}:${it.primaryPackageName}" }) { group ->
             WearAppItem(spec, group, onAppClick)
         }
     }
@@ -66,11 +64,10 @@ internal fun WearModuleSearchResults(
     WearList(onBack = onBack, snap = true) { spec ->
         searchHeader(spec, title, state.search, onEdit)
         when {
-            state.isLoading -> wearLoadingItem(spec)
             !error.isNullOrBlank() -> item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR) }
             state.moduleList.isEmpty() -> item { WearStatusItem(spec, Icons.TwoTone.SearchOff, stringResource(R.string.search_no_any_match)) }
         }
-        if (!state.isLoading) items(state.moduleList, key = { it.id }) { module -> WearModuleItem(spec, module, onModuleClick) }
+        items(state.moduleList, key = { it.id }) { module -> WearModuleItem(spec, module, onModuleClick) }
     }
 }
 

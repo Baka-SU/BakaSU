@@ -1,7 +1,7 @@
 package com.resukisu.resukisu.ui.wear
 
 import androidx.compose.material.icons.twotone.Error
-import com.resukisu.resukisu.ui.component.wear.WearStatusTone
+import com.resukisu.resukisu.ui.wear.component.WearStatusTone
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,13 +37,12 @@ import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.InstalledModule
-import com.resukisu.resukisu.ui.component.wear.WearIconAction
-import com.resukisu.resukisu.ui.component.wear.WearIconButtonGroup
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearModuleSwipeActions
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearStatusItem
-import com.resukisu.resukisu.ui.component.wear.wearLoadingItem
+import com.resukisu.resukisu.ui.wear.component.WearIconAction
+import com.resukisu.resukisu.ui.wear.component.WearIconButtonGroup
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearModuleSwipeActions
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearStatusItem
 import com.resukisu.resukisu.ui.viewmodel.ModuleUiState
 
 /**
@@ -64,12 +63,12 @@ internal fun WearModulesPage(
     onExecute: (InstalledModule) -> Unit = {},
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
 ) {
-    // As on the phone: an empty list shows the loading indicator in place of its content; once it
-    // has content, loading and refreshing show at the pull refresh, in the edge button.
-    val busy = state.isLoading || state.isRefreshing
+    // As on the phone: an empty list shows the loading indicator in place of the page; once it has
+    // content, refreshing shows at the pull refresh, in the edge button.
+    val loading = state.isRefreshing && state.moduleList.isEmpty() && state.search.isEmpty()
     WearList(
-        isBusy = busy,
-        isRefreshing = busy && state.moduleList.isNotEmpty(),
+        isLoading = loading,
+        isRefreshing = state.isRefreshing && !loading,
         onRefresh = onRefresh,
         backToTop = true, snap = true, listState = listState,
         onOpenPanel = onSort, panelLabel = stringResource(R.string.wear_sort),
@@ -85,11 +84,8 @@ internal fun WearModulesPage(
         if (!error.isNullOrBlank()) item {
             WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
         }
-        if (state.moduleList.isEmpty()) {
-            if (busy && state.search.isEmpty()) wearLoadingItem(spec)
-            else if (error.isNullOrBlank()) item {
-                WearStatusItem(spec, Icons.TwoTone.Extension, stringResource(R.string.module_empty))
-            }
+        if (state.moduleList.isEmpty() && error.isNullOrBlank()) item {
+            WearStatusItem(spec, Icons.TwoTone.Extension, stringResource(R.string.module_empty))
         }
         items(state.moduleList, key = { it.id }) { module ->
             WearModuleItem(spec, module, onModuleClick, listState.isScrollInProgress, onWebUi, onExecute)

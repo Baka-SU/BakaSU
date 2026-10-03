@@ -20,11 +20,9 @@ import com.resukisu.resukisu.domain.usecase.IsNetworkAvailableUseCase
 import com.resukisu.resukisu.domain.usecase.RebootUseCase
 import com.resukisu.resukisu.domain.usecase.SetBooleanPreferenceUseCase
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
@@ -65,22 +63,12 @@ class HomeViewModel(
     private val setBooleanPreference: SetBooleanPreferenceUseCase,
     private val reboot: RebootUseCase,
 ) : ViewModel() {
-    // Zygisk and meta-module implementations are detected through blocking root-shell file reads,
-    // so they load in the background instead of on the main thread during every combine.
-    private data class RuntimeModulesInfo(
-        val zygiskImplement: String = "None",
-        val metaModuleImplement: String = "None",
-    )
-
-    private val runtimeModulesInfo = MutableStateFlow(RuntimeModulesInfo())
-
     val uiState = combine(
         homeStateRepository.state,
         superUserRepository.state,
         moduleRepository.installedModules,
         countRepository.state,
-        runtimeModulesInfo,
-    ) { homeState, superUserState, moduleState, countState, runtimeInfo ->
+    ) { homeState, superUserState, moduleState, countState ->
         val superuserCount = if (superUserState.groups.isNotEmpty()) {
             superUserState.groups.filter { it.allowSu }.size
         } else {
@@ -95,8 +83,8 @@ class HomeViewModel(
             systemInfo = homeState.systemInfo.copy(
                 moduleCount = moduleCount,
                 superuserCount = superuserCount,
-                zygiskImplement = runtimeInfo.zygiskImplement,
-                metaModuleImplement = runtimeInfo.metaModuleImplement,
+                zygiskImplement = ksuCliRepository.getZygiskImplement(),
+                metaModuleImplement = ksuCliRepository.getMetaModuleImplement(),
             )
         )
     }.stateIn(
@@ -115,7 +103,6 @@ class HomeViewModel(
     init {
         applyUserSettings()
         viewModelScope.launch { countRepository.refresh() }
-        refreshRuntimeModulesInfo()
     }
 
     suspend fun awaitInitialData() {
@@ -123,11 +110,10 @@ class HomeViewModel(
     }
 
     fun refreshData(refreshUI: Boolean = false): Job {
-        refreshJob?.takeIf(Job::isActive)?.let { return it }
         if (!refreshUI) {
+            refreshJob?.takeIf(Job::isActive)?.let { return it }
             if (uiState.value.isInitialDataLoaded) return completedJob()
         }
-        refreshRuntimeModulesInfo()
         refreshManagerUpdates(force = refreshUI)
         return viewModelScope.launch {
             refreshMutex.withLock {
@@ -186,19 +172,6 @@ class HomeViewModel(
             }
         }.also { refreshJob = it }
     }
-
-    /** Loads the blocking runtime-module reads off the main thread and publishes the result. */
-    private fun refreshRuntimeModulesInfo() {
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching {
-                RuntimeModulesInfo(
-                    zygiskImplement = ksuCliRepository.getZygiskImplement(),
-                    metaModuleImplement = ksuCliRepository.getMetaModuleImplement(),
-                )
-            }.onSuccess { runtimeModulesInfo.value = it }
-        }
-    }
-
     fun handleSimpleModeChange(enabled: Boolean) =
         updatePreference(PREF_SIMPLE_MODE, enabled) { it.copy(isSimpleMode = enabled) }
 

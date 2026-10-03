@@ -1,8 +1,8 @@
 package com.resukisu.resukisu.ui.wear
 
 import androidx.compose.material.icons.twotone.Error
-import com.resukisu.resukisu.ui.component.wear.WearStatusTone
-import com.resukisu.resukisu.ui.component.wear.wearGroupGap
+import com.resukisu.resukisu.ui.wear.component.WearStatusTone
+import com.resukisu.resukisu.ui.wear.component.wearGroupGap
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,13 +35,11 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.InstalledAppGroup
 import com.resukisu.resukisu.ui.component.PackageIcon
-import com.resukisu.resukisu.ui.component.wear.WearIconAction
-import com.resukisu.resukisu.ui.component.wear.WearIconButtonGroup
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearStatusItem
-import com.resukisu.resukisu.ui.component.wear.wearLoadingItem
-import com.resukisu.resukisu.ui.component.wear.wearAppButtonColors
+import com.resukisu.resukisu.ui.wear.component.WearIconAction
+import com.resukisu.resukisu.ui.wear.component.WearIconButtonGroup
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearStatusItem
 import com.resukisu.resukisu.ui.viewmodel.SuperUserUiState
 
 /**
@@ -62,10 +60,10 @@ internal fun WearSuperUserPage(
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     backToTop: Boolean = false,
 ) {
-    // As on the phone: an empty list shows the loading indicator in place of its content; once it
-    // has content, loading and refreshing show at the pull refresh, in the edge button.
-    val busy = state.isLoading || state.isRefreshing
-    WearList(isBusy = busy, isRefreshing = busy && state.appGroupList.isNotEmpty(), onRefresh = onRefresh,
+    // As on the phone: an empty list shows the loading indicator in place of the page; once it has
+    // content, refreshing shows at the pull refresh, in the edge button.
+    val loading = state.isRefreshing && state.appGroupList.isEmpty() && state.search.isEmpty()
+    WearList(isLoading = loading, isRefreshing = state.isRefreshing && !loading, onRefresh = onRefresh,
         onBack = onBack, onOpenPanel = onFilter, panelLabel = stringResource(R.string.wear_filter_sort),
         snap = true, listState = listState, backToTop = backToTop,
     ) { spec ->
@@ -82,11 +80,8 @@ internal fun WearSuperUserPage(
         if (!error.isNullOrBlank()) {
             item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR) }
         }
-        if (state.appGroupList.isEmpty()) {
-            if (busy && state.search.isEmpty()) wearLoadingItem(spec)
-            else if (error.isNullOrBlank()) item {
-                WearStatusItem(spec, Icons.TwoTone.Apps, stringResource(R.string.no_apps_in_category))
-            }
+        if (state.appGroupList.isEmpty() && error.isNullOrBlank()) item {
+            WearStatusItem(spec, Icons.TwoTone.Apps, stringResource(R.string.no_apps_in_category))
         }
         // An app button list: 32dp app icon, one-line name and a one-line authorization status.
         items(state.appGroupList, key = { "${it.uid}:${it.primaryPackageName}" }) { group ->
@@ -107,7 +102,8 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
         transformation = SurfaceTransformation(spec),
         onClick = { onAppClick(group.uid, group.primaryPackageName) },
-        colors = wearAppButtonColors(group.allowSu),
+        // Granted apps use the system accent; the others keep the neutral tonal surface.
+        colors = if (group.allowSu) ButtonDefaults.buttonColors() else ButtonDefaults.filledTonalButtonColors(),
         icon = {
             PackageIcon(
                 packageName = if (group.isWebViewZygote) "android" else group.mainApp.packageName,

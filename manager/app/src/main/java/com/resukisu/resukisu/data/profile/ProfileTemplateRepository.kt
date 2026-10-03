@@ -19,9 +19,6 @@ import com.resukisu.resukisu.profile.Capabilities
 import com.resukisu.resukisu.profile.Groups
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -70,8 +67,7 @@ class ProfileTemplateRepository(
                 runCatching {
                     val localIds = ksuCliRepository.listAppProfileTemplates()
                     val shouldSynchronize = localIds.isEmpty() || synchronize
-                    val synchronized = !shouldSynchronize ||
-                            networkStatusRepository.isAvailable() && fetchRemoteTemplates()
+                    val synchronized = !shouldSynchronize || fetchRemoteTemplates()
                     mutableOffline.value = shouldSynchronize && !synchronized
                     mutableTemplates.value = ksuCliRepository.listAppProfileTemplates()
                         .mapNotNull(::readTemplate)
@@ -90,28 +86,13 @@ class ProfileTemplateRepository(
         }
     }
 
-    /**
-     * Online templates for browsing; they are never written to the local template store. With a
-     * usable network they are fetched directly, otherwise (as on a watch behind its phone's
-     * Bluetooth proxy) through the paired phone's Manager.
-     */
-    suspend fun browseOnline(): Result<List<ProfileTemplate>> = withContext(Dispatchers.IO) {
-        runCatching {
-            val bodies = if (networkStatusRepository.isAvailable()) fetchRemoteBodies()
-            else fetchBodiesFromPhone() ?: throw ProfileTemplateException(ProfileTemplateFailure.Offline)
-            bodies.map { body ->
-                JSONObject(body).toTemplate() ?: throw ProfileTemplateException(ProfileTemplateFailure.Invalid)
-            }
-        }
-    }
-
-    /** Answers a watch's [browseOnline] on [channel] with this device's own network. */
+    /** Answers a watch's template synchronization on [channel] with this device's own network. */
     suspend fun serveOnlineTemplates(client: ChannelClient, channel: ChannelClient.Channel) = withContext(Dispatchers.IO) {
         try {
             DataOutputStream(Tasks.await(client.getOutputStream(channel), 5, TimeUnit.SECONDS)).use { output ->
                 val bytes = runCatching {
                     check(networkStatusRepository.isAvailable())
-                    JSONArray(fetchRemoteBodies()).toString().toByteArray()
+                    JSONObject(checkNotNull(fetchRemoteBodies())).toString().toByteArray()
                 }.getOrNull()
                 output.writeBoolean(bytes != null)
                 bytes?.let { output.writeInt(it.size); output.write(it) }
@@ -124,20 +105,19 @@ class ProfileTemplateRepository(
         }
     }
 
-    private suspend fun fetchRemoteBodies(): List<String> = coroutineScope {
-        val ids = JSONArray(networkRequestRepository.fetch(TEMPLATE_INDEX_URL, callTimeoutSeconds = 15).getOrThrow())
-        (0 until ids.length()).map { index ->
-            async {
-                // Only the official template endpoint is accessed, never a caller-provided URL.
-                val id = ids.getString(index)
-                require(id.matches(Regex("[A-Za-z0-9_.-]+"))) { "Invalid template ID" }
-                networkRequestRepository.fetch(TEMPLATE_URL.format(id), callTimeoutSeconds = 15).getOrThrow()
-            }
-        }.awaitAll()
+    /** The official templates by ID, skipping those that fail to download; null without the index. */
+    private suspend fun fetchRemoteBodies(): Map<String, String>? {
+        val ids = networkRequestRepository.fetch(TEMPLATE_INDEX_URL)
+            .mapCatching { JSONArray(it) }
+            .getOrElse { return null }
+        return (0 until ids.length()).mapNotNull { index ->
+            val id = ids.optString(index)
+            networkRequestRepository.fetch(TEMPLATE_URL.format(id)).getOrNull()?.let { id to it }
+        }.toMap()
     }
 
-    /** The template bodies fetched by a reachable paired phone, or null when none answers. */
-    private suspend fun fetchBodiesFromPhone(): List<String>? = runCatching {
+    /** The template bodies by ID fetched by a reachable paired phone, or null when none answers. */
+    private suspend fun fetchBodiesFromPhone(): Map<String, String>? = runCatching {
         val localId = Tasks.await(Wearable.getNodeClient(application).localNode, 5, TimeUnit.SECONDS).id
         val nodes = Tasks.await(Wearable.getCapabilityClient(application)
             .getCapability(ONLINE_TEMPLATES_CAPABILITY, CapabilityClient.FILTER_REACHABLE), 5, TimeUnit.SECONDS)
@@ -154,8 +134,8 @@ class ProfileTemplateRepository(
                     check(it.readBoolean()) { "Phone template fetch failed" }
                     val length = it.readInt()
                     require(length in 1..1_048_576) { "Invalid template response size" }
-                    val bodies = JSONArray(ByteArray(length).also(it::readFully).decodeToString())
-                    (0 until bodies.length()).map(bodies::getString)
+                    val bodies = JSONObject(ByteArray(length).also(it::readFully).decodeToString())
+                    bodies.keys().asSequence().associateWith(bodies::getString)
                 }
             } finally {
                 timeout.cancel()
@@ -241,15 +221,15 @@ class ProfileTemplateRepository(
                 )
     }
 
+    /**
+     * Without a usable network, as on a watch behind its phone's Bluetooth proxy, the templates are
+     * fetched by the paired phone's Manager instead.
+     */
     private suspend fun fetchRemoteTemplates(): Boolean = runCatching {
-        val ids = networkRequestRepository.fetch(TEMPLATE_INDEX_URL)
-            .mapCatching { JSONArray(it) }
-            .getOrElse { return false }
-        var fetchedAny = ids.length() == 0
-        (0 until ids.length()).forEach { index ->
-            val id = ids.optString(index)
-            val body = networkRequestRepository.fetch(TEMPLATE_URL.format(id)).getOrNull()
-                ?: return@forEach
+        val bodies = (if (networkStatusRepository.isAvailable()) fetchRemoteBodies() else fetchBodiesFromPhone())
+            ?: return false
+        var fetchedAny = bodies.isEmpty()
+        bodies.forEach { (id, body) ->
             val template =
                 runCatching { JSONObject(body).toTemplate() }.getOrNull() ?: return@forEach
             if (ksuCliRepository.setAppProfileTemplate(

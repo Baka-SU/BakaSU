@@ -27,20 +27,19 @@ import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.SulogEntry
 import com.resukisu.resukisu.domain.model.SulogEventFilter
 import com.resukisu.resukisu.domain.model.toSulogDisplayName
-import com.resukisu.resukisu.ui.component.settings.LazySegmentedColumn
-import com.resukisu.resukisu.ui.component.settings.SegmentedColumn
-import com.resukisu.resukisu.ui.component.wear.WearActionButton
-import com.resukisu.resukisu.ui.component.wear.WearIconAction
-import com.resukisu.resukisu.ui.component.wear.WearIconButtonGroup
-import com.resukisu.resukisu.ui.component.wear.WearInfoCard
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
-import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
-import com.resukisu.resukisu.ui.component.wear.WearStatusItem
-import com.resukisu.resukisu.ui.component.wear.wearLoadingItem
-import com.resukisu.resukisu.ui.component.wear.WearStatusTone
-import com.resukisu.resukisu.ui.component.wear.rememberWearConfirmDialog
+import com.resukisu.resukisu.ui.wear.component.settings.LazySegmentedColumn
+import com.resukisu.resukisu.ui.wear.component.settings.SegmentedColumn
+import com.resukisu.resukisu.ui.wear.component.WearActionButton
+import com.resukisu.resukisu.ui.wear.component.WearIconAction
+import com.resukisu.resukisu.ui.wear.component.WearIconButtonGroup
+import com.resukisu.resukisu.ui.wear.component.WearInfoCard
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearSectionHeader
+import com.resukisu.resukisu.ui.wear.component.settings.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.wear.component.WearStatusItem
+import com.resukisu.resukisu.ui.wear.component.WearStatusTone
+import com.resukisu.resukisu.ui.wear.component.rememberWearConfirmDialog
 import com.resukisu.resukisu.ui.screen.sulogEntryDescription
 import com.resukisu.resukisu.ui.screen.sulogEntryDetailText
 import com.resukisu.resukisu.ui.screen.sulogEntryStatus
@@ -63,7 +62,7 @@ import com.resukisu.resukisu.ui.viewmodel.SulogUiState
 internal fun WearLogsPage(
     state: SulogUiState,
     onBack: () -> Unit,
-    onSetEnabled: (Boolean) -> Unit,
+    onEnable: () -> Unit,
     onSearch: () -> Unit,
     onClearSearch: () -> Unit,
     onRefresh: () -> Unit,
@@ -72,19 +71,15 @@ internal fun WearLogsPage(
     error: String? = null,
 ) {
     // As on the phone: the log refreshes by the pull gesture, whose progress shows in the edge
-    // button, and the first load shows only the loading indicator below the title and actions.
-    WearList(isBusy = state.isLoading || state.isRefreshing,
-        isRefreshing = state.isRefreshing && !state.isLoading, onRefresh = onRefresh, onBack = onBack) { spec ->
+    // button, and the first load shows only the loading indicator.
+    WearList(isLoading = state.isLoading, isRefreshing = state.isRefreshing && !state.isLoading,
+        onRefresh = onRefresh, onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.sulog)) }
         item {
             WearIconButtonGroup(spec, listOf(
                 WearIconAction(Icons.TwoTone.Search, stringResource(R.string.sulog_search_placeholder), onSearch),
                 WearIconAction(Icons.TwoTone.FilterList, stringResource(R.string.sulog_filter_title), onOptions),
             ))
-        }
-        if (state.isLoading) {
-            wearLoadingItem(spec)
-            return@WearList
         }
         // The active query; tapping it clears the search.
         if (state.searchText.isNotBlank()) item {
@@ -93,13 +88,9 @@ internal fun WearLogsPage(
                 colors = ButtonDefaults.filledTonalButtonColors())
         }
         when (state.sulogStatus) {
-            "supported" -> item {
-                WearActionButton(
-                    spec,
-                    Icons.TwoTone.PowerSettingsNew,
-                    stringResource(if (state.isSulogEnabled) R.string.wear_disable_sulog else R.string.wear_enable_sulog),
-                    onClick = { onSetEnabled(!state.isSulogEnabled) },
-                )
+            // As on the phone, the log only offers enabling; disabling is the setting's switch.
+            "supported" -> if (!state.isSulogEnabled) item {
+                WearActionButton(spec, Icons.TwoTone.PowerSettingsNew, stringResource(R.string.wear_enable_sulog), onEnable)
             }
             "unsupported" -> item {
                 WearStatusItem(spec, Icons.TwoTone.Warning, stringResource(R.string.sulog_unsupported_title),

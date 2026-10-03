@@ -59,7 +59,6 @@ sealed interface SulogUiAction {
     data object Refresh : SulogUiAction
     data object RefreshLatest : SulogUiAction
     data object Enable : SulogUiAction
-    data object Disable : SulogUiAction
     data object CleanFile : SulogUiAction
     data class Search(val query: String) : SulogUiAction
     data class ToggleFilter(val filter: SulogEventFilter) : SulogUiAction
@@ -118,15 +117,19 @@ class SulogViewModel(
         when (action) {
             SulogUiAction.Refresh -> refresh(state.value.selectedFilePath)
             SulogUiAction.RefreshLatest -> refresh(null)
-            SulogUiAction.Enable -> changeEnabled(true)
-            SulogUiAction.Disable -> changeEnabled(false)
+            SulogUiAction.Enable -> viewModelScope.launch {
+                val result = setSulogEnabled(true)
+                result.exceptionOrNull()?.let {
+                    mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))
+                } ?: refresh(state.value.selectedFilePath)
+            }
 
             SulogUiAction.CleanFile -> state.value.selectedFilePath?.let { path ->
                 viewModelScope.launch {
                     val result = cleanSulog(path)
                     result.exceptionOrNull()?.let {
                         mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))
-                    } ?: refresh(path, replaceInFlight = true)
+                    } ?: refresh(path)
                 }
             }
 
@@ -138,21 +141,11 @@ class SulogViewModel(
                 setStringSetPreference(PREF_SULOG_FILTERS, filters.value.map { it.name }.toSet())
             }
 
-            is SulogUiAction.SelectFile -> refresh(action.path, replaceInFlight = true)
+            is SulogUiAction.SelectFile -> refresh(action.path)
         }
     }
 
-    private fun changeEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            val result = setSulogEnabled(enabled)
-            result.exceptionOrNull()?.let {
-                mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))
-            } ?: refresh(state.value.selectedFilePath, replaceInFlight = true)
-        }
-    }
-
-    private fun refresh(preferredFilePath: String?, replaceInFlight: Boolean = false) {
-        if (!replaceInFlight && refreshJob?.isActive == true) return
+    private fun refresh(preferredFilePath: String?) {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
             refreshSulog(preferredFilePath).exceptionOrNull()?.let {
