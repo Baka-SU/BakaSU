@@ -6,7 +6,6 @@ data class FlashProgress(
     val progress: Float = 0f,
     val currentStep: String = "",
     val logs: List<String> = emptyList(),
-    val logsTruncated: Boolean = false,
     val error: String = "",
 )
 

@@ -130,16 +130,4 @@ fun getCurrentAppLocale(context: Context): Locale? {
         }
     }
 }
-
-/**
- * On Android 13+ the app language lives in the system's per-app locale, which [getCurrentAppLocale]
- * reads and the system applies; an in-app choice (as on Wear, which has no per-app language
- * settings page) must be set there too. Older versions apply the saved tag in [applyLanguage].
- */
-fun setApplicationLocale(context: Context, tag: String) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-    val localeManager = context.getSystemService(Context.LOCALE_SERVICE) as? android.app.LocaleManager ?: return
-    localeManager.applicationLocales =
-        if (tag == "system") android.os.LocaleList.getEmptyLocaleList() else android.os.LocaleList(parseLocaleTag(tag))
-}
 }

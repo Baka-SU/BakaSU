@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">ปิดบันทึก SU</string>
     <string name="wear_refresh">รีเฟรช</string>
     <string name="wear_module_file_unreadable">ไม่สามารถอ่านไฟล์ ZIP ของโมดูลที่เลือกได้</string>
-    <string name="wear_file_picker_unavailable">ตัวเลือกไฟล์ไม่พร้อมใช้งาน</string>
     <string name="wear_apps">แอป</string>
     <string name="wear_general">ทั่วไป</string>
     <string name="wear_security">ความปลอดภัย</string>

@@ -304,7 +304,10 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
         error?.let { message ->
             item { WearStatusItem(spec, Icons.TwoTone.Warning, message.ifBlank { stringResource(R.string.failed_reboot) }, tone = WearStatusTone.ERROR) }
         }
-        if (!interrupted) wearLogLines(spec, flash.logs)
-        if (!interrupted && flash.logsTruncated) item { WearSectionHeader(spec, stringResource(R.string.wear_log_tail)) }
+        // The watch shows only the latest lines; the full log stays in the shared flash state.
+        if (!interrupted) wearLogLines(spec, flash.logs.takeLast(WearFlashLogLines))
+        if (!interrupted && flash.logs.size > WearFlashLogLines) item { WearSectionHeader(spec, stringResource(R.string.wear_log_tail)) }
     }
 }
+
+private const val WearFlashLogLines = 256

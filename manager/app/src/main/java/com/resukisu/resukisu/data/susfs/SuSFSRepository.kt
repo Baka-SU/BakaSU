@@ -13,11 +13,6 @@ import com.resukisu.resukisu.domain.model.SusKstatType as DomainSusKstatType
 import com.resukisu.resukisu.domain.model.SusPathItem as DomainSusPathItem
 import com.resukisu.resukisu.domain.model.UnameConfig as DomainUnameConfig
 import androidx.core.net.toUri
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.nio.ByteBuffer
-import java.nio.charset.CodingErrorAction
-import com.resukisu.resukisu.R
 
 class SuSFSRepository(
     private val application: Application,
@@ -84,19 +79,7 @@ class SuSFSRepository(
     suspend fun addSusMap(path: String) = helper.addSusMap(path)
     suspend fun removeSusMap(path: String) = helper.removeSusMap(path)
     suspend fun exportConfig(uri: String) = helper.exportConfigToUri(application, uri.toUri())
-    suspend fun exportConfigDirectory(directory: String, name: String) = helper.exportConfigToDirectory(directory, name)
     suspend fun importConfig(uri: String) = helper.importConfigFromUri(application, uri.toUri())
-
-    suspend fun readEntryFile(uri: String): String = withContext(Dispatchers.IO) {
-        val bytes = application.contentResolver.openInputStream(uri.toUri())?.use { it.readBytes() }
-            ?: error(application.getString(R.string.susfs_entry_import_file_failed))
-        try {
-            Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString()
-        } catch (e: java.nio.charset.CharacterCodingException) {
-            throw IllegalArgumentException(application.getString(R.string.susfs_entry_import_file_not_text), e)
-        }
-    }
 
     private fun SuSFSConfig.toDomain(): DomainSuSFSConfig = DomainSuSFSConfig(
         version = version,

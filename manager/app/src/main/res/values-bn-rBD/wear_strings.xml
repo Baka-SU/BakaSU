@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">SU লগ নিষ্ক্রিয় করুন</string>
     <string name="wear_refresh">রিফ্রেশ করুন</string>
     <string name="wear_module_file_unreadable">নির্বাচিত মডিউলের ZIP ফাইল পড়া যাচ্ছে না</string>
-    <string name="wear_file_picker_unavailable">ফাইল নির্বাচক উপলভ্য নয়</string>
     <string name="wear_apps">অ্যাপ</string>
     <string name="wear_general">সাধারণ</string>
     <string name="wear_security">নিরাপত্তা</string>

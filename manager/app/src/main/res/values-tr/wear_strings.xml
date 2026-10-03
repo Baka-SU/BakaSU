@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">SU günlüğünü devre dışı bırak</string>
     <string name="wear_refresh">Yenile</string>
     <string name="wear_module_file_unreadable">Seçilen modül ZIP dosyası okunamıyor</string>
-    <string name="wear_file_picker_unavailable">Dosya seçici kullanılamıyor</string>
     <string name="wear_apps">Uygulamalar</string>
     <string name="wear_general">Genel</string>
     <string name="wear_security">Güvenlik</string>

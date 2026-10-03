@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">Онемогући SU дневник</string>
     <string name="wear_refresh">Освежи</string>
     <string name="wear_module_file_unreadable">Није могуће прочитати изабрани ZIP модула</string>
-    <string name="wear_file_picker_unavailable">Бирач датотека није доступан</string>
     <string name="wear_apps">Апликације</string>
     <string name="wear_general">Опште</string>
     <string name="wear_security">Безбедност</string>

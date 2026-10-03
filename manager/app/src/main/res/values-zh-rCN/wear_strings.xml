@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">关闭 SU 日志</string>
     <string name="wear_refresh">刷新</string>
     <string name="wear_module_file_unreadable">无法读取所选模块 ZIP</string>
-    <string name="wear_file_picker_unavailable">文件选择器不可用</string>
     <string name="wear_apps">应用</string>
     <string name="wear_general">常规</string>
     <string name="wear_security">安全</string>

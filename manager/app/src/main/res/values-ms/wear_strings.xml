@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">Nyahaktifkan log SU</string>
     <string name="wear_refresh">Segar semula</string>
     <string name="wear_module_file_unreadable">Tidak dapat membaca ZIP modul yang dipilih</string>
-    <string name="wear_file_picker_unavailable">Pemilih fail tidak tersedia</string>
     <string name="wear_apps">Aplikasi</string>
     <string name="wear_general">Umum</string>
     <string name="wear_security">Keselamatan</string>

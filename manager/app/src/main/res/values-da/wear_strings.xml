@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">Deaktivér SU-log</string>
     <string name="wear_refresh">Opdater</string>
     <string name="wear_module_file_unreadable">Kan ikke læse den valgte modul-ZIP</string>
-    <string name="wear_file_picker_unavailable">Filvælger er ikke tilgængelig</string>
     <string name="wear_apps">Apps</string>
     <string name="wear_general">Generelt</string>
     <string name="wear_security">Sikkerhed</string>

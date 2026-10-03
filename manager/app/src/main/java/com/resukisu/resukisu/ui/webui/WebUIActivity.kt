@@ -1,6 +1,7 @@
 package com.resukisu.resukisu.ui.webui
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.content.pm.PackageManager
@@ -26,6 +27,7 @@ import com.resukisu.resukisu.data.AppSettingsRepository
 import com.resukisu.resukisu.data.packageinfo.AppIconDataSource
 import com.resukisu.resukisu.data.packageinfo.InstalledPackageRepository
 import com.resukisu.resukisu.data.webui.WebUiRepository
+import com.resukisu.resukisu.domain.usecase.GetStringPreferenceUseCase
 import com.resukisu.resukisu.ui.theme.KernelSUTheme
 import com.resukisu.resukisu.ui.viewmodel.ModuleViewModel
 import com.resukisu.resukisu.ui.viewmodel.SuperUserViewModel
@@ -33,9 +35,20 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import com.resukisu.resukisu.ui.wear.WearManagerTheme
 import com.resukisu.resukisu.ui.wear.WearWebUIScreen
+import com.resukisu.resukisu.ui.wear.withDocumentPickerFallback
+import org.koin.android.ext.android.inject
 
 @SuppressLint("SetJavaScriptEnabled")
 class WebUIActivity : ComponentActivity() {
+
+    private val getPreference: GetStringPreferenceUseCase by inject()
+
+    // Standard SAF requests fall back to the app's own picker where the device has no usable one.
+    @Deprecated("Deprecated in Java")
+    @Suppress("DEPRECATION")
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        super.startActivityForResult(withDocumentPickerFallback(intent, getPreference("wear_file_picker")), requestCode, options)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
 

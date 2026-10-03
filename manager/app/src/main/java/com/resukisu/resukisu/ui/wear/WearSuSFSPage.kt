@@ -1,7 +1,6 @@
 package com.resukisu.resukisu.ui.wear
 
 import android.net.Uri
-import android.os.SystemClock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
@@ -16,7 +15,6 @@ import androidx.compose.material.icons.twotone.VisibilityOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -27,7 +25,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.material3.Text
 import com.resukisu.resukisu.R
-import com.resukisu.resukisu.data.file.WearFileMode
 import com.resukisu.resukisu.ui.component.settings.LazySegmentedColumn
 import com.resukisu.resukisu.ui.component.settings.SegmentedColumn
 import com.resukisu.resukisu.ui.component.settings.WearSettingsJumpPageWidget
@@ -66,7 +63,7 @@ internal typealias WearSuSFSCommand = (SuSFSCommandReply) -> SuSFSUiAction
 
 /** Wear presentation of the phone SUSFS manager, sharing its commands, config and resources. */
 @Composable
-internal fun WearSuSFSPage(pickerMode: String, onBack: () -> Unit) {
+internal fun WearSuSFSPage(onBack: () -> Unit) {
     val viewModel = koinViewModel<SuSFSViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -77,10 +74,8 @@ internal fun WearSuSFSPage(pickerMode: String, onBack: () -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     var pendingImport by rememberSaveable { mutableStateOf("") }
-    var pickerStartedAt by remember { mutableLongStateOf(0L) }
     val failed = stringResource(R.string.susfs_operation_failed)
     val succeeded = stringResource(R.string.susfs_operation_success)
-    val pickerUnavailable = stringResource(R.string.wear_file_picker_unavailable)
     val importSuccess = stringResource(R.string.susfs_backup_import_success)
     val exportSuccess = stringResource(R.string.susfs_backup_export_success)
     val noData = stringResource(R.string.susfs_status_no_data)
@@ -146,44 +141,29 @@ internal fun WearSuSFSPage(pickerMode: String, onBack: () -> Unit) {
         pendingImport = uri
         confirmImport.show()
     }
-    fun pickerCanceled(fallback: String) {
-        if (pickerMode == "auto" && SystemClock.elapsedRealtime() - pickerStartedAt < 2_000) page = fallback
-    }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
         if (uri != null) submit({ SuSFSUiAction.ExportConfig(uri.toString(), it) }, exportSuccess)
-        else pickerCanceled("export")
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        if (uri != null) importSelected(uri.toString()) else pickerCanceled("import")
+        if (uri != null) importSelected(uri.toString())
     }
+    // Plain SAF requests, as on the phone; watches without DocumentsUI get the built-in picker.
     fun launchPicker(export: Boolean) {
-        if (pickerMode == "builtin") { page = if (export) "export" else "import"; return }
-        pickerStartedAt = SystemClock.elapsedRealtime()
         runCatching {
             if (export) exportLauncher.launch(backupFileName) else importLauncher.launch(arrayOf("application/json"))
-        }.onFailure {
-            if (pickerMode == "auto") page = if (export) "export" else "import"
-            else message = pickerUnavailable
-        }
+        }.onFailure { message = failed }
     }
     WearPageTransition(page, when (page) { "" -> 0; "add", "detail" -> 2; else -> 1 }) { route ->
         if (route.isNotEmpty()) {
             WearSubPage({ page = if (page in setOf("add", "detail")) "section" else "" }) {
                 when (route) {
-                    "import" -> WearFilePage(stringResource(R.string.susfs_backup_import), WearFileMode.JSON,
-                        onBack = { page = "" }, onSelected = { page = ""; importSelected(it) }, onSaved = {}, requestId = 0)
-                    "export" -> WearFilePage(stringResource(R.string.susfs_backup_export), WearFileMode.JSON_DIRECTORY,
-                        onBack = { page = "" }, onSelected = {}, onSaved = {}, requestId = 0,
-                        onSelectDirectory = { path, name ->
-                            submit({ SuSFSUiAction.ExportConfigDirectory(path, name, it) }, exportSuccess) { page = "" }
-                        }, message = message, busy = busy)
                     "section" -> if (config != null && config.enabled) {
                         if (section == WearSuSFSSection.Standard) WearSuSFSStandardPage(config, busy, message, viewModel,
                             onBack = { page = "" }, onCommand = { command, onSuccess -> submit(command, onSuccess = onSuccess) })
                         else WearSuSFSEntriesPage(section, config, busy, message, onBack = { page = "" },
                             onAdd = { page = "add" }, onSelect = { selectedPath = it; page = "detail" })
                     }
-                    "add" -> WearSuSFSAddPage(section, busy, message, pickerMode, viewModel,
+                    "add" -> WearSuSFSAddPage(section, busy, message, viewModel,
                         onBack = { page = "section" }, onCommand = ::addEntries)
                     "detail" -> if (config != null) WearSuSFSDetailPage(section, config, selectedPath, busy, message,
                         onBack = { page = "section" }) { command -> submit(command) { page = "section" } }

@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">Lülita SU logi välja</string>
     <string name="wear_refresh">Värskenda</string>
     <string name="wear_module_file_unreadable">Valitud mooduli ZIP-faili ei saa lugeda</string>
-    <string name="wear_file_picker_unavailable">Failivalija pole saadaval</string>
     <string name="wear_apps">Rakendused</string>
     <string name="wear_general">Üldine</string>
     <string name="wear_security">Turvalisus</string>
