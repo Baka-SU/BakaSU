@@ -391,14 +391,23 @@ enum PolicyObject {
     None,
 }
 
-impl TryFrom<&str> for PolicyObject {
-    type Error = anyhow::Error;
-    fn try_from(s: &str) -> Result<Self> {
+impl std::str::FromStr for PolicyObject {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
         anyhow::ensure!(!s.as_bytes().contains(&0), "policy object contains NUL");
         if s == "*" {
             return Ok(Self::All);
         }
         Ok(Self::One(s.as_bytes().to_vec()))
+    }
+}
+
+impl<'a> TryFrom<&'a str> for PolicyObject {
+    type Error = anyhow::Error;
+
+    fn try_from(s: &'a str) -> Result<Self> {
+        s.parse()
     }
 }
 
