@@ -34,7 +34,6 @@ import com.resukisu.resukisu.data.packageinfo.RootServiceRepository
 import com.resukisu.resukisu.data.packageinfo.SuperUserRepository
 import com.resukisu.resukisu.data.profile.ProfileRepository
 import com.resukisu.resukisu.data.profile.ProfileTemplateRepository
-import com.resukisu.resukisu.data.profile.ProfileTemplateNetworkRepository
 import com.resukisu.resukisu.data.settings.LocaleHelper
 import com.resukisu.resukisu.data.settings.LocaleRepository
 import com.resukisu.resukisu.data.settings.SettingsPlatformRepository
@@ -284,7 +283,6 @@ val repositoryModule = module {
     singleOf(::WearLinkRepository)
     singleOf(::ProfileRepository)
     singleOf(::ProfileTemplateRepository)
-    singleOf(::ProfileTemplateNetworkRepository)
     singleOf(::SuSFSConfigHelper)
     singleOf(::SuSFSRepository)
     singleOf(::MonetCompatColorSource)
@@ -435,10 +433,7 @@ val viewModelModule = module {
     viewModelOf(::SuSFSViewModel)
     viewModelOf(::ModuleRepoViewModel)
     viewModel { parameters -> ModuleDetailViewModel(parameters[0], get()) }
-    viewModel { parameters ->
-        TemplateViewModel(get(), get(), get(), get(), get(), get(), get(), get(),
-            localOnly = parameters.getOrNull<Boolean>() ?: false)
-    }
+    viewModelOf(::TemplateViewModel)
     viewModel { parameters ->
         TemplateEditorViewModel(
             templateId = parameters[0],

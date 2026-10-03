@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">Atspējot SU žurnālu</string>
     <string name="wear_refresh">Atsvaidzināt</string>
     <string name="wear_module_file_unreadable">Nevar nolasīt atlasītā moduļa ZIP failu</string>
-    <string name="wear_file_picker_unavailable">Failu atlasītājs nav pieejams</string>
     <string name="wear_apps">Lietotnes</string>
     <string name="wear_general">Vispārīgi</string>
     <string name="wear_security">Drošība</string>

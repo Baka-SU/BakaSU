@@ -19,17 +19,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.resukisu.resukisu.R
 import com.resukisu.resukisu.data.AppSettingsRepository
 import com.resukisu.resukisu.data.webui.RemoteWebUiBackend
 import com.resukisu.resukisu.data.webui.WearWebUiProtocol
 import com.resukisu.resukisu.ui.theme.KernelSUTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 
 /**
  * The phone side of a watch module's WebUI, opened by the watch through RemoteActivityHelper with a
- * `resukisu-webui://open` link. The page, its files and its `ksu` bridge commands are all served
- * by the watch, so every change the page makes is applied on the watch; closing the page tells the
- * watch to end the session and reload its modules.
+ * `resukisu-webui://open` link. The link carries no data and anyone may send it: the activity only
+ * shows a session that a watch offered to this phone and that it claims over the Data Layer. The
+ * page, its files and its `ksu` bridge commands are all served by the watch, so every change the
+ * page makes is applied on the watch; closing the page tells the watch to end the session and
+ * reload its modules.
  */
 class RemoteWebUIActivity : ComponentActivity() {
     private var backend: RemoteWebUiBackend? = null
@@ -43,30 +49,29 @@ class RemoteWebUIActivity : ComponentActivity() {
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
         super.onCreate(savedInstanceState)
 
-        val data = intent.data
-        val nodeId = data?.getQueryParameter("node")
-        val token = data?.getQueryParameter("token")
-        val moduleId = data?.getQueryParameter("module")
-        if (data?.scheme != WearWebUiProtocol.SCHEME || nodeId.isNullOrEmpty() || token.isNullOrEmpty() ||
-            moduleId.isNullOrEmpty() || moduleId.contains('/')) {
+        if (intent.data?.scheme != WearWebUiProtocol.SCHEME) {
             finish()
             return
         }
-        val remote = RemoteWebUiBackend(this, nodeId, token).also { backend = it }
 
         setContent {
             KernelSUTheme {
-                val webUIState = remember {
-                    WebUIState().apply {
-                        moduleName = data.getQueryParameter("name").orEmpty().ifEmpty { moduleId }
-                        modDir = "/data/adb/modules/$moduleId"
-                    }
-                }
+                val webUIState = remember { WebUIState() }
                 val settingsRepository = koinInject<AppSettingsRepository>()
                 val colorsCss = koinInject<MonetColorsProvider>().getColorsCss()
                 val currentColorsCss = rememberUpdatedState(colorsCss)
+                val claimFailed = stringResource(R.string.operation_failed)
                 LaunchedEffect(Unit) {
-                    createWebView(this@RemoteWebUIActivity, webUIState, remote, settingsRepository) { currentColorsCss.value }
+                    val remote = withContext(Dispatchers.IO) { RemoteWebUiBackend.claim(applicationContext) }
+                    if (remote == null) {
+                        webUIState.uiEvent = WebUIEvent.Error(claimFailed)
+                        return@LaunchedEffect
+                    }
+                    backend = remote
+                    webUIState.moduleName = remote.moduleName
+                    webUIState.modDir = "/data/adb/modules/${remote.moduleId}"
+                    createWebView(this@RemoteWebUIActivity, webUIState, remote, settingsRepository,
+                        restrictToModule = true) { currentColorsCss.value }
                 }
                 DisposableEffect(Unit) { onDispose { webUIState.dispose() } }
 

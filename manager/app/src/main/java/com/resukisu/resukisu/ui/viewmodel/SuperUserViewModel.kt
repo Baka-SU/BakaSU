@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class SortType(val displayNameRes: Int, val persistKey: String) {
@@ -74,6 +75,7 @@ private data class SuperUserControls(
     val showSystemApps: Boolean = false,
     val sortType: SortType = SortType.NAME,
     val reverseOrder: Boolean = false,
+    val loaded: Boolean = false,
 )
 
 class SuperUserViewModel(
@@ -129,8 +131,9 @@ class SuperUserViewModel(
             currentSortType = local.sortType,
             reverseOrder = local.reverseOrder,
             managerUids = uids,
-            isLoading = !source.isInitialDataLoaded,
-            isRefreshing = source.refreshing && source.isInitialDataLoaded,
+            // Loading until this model's first refresh ends, unless apps are already known.
+            isLoading = !local.loaded && source.groups.isEmpty(),
+            isRefreshing = source.refreshing,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, SuperUserUiState())
     val uiState: StateFlow<SuperUserUiState> = state
@@ -185,6 +188,7 @@ class SuperUserViewModel(
     suspend fun fetchAppList() {
         refreshSuperUsers()
             .onFailure { mutableEvents.tryEmit(SuperUserUiEvent.Error(it.message.orEmpty())) }
+        controls.update { it.copy(loaded = true) }
     }
 
     private fun notifySuperuserStatusChanged() {

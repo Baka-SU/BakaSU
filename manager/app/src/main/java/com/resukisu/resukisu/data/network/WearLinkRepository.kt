@@ -12,7 +12,6 @@ import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.Wearable
 import com.resukisu.resukisu.data.webui.WearWebUiProtocol
 import com.resukisu.resukisu.data.webui.WearWebUiSession
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -65,8 +64,8 @@ class WearLinkRepository(private val application: Application) {
 
     /**
      * Opens a module's WebUI on the paired phone. A connected phone must have this app, found by its
-     * Data Layer capability; the phone page is then started with RemoteActivityHelper, and the
-     * session it may call back into is limited to [moduleId].
+     * Data Layer capability; the phone page is then started with RemoteActivityHelper and may claim
+     * a session limited to [moduleId], for that phone only (see [WearWebUiSession]).
      */
     suspend fun openWebUiOnPhone(moduleId: String, moduleName: String) = withContext(Dispatchers.IO) {
         val nodeClient = Wearable.getNodeClient(application)
@@ -87,13 +86,13 @@ class WearLinkRepository(private val application: Application) {
         Log.i(TAG, "Nodes with ${WearWebUiProtocol.CAPABILITY}: ${phones.joinToString { "${it.displayName}(${it.id})" }}")
         val phone = phones.firstOrNull { it.isNearby } ?: phones.firstOrNull()
             ?: throw WearLinkException(WearLinkFailure.PHONE_APP_MISSING)
-        val token = UUID.randomUUID().toString()
-        WearWebUiSession.start(token, moduleId)
-        val uri = Uri.Builder().scheme(WearWebUiProtocol.SCHEME).authority(WearWebUiProtocol.HOST)
-            .appendQueryParameter("node", localId).appendQueryParameter("token", token)
-            .appendQueryParameter("module", moduleId).appendQueryParameter("name", moduleName).build()
+        // The link only names this app's phone activity; that activity claims the session from the
+        // watch over the Data Layer, so the intent carries nothing another app could reuse.
+        val token = WearWebUiSession.offer(moduleId, moduleName, phone.id)
+        val uri = Uri.Builder().scheme(WearWebUiProtocol.SCHEME).authority(WearWebUiProtocol.HOST).build()
         try {
-            startOnPhone(Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE), phone.id)
+            startOnPhone(Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)
+                .setPackage(application.packageName), phone.id)
         } catch (error: Exception) {
             WearWebUiSession.end(token)
             throw error

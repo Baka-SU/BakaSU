@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">SU-logboek uitschakelen</string>
     <string name="wear_refresh">Vernieuwen</string>
     <string name="wear_module_file_unreadable">Kan de geselecteerde module-ZIP niet lezen</string>
-    <string name="wear_file_picker_unavailable">Bestandskiezer niet beschikbaar</string>
     <string name="wear_apps">Apps</string>
     <string name="wear_general">Algemeen</string>
     <string name="wear_security">Beveiliging</string>

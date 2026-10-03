@@ -57,12 +57,9 @@ class ModuleRepository(
                         }
                     }.awaitAll().any { it }
                 }
-                // Keep refreshing set until the update check below finishes, so the UI reports one
-                // continuous load rather than a loaded list that is still being filled in.
                 mutableInstalledModules.value = InstalledModulesState(
-                    isInitialDataLoaded = true,
                     modules = modules,
-                    refreshing = true,
+                    refreshing = false,
                     hasModuleRequireMount = requiresMount,
                     hasMagisk = ksuCliRepository.hasMagisk(),
                     metaModuleStatus = getMetaModuleStatus(),
@@ -91,10 +88,8 @@ class ModuleRepository(
                     }
                     mutableInstalledModules.update { current -> current.copy(modules = withUpdates) }
                 }
-            }.also {
-                mutableInstalledModules.update { current ->
-                    current.copy(refreshing = false, isInitialDataLoaded = true)
-                }
+            }.onFailure {
+                mutableInstalledModules.update { current -> current.copy(refreshing = false) }
             }
         }
     }

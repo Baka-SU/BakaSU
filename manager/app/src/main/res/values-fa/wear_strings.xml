@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">غیرفعال‌کردن گزارش SU</string>
     <string name="wear_refresh">تازه‌سازی</string>
     <string name="wear_module_file_unreadable">خواندن فایل ZIP ماژول انتخاب‌شده ممکن نیست</string>
-    <string name="wear_file_picker_unavailable">انتخابگر فایل در دسترس نیست</string>
     <string name="wear_apps">برنامه‌ها</string>
     <string name="wear_general">عمومی</string>
     <string name="wear_security">امنیت</string>

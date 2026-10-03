@@ -25,6 +25,7 @@ import androidx.lifecycle.lifecycleScope
 import com.resukisu.resukisu.domain.model.StartupState
 import com.resukisu.resukisu.domain.usecase.ApplyLanguageUseCase
 import com.resukisu.resukisu.domain.usecase.EnsureManagerInstalledUseCase
+import com.resukisu.resukisu.domain.usecase.GetStringPreferenceUseCase
 import com.resukisu.resukisu.domain.usecase.ObserveStartupStateUseCase
 import com.resukisu.resukisu.ui.activity.util.ThemeChangeContentObserver
 import com.resukisu.resukisu.ui.activity.util.ThemeUtils
@@ -42,6 +43,7 @@ import com.resukisu.resukisu.ui.viewmodel.SuperUserViewModel
 import com.resukisu.resukisu.ui.wear.WearManagerScreen
 import com.resukisu.resukisu.ui.wear.WearManagerTheme
 import com.resukisu.resukisu.ui.wear.WearStartupStatus
+import com.resukisu.resukisu.ui.wear.withDocumentPickerFallback
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
@@ -59,6 +61,15 @@ open class MainActivity : ComponentActivity() {
     private val ensureManagerInstalled: EnsureManagerInstalledUseCase by inject()
     private val themeUtils: ThemeUtils by inject()
     private val applyLanguage: ApplyLanguageUseCase by inject()
+
+    private val getPreference: GetStringPreferenceUseCase by inject()
+
+    // Standard SAF requests fall back to the app's own picker where the device has no usable one.
+    @Deprecated("Deprecated in Java")
+    @Suppress("DEPRECATION")
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        super.startActivityForResult(withDocumentPickerFallback(intent, getPreference("wear_file_picker")), requestCode, options)
+    }
     private val startupState by lazy { observeStartupState() }
 
     private var showConfirmationDialog: MutableState<Boolean> = mutableStateOf(false)

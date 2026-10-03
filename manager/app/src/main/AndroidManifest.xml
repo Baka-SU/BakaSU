@@ -35,7 +35,11 @@
         </intent>
         <intent>
             <action android:name="android.intent.action.CREATE_DOCUMENT" />
-            <data android:mimeType="application/gzip" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="*/*" />
         </intent>
     </queries>
 
@@ -142,7 +146,9 @@
             android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden"
             />
 
-        <!-- A watch module's WebUI shown on the phone; the watch opens it with RemoteActivityHelper. -->
+        <!-- A watch module's WebUI shown on the phone; the watch opens it with RemoteActivityHelper,
+             which needs it exported. The link carries no data: the activity only shows a session it
+             claims from the paired watch over the Data Layer. -->
         <activity
             android:name=".ui.webui.RemoteWebUIActivity"
             android:autoRemoveFromRecents="true"
@@ -158,7 +164,34 @@
             </intent-filter>
         </activity>
 
-        <!-- Serves watch WebUIs and phone-assisted template downloads over the Wear Data Layer. -->
+        <!-- Built-in document picker for watches without a usable DocumentsUI. Not exported: only
+             this app's own SAF requests reach it, and only when no system picker can take them
+             (see withDocumentPickerFallback); the low priority keeps it behind any system picker. -->
+        <activity
+            android:name=".ui.wear.WearFilePickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.KernelSU.WebUI"
+            android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden">
+            <intent-filter android:priority="-1000">
+                <action android:name="android.intent.action.OPEN_DOCUMENT" />
+                <action android:name="android.intent.action.CREATE_DOCUMENT" />
+                <action android:name="android.intent.action.GET_CONTENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+
+        <!-- Serves the files picked in the built-in picker to this app only. -->
+        <provider
+            android:name=".data.file.WearFileProvider"
+            android:authorities="${applicationId}.wearfiles"
+            android:exported="false"
+            android:grantUriPermissions="false" />
+
+        <!-- Serves watch WebUIs and phone-assisted template downloads over the Wear Data Layer.
+             Exported for Google Play services, which only delivers events from this app on paired
+             devices signed with the same key. -->
         <service
             android:name=".data.webui.WearWebUiService"
             android:exported="true">

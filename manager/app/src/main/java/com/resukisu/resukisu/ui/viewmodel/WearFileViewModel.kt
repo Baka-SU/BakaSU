@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.resukisu.resukisu.data.file.WearDirectory
 import com.resukisu.resukisu.data.file.WearFileException
-import com.resukisu.resukisu.data.file.WearFileMode
+import com.resukisu.resukisu.data.file.WearFileProvider
 import com.resukisu.resukisu.data.file.WearFileRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -15,8 +15,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 /**
  * @author Hanhan_awa
@@ -25,13 +23,12 @@ import java.time.format.DateTimeFormatter
 
 /** [error] is a localized message; [failed] without it means an unexpected, generic failure. */
 data class WearFileUiState(val directory: WearDirectory? = null, val loading: Boolean = false,
-    val error: String? = null, val failed: Boolean = false, val name: String = "KernelSU_bugreport_" +
-        LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm_ss")) + ".tar.gz")
+    val error: String? = null, val failed: Boolean = false, val name: String = "")
 sealed interface WearFileEvent {
-    data class Selected(val uri: String) : WearFileEvent
-    data class Saved(val path: String) : WearFileEvent
+    /** A picked or newly named file, as a URI of [WearFileProvider]. */
+    data class Picked(val uri: String) : WearFileEvent
+    data class Saved(val name: String) : WearFileEvent
     data class Share(val uri: String) : WearFileEvent
-    data class SystemPicker(val mode: WearFileMode, val available: Boolean) : WearFileEvent
 }
 
 class WearFileViewModel(private val repository: WearFileRepository) : ViewModel() {
@@ -41,21 +38,18 @@ class WearFileViewModel(private val repository: WearFileRepository) : ViewModel(
     val events = mutableEvents.asSharedFlow()
     private var task: Job? = null
     fun setName(name: String) { mutableState.update { it.copy(name = name) } }
-    fun load(path: String?, mode: WearFileMode) = submit {
-        val directory = repository.list(path, mode)
+    fun load(path: String?, mimeTypes: List<String>, directoriesOnly: Boolean) = submit {
+        val directory = repository.list(path, mimeTypes, directoriesOnly)
         mutableState.update { it.copy(directory = directory) }
     }
-    fun select(path: String) = submit { mutableEvents.emit(WearFileEvent.Selected(repository.prepare(path))) }
-    fun save() = submit {
+    fun select(path: String) = submit { mutableEvents.emit(WearFileEvent.Picked(WearFileProvider.uriFor(path).toString())) }
+    fun create() = submit {
         val current = state.value
-        val path = repository.export(requireNotNull(current.directory).path, current.name)
-        mutableEvents.emit(WearFileEvent.Saved(path))
+        val path = repository.newFile(requireNotNull(current.directory).path, current.name)
+        mutableEvents.emit(WearFileEvent.Picked(WearFileProvider.uriFor(path).toString()))
     }
     fun exportTo(uri: String) = submit { mutableEvents.emit(WearFileEvent.Saved(repository.export(uri.toUri()))) }
     fun share() = submit { mutableEvents.emit(WearFileEvent.Share(repository.shareUri())) }
-    fun checkSystemPicker(mode: WearFileMode) {
-        viewModelScope.launch { mutableEvents.emit(WearFileEvent.SystemPicker(mode, repository.hasSystemPicker(mode))) }
-    }
     fun clearError() { mutableState.update { it.copy(error = null, failed = false) } }
     private fun submit(block: suspend () -> Unit) {
         if (task?.isActive == true) return

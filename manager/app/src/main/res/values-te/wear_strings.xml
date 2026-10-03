@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">SU లాగ్ నిలిపివేయండి</string>
     <string name="wear_refresh">రిఫ్రెష్ చేయండి</string>
     <string name="wear_module_file_unreadable">ఎంచుకున్న మాడ్యూల్ ZIP చదవడం సాధ్యం కాదు</string>
-    <string name="wear_file_picker_unavailable">ఫైల్ ఎంపిక సాధనం అందుబాటులో లేదు</string>
     <string name="wear_apps">యాప్‌లు</string>
     <string name="wear_general">సాధారణం</string>
     <string name="wear_security">భద్రత</string>

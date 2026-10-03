@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">Išjungti SU žurnalą</string>
     <string name="wear_refresh">Atnaujinti</string>
     <string name="wear_module_file_unreadable">Nepavyksta perskaityti pasirinkto modulio ZIP</string>
-    <string name="wear_file_picker_unavailable">Failų parinkiklis nepasiekiamas</string>
     <string name="wear_apps">Programos</string>
     <string name="wear_general">Bendra</string>
     <string name="wear_security">Sauga</string>

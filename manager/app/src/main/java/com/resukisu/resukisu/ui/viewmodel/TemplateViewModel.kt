@@ -58,7 +58,6 @@ class TemplateViewModel(
     private val exportTemplatesUseCase: ExportProfileTemplatesUseCase,
     private val browseOnlineTemplates: BrowseOnlineProfileTemplatesUseCase,
     private val saveTemplate: SaveProfileTemplateUseCase,
-    private val localOnly: Boolean = false,
 ) : ViewModel() {
     private val mutableEvents = MutableSharedFlow<TemplateUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<TemplateUiEvent> = mutableEvents.asSharedFlow()
@@ -92,7 +91,7 @@ class TemplateViewModel(
     }
 
     suspend fun fetchTemplates(sync: Boolean = false) {
-        refreshTemplates(sync, localOnly).exceptionOrNull()?.let {
+        refreshTemplates(sync).exceptionOrNull()?.let {
             mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty()))
         }
     }

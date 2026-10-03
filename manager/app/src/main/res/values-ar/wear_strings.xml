@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">تعطيل سجل SU</string>
     <string name="wear_refresh">تحديث</string>
     <string name="wear_module_file_unreadable">تعذّرت قراءة ملف ZIP للوحدة المحددة</string>
-    <string name="wear_file_picker_unavailable">منتقي الملفات غير متاح</string>
     <string name="wear_apps">التطبيقات</string>
     <string name="wear_general">عام</string>
     <string name="wear_security">الأمان</string>

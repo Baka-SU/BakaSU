@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">SU žurnalyny öçür</string>
     <string name="wear_refresh">Täzele</string>
     <string name="wear_module_file_unreadable">Saýlanan modulyň ZIP faýlyny okap bolmaýar</string>
-    <string name="wear_file_picker_unavailable">Faýl saýlaýjy elýeterli däl</string>
     <string name="wear_apps">Programmalar</string>
     <string name="wear_general">Umumy</string>
     <string name="wear_security">Howpsuzlyk</string>

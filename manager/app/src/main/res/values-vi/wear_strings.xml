@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">Tắt nhật ký SU</string>
     <string name="wear_refresh">Làm mới</string>
     <string name="wear_module_file_unreadable">Không thể đọc ZIP mô-đun đã chọn</string>
-    <string name="wear_file_picker_unavailable">Trình chọn tệp không khả dụng</string>
     <string name="wear_apps">Ứng dụng</string>
     <string name="wear_general">Chung</string>
     <string name="wear_security">Bảo mật</string>

@@ -10,7 +10,6 @@
     <string name="wear_disable_sulog">Выключыць журнал SU</string>
     <string name="wear_refresh">Абнавіць</string>
     <string name="wear_module_file_unreadable">Не ўдалося прачытаць выбраны ZIP модуля</string>
-    <string name="wear_file_picker_unavailable">Выбар файлаў недаступны</string>
     <string name="wear_apps">Праграмы</string>
     <string name="wear_general">Агульныя</string>
     <string name="wear_security">Бяспека</string>
