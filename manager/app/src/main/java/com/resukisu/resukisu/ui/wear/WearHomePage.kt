@@ -25,13 +25,13 @@ import com.resukisu.resukisu.BuildConfig
 import com.resukisu.resukisu.Natives.KernelPatchImplementation
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.domain.model.HomeDashboardState
-import com.resukisu.resukisu.ui.component.wear.WearChip
-import com.resukisu.resukisu.ui.component.wear.WearChipEmphasis
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
-import com.resukisu.resukisu.ui.component.wear.WearStatusItem
-import com.resukisu.resukisu.ui.component.wear.WearStatusTone
+import com.resukisu.resukisu.ui.wear.component.WearChip
+import com.resukisu.resukisu.ui.wear.component.WearChipEmphasis
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearSectionHeader
+import com.resukisu.resukisu.ui.wear.component.WearStatusItem
+import com.resukisu.resukisu.ui.wear.component.WearStatusTone
 
 /**
  * @author Hanhan_awa

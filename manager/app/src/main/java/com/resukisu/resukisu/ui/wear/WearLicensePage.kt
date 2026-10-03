@@ -15,10 +15,10 @@ import com.mikepenz.aboutlibraries.Libs
 import com.mikepenz.aboutlibraries.util.withJson
 import com.mikepenz.aboutlibraries.ui.compose.util.author
 import com.resukisu.resukisu.R
-import com.resukisu.resukisu.ui.component.wear.WearActionButton
-import com.resukisu.resukisu.ui.component.wear.WearInfoCard
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearActionButton
+import com.resukisu.resukisu.ui.wear.component.WearInfoCard
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

@@ -23,19 +23,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.material3.ConfirmationDialogDefaults
+import androidx.wear.compose.material3.FailureConfirmationDialog
+import androidx.wear.compose.material3.SuccessConfirmationDialog
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.confirmationDialogCurvedText
 import com.resukisu.resukisu.R
-import com.resukisu.resukisu.ui.component.settings.LazySegmentedColumn
-import com.resukisu.resukisu.ui.component.settings.SegmentedColumn
-import com.resukisu.resukisu.ui.component.settings.WearSettingsJumpPageWidget
-import com.resukisu.resukisu.ui.component.wear.WearInfoCard
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearPageTransition
-import com.resukisu.resukisu.ui.component.wear.WearSectionHeader
-import com.resukisu.resukisu.ui.component.settings.WearSettingsSwitchWidget
-import com.resukisu.resukisu.ui.component.wear.WearSubPage
-import com.resukisu.resukisu.ui.component.wear.rememberWearConfirmDialog
+import com.resukisu.resukisu.ui.wear.component.settings.LazySegmentedColumn
+import com.resukisu.resukisu.ui.wear.component.settings.SegmentedColumn
+import com.resukisu.resukisu.ui.wear.component.settings.WearSettingsJumpPageWidget
+import com.resukisu.resukisu.ui.wear.component.WearInfoCard
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearSectionHeader
+import com.resukisu.resukisu.ui.wear.component.settings.WearSettingsSwitchWidget
+import com.resukisu.resukisu.ui.wear.component.WearSubPage
+import com.resukisu.resukisu.ui.wear.component.rememberWearConfirmDialog
 import com.resukisu.resukisu.ui.util.ActivityResumeEffect
 import com.resukisu.resukisu.ui.viewmodel.SuSFSCommandReply
 import com.resukisu.resukisu.ui.viewmodel.SuSFSUiAction
@@ -82,6 +85,28 @@ internal fun WearSuSFSPage(onBack: () -> Unit) {
     val batchResult = stringResource(R.string.susfs_entry_import_success)
     val backupFileName = stringResource(R.string.wear_susfs_backup_file_name)
     val config = state.config
+    var confirmSuccessText by remember { mutableStateOf("") }
+    var showConfirmSuccess by remember { mutableStateOf(false) }
+    var showConfirmFailure by remember { mutableStateOf(false) }
+
+    // Export, import and restoring defaults are one-shot file operations; their result shows as the
+    // official confirmation overlay instead of the persistent in-list message the other commands use.
+    fun submitConfirmed(command: WearSuSFSCommand, successMessage: String) {
+        if (busy) return
+        busy = true
+        showConfirmFailure = false
+        scope.launch {
+            try {
+                if (awaitSuSFSBoolean(viewModel, command)) {
+                    awaitSuSFSConfig(viewModel) { SuSFSUiAction.Load(it) }
+                    confirmSuccessText = successMessage
+                    showConfirmSuccess = true
+                } else showConfirmFailure = true
+            } finally {
+                busy = false
+            }
+        }
+    }
 
     fun submit(command: WearSuSFSCommand, successMessage: String = succeeded, onSuccess: () -> Unit = {}) {
         if (busy) return
@@ -131,18 +156,18 @@ internal fun WearSuSFSPage(onBack: () -> Unit) {
     }
     val confirmImport = rememberWearConfirmDialog(stringResource(R.string.susfs_backup_import_confirm_title),
         stringResource(R.string.susfs_backup_import_confirm_message)) {
-        submit({ SuSFSUiAction.ImportConfig(pendingImport, it) }, importSuccess)
+        submitConfirmed({ SuSFSUiAction.ImportConfig(pendingImport, it) }, importSuccess)
     }
     val restore = rememberWearConfirmDialog(stringResource(R.string.susfs_backup_restore_default),
         stringResource(R.string.susfs_backup_restore_default_desc)) {
-        submit({ SuSFSUiAction.RestoreDefault(it) })
+        submitConfirmed({ SuSFSUiAction.RestoreDefault(it) }, succeeded)
     }
     fun importSelected(uri: String) {
         pendingImport = uri
         confirmImport.show()
     }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
-        if (uri != null) submit({ SuSFSUiAction.ExportConfig(uri.toString(), it) }, exportSuccess)
+        if (uri != null) submitConfirmed({ SuSFSUiAction.ExportConfig(uri.toString(), it) }, exportSuccess)
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) importSelected(uri.toString())
@@ -151,65 +176,69 @@ internal fun WearSuSFSPage(onBack: () -> Unit) {
     fun launchPicker(export: Boolean) {
         runCatching {
             if (export) exportLauncher.launch(backupFileName) else importLauncher.launch(arrayOf("application/json"))
-        }.onFailure { message = failed }
+        }.onFailure { showConfirmFailure = true }
     }
-    WearPageTransition(page, when (page) { "" -> 0; "add", "detail" -> 2; else -> 1 }) { route ->
-        if (route.isNotEmpty()) {
-            WearSubPage({ page = if (page in setOf("add", "detail")) "section" else "" }) {
-                when (route) {
-                    "section" -> if (config != null && config.enabled) {
-                        if (section == WearSuSFSSection.Standard) WearSuSFSStandardPage(config, busy, message, viewModel,
-                            onBack = { page = "" }, onCommand = { command, onSuccess -> submit(command, onSuccess = onSuccess) })
-                        else WearSuSFSEntriesPage(section, config, busy, message, onBack = { page = "" },
-                            onAdd = { page = "add" }, onSelect = { selectedPath = it; page = "detail" })
-                    }
-                    "add" -> WearSuSFSAddPage(section, busy, message, viewModel,
-                        onBack = { page = "section" }, onCommand = ::addEntries)
-                    "detail" -> if (config != null) WearSuSFSDetailPage(section, config, selectedPath, busy, message,
-                        onBack = { page = "section" }) { command -> submit(command) { page = "section" } }
+    val route = page
+    if (route.isNotEmpty()) {
+        WearSubPage({ page = if (page in setOf("add", "detail")) "section" else "" }) {
+            when (route) {
+                "section" -> if (config != null && config.enabled) {
+                    if (section == WearSuSFSSection.Standard) WearSuSFSStandardPage(config, busy, message, viewModel,
+                        onBack = { page = "" }, onCommand = { command, onSuccess -> submit(command, onSuccess = onSuccess) })
+                    else WearSuSFSEntriesPage(section, config, busy, message, onBack = { page = "" },
+                        onAdd = { page = "add" }, onSelect = { selectedPath = it; page = "detail" })
                 }
+                "add" -> WearSuSFSAddPage(section, busy, message, viewModel,
+                    onBack = { page = "section" }, onCommand = ::addEntries)
+                "detail" -> if (config != null) WearSuSFSDetailPage(section, config, selectedPath, busy, message,
+                    onBack = { page = "section" }) { command -> submit(command) { page = "section" } }
             }
-        } else WearList(isLoading = state.isLoading || busy, onBack = onBack) { spec ->
-            item { WearPageHeader(spec, stringResource(R.string.susfs_config_title)) }
-            message?.let { item { WearInfoCard(spec) { Text(it) } } }
-            item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_status_controls)) }
-            item {
-                WearSettingsSwitchWidget(spec, stringResource(R.string.susfs_enable_config), config?.enabled == true,
-                    { enabled -> submit({ SuSFSUiAction.SetEnabled(enabled, it) }) }, enabled = config != null && !busy,
-                    icon = Icons.TwoTone.VisibilityOff,
-                    secondaryLabel = stringResource(R.string.susfs_enable_config_summary))
+        }
+    } else WearList(isLoading = state.isLoading || busy, onBack = onBack) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.susfs_config_title)) }
+        message?.let { item { WearInfoCard(spec) { Text(it) } } }
+        item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_status_controls)) }
+        item {
+            WearSettingsSwitchWidget(spec, stringResource(R.string.susfs_enable_config), config?.enabled == true,
+                { enabled -> submit({ SuSFSUiAction.SetEnabled(enabled, it) }) }, enabled = config != null && !busy,
+                icon = Icons.TwoTone.VisibilityOff,
+                secondaryLabel = stringResource(R.string.susfs_enable_config_summary))
+        }
+        if (config?.enabled == false) item {
+            WearInfoCard(spec) { Text(stringResource(R.string.susfs_config_disable_warning)) }
+        }
+        item {
+            WearInfoCard(spec) {
+                Text(stringResource(R.string.susfs_status_version))
+                Text(state.statusInfo?.version?.ifBlank { noData } ?: noData)
+                Text(stringResource(R.string.susfs_status_variant))
+                Text(state.statusInfo?.variant?.ifBlank { noData } ?: noData)
+                Text(stringResource(R.string.susfs_status_enabled_features))
+                Text(state.statusInfo?.enabledFeatures?.ifBlank { noData } ?: noData)
             }
-            if (config?.enabled == false) item {
-                WearInfoCard(spec) { Text(stringResource(R.string.susfs_config_disable_warning)) }
-            }
-            item {
-                WearInfoCard(spec) {
-                    Text(stringResource(R.string.susfs_status_version))
-                    Text(state.statusInfo?.version?.ifBlank { noData } ?: noData)
-                    Text(stringResource(R.string.susfs_status_variant))
-                    Text(state.statusInfo?.variant?.ifBlank { noData } ?: noData)
-                    Text(stringResource(R.string.susfs_status_enabled_features))
-                    Text(state.statusInfo?.enabledFeatures?.ifBlank { noData } ?: noData)
-                }
-            }
-            if (config?.enabled == true) item {
-                WearSectionHeader(spec, stringResource(R.string.wear_susfs_features))
-            }
-            LazySegmentedColumn(if (config?.enabled == true) WearSuSFSSection.entries else emptyList(), { it.name }) { entry ->
-                WearSettingsJumpPageWidget(spec, stringResource(entry.title), { sectionName = entry.name; page = "section" },
-                    icon = entry.icon)
-            }
-            item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_backup_restore)) }
-            SegmentedColumn(listOf("export", "import", "reset"), { it }) { action ->
-                when (action) {
-                    "export" -> WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_backup_export), { launchPicker(true) },
-                        icon = Icons.TwoTone.Save, description = stringResource(R.string.susfs_backup_description))
-                    "import" -> WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_backup_import), { launchPicker(false) },
-                        icon = Icons.TwoTone.Restore, description = stringResource(R.string.susfs_restore_description))
-                    "reset" -> WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_backup_restore_default), restore::show,
-                        icon = Icons.TwoTone.Restore, description = stringResource(R.string.susfs_backup_restore_default_desc))
-                }
+        }
+        if (config?.enabled == true) item {
+            WearSectionHeader(spec, stringResource(R.string.wear_susfs_features))
+        }
+        LazySegmentedColumn(if (config?.enabled == true) WearSuSFSSection.entries else emptyList(), { it.name }) { entry ->
+            WearSettingsJumpPageWidget(spec, stringResource(entry.title), { sectionName = entry.name; page = "section" },
+                icon = entry.icon)
+        }
+        item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_backup_restore)) }
+        SegmentedColumn(listOf("export", "import", "reset"), { it }) { action ->
+            when (action) {
+                "export" -> WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_backup_export), { launchPicker(true) },
+                    icon = Icons.TwoTone.Save, description = stringResource(R.string.susfs_backup_description))
+                "import" -> WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_backup_import), { launchPicker(false) },
+                    icon = Icons.TwoTone.Restore, description = stringResource(R.string.susfs_restore_description))
+                "reset" -> WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_backup_restore_default), restore::show,
+                    icon = Icons.TwoTone.Restore, description = stringResource(R.string.susfs_backup_restore_default_desc))
             }
         }
     }
+    val confirmationStyle = ConfirmationDialogDefaults.curvedTextStyle
+    SuccessConfirmationDialog(visible = showConfirmSuccess, onDismissRequest = { showConfirmSuccess = false },
+        curvedText = { confirmationDialogCurvedText(confirmSuccessText, confirmationStyle) })
+    FailureConfirmationDialog(visible = showConfirmFailure, onDismissRequest = { showConfirmFailure = false },
+        curvedText = { confirmationDialogCurvedText(failed, confirmationStyle) })
 }

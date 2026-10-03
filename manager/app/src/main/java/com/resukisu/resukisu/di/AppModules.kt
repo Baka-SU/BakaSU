@@ -9,8 +9,6 @@ import com.resukisu.resukisu.data.count.CountRepository
 import com.resukisu.resukisu.data.download.DownloadRepository
 import com.resukisu.resukisu.data.file.ModuleFileRepository
 import com.resukisu.resukisu.data.file.WearFileRepository
-import com.resukisu.resukisu.ui.viewmodel.WearFileViewModel
-import com.resukisu.resukisu.ui.viewmodel.WearPreferencesViewModel
 import com.resukisu.resukisu.data.flash.FlashRepository
 import com.resukisu.resukisu.data.kernel.KernelRepository
 import com.resukisu.resukisu.data.kernel.UmountRepository
@@ -21,11 +19,8 @@ import com.resukisu.resukisu.data.module.ModuleCatalogRepository
 import com.resukisu.resukisu.data.module.ModulePreferencesRepository
 import com.resukisu.resukisu.data.module.ModuleRepository
 import com.resukisu.resukisu.data.network.NetworkRequestRepository
-import com.resukisu.resukisu.data.network.WearLinkRepository
-import com.resukisu.resukisu.ui.viewmodel.WearLinkViewModel
-import com.resukisu.resukisu.ui.viewmodel.WearModuleUpdateViewModel
-import com.resukisu.resukisu.ui.viewmodel.WearKernelInstallViewModel
 import com.resukisu.resukisu.data.network.NetworkStatusRepository
+import com.resukisu.resukisu.data.network.WearLinkRepository
 import com.resukisu.resukisu.data.network.WebResourceRepository
 import com.resukisu.resukisu.data.packageinfo.AppIconDataSource
 import com.resukisu.resukisu.data.packageinfo.InstalledPackageCache
@@ -62,7 +57,6 @@ import com.resukisu.resukisu.domain.usecase.ClearDynamicManagerUseCase
 import com.resukisu.resukisu.domain.usecase.ConfigureSuLogUseCase
 import com.resukisu.resukisu.domain.usecase.ControlAppUseCase
 import com.resukisu.resukisu.domain.usecase.DeleteProfileTemplateUseCase
-import com.resukisu.resukisu.domain.usecase.BrowseOnlineProfileTemplatesUseCase
 import com.resukisu.resukisu.domain.usecase.EnableSulogUseCase
 import com.resukisu.resukisu.domain.usecase.EnqueueDownloadUseCase
 import com.resukisu.resukisu.domain.usecase.EnqueueManagerUpdateUseCase
@@ -157,7 +151,6 @@ import com.resukisu.resukisu.ui.viewmodel.AppProfileViewModel
 import com.resukisu.resukisu.ui.viewmodel.DynamicManagerViewModel
 import com.resukisu.resukisu.ui.viewmodel.ExecuteModuleActionViewModel
 import com.resukisu.resukisu.ui.viewmodel.FlashViewModel
-import com.resukisu.resukisu.ui.viewmodel.WearPageStoresViewModel
 import com.resukisu.resukisu.ui.viewmodel.HomeViewModel
 import com.resukisu.resukisu.ui.viewmodel.InstallViewModel
 import com.resukisu.resukisu.ui.viewmodel.KernelFlashViewModel
@@ -172,6 +165,9 @@ import com.resukisu.resukisu.ui.viewmodel.SuperUserViewModel
 import com.resukisu.resukisu.ui.viewmodel.TemplateEditorViewModel
 import com.resukisu.resukisu.ui.viewmodel.TemplateViewModel
 import com.resukisu.resukisu.ui.viewmodel.UmountManagerScreenViewModel
+import com.resukisu.resukisu.ui.viewmodel.WearFileViewModel
+import com.resukisu.resukisu.ui.viewmodel.WearLinkViewModel
+import com.resukisu.resukisu.ui.viewmodel.WearPreferencesViewModel
 import com.resukisu.resukisu.ui.webui.MonetColorsProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -355,7 +351,6 @@ val useCaseModule = module {
     factoryOf(::ObserveProfileTemplateRefreshingUseCase)
     factoryOf(::ObserveProfileTemplateOfflineUseCase)
     factoryOf(::RefreshProfileTemplatesUseCase)
-    factoryOf(::BrowseOnlineProfileTemplatesUseCase)
     factoryOf(::GetProfileTemplateUseCase)
     factoryOf(::SaveProfileTemplateUseCase)
     factoryOf(::DeleteProfileTemplateUseCase)
@@ -419,11 +414,6 @@ val viewModelModule = module {
         )
     }
     viewModelOf(::HomeViewModel)
-    viewModelOf(::WearFileViewModel)
-    viewModelOf(::WearPreferencesViewModel)
-    viewModelOf(::WearLinkViewModel)
-    viewModelOf(::WearModuleUpdateViewModel)
-    viewModelOf(::WearKernelInstallViewModel)
     viewModelOf(::InstallViewModel)
     viewModelOf(::MainIntentViewModel)
     viewModelOf(::KernelFlashViewModel)
@@ -446,18 +436,16 @@ val viewModelModule = module {
     }
     viewModelOf(::SulogViewModel)
     viewModelOf(::DynamicManagerViewModel)
-    viewModelOf(::WearPageStoresViewModel)
-    viewModel { parameters ->
-        FlashViewModel(get(), get(), get(), get(), parameters.getOrNull<Int>() ?: Int.MAX_VALUE)
-    }
+    viewModelOf(::FlashViewModel)
     viewModelOf(::UmountManagerScreenViewModel)
+    viewModelOf(::WearFileViewModel)
+    viewModelOf(::WearLinkViewModel)
+    viewModelOf(::WearPreferencesViewModel)
     viewModel { parameters ->
         ExecuteModuleActionViewModel(
             moduleId = parameters[0],
             executeModuleAction = get(),
             saveModuleActionLog = get(),
-            autoStart = parameters.getOrNull<Boolean>() ?: true,
-            displayLogLimit = parameters.getOrNull<Int>() ?: Int.MAX_VALUE,
         )
     }
 }

@@ -25,12 +25,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Job
 import java.text.Collator
 import java.util.Locale
 
 data class ModuleUiState(
-    val isLoading: Boolean = true,
     val moduleList: List<InstalledModule> = emptyList(),
     val moduleSizes: Map<String, String> = emptyMap(),
     val isRefreshing: Boolean = false,
@@ -78,7 +76,6 @@ private data class ModuleControls(
     val search: String = "",
     val isNeedRefresh: Boolean = false,
     val moduleSizes: Map<String, String> = emptyMap(),
-    val loaded: Boolean = false,
 )
 
 class ModuleViewModel(
@@ -94,7 +91,6 @@ class ModuleViewModel(
     private val reboot: RebootUseCase,
     private val isSoftRebootPreferred: IsSoftRebootPreferredUseCase,
 ) : ViewModel() {
-    private var refreshJob: Job? = null
     private val controls = MutableStateFlow(ModuleControls())
     private val mutableEvents = MutableSharedFlow<ModuleUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<ModuleUiEvent> = mutableEvents.asSharedFlow()
@@ -112,8 +108,6 @@ class ModuleViewModel(
                 sortActionFirst = preferences.sortActionFirst,
             ),
             moduleSizes = local.moduleSizes,
-            // Loading until this model's first refresh ends, unless modules are already known.
-            isLoading = !local.loaded && source.modules.isEmpty(),
             isRefreshing = source.refreshing,
             search = local.search,
             sortEnabledFirst = preferences.sortEnabledFirst,
@@ -172,8 +166,7 @@ class ModuleViewModel(
         }
     }
     private fun refresh(manual: Boolean) {
-        if (refreshJob?.isActive == true) return
-        refreshJob = viewModelScope.launch { refreshNow(manual) }
+        viewModelScope.launch { refreshNow(manual) }
     }
 
     private suspend fun refreshNow(manual: Boolean) {
@@ -189,7 +182,6 @@ class ModuleViewModel(
             .onFailure { error ->
                 mutableEvents.tryEmit(ModuleUiEvent.Error(error.message.orEmpty()))
             }
-        controls.update { it.copy(loaded = true) }
     }
 
     private fun buildModuleList(

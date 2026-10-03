@@ -34,18 +34,17 @@ import androidx.wear.compose.material3.Text
 import com.resukisu.resukisu.R
 import com.resukisu.resukisu.data.file.matchesMimeType
 import com.resukisu.resukisu.data.file.wearFileMimeType
-import com.resukisu.resukisu.ui.component.wear.WearActionButton
-import com.resukisu.resukisu.ui.component.wear.WearChip
-import com.resukisu.resukisu.ui.component.wear.WearChipEmphasis
-import com.resukisu.resukisu.ui.component.wear.WearList
-import com.resukisu.resukisu.ui.component.wear.WearPageHeader
-import com.resukisu.resukisu.ui.component.wear.WearScaledItem
-import com.resukisu.resukisu.ui.component.wear.WearStatusItem
-import com.resukisu.resukisu.ui.component.wear.WearStatusTone
-import com.resukisu.resukisu.ui.component.wear.WearSubPage
-import com.resukisu.resukisu.ui.component.wear.WearPageTransition
-import com.resukisu.resukisu.ui.component.wear.WearTextInputPage
-import com.resukisu.resukisu.ui.component.wear.wearGroupGap
+import com.resukisu.resukisu.ui.wear.component.WearActionButton
+import com.resukisu.resukisu.ui.wear.component.WearChip
+import com.resukisu.resukisu.ui.wear.component.WearChipEmphasis
+import com.resukisu.resukisu.ui.wear.component.WearList
+import com.resukisu.resukisu.ui.wear.component.WearPageHeader
+import com.resukisu.resukisu.ui.wear.component.WearScaledItem
+import com.resukisu.resukisu.ui.wear.component.WearStatusItem
+import com.resukisu.resukisu.ui.wear.component.WearStatusTone
+import com.resukisu.resukisu.ui.wear.component.WearSubPage
+import com.resukisu.resukisu.ui.wear.component.WearTextInputPage
+import com.resukisu.resukisu.ui.wear.component.wearGroupGap
 import com.resukisu.resukisu.ui.viewmodel.WearFileEvent
 import com.resukisu.resukisu.ui.viewmodel.WearFileViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -77,58 +76,56 @@ internal fun WearFilePage(mimeTypes: List<String>, saving: Boolean, initialName:
         if (event is WearFileEvent.Picked) onPicked(event.uri.toUri())
     } }
     var editingName by rememberSaveable { mutableStateOf(false) }
-    WearPageTransition(if (editingName) "name" else "", if (editingName) 1 else 0) { route ->
-        if (route == "name") {
-            WearSubPage({ editingName = false }) {
-                WearTextInputPage(stringResource(R.string.wear_file_name), state.name) {
-                    viewModel.setName(it); editingName = false
-                }
+    if (editingName) {
+        WearSubPage({ editingName = false }) {
+            WearTextInputPage(stringResource(R.string.wear_file_name), state.name) {
+                viewModel.setName(it); editingName = false
             }
-        } else {
-            val error = state.error ?: if (state.failed) stringResource(R.string.operation_failed) else null
-            val directory = state.directory
-            WearList(isLoading = state.loading || directory == null && !state.failed, onBack = onBack, snap = true,
-                onConfirm = if (saving && directory?.writable == true) ({ viewModel.create() }) else null,
-            ) { spec ->
-                item { WearPageHeader(spec, stringResource(R.string.wear_picker_mode)) }
-                directory?.let { item {
-                    WearScaledItem(spec) {
-                        Text(it.path, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                            style = MaterialTheme.typography.bodyExtraSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.StartEllipsis)
-                    }
-                } }
-                error?.let { item { WearStatusItem(spec, Icons.TwoTone.Error, it, tone = WearStatusTone.ERROR) } }
-                directory?.parent?.let { parent -> item {
-                    WearChip(spec, stringResource(R.string.wear_parent_directory), icon = Icons.TwoTone.SubdirectoryArrowLeft, emphasis = WearChipEmphasis.HIGH,
-                        onClick = { viewModel.load(parent, mimeTypes, saving) })
-                } }
-                if (directory != null && directory.entries.isEmpty()) item {
-                    WearStatusItem(spec, Icons.TwoTone.FolderOff, stringResource(R.string.wear_directory_empty))
+        }
+    } else {
+        val error = state.error ?: if (state.failed) stringResource(R.string.operation_failed) else null
+        val directory = state.directory
+        WearList(isLoading = state.loading || directory == null && !state.failed, onBack = onBack, snap = true,
+            onConfirm = if (saving && directory?.writable == true) ({ viewModel.create() }) else null,
+        ) { spec ->
+            item { WearPageHeader(spec, stringResource(R.string.wear_picker_mode)) }
+            directory?.let { item {
+                WearScaledItem(spec) {
+                    Text(it.path, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                        style = MaterialTheme.typography.bodyExtraSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.StartEllipsis)
                 }
-                items(directory?.entries.orEmpty(), key = { it.path }) { entry ->
-                    val mimeType = wearFileMimeType(entry.name)
-                    WearActionButton(spec,
-                        icon = when {
-                            entry.directory -> Icons.TwoTone.Folder
-                            matchesMimeType(mimeType, listOf("image/*")) -> Icons.TwoTone.Image
-                            mimeType == "application/zip" -> Icons.TwoTone.FolderZip
-                            else -> Icons.TwoTone.FilePresent
-                        },
-                        label = entry.name,
-                        onClick = { if (entry.directory) viewModel.load(entry.path, mimeTypes, saving) else viewModel.select(entry.path) },
-                        secondaryText = if (entry.directory) null else Formatter.formatShortFileSize(context, entry.size),
-                        colors = ButtonDefaults.filledTonalButtonColors())
+            } }
+            error?.let { item { WearStatusItem(spec, Icons.TwoTone.Error, it, tone = WearStatusTone.ERROR) } }
+            directory?.parent?.let { parent -> item {
+                WearChip(spec, stringResource(R.string.wear_parent_directory), icon = Icons.TwoTone.SubdirectoryArrowLeft, emphasis = WearChipEmphasis.HIGH,
+                    onClick = { viewModel.load(parent, mimeTypes, saving) })
+            } }
+            if (directory != null && directory.entries.isEmpty()) item {
+                WearStatusItem(spec, Icons.TwoTone.FolderOff, stringResource(R.string.wear_directory_empty))
+            }
+            items(directory?.entries.orEmpty(), key = { it.path }) { entry ->
+                val mimeType = wearFileMimeType(entry.name)
+                WearActionButton(spec,
+                    icon = when {
+                        entry.directory -> Icons.TwoTone.Folder
+                        matchesMimeType(mimeType, listOf("image/*")) -> Icons.TwoTone.Image
+                        mimeType == "application/zip" -> Icons.TwoTone.FolderZip
+                        else -> Icons.TwoTone.FilePresent
+                    },
+                    label = entry.name,
+                    onClick = { if (entry.directory) viewModel.load(entry.path, mimeTypes, saving) else viewModel.select(entry.path) },
+                    secondaryText = if (entry.directory) null else Formatter.formatShortFileSize(context, entry.size),
+                    colors = ButtonDefaults.filledTonalButtonColors())
+            }
+            if (saving) {
+                wearGroupGap("save-gap")
+                if (directory?.writable == false) item {
+                    WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.wear_directory_unavailable), tone = WearStatusTone.ERROR)
                 }
-                if (saving) {
-                    wearGroupGap("save-gap")
-                    if (directory?.writable == false) item {
-                        WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.wear_directory_unavailable), tone = WearStatusTone.ERROR)
-                    }
-                    item {
-                        WearActionButton(spec, Icons.TwoTone.DriveFileRenameOutline, state.name, { editingName = true },
-                            secondaryText = stringResource(R.string.wear_file_name), colors = ButtonDefaults.filledTonalButtonColors())
-                    }
+                item {
+                    WearActionButton(spec, Icons.TwoTone.DriveFileRenameOutline, state.name, { editingName = true },
+                        secondaryText = stringResource(R.string.wear_file_name), colors = ButtonDefaults.filledTonalButtonColors())
                 }
             }
         }

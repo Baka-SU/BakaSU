@@ -9,7 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.graphics.Color
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
-import com.resukisu.resukisu.ui.component.wear.WearTimeText
+import com.resukisu.resukisu.ui.wear.component.WearTimeText
 
 /**
  * The app's own document picker for watches without a usable DocumentsUI. It answers the standard
