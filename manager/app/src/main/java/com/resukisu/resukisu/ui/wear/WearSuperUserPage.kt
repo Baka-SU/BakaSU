@@ -107,7 +107,7 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
         transformation = SurfaceTransformation(spec),
         onClick = { onAppClick(group.uid, group.primaryPackageName) },
-        colors = wearAppButtonColors(group.mainApp.packageName, group.allowSu),
+        colors = wearAppButtonColors(group.allowSu),
         icon = {
             PackageIcon(
                 packageName = if (group.isWebViewZygote) "android" else group.mainApp.packageName,
@@ -121,7 +121,8 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
                     imageVector = if (group.allowSu) Icons.Default.CheckCircle else Icons.Default.Block,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
-                    tint = if (group.allowSu) MaterialTheme.colorScheme.primary
+                    // On the primary container of an authorized app the mark uses its content color.
+                    tint = if (group.allowSu) MaterialTheme.colorScheme.onPrimary
                         else MaterialTheme.colorScheme.error,
                 )
                 Spacer(Modifier.width(4.dp))

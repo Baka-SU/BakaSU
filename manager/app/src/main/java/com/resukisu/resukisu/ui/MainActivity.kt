@@ -102,6 +102,12 @@ open class MainActivity : ComponentActivity() {
 
             if (isWearDevice) {
                 lifecycleScope.launch { ensureManagerInstalled() }
+                // As on the phone, Home and the app list start loading at launch, so the superuser
+                // page already has its list once the startup screen is gone.
+                if (savedInstanceState == null) {
+                    homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
+                    superUserViewModel.dispatch(SuperUserUiAction.Refresh)
+                }
                 setContent {
                     WearManagerTheme {
                         when (val state = startupState.collectAsStateWithLifecycle().value) {

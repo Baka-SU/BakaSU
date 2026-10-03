@@ -72,4 +72,7 @@
     <string name="wear_template_offline">无网络连接</string>
     <string name="wear_operation_interrupted">操作状态未恢复，请检查当前状态后再重新发起。</string>
     <string name="wear_log_tail">仅显示最近的日志输出</string>
+    <string name="wear_template_offline_local">仅显示本地模板</string>
+    <string name="wear_template_offline_online">无法获取在线模板</string>
+    <string name="wear_settings_selinux_hide_summary">阻止应用检测</string>
 </resources>
