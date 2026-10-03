@@ -406,7 +406,8 @@ fun WearManagerScreen() {
     com.resukisu.resukisu.ui.component.wear.WearManagerUpdateDialog(home.stableManagerUpdate ?: home.betaManagerUpdate)
     WearPhoneWebUiDialogs(webUiOnPhone, { webUiOnPhone = false }, webUiPhoneFailure, webUiPhoneFailed) { webUiPhoneFailed = false }
     AppScaffold(timeText = { WearTimeText() }, containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface) {
-        WearPageTransition(detailType, parents.size, verticalRoutes = setOf("reboot", "app-filter", "module-sort")) { route ->
+        WearPageTransition(detailType, parents.size, verticalRoutes = setOf("reboot", "app-filter", "module-sort"),
+            parentRoute = parents.lastOrNull()) { route ->
             if (linkLoading) {
                 // A waiting spinner; the branded loading screen is only shown at app startup.
                 androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
@@ -415,7 +416,7 @@ fun WearManagerScreen() {
             } else if (route.isNotEmpty()) {
                 com.resukisu.resukisu.ui.component.wear.WearSwipeToDismissBox(onDismissed = { goBack() }) { isBackground ->
                     if (isBackground) {
-                        // The revealed layer shows only the app backdrop while swiping.
+                        // The page transition draws the parent page under the swiped page.
                         Unit
                     } else pageStateHolder.SaveableStateProvider("wear-details-$route-$selectedId") { when (route) {
                         "module" -> WearModuleDetail(

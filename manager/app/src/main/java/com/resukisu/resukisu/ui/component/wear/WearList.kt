@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.LocalContentColor
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableDefaults
@@ -160,7 +161,9 @@ fun WearList(
                     -pullProgress.floatValue, closing = true)
                 else if (pullProgress.floatValue < 0f) CircularProgressIndicator(
                     progress = { (-pullProgress.floatValue).coerceIn(0f, 1f) }, modifier = Modifier.size(24.dp),
-                    colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current))
+                    colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current),
+                    // The pull ring keeps the thin stroke of the spinner that follows it.
+                    strokeWidth = CircularProgressIndicatorDefaults.IndeterminateStrokeWidth)
                 else if (isRefreshing) CircularProgressIndicator(Modifier.size(24.dp),
                     colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current))
                 else Icon(

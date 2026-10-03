@@ -111,7 +111,7 @@ internal fun WearFilePage(title: String, mode: WearFileMode, onBack: () -> Unit,
                 } }
                 error?.let { item { WearStatusItem(spec, Icons.TwoTone.Error, it, tone = WearStatusTone.ERROR) } }
                 directory?.parent?.let { parent -> item {
-                    WearChip(spec, stringResource(R.string.wear_parent_directory), icon = Icons.TwoTone.SubdirectoryArrowLeft, emphasis = WearChipEmphasis.OUTLINED,
+                    WearChip(spec, stringResource(R.string.wear_parent_directory), icon = Icons.TwoTone.SubdirectoryArrowLeft, emphasis = WearChipEmphasis.HIGH,
                         onClick = { viewModel.load(parent, mode) })
                 } }
                 if (directory != null && directory.entries.isEmpty()) item {

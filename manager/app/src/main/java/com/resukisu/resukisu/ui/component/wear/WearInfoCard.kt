@@ -22,9 +22,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.Icon
@@ -141,31 +139,5 @@ fun TransformingLazyColumnItemScope.WearStatusItem(
             modifier = Modifier.size(24.dp).align(Alignment.CenterHorizontally))
         Text(message, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium,
             color = if (neutral) MaterialTheme.colorScheme.onSurface else content, textAlign = TextAlign.Center)
-    }
-}
-
-/** A one-line pill strip for short persistent states such as being offline. */
-@Composable
-fun TransformingLazyColumnItemScope.WearStatusLabel(
-    transformationSpec: TransformationSpec,
-    icon: ImageVector,
-    message: String,
-    modifier: Modifier = Modifier,
-    tone: WearStatusTone = WearStatusTone.NEUTRAL,
-) {
-    val (container, content) = wearStatusColors(tone)
-    WearInfoCard(
-        transformationSpec,
-        modifier,
-        containerColor = container,
-        shape = CircleShape,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-    ) {
-        Row(Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp), tint = content)
-            Spacer(Modifier.width(4.dp))
-            Text(message, style = MaterialTheme.typography.labelSmall, color = content,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
     }
 }

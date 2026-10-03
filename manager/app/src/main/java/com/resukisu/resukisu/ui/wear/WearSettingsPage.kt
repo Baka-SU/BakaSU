@@ -222,7 +222,8 @@ internal fun WearSettingsPage(
                         state.defaultUmountModules, SettingsUiAction.SetDefaultUmountModules(!state.defaultUmountModules)))
                     add(SettingsToggle(SettingsSection.LoggingPrivacy, R.string.settings_sulog, R.string.settings_sulog_summary,
                         state.isSuLogEnabled, SettingsUiAction.SetSuLog(!state.isSuLogEnabled)))
-                    add(SettingsToggle(SettingsSection.LoggingPrivacy, R.string.settings_selinux_hide, R.string.settings_selinux_hide_summary,
+                    // A short Wear summary keeps this row compact; the phone summary wraps around "SELinux".
+                    add(SettingsToggle(SettingsSection.LoggingPrivacy, R.string.settings_selinux_hide, R.string.wear_settings_selinux_hide_summary,
                         state.isSelinuxHideEnabled, SettingsUiAction.SetSelinuxHide(!state.isSelinuxHideEnabled)))
                 }
                 if (category == "advanced" && status.isFullFeatured) {

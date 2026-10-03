@@ -11,6 +11,9 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import com.resukisu.resukisu.ui.theme.ThemeConfig
 import org.koin.compose.koinInject
+import androidx.compose.runtime.LaunchedEffect
+import androidx.wear.compose.foundation.SwipeToDismissValue
+import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
 import androidx.wear.compose.material3.SwipeToDismissBox
 
 /**
@@ -37,9 +40,24 @@ fun WearBackground(content: @Composable BoxScope.() -> Unit) {
 }
 
 /**
- * Swipe-dismiss layers contain only page content; the theme owns the stationary backdrop.
+ * Swipe-dismiss layers contain only page content; the theme owns the stationary backdrop. The
+ * default background scrim is an opaque fill under the foreground page that would hide that
+ * backdrop, so it is transparent; the content scrim still dims the page while it is swiped away.
+ *
+ * Inside a [WearPageTransition] the box uses that page's swipe state: the transition draws the
+ * parent page underneath and the dismissed page stays off screen, where the stock box would snap it
+ * back before returning.
  */
 @Composable
 fun WearSwipeToDismissBox(onDismissed: () -> Unit, content: @Composable BoxScope.(isBackground: Boolean) -> Unit) {
-    SwipeToDismissBox(onDismissed = onDismissed, content = content)
+    val page = LocalWearPageSwipe.current
+    val ownState = rememberSwipeToDismissBoxState()
+    val state = page?.state ?: ownState
+    LaunchedEffect(state, state.currentValue) {
+        if (state.currentValue == SwipeToDismissValue.Dismissed) {
+            if (page == null) state.snapTo(SwipeToDismissValue.Default) else page.onDismissed()
+            onDismissed()
+        }
+    }
+    SwipeToDismissBox(state = state, backgroundScrimColor = Color.Transparent, content = content)
 }

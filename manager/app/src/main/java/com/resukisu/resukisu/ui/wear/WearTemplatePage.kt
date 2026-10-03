@@ -82,8 +82,9 @@ internal fun WearTemplatePage(onBack: () -> Unit) {
             WearSubPage(back) {
                 WearList(isLoading = state.isLoadingOnline && state.onlineTemplates.isEmpty(), onBack = back) { spec ->
                     item { WearPageHeader(spec, stringResource(R.string.wear_online_templates)) }
-                    if (onlineOffline) item { WearStatusLabel(spec, Icons.TwoTone.SignalWifiOff,
-                        stringResource(R.string.wear_template_offline), tone = WearStatusTone.WARNING) }
+                    if (onlineOffline) item { WearChip(spec, stringResource(R.string.wear_template_offline),
+                        secondaryLabel = stringResource(R.string.wear_template_offline_online),
+                        icon = Icons.TwoTone.SignalWifiOff, emphasis = WearChipEmphasis.HIGH) }
                     message?.let { item { WearInfoCard(spec) { Text(it) } } }
                     if (template == null) {
                         item { WearActionButton(spec, Icons.TwoTone.Refresh, stringResource(R.string.wear_refresh),
@@ -117,8 +118,9 @@ internal fun WearTemplatePage(onBack: () -> Unit) {
             }
         } else WearList(isLoading = state.isRefreshing && state.templateList.none { it.local }, onBack = onBack, listState = listState) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.settings_profile_template)) }
-            if (state.isOffline) item { WearStatusLabel(spec, Icons.TwoTone.SignalWifiOff,
-                stringResource(R.string.wear_template_offline), tone = WearStatusTone.WARNING) }
+            if (state.isOffline) item { WearChip(spec, stringResource(R.string.wear_template_offline),
+                secondaryLabel = stringResource(R.string.wear_template_offline_local),
+                icon = Icons.TwoTone.SignalWifiOff, emphasis = WearChipEmphasis.HIGH) }
             message?.let { item { WearInfoCard(spec) { Text(it) } } }
             item { WearActionButton(spec, Icons.TwoTone.Add, stringResource(R.string.app_profile_template_create), {
                 creation = true; readOnly = false; selected = ""; editRequest++
