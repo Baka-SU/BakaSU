@@ -502,12 +502,13 @@ void do_ksu_load_allow_list(void *unused)
     u32 magic;
     u32 version;
     size_t app_profile_size;
+    const struct cred *saved = override_creds(ksu_cred);
 
     // load allowlist now!
     fp = filp_open(KERNEL_SU_ALLOWLIST, O_RDONLY, 0);
     if (IS_ERR(fp)) {
         pr_err("load_allow_list open file failed: %ld\n", PTR_ERR(fp));
-        return;
+        goto revert_creds;
     }
 
     // verify magic
@@ -550,6 +551,7 @@ void do_ksu_load_allow_list(void *unused)
     }
     ksu_show_allow_list();
     filp_close(fp, 0);
+    revert_creds(saved);
     if (version < KSU_APP_PROFILE_VER)
         ksu_persistent_allow_list();
     return;
@@ -557,6 +559,8 @@ void do_ksu_load_allow_list(void *unused)
 exit:
     ksu_show_allow_list();
     filp_close(fp, 0);
+revert_creds:
+    revert_creds(saved);
 }
 
 void ksu_persistent_allow_list(void)
