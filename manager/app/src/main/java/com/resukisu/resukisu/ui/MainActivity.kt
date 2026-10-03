@@ -78,10 +78,11 @@ class MainActivity : ComponentActivity() {
             super.onCreate(savedInstanceState)
 
             splashScreen.setKeepOnScreenCondition {
-                shouldKeepStartupSplash(
-                    startupState = startupState.value,
-                    homeInitialDataLoaded = homeViewModel.homeStateRepository.state.value.isInitialDataLoaded,
-                )
+                when (startupState.value) {
+                    StartupState.Loading -> true
+                    StartupState.Ready -> false
+                    is StartupState.Failed -> false
+                }
             }
 
             lifecycleScope.launch { ensureManagerInstalled() }
