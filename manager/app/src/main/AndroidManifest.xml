@@ -34,7 +34,7 @@
         android:theme="@style/Theme.KernelSU"
         tools:targetApi="34"
         android:directBootAware="true"
-        android:zygotePreloadName="com.bakasu.bakasu.magica.AppZygotePreload">
+        android:zygotePreloadName="org.bakasu.bakasu.magica.AppZygotePreload">
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
@@ -149,7 +149,7 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.bakasu.bakasu.magica.LAUNCH" />
+                <action android:name="org.bakasu.bakasu.magica.LAUNCH" />
             </intent-filter>
         </receiver>
     </application>
