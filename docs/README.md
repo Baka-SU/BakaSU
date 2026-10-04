@@ -54,7 +54,6 @@ If you need to submit a translation for the manager, please go to [Weblate](http
 ## License
 
 - The file in the “kernel” directory is under [GPL-2.0-only](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html) license.
-- The images of the files `ic_launcher(?!.*alt.*).*` with anime character artwork are licensed under a special arrangement: drawn by [怡子曰曰](https://space.bilibili.com/10545509), the copyright is held by [明风 OuO](https://space.bilibili.com/274939213), and the vectorized icons are provided by this project. See [`LICENSE_icon_English`](/LICENSE_icon_English) and [`LICENSE_icon_SC`](/LICENSE_icon_SC) for details.
 - The artwork files [`BakaSU_Clean.svg`](/docs/BakaSU_Clean.svg) and [`BakaSU_Full.svg`](/docs/BakaSU_Full.svg) are created by [OukaroMF](https://github.com/OukaroMF) under a layered license arrangement. See [`ASSETS_LICENSE.md`](/ASSETS_LICENSE.md) and [`ASSETS_LICENSE.zh-CN.md`](/ASSETS_LICENSE.zh-CN.md) for details.
 - Except for the files or directories mentioned above, all other parts are under [GPL-3.0 or later](https://www.gnu.org/licenses/gpl-3.0.html) license.
 
