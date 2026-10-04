@@ -45,7 +45,7 @@ See the [documentation](https://bakasu.org).
 
 ## Translation
 
-If you need to submit a translation for the manager, please go to [Weblate](https://hosted.weblate.org/engage/bakasu/).
+If you want to submit a translation for the manager, please go to [Weblate](https://hosted.weblate.org/engage/bakasu/).
 
 ## Sponsor
 
