@@ -4,6 +4,9 @@
 -dontwarn org.conscrypt.**
 -dontwarn kotlinx.serialization.**
 
+# Commons Compress references the optional Zstandard backend; ZIP metadata uses XZ.
+-dontwarn com.github.luben.zstd.ZstdInputStream
+
 # Please add these rules to your existing keep rules in order to suppress warnings.
 # This is generated automatically by the Android Gradle plugin.
 -dontwarn com.google.auto.service.AutoService

@@ -34,6 +34,8 @@ datastore = "1.2.1"
 benchmark = "1.5.0"
 profileinstaller = "1.4.1"
 koin-bom = "4.2.2"
+commons-compress = "1.28.0"
+xz = "1.12"
 
 [plugins]
 agp-app = { id = "com.android.application", version.ref = "agp" }
@@ -46,6 +48,8 @@ lsplugin-apksign = { id = "org.lsposed.lsplugin.apksign", version.ref = "apksign
 aboutLibraries = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutLibraries" }
 
 [libraries]
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
+xz = { module = "org.tukaani:xz", version.ref = "xz" }
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
 koin-core = { module = "io.insert-koin:koin-core" }
 koin-android = { module = "io.insert-koin:koin-android" }

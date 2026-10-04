@@ -7,8 +7,6 @@ import android.net.Uri
 import android.util.Log
 import com.resukisu.resukisu.R
 import java.util.Properties
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
 
 class ModuleUtils {
     private companion object {
@@ -33,26 +31,17 @@ class ModuleUtils {
         }
 
         try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                ZipInputStream(inputStream).use { zip ->
-                    var entry: ZipEntry?
-
-                    while (zip.nextEntry.also { entry = it } != null) {
-                        if (entry?.name == "module.prop") {
-                            val prop = Properties()
-                            prop.load(zip)
-
-                            val name = prop.getProperty("name")
-                            if (!name.isNullOrBlank()) {
-                                return name.replace(
-                                    Regex("[^a-zA-Z0-9\\s\\-_.@()\\u4e00-\\u9fa5]"),
-                                    ""
-                                ).trim()
-                            }
-                            break
-                        }
-                    }
-                }
+            val name = withInstallArchive(context, uri) { zip ->
+                val entry = zip.getEntry("module.prop") ?: return@withInstallArchive null
+                val prop = Properties()
+                zip.getInputStream(entry).use { prop.load(it) }
+                prop.getProperty("name")
+            }
+            if (!name.isNullOrBlank()) {
+                return name.replace(
+                    Regex("[^a-zA-Z0-9\\s\\-_.@()\\u4e00-\\u9fa5]"),
+                    ""
+                ).trim()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error extracting module name: ${e.message}")
@@ -121,20 +110,11 @@ class ModuleUtils {
     fun extractModuleId(context: Context, uri: Uri): String? {
         if (uri == Uri.EMPTY) return null
 
-        context.contentResolver.openInputStream(uri)?.use { inputStream ->
-            ZipInputStream(inputStream).use { zip ->
-                var entry: ZipEntry?
-
-                while (zip.nextEntry.also { entry = it } != null) {
-                    if (entry?.name == "module.prop") {
-                        val prop = Properties()
-                        prop.load(zip)
-                        return prop.getProperty("id")
-                    }
-                }
-            }
+        return withInstallArchive(context, uri) { zip ->
+            val entry = zip.getEntry("module.prop") ?: return@withInstallArchive null
+            val prop = Properties()
+            zip.getInputStream(entry).use { prop.load(it) }
+            prop.getProperty("id")
         }
-
-        return null
     }
 }

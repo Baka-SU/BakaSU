@@ -26,20 +26,13 @@ import com.resukisu.resukisu.data.packageinfo.InstalledPackageRepository
 import com.resukisu.resukisu.data.webui.LocalWebUiBackend
 import com.resukisu.resukisu.data.webui.WebUiBackend
 import com.resukisu.resukisu.data.webui.WebUiRepository
-import com.resukisu.resukisu.ui.viewmodel.ModuleUiAction
-import com.resukisu.resukisu.ui.viewmodel.ModuleUiEvent
-import com.resukisu.resukisu.ui.viewmodel.ModuleViewModel
 import com.resukisu.resukisu.ui.viewmodel.SuperUserUiAction
 import com.resukisu.resukisu.ui.viewmodel.SuperUserViewModel
-import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.ByteArrayInputStream
 import java.io.File
-import kotlin.time.Duration.Companion.milliseconds
 
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -47,7 +40,6 @@ internal suspend fun prepareWebView(
     activity: Activity,
     moduleId: String,
     webUIState: WebUIState,
-    moduleViewModel: ModuleViewModel,
     superUserViewModel: SuperUserViewModel,
     settingsRepository: AppSettingsRepository,
     packageRepository: InstalledPackageRepository,
@@ -57,36 +49,17 @@ internal suspend fun prepareWebView(
     recoverFromRenderCrash: Boolean = false,
 ) {
     withContext(Dispatchers.IO) {
-        val refreshEvent = async(start = CoroutineStart.UNDISPATCHED) {
-            moduleViewModel.events.first { event ->
-                event is ModuleUiEvent.RefreshCompleted || event is ModuleUiEvent.Error
+        val moduleInfo = try {
+            webUiRepository.getModuleInfo(moduleId)
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            withContext(Dispatchers.Main) {
+                webUIState.uiEvent = WebUIEvent.Error(
+                    activity.getString(R.string.module_unavailable, moduleId),
+                )
             }
+            return@withContext
         }
-        moduleViewModel.dispatch(ModuleUiAction.Refresh())
-        when (val event = withTimeoutOrNull(30_000L.milliseconds) { refreshEvent.await() }) {
-            is ModuleUiEvent.Error -> {
-                withContext(Dispatchers.Main) {
-                    webUIState.uiEvent = WebUIEvent.Error(
-                        activity.getString(R.string.module_unavailable, event.message),
-                    )
-                }
-                return@withContext
-            }
-
-            null -> {
-                withContext(Dispatchers.Main) {
-                    webUIState.uiEvent = WebUIEvent.Error(
-                        activity.getString(R.string.module_unavailable, moduleId),
-                    )
-                }
-                return@withContext
-            }
-
-            else -> Unit
-        }
-
-        val moduleInfo =
-            moduleViewModel.uiState.value.moduleList.find { info -> info.id == moduleId }
 
         if (moduleInfo == null) {
             withContext(Dispatchers.Main) {
@@ -101,9 +74,6 @@ internal suspend fun prepareWebView(
             }
             return@withContext
         }
-
-        webUIState.moduleName = moduleInfo.name
-        webUIState.modDir = "/data/adb/modules/${moduleId}"
 
         if (packageRepository.packages.value.isEmpty()) {
             superUserViewModel.dispatch(SuperUserUiAction.Refresh)
@@ -123,6 +93,18 @@ internal suspend fun prepareWebView(
 
 private fun Uri.isModuleOrigin() = scheme == "https" && host == MODULE_HOST ||
     scheme.equals("ksu", ignoreCase = true) && host.equals("icon", ignoreCase = true)
+            webUIState.moduleName = moduleInfo.name
+            webUIState.modDir = "/data/adb/modules/$moduleId"
+
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                @Suppress("DEPRECATION")
+                activity.setTaskDescription(ActivityManager.TaskDescription("KernelSU - ${moduleInfo.name}"))
+            } else {
+                val taskDescription = ActivityManager.TaskDescription.Builder()
+                    .setLabel("KernelSU - ${moduleInfo.name}")
+                    .build()
+                activity.setTaskDescription(taskDescription)
+            }
 
 private const val MODULE_HOST = "mui.kernelsu.org"
 
