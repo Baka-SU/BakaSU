@@ -19,6 +19,6 @@ dependencies {
 
 tasks.jar {
     manifest {
-        attributes("Lint-Registry-v2" to "com.resukisu.resukisu.lint.ResukisuIssueRegistry")
+        attributes("Lint-Registry-v2" to "com.bakasu.bakasu.lint.BakaSuIssueRegistry")
     }
 }

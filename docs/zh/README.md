@@ -1,16 +1,17 @@
-# ReSukiSU
-<img align='right' src='ReSukiSU_blue.svg' width='220px' alt="ReSukiSU Icon">
+# BakaSU
+<img align='right' src='BakaSU_blue.svg' width='220px' alt="BakaSU Icon">
 
+曾用名：BakaSU
 
-[English](../README.md) | **简体中文** | [日本語](../ja/README.md) | [Türkçe](../tr/README.md) | [Русский](../ru/README.md)
+[English](../README.md) | **简体中文** 
 
-一个 [`SukiSU-Ultra/SukiSU-Ultra`](https://github.com/SukiSU-Ultra/SukiSU-Ultra) 的下游分支,添加了一些有趣的变更，且更加稳定。
+一个 [`tiann/KernelSU`](https://github.com/tiann/KernelSU) 的下游分支, 添加了一些个人修改。
 
-[![最新发行](https://img.shields.io/github/v/release/ReSukiSU/ReSukiSU?label=Release&logo=github)](https://github.com/ReSukiSU/ReSukiSU/releases/latest)
-[![最新 CI 构建（nightly.link）](https://img.shields.io/badge/nightly.link-%E6%9C%80%E6%96%B0%20CI%20%E6%9E%84%E5%BB%BA-800080)](https://nightly.link/ReSukiSU/ReSukiSU/workflows/build-manager/main)
-[![频道](https://img.shields.io/badge/Follow-Telegram-blue.svg?logo=telegram)](https://t.me/ReSukiSU)
+[![最新发行](https://img.shields.io/github/v/release/Baka-SU/BakaSU?label=Release&logo=github)](https://github.com/Baka-SU/BakaSU/releases/latest)
+[![最新 CI 构建（nightly.link）](https://img.shields.io/badge/nightly.link-%E6%9C%80%E6%96%B0%20CI%20%E6%9E%84%E5%BB%BA-800080)](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main)
+[![频道](https://img.shields.io/badge/Follow-Telegram-blue.svg?logo=telegram)](https://t.me/BakaSU)
 [![Kernel License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-orange.svg?logo=gnu)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-[![其他部分 License：GPL v3](https://img.shields.io/github/license/ReSukiSU/ReSukiSU?logo=gnu)](/LICENSE)
+[![其他部分 License：GPL v3](https://img.shields.io/github/license/Baka-SU/BakaSU?logo=gnu)](/LICENSE)
 
 ## 特性
 
@@ -19,11 +20,11 @@
 3. [App Profile](https://kernelsu.org/zh_CN/guide/app-profile.html): 把 Root 权限关进笼子里。
 4. 支持 non-GKI 与 GKI 1.0。
 5. 可调整管理器外观，可自定义 susfs 配置。
-6. 多管理器支持，默认支持使用 [官方KernelSU](https://github.com/tiann/KernelSU)/[RKSU](https://github.com/rsuntk/KernelSU)/[MKSU](https://github.com/5ec1cff/KernelSU)/[SukiSU](https://github.com/SukiSU-Ultra/SukiSU-Ultra) 作为管理器与 ReSukiSU 内核共同工作
+6. 多管理器支持，默认支持使用 [官方KernelSU](https://github.com/tiann/KernelSU)/[KOWSU](https://github.com/KOWX712/KernelSU) 作为管理器与 BakaSU 内核共同工作
 
 ## 兼容状态
 
-- ReSukiSU 官方支持 GKI 2.0 的设备（内核版本 5.10 以上）。
+- BakaSU 官方支持 GKI 2.0 的设备（内核版本 5.10 以上）。
 
 - 旧内核也是兼容的（3.4+），不过需要自己编译内核。
 
@@ -34,15 +35,15 @@
 ## Hook 模式
 - `Tracepoint Syscall Redirect hook` 默认模式, 来自于 [上游](https://github.com/tiann/KernelSU), 但是只支持 GKI2 内核且为 `arm64-v8a` 或 `x86_64` 架构
 - `Manual Hook` 兼容性最强的钩子，支持 Linux Kernel 3.4 - Linux Kernel 6.18
-- `SuSFS Inline Hook` 一个来自 [SuSFS](https://github.com/simonpunk/susfs4ksu) 的 Hook, 类似于 `Manual Hook`, 但是由 `SuSFS` 项目，而非本项目
+- `SUSFS Inline Hook` 一个来自 [SUSFS](https://github.com/simonpunk/susfs4ksu) 的 Hook, 类似于 `Manual Hook`, 但是由 `SUSFS` 项目，而非本项目
 
 ## 集成
 
-请参考[文档](https://Resukisu.org)
+请参考[文档](https://bakasu.org)
 
 ## 参与翻译
 
-要将 ReSukiSU 翻译成您的语言，或完善现有的翻译，请使用 [Weblate](https://hosted.weblate.org/engage/resukisu/).
+要将 BakaSU 翻译成您的语言，或完善现有的翻译，请使用 [Weblate](https://hosted.weblate.org/engage/bakasu/).
 
 ## 许可证
 
@@ -52,49 +53,21 @@
 
 ## 致谢
 
-- [ShirkNeko](https://afdian.com/a/shirkneko) (SukiSU 主要维护者)
 - [weishu](https://github.com/sponsors/tiann) (KernelSU 作者)
-
-<details>
-<summary>ShirkNeko 的赞助列表</summary>
-
-- [Ktouls](https://github.com/Ktouls) 非常感谢你给我带来的支持
-- [zaoqi123](https://github.com/zaoqi123) 请我喝奶茶也不错
-- [wswzgdg](https://github.com/wswzgdg) 非常感谢对此项目的支持
-- [yspbwx2010](https://github.com/yspbwx2010) 非常感谢
-- [DARKWWEE](https://github.com/DARKWWEE) 感谢老哥的 100 USDT
-- [Saksham Singla](https://github.com/TypeFlu) 网站的提供以及维护
-- [OukaroMF](https://github.com/OukaroMF) 网站域名捐赠
-</details>
 
 ## 本地化
 
-在 Weblate 上对 ReSukiSU 的翻译做出贡献:
+在 Weblate 上对 BakaSU 的翻译做出贡献:
 
-https://hosted.weblate.org/engage/resukisu/
+https://hosted.weblate.org/engage/bakasu/
 
-[![翻译状态](https://hosted.weblate.org/widget/resukisu/multi-auto.svg)](https://hosted.weblate.org/engage/resukisu/)
+[![翻译状态](https://hosted.weblate.org/widget/bakasu/multi-auto.svg)](https://hosted.weblate.org/engage/bakasu/)
 
 ## 鸣谢
 
 - [KernelSU](https://github.com/tiann/KernelSU): 上游
 - [SukiSU-Ultra/SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra)：分叉来源
-
-<details>
-<summary>SukiSU 的鸣谢</summary>
-
-- [KernelSU](https://github.com/tiann/KernelSU): 上游
-- [MKSU](https://github.com/5ec1cff/KernelSU): 魔法坐骑支持
-- [RKSU](https://github.com/rsuntk/KernelsU): non-GKI 支持
-- [susfs](https://gitlab.com/simonpunk/susfs4ksu): 隐藏内核补丁以及用户空间模组的 KernelSU 附件
-- [KernelPatch](https://github.com/bmax121/KernelPatch): KernelPatch 是内核模块 APatch 实现的关键部分
-</details>
-
-<details>
-<summary>KernelSU 的鸣谢</summary>
-
 - [kernel-assisted-superuser](https://git.zx2c4.com/kernel-assisted-superuser/about/)：KernelSU 的灵感。
 - [Magisk](https://github.com/topjohnwu/Magisk)：强大的 root 工具箱。
 - [genuine](https://github.com/brevent/genuine/)：apk v2 签名验证。
 - [Diamorphine](https://github.com/m0nad/Diamorphine)：一些 rootkit 技巧。
-</details>

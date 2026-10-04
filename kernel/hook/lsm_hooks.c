@@ -278,7 +278,7 @@ show_not_found_warning:
     pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
     pr_alert("**                                                         **");
     pr_alert("**                 selinux_ops NOT FOUND                   **");
-    pr_alert("**     ReSukiSU won't working due lost necessary hooks     **");
+    pr_alert("**       BakaSU won't working due lost necessary hooks     **");
     pr_alert("**                                                         **");
     pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
     pr_alert("*************************************************************");
