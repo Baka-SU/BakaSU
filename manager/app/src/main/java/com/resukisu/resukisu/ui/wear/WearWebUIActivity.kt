@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -138,7 +139,7 @@ private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) 
 private fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
     val back: () -> Unit = { if (state.webCanGoBack) state.webView?.goBack() else onFinish() }
     BackHandler { back() }
-    AppScaffold(timeText = { WearTimeText() }) {
+    AppScaffold(timeText = { WearTimeText() }, containerColor = Color.Transparent) {
         WearSwipeToDismissBox(onDismissed = back) { background ->
             if (!background) {
                 when (val event = state.uiEvent) {

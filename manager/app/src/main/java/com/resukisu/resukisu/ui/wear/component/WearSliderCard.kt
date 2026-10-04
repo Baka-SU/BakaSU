@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -16,6 +17,7 @@ import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Slider
+import androidx.wear.compose.material3.SliderDefaults
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 
@@ -58,7 +60,10 @@ fun TransformingLazyColumnItemScope.WearSliderCard(
             Text(valueText, style = MaterialTheme.typography.numeralExtraSmall, color = MaterialTheme.colorScheme.primary,
                 maxLines = 1)
         }
+        // The slider's own container would otherwise stack a second copy of the card's surface on
+        // top of it, which reads as a darker pill once the card is translucent.
         Slider(value, onValueChange, steps = steps, valueRange = valueRange, enabled = enabled,
+            colors = SliderDefaults.sliderColors(containerColor = Color.Transparent),
             modifier = Modifier.fillMaxWidth())
     }
 }

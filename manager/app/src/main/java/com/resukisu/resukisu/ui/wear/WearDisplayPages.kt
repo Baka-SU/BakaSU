@@ -14,6 +14,7 @@ import androidx.compose.material.icons.twotone.Check
 import androidx.compose.material.icons.twotone.Delete
 import androidx.compose.material.icons.twotone.FormatSize
 import androidx.compose.material.icons.twotone.Image
+import androidx.compose.material.icons.twotone.Opacity
 import androidx.compose.material.icons.twotone.Palette
 import androidx.compose.material.icons.twotone.Restore
 import androidx.compose.runtime.Composable
@@ -145,6 +146,13 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
                         WearSliderCard(spec, Icons.TwoTone.Image, stringResource(R.string.settings_background_dim),
                             "${(state.backgroundDim * 100).roundToInt()}%", state.backgroundDim,
                             { onAction(SettingsUiAction.SetBackgroundDim(it)) }, valueRange = 0f..1f, steps = 19)
+                    }
+                    // How much of the background the components let through, matching the phone's
+                    // card transparency slider.
+                    item {
+                        WearSliderCard(spec, Icons.TwoTone.Opacity, stringResource(R.string.settings_card_alpha),
+                            "${(state.cardAlpha * 100).roundToInt()}%", state.cardAlpha,
+                            { onAction(SettingsUiAction.SetCardAlpha(it)) }, valueRange = 0f..1f, steps = 19)
                     }
                 }
             }

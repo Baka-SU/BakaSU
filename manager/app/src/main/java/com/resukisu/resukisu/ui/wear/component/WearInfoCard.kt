@@ -39,7 +39,8 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 
 /**
  * A non-interactive information container using the Wear surface transformation.
- * A null [containerColor] uses the neutral surface; custom images belong to the page background.
+ * A null [containerColor] uses the neutral surface, which the theme makes translucent whenever a
+ * custom background is set, so the image shows through the card.
  */
 @Composable
 fun TransformingLazyColumnItemScope.WearInfoCard(

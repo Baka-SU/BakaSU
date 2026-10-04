@@ -22,8 +22,9 @@ import androidx.wear.compose.material3.SwipeToDismissBox
  */
 
 /**
- * The watchOS black page base. Custom images are drawn inside neutral content cards.
- * The app's single backdrop, including the user's cropped image and chosen dimming.
+ * The watchOS black page base. The app's single backdrop, including the user's cropped image and
+ * chosen dimming; the components drawn over it are made translucent by the theme, so the image
+ * shows through them. Black remains the fallback with no image, or until the image has loaded.
  * Rendered by WearManagerTheme outside all page and swipe-dismiss transitions.
  */
 @Composable

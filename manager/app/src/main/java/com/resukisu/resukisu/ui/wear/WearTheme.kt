@@ -32,6 +32,7 @@ import com.resukisu.resukisu.ui.wear.component.WearBackground
 import com.resukisu.resukisu.ui.wear.component.WearList
 import com.resukisu.resukisu.ui.wear.component.WearLoadingScreen
 import com.resukisu.resukisu.ui.wear.component.WearTimeText
+import com.resukisu.resukisu.ui.theme.CardConfig
 import com.resukisu.resukisu.ui.theme.ThemeConfig
 import com.resukisu.resukisu.ui.viewmodel.SettingsViewModel
 import org.koin.compose.koinInject
@@ -96,11 +97,33 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             errorContainer = generated.errorContainer, onError = generated.onError,
             onErrorContainer = generated.onErrorContainer,
         )
-        // Wear screens keep a pure black background whichever scheme is used.
+        // Wear screens keep a pure black background whichever scheme is used. The navigation host
+        // makes this role transparent so its backdrop image is not covered by the scene's
+        // swipe-dismiss box, and restores it per entry; see WearManager.pageBaseDecorator.
         scheme.copy(background = Color.Black)
     }
+    // Container colors follow the card transparency so a custom background shows through them,
+    // the same rule the phone applies per row in SettingsBaseWidget. It has to happen here rather
+    // than per call site: Wear components take their containers from scheme roles, including the
+    // ones inside the library (slider, swipe-to-reveal, switch track). Accent fills that the phone
+    // also leaves solid stay solid — `primary` for high-emphasis buttons, `errorContainer` for
+    // error surfaces, and `background` for dialogs. Derived outside the remember above so the
+    // scheme itself is still only generated when the seed or the dynamic-color switch changes.
+    val cardConfig = koinInject<CardConfig>()
+    val alpha = cardConfig.cardAlpha
+    val themedColors = remember(colors, alpha) {
+        if (alpha >= 1f) colors
+        else colors.copy(
+            surfaceContainerLow = colors.surfaceContainerLow.copy(alpha = alpha),
+            surfaceContainer = colors.surfaceContainer.copy(alpha = alpha),
+            surfaceContainerHigh = colors.surfaceContainerHigh.copy(alpha = alpha),
+            primaryContainer = colors.primaryContainer.copy(alpha = alpha),
+            secondaryContainer = colors.secondaryContainer.copy(alpha = alpha),
+            tertiaryContainer = colors.tertiaryContainer.copy(alpha = alpha),
+        )
+    }
     CompositionLocalProvider(LocalDensity provides density, LocalConfiguration provides configuration) {
-        MaterialTheme(colorScheme = colors, motionScheme = MotionScheme.expressive()) {
+        MaterialTheme(colorScheme = themedColors, motionScheme = MotionScheme.expressive()) {
             // The selected image and dim layer belong to the shared page background.
             WearBackground { content() }
         }

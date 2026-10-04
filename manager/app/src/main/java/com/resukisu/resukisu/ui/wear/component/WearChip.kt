@@ -90,7 +90,7 @@ fun TransformingLazyColumnItemScope.WearChip(
     val scheme = MaterialTheme.colorScheme
     val (container, content, secondaryContent) = when (emphasis) {
         WearChipEmphasis.HIGH -> Triple(scheme.primary, scheme.onPrimary, scheme.onPrimary)
-        // A null container keeps the surface container and the custom background of other cards.
+        // A null container keeps the surface container, which follows the card transparency.
         WearChipEmphasis.MEDIUM -> Triple(null, scheme.onSurface, scheme.onSurfaceVariant)
         WearChipEmphasis.OUTLINED -> Triple(Color.Transparent, scheme.primary, scheme.onSurfaceVariant)
         WearChipEmphasis.LOW -> Triple(Color.Transparent, scheme.onSurface, scheme.onSurfaceVariant)

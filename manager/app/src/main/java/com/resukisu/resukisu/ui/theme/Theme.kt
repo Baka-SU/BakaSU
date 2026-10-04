@@ -207,6 +207,14 @@ class BackgroundManager(
 ) {
     private val tag = "BackgroundManager"
 
+    private companion object {
+        /** Name used before backgrounds were stored under a per-save name; still deleted on replace. */
+        const val LEGACY_BACKGROUND_FILE_NAME = "custom_background.jpg"
+
+        /** Prefix of the per-save background names; the suffix keeps every saved Uri distinct. */
+        const val BACKGROUND_FILE_PREFIX = "custom_background_"
+    }
+
     fun saveBackgroundDim(dim: Float) {
         config.backgroundDim = dim
         settings.putFloat("background_dim", dim)
@@ -243,6 +251,7 @@ class BackgroundManager(
     ): Boolean {
         val appContext = context.applicationContext
         return try {
+            val previousUri = config.customBackgroundUri
             val finalUri = withContext(Dispatchers.IO) {
                 copyImageToInternalStorage(appContext, uri)
             } ?: return false
@@ -252,6 +261,7 @@ class BackgroundManager(
             cardConfig.updateBackground(true)
             withContext(Dispatchers.IO) {
                 clearBackgroundBlurCache(appContext)
+                deleteBackgroundFile(appContext, previousUri)
             }
             resetBackgroundState()
 
@@ -265,10 +275,12 @@ class BackgroundManager(
     }
 
     fun clearCustomBackground(context: Context) {
+        val previousUri = config.customBackgroundUri
         saveBackgroundUri(null)
         config.customBackgroundUri = null
         cardConfig.updateBackground(false)
         clearBackgroundBlurCache(context)
+        deleteBackgroundFile(context, previousUri)
         resetBackgroundState()
     }
 
@@ -314,10 +326,17 @@ class BackgroundManager(
         }
     }
 
+    /**
+     * Copies the picked image into the app's own storage under a fresh, per-save name.
+     *
+     * The name has to change on every save: Coil compares image requests field by field and skips
+     * a request equal to the one already loaded, so reusing a fixed name would leave the previous
+     * image on screen after the user picks another one.
+     */
     private fun copyImageToInternalStorage(context: Context, uri: Uri): Uri? {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-            val fileName = "custom_background.jpg"
+            val fileName = "$BACKGROUND_FILE_PREFIX${System.currentTimeMillis()}.jpg"
             val file = File(context.filesDir, fileName)
 
             FileOutputStream(file).use { outputStream ->
@@ -335,6 +354,20 @@ class BackgroundManager(
             Log.e(tag, "复制图片失败: ${e.message}", e)
             null
         }
+    }
+
+    /**
+     * Deletes a stored background image once it is no longer referenced. Only files this class
+     * writes qualify — the legacy fixed name and its per-save successors — so the blur cache,
+     * which shares the same directory under a different name, is left alone.
+     */
+    private fun deleteBackgroundFile(context: Context, uri: Uri?) {
+        val file = uri?.path?.let(::File) ?: return
+        val isStoredBackground = file.parentFile == context.filesDir &&
+            (file.name == LEGACY_BACKGROUND_FILE_NAME || file.name.startsWith(BACKGROUND_FILE_PREFIX))
+        if (!isStoredBackground) return
+        runCatching { file.delete() }
+            .onFailure { Log.w(tag, "删除背景文件失败: ${it.message}") }
     }
 }
 
