@@ -2,6 +2,7 @@ package com.resukisu.resukisu.data.webui
 
 import com.resukisu.resukisu.data.shell.KsuCliRepository
 import com.resukisu.resukisu.domain.model.WebUiCommandResult
+import com.resukisu.resukisu.domain.model.WebUiModuleInfo
 import com.resukisu.resukisu.domain.model.WebUiProcess
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
@@ -28,6 +29,16 @@ class WebUiRepository(
         ShellWebUiProcess(ksuCliRepository.createRootShell(globalMnt), command)
 
     fun listModules(): String = ksuCliRepository.listModules()
+
+    fun getModuleInfo(moduleId: String): WebUiModuleInfo? =
+        ksuCliRepository.withNewRootShell(globalMnt = true) {
+            val rootShell = this
+            readWebUiModuleInfo(
+                moduleId = moduleId,
+                resolveFile = { path -> SuFile(path).apply { shell = rootShell } },
+                openFile = { file -> SuFileInputStream.open(file) },
+            )
+        }
 
     fun openFile(path: String) = runCatching {
         val file = SuFile(path).apply { shell = ksuCliRepository.createRootShell(true) }

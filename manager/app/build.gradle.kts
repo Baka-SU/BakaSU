@@ -197,6 +197,8 @@ dependencies {
     implementation(libs.koin.compose.viewmodel)
 
     implementation(libs.gson)
+    implementation(libs.commons.compress)
+    implementation(libs.xz)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.profileinstaller)

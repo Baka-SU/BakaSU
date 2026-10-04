@@ -60,7 +60,6 @@ import com.resukisu.resukisu.ui.wear.component.WearSubPage
 import com.resukisu.resukisu.ui.wear.component.WearSwipeToDismissBox
 import com.resukisu.resukisu.ui.wear.component.WearTextInputPage
 import com.resukisu.resukisu.ui.wear.component.WearTimeText
-import com.resukisu.resukisu.ui.viewmodel.ModuleViewModel
 import com.resukisu.resukisu.ui.viewmodel.SuperUserViewModel
 import com.resukisu.resukisu.ui.webui.HandleConfigurationChanges
 import com.resukisu.resukisu.ui.webui.HandleWebViewLifecycle
@@ -95,7 +94,6 @@ class WearWebUIActivity : ComponentActivity() {
 private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) {
     val moduleId = remember { activity.intent.getStringExtra("id") }
     val webUIState = remember { WebUIState() }
-    val moduleViewModel = koinViewModel<ModuleViewModel>()
     val superUserViewModel = koinViewModel<SuperUserViewModel>()
     val settingsRepository = koinInject<AppSettingsRepository>()
     val packageRepository = koinInject<InstalledPackageRepository>()
@@ -113,7 +111,6 @@ private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) 
             activity,
             moduleId,
             webUIState,
-            moduleViewModel,
             superUserViewModel,
             settingsRepository,
             packageRepository,

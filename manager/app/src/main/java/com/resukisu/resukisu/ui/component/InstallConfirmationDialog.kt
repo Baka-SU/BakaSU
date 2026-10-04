@@ -36,10 +36,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.resukisu.resukisu.R
-import java.io.BufferedReader
+import com.resukisu.resukisu.data.file.withInstallArchive
 import java.io.InputStream
-import java.io.InputStreamReader
-import java.util.zip.ZipInputStream
 
 enum class ZipType {
     MODULE,
@@ -72,36 +70,21 @@ class ZipFileDetector {
         var zipInfo = ZipFileInfo(uri = uri, type = ZipType.MODULE)
 
         try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                ZipInputStream(inputStream).use { zipStream ->
-                    var entry = zipStream.nextEntry
-                    while (entry != null) {
-                        if (entry.name.lowercase() == "module.prop" || entry.name.endsWith("/module.prop")) {
-                            val reader = BufferedReader(InputStreamReader(zipStream))
-                            val props = mutableMapOf<String, String>()
+            withInstallArchive(context, uri) { zip ->
+                val entries = zip.entries
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (entry.name.lowercase() == "module.prop" || entry.name.endsWith("/module.prop")) {
+                        val props = zip.getInputStream(entry).use(::parseSimpleProps)
 
-                            var line = reader.readLine()
-                            while (line != null) {
-                                if (line.contains("=") && !line.startsWith("#")) {
-                                    val parts = line.split("=", limit = 2)
-                                    if (parts.size == 2) {
-                                        props[parts[0].trim()] = parts[1].trim()
-                                    }
-                                }
-                                line = reader.readLine()
-                            }
-
-                            zipInfo = zipInfo.copy(
-                                name = props["name"] ?: context.getString(R.string.unknown_module),
-                                version = props["version"] ?: "",
-                                versionCode = props["versionCode"] ?: "",
-                                author = props["author"] ?: "",
-                                description = props["description"] ?: ""
-                            )
-                            break
-                        }
-                        zipStream.closeEntry()
-                        entry = zipStream.nextEntry
+                        zipInfo = zipInfo.copy(
+                            name = props["name"] ?: context.getString(R.string.unknown_module),
+                            version = props["version"] ?: "",
+                            versionCode = props["versionCode"] ?: "",
+                            author = props["author"] ?: "",
+                            description = props["description"] ?: ""
+                        )
+                        break
                     }
                 }
             }
@@ -147,24 +130,21 @@ class ZipFileDetector {
         val foundFiles = mutableSetOf<String>()
 
         try {
-            context.contentResolver.openInputStream(uri)?.use { fis ->
-                ZipInputStream(fis).use { zis ->
-                    var entry = zis.nextEntry
-                    while (entry != null) {
-                        val name = entry.name
-                        foundFiles.add(name)
+            withInstallArchive(context, uri) { zip ->
+                val entries = zip.entries
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    val name = entry.name
+                    foundFiles.add(name)
 
-                        when {
-                            name.endsWith("module.prop") -> {
-                                props.putAll(parseSimpleProps(zis))
-                            }
-
-                            name.endsWith("anykernel.sh") -> {
-                                props.putAll(parseShellVariables(zis))
-                            }
+                    when {
+                        name.endsWith("module.prop") -> {
+                            zip.getInputStream(entry).use { props.putAll(parseSimpleProps(it)) }
                         }
-                        zis.closeEntry()
-                        entry = zis.nextEntry
+
+                        name.endsWith("anykernel.sh") -> {
+                            zip.getInputStream(entry).use { props.putAll(parseShellVariables(it)) }
+                        }
                     }
                 }
             }

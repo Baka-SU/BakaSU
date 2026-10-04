@@ -236,14 +236,15 @@ fun ModulePage(bottomPadding: Dp) {
                 val selectedModules = mutableListOf<Uri>()
                 val selectedModuleNames = mutableMapOf<Uri, String>()
 
-                fun processUri(uri: Uri) {
+                suspend fun processUri(uri: Uri) {
                     try {
                         val uriString = uri.toString()
                         if (!isModuleUriAccessible(uriString)) {
                             return
                         }
                         takeModuleUriPermission(uriString)
-                        val moduleName = extractModuleName(uriString)
+                        val moduleName =
+                            withContext(Dispatchers.IO) { extractModuleName(uriString) }
                         selectedModules.add(uri)
                         selectedModuleNames[uri] = moduleName
                     } catch (e: Exception) {
@@ -261,7 +262,9 @@ fun ModulePage(bottomPadding: Dp) {
                     return@launch
                 }
                 selectedModules.forEach { it ->
-                    zipFiles.add(zipFileDetector.parseModuleInfo(context, it))
+                    val info =
+                        withContext(Dispatchers.IO) { zipFileDetector.parseModuleInfo(context, it) }
+                    zipFiles.add(info)
                 }
                 pendingZipFiles = zipFiles
 
@@ -278,7 +281,13 @@ fun ModulePage(bottomPadding: Dp) {
 
                     takeModuleUriPermission(uriString)
 
-                    zipFiles.add(zipFileDetector.parseModuleInfo(context, uri))
+                    val info = withContext(Dispatchers.IO) {
+                        zipFileDetector.parseModuleInfo(
+                            context,
+                            uri
+                        )
+                    }
+                    zipFiles.add(info)
                     pendingZipFiles = zipFiles
 
                     showConfirmationDialog = true
