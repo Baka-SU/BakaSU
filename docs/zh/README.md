@@ -1,7 +1,7 @@
 # BakaSU
 <img align='right' src='BakaSU_blue.svg' width='220px' alt="BakaSU Icon">
 
-曾用名：BakaSU
+曾用名：ReSukiSU
 
 [English](../README.md) | **简体中文** 
 
