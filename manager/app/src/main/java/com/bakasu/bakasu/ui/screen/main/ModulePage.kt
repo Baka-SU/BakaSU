@@ -121,7 +121,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.kyant.capsule.ContinuousRoundedRectangle
 import com.bakasu.bakasu.R
 import com.bakasu.bakasu.domain.model.InstalledModule
 import com.bakasu.bakasu.domain.model.MetaModuleStatus
@@ -165,6 +164,7 @@ import com.bakasu.bakasu.ui.viewmodel.ModuleUiEvent
 import com.bakasu.bakasu.ui.viewmodel.ModuleUiState
 import com.bakasu.bakasu.ui.viewmodel.ModuleViewModel
 import com.bakasu.bakasu.ui.webui.WebUIActivity
+import com.kyant.capsule.ContinuousRoundedRectangle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -1058,7 +1058,7 @@ private fun ModuleList(
                                 .background(Color.White)
                         )
                         Image(
-                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                            painter = painterResource(id = R.drawable.ic_launcher_monochrome),
                             contentDescription = null,
                             contentScale = FixedScale(1.5f)
                         )
