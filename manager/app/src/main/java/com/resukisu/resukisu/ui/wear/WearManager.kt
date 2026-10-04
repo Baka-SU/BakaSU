@@ -6,6 +6,14 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
@@ -26,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavEntryDecorator
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -299,8 +308,13 @@ fun WearManagerScreen() {
             // fills the screen with MaterialTheme.colorScheme.background, which would cover the
             // theme's backdrop image. The role is transparent inside the host so the backdrop
             // stays visible, and every entry restores the opaque base for its own components
-            // (dialogs, the swipe and pager scrims) with pageBaseDecorator().
-            MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(background = Color.Transparent)) {
+            // (dialogs, the swipe and pager scrims) with PageBaseDecorator.
+            // The scheme is remembered: ColorScheme has no equals, so a fresh copy on every
+            // recomposition would invalidate the whole navigation subtree through
+            // LocalColorScheme, which is a static composition local.
+            val hostScheme = MaterialTheme.colorScheme
+            val transparentScheme = remember(hostScheme) { hostScheme.copy(background = Color.Transparent) }
+            MaterialTheme(colorScheme = transparentScheme) {
                 NavDisplay(
                     backStack = backStack,
                     onBack = { back() },
@@ -308,9 +322,9 @@ fun WearManagerScreen() {
                     entryDecorators = listOf(
                         rememberSaveableStateHolderNavEntryDecorator(),
                         rememberViewModelStoreNavEntryDecorator(),
-                        pageBaseDecorator(),
+                        PageBaseDecorator,
                     ),
-                    entryProvider = entryProvider {
+                    entryProvider = withPageTransitions(entryProvider {
                         entry<WearRoute.Main> {
                             WearMainPages(
                                 home = home,
@@ -548,7 +562,7 @@ fun WearManagerScreen() {
                                 }
                             }
                         }
-                    },
+                    }),
                 )
             }
             // Waiting for a link to open; Back cancels it.
@@ -562,18 +576,36 @@ fun WearManagerScreen() {
     }
 }
 
-/**
- * Restores the opaque page base around a navigation entry. The host makes
- * `MaterialTheme.colorScheme.background` transparent so the scene's swipe-dismiss box does not
- * cover the theme's backdrop image; this puts the page black back for the entry's own components,
- * which is what its dialogs and the swipe and pager scrims expect. Wear screens keep a pure black
- * background whichever scheme is used, so it is [Color.Black] rather than a scheme role.
- */
-private fun <T : Any> pageBaseDecorator(): NavEntryDecorator<T> =
+
+private val PageBaseDecorator: NavEntryDecorator<NavKey> =
     NavEntryDecorator { entry ->
-        MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(background = Color.Black)) {
+        val scheme = MaterialTheme.colorScheme
+        val pageScheme = remember(scheme) { scheme.copy(background = Color.Black) }
+        MaterialTheme(colorScheme = pageScheme) {
             entry.Content()
         }
+    }
+
+
+private val WearPageTransitions: Map<String, Any> = NavDisplay.transitionSpec {
+    (slideInHorizontally(initialOffsetX = { it / 2 }, animationSpec = spring(0.8f, 300f)) +
+        scaleIn(initialScale = 0.8f, animationSpec = spring(1f, 500f)) +
+        fadeIn(animationSpec = spring(1f, 1500f))) togetherWith
+        (scaleOut(targetScale = 0.85f, animationSpec = spring(1f, 150f)) +
+            slideOutHorizontally(targetOffsetX = { -it / 2 }, animationSpec = spring(0.8f, 200f)) +
+            fadeOut(targetAlpha = 0f, animationSpec = spring(1f, 1400f)))
+}
+
+/**
+ * Attaches [WearPageTransitions] to every entry a provider builds. A scene's metadata is built from
+ * its entry's metadata last, so the entry wins over the Wear scene's own transition. The key and the
+ * content key are carried over unchanged, leaving the entry's saveable state and ViewModel scopes
+ * as they were.
+ */
+private fun <T : Any> withPageTransitions(provider: (T) -> NavEntry<T>): (T) -> NavEntry<T> =
+    { key ->
+        val entry = provider(key)
+        NavEntry(key, entry.contentKey, entry.metadata + WearPageTransitions) { entry.Content() }
     }
 
 /**
