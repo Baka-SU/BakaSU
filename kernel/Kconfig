@@ -34,7 +34,7 @@ config KSU_TOOLKIT_SUPPORT
 config KSU_FULL_NAME_FORMAT
       string "KernelSU full name format"
       depends on KSU
-      default "%TAG_NAME%-%COMMIT_SHA%@%REPO_NAME%"
+      default "%TAG_NAME%-%COMMIT_SHA%"
       help
         Change the build time full name format.
         It is displayed in KernelSU manager under "Version".
