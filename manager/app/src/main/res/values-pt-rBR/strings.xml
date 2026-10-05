@@ -139,7 +139,6 @@
     <string name="module_repo">Repositório de módulos</string>
     <string name="module_sort_star_first">Ordenar (estrelas primeiro)</string>
     <string name="reboot_soft">Reinicialização suave</string>
-    <string name="about_anime_character_sticker"><![CDATA[As imagens dos arquivos com adesivos de personagens de anime são protegidas por direitos autorais de %1$s, e a propriedade intelectual da marca nas imagens pertence a %2$s. Antes de usar esses arquivos, além de respeitar os direitos autorais de %3$s, você também precisa obter a autorização dos dois autores para usar esse conteúdo artístico.]]></string>
     <string name="get_source_code">Verifique o código-fonte</string>
     <string name="get_source_code_detail">Confira o código-fonte no GitHub</string>
     <string name="join_telegram_group">Junte-se à comunidade</string>

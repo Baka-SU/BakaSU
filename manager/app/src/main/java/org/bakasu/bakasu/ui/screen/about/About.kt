@@ -146,7 +146,8 @@ fun AboutScreen() {
                     ),
                     message = AnnotatedString.fromHtml(
                         htmlString = stringResource(
-                            id = R.string.about_anime_character_sticker,
+                            id = R.string.about_app_icon,
+                            "<b><a href=\"https://github.com/OukaroMF\">OukaroMF</a></b>"
                         ),
                         linkStyles = TextLinkStyles(
                             style = SpanStyle(

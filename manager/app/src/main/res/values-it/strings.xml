@@ -168,7 +168,6 @@
     <string name="module_sort_action_first">Ordina (Prima azioni)</string>
     <string name="module_sort_star_first">Ordina (Prima stelle)</string>
     <string name="module_sort_enabled_first">Ordina (Prima abilitati)</string>
-    <string name="about_anime_character_sticker"><![CDATA[Le icone sono fornite in licenza tramite un accordo speciale: disegnate da 怡子曰曰, il copyright è detenuto da 明风 OuO e le icone vettoriali sono fornite da questo progetto.]]></string>
     <string name="get_source_code">Guarda il codice sorgente</string>
     <string name="get_source_code_detail">Guarda il codice sorgente su GitHub</string>
     <string name="open_source_license_settings_description">Guarda le librerie open-source di terze parti e le loro licenze</string>

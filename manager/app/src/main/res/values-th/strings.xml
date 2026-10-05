@@ -141,7 +141,6 @@
     <string name="module_repo">คลังโมดูล</string>
     <string name="module_sort_star_first">เรียงลำดับ (ติดดาว)</string>
     <string name="reboot_soft">ซอร์ฟ รีบูต</string>
-    <string name="about_anime_character_sticker"><![CDATA[ไอคอนเหล่านี้อยู่ภายใต้ข้อตกลงการอนุญาตใช้งานพิเศษ โดยวาดโดย 怡子曰曰 ลิขสิทธิ์เป็นของ 明风 OuO และไอคอนในรูปแบบเวกเตอร์จัดทำขึ้นโดยโครงการนี้]]></string>
     <string name="get_source_code">ตรวจสอบซอร์สโค้ด</string>
     <string name="get_source_code_detail">ตรวจสอบซอร์สโค้ดใน Github</string>
     <string name="join_telegram_group">เข้าร่วมชุมชนกับพวกเรา</string>
