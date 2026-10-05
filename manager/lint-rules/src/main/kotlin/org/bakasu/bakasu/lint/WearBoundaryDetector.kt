@@ -11,7 +11,10 @@ import com.android.tools.lint.detector.api.Severity
 import com.android.tools.lint.detector.api.SourceCodeScanner
 import org.jetbrains.uast.UImportStatement
 
-/** Keeps the phone and Wear UI components apart: neither side imports the other's components. */
+/**
+ * Keeps the phone and Wear sides apart, reported as warnings in both directions: phone code must
+ * not import from the Wear package tree, and Wear screens must not import phone UI components.
+ */
 class WearBoundaryDetector : Detector(), SourceCodeScanner {
     override fun getApplicableUastTypes() = listOf(UImportStatement::class.java)
 
@@ -23,8 +26,8 @@ class WearBoundaryDetector : Detector(), SourceCodeScanner {
             val message = when {
                 inWear && imported.startsWith("$PHONE_COMPONENT_PACKAGE.") && imported !in SHARED_COMPONENTS ->
                     "Wear UI should not use phone components from $PHONE_COMPONENT_PACKAGE; use $WEAR_COMPONENT_PACKAGE."
-                !inWear && imported.startsWith("$WEAR_COMPONENT_PACKAGE.") ->
-                    "Phone UI should not use Wear components from $WEAR_COMPONENT_PACKAGE."
+                !inWear && imported.startsWith("$WEAR_PACKAGE.") ->
+                    "Phone code should not use Wear components from $WEAR_PACKAGE."
                 else -> return
             }
             context.report(ISSUE, node, context.getLocation(node), message)
@@ -48,7 +51,7 @@ class WearBoundaryDetector : Detector(), SourceCodeScanner {
 
         val ISSUE: Issue = Issue.create(
             id = "WearPhoneComponentBoundary",
-            briefDescription = "Phone and Wear UI components are mixed",
+            briefDescription = "Phone and Wear code are mixed",
             explanation = "Phone screens use components from ui.component and Wear screens use components " +
                 "from ui.wear.component. Importing across the two keeps watch-specific layouts out of the " +
                 "phone UI and the other way around.",
