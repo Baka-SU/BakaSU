@@ -11,7 +11,7 @@ A [`tiann/KernelSU`](https://github.com/tiann/KernelSU)'s downstream, added some
 [![Latest CI build (nightly.link)](https://img.shields.io/badge/nightly.link-Latest%20CI%20Build-800080)](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main)
 [![Channel](https://img.shields.io/badge/Follow-Telegram-blue.svg?logo=telegram)](https://t.me/BakaSU_Grp)
 [![Kernel License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-orange.svg?logo=gnu)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-[![Other part License：GPL v3](https://img.shields.io/github/license/Baka-SU/BakaSU?logo=gnu)](/LICENSE)
+[![Other part License：GPL v3](https://img.shields.io/github/license/Baka-SU/BakaSU?logo=gnu)](../LICENSE)
 
 ## Features
 
@@ -54,7 +54,7 @@ If you want to submit a translation for the manager, please go to [Weblate](http
 ## License
 
 - The file in the “kernel” directory is under [GPL-2.0-only](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html) license.
-- The artwork files [`BakaSU_Clean.svg`](./BakaSU_Clean.svg) and [`BakaSU_Full.svg`](./BakaSU_Full.svg) are created by [OukaroMF](https://github.com/OukaroMF) under a layered license arrangement. See [`ASSETS_LICENSE.md`](../ASSETS_LICENSE.md) and [`ASSETS_LICENSE.zh-CN.md`](../ASSETS_LICENSE.zh-CN.md) for details.
+- The artwork and visual files ([`docs/BakaSU_Clean.svg`](./BakaSU_Clean.svg), [`docs/BakaSU_Full.svg`](./BakaSU_Full.svg), and [`manager/app/src/main/res/drawable/ic_launcher_foreground.xml`](../manager/app/src/main/res/drawable/ic_launcher_foreground.xml)) are created by [OukaroMF](https://github.com/OukaroMF) under a layered license arrangement. See [`ASSETS_LICENSE.md`](../ASSETS_LICENSE.md) and [`ASSETS_LICENSE.zh-CN.md`](../ASSETS_LICENSE.zh-CN.md) for details.
 - Except for the files or directories mentioned above, all other parts are under [GPL-3.0 or later](https://www.gnu.org/licenses/gpl-3.0.html) license.
 
 ## Localization
