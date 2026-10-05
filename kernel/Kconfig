@@ -34,7 +34,7 @@ config KSU_TOOLKIT_SUPPORT
 config KSU_FULL_NAME_FORMAT
       string "KernelSU full name format"
       depends on KSU
-      default "%TAG_NAME%-%COMMIT_SHA%@%REPO_NAME%"
+      default "%TAG_NAME%-%COMMIT_SHA%"
       help
         Change the build time full name format.
         It is displayed in KernelSU manager under "Version".
@@ -116,10 +116,10 @@ menu "KernelSU - Manual Hook Auto hook"
     depends on KSU_MANUAL_HOOK
 
 comment "------------------------WARNING-------------------------------"
-comment "ReSukiSU will check EVERY hooks in kernel compile process"
+comment "BakaSU will check EVERY hooks in kernel compile process"
 comment "If anything mismatch with document, Kernel compile maybe FAILED!"
 comment "See document if you face any compile failed due to hook check"
-comment "Document: https://resukisu.org/guide/manual-integrate.html"
+comment "Document: https://bakasu.org/guide/manual-integrate.html"
 comment "--------------------------------------------------------------"
 
 config KSU_MANUAL_HOOK_AUTO_SETUID_HOOK
@@ -161,7 +161,7 @@ menu "KernelSU - SUSFS"
     depends on KSU_SUSFS
 
 comment "------------------------WARNING-------------------------------"
-comment "ReSukiSU will check EVERY hooks in kernel compile process"
+comment "BakaSU will check EVERY hooks in kernel compile process"
 comment "If anything mismatch with simonpunk's patch, Kernel compile maybe FAILED!"
 comment "See simonpunk's original patch if you face any compile failed due to hook check"
 comment "Repo: https://gitlab.com/simonpunk/susfs4ksu"

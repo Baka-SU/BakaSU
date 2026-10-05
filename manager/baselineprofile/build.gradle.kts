@@ -12,7 +12,7 @@ val androidSourceCompatibility = rootProject.extra["androidSourceCompatibility"]
 val androidTargetCompatibility = rootProject.extra["androidTargetCompatibility"] as JavaVersion
 
 android {
-    namespace = "com.resukisu.resukisu.baselineprofile"
+    namespace = "org.bakasu.bakasu.baselineprofile"
     compileSdk = androidCompileSdkVersion
 
     defaultConfig {

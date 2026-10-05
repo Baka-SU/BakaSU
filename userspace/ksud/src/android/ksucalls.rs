@@ -250,6 +250,13 @@ pub fn report_post_fs_data() {
     report_event(uapi::EVENT_POST_FS_DATA_RUST);
 }
 
+pub fn report_services() -> Result<bool> {
+    let mut cmd = uapi::ksu_report_event_cmd {
+        event: uapi::EVENT_SERVICES,
+    };
+    Ok(ksuctl(uapi::KSU_IOCTL_REPORT_EVENT, &raw mut cmd)? == 1)
+}
+
 pub fn report_boot_complete() {
     report_event(uapi::EVENT_BOOT_COMPLETED_RUST);
 }

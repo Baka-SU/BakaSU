@@ -3,7 +3,7 @@ define check_ksu_hook
       $$(info -- $$(REPO_NAME)/manual_hook: $(1) found)
   else
       $$(info -- You lost $(1) hook in your kernel)
-      $$(info -- Read: https://resukisu.org/guide/manual-integrate.html)
+      $$(info -- Read: https://bakasu.org/guide/manual-integrate.html)
       $$(error You should integrate $$(REPO_NAME) in your kernel. $(3))
   endif
 endef
@@ -11,7 +11,7 @@ endef
 define check_ksu_hook_incompatible
   ifeq ($$(shell grep -q "$(1)" $(2); echo $$$$?),0)
       $$(info -- $(1) is incompatible hook)
-      $$(info -- Read: https://resukisu.org/guide/manual-integrate.html)
+      $$(info -- Read: https://bakasu.org/guide/manual-integrate.html)
       $$(error You should integrate $$(REPO_NAME) in your kernel correctly.)
   endif
 endef
@@ -24,7 +24,7 @@ ifeq ($(CONFIG_KSU_MANUAL_HOOK_AUTO_SETUID_HOOK), y)
   ifeq ($(shell test \( $(VERSION) -gt 6 -o \( $(VERSION) -eq 6 -a $(PATCHLEVEL) -ge 8 \) \) && echo y),y)
       $(info -- You can't use LSM hooks for kernel version >=6.8)
       $(info -- You should turn off CONFIG_KSU_MANUAL_HOOK_AUTO_SETUID_HOOK and hook setresuid manually)
-      $(info -- Read: https://resukisu.org/guide/manual-integrate.html)
+      $(info -- Read: https://bakasu.org/guide/manual-integrate.html)
       $(error You can't use LSM hooks when kernel version >= 6.8)
   endif
 else
@@ -37,7 +37,7 @@ ifeq ($(CONFIG_KSU_MANUAL_HOOK_AUTO_INITRC_HOOK), y)
   ifeq ($(shell test \( $(VERSION) -gt 6 -o \( $(VERSION) -eq 6 -a $(PATCHLEVEL) -ge 8 \) \) && echo y),y)
       $(info -- You can't use LSM hooks for kernel version >=6.8)
       $(info -- You should turn off CONFIG_KSU_MANUAL_HOOK_AUTO_INITRC_HOOK and hook sys_read manually.)
-      $(info -- Read: https://resukisu.org/guide/manual-integrate.html)
+      $(info -- Read: https://bakasu.org/guide/manual-integrate.html)
       $(error You can't use LSM hooks when kernel version >= 6.8)
   endif
 else
@@ -61,12 +61,12 @@ endif
         $(info -- $(REPO_NAME)/manual_hook: ksu_handle_execve found)
       else
         $(info -- You lost ksu_handle_execve hook in your kernel)
-        $(info -- Read: https://resukisu.org/guide/manual-integrate.html)
+        $(info -- Read: https://bakasu.org/guide/manual-integrate.html)
         $(error You should integrate $(REPO_NAME) in your kernel.)
       endif
     else
       $(info -- You lost ksu_handle_execveat hook in your kernel)
-      $(info -- Read: https://resukisu.org/guide/manual-integrate.html)
+      $(info -- Read: https://bakasu.org/guide/manual-integrate.html)
       $(error You should integrate $(REPO_NAME) in your kernel.)
     endif
   endif

@@ -522,7 +522,6 @@
     <string name="susfs_uid_scheme_unmounted">Bağlantısı Kesik</string>
     <string name="susfs_status_no_data">Veri Yok</string>
     <string name="susfs_tab_open_redirect">Yönlendirmeyi Aç</string>
-    <string name="about_anime_character_sticker"><![CDATA[Simgeler özel bir lisans anlaşması kapsamında kullanılmaktadır: 怡子曰曰 tarafından çizilmiş, telif hakkı 明风 OuO\'ya aittir ve vektörleştirilmiş simgeler bu proje tarafından sağlanmaktadır.]]></string>
     <string name="settings_custom_monospace_font">Yerleşik eş aralıklı yazı tipini kullan</string>
     <string name="settings_custom_monospace_font_summary">Günlükleri görüntülerken sistemin eş aralıklı yazı tipiyle ilgili sorunları önlemek için yerleşik JetBrains Mono yazı tipini kullanır</string>
     <string name="susfs_enable_config">SUSFS Yöneticisi</string>

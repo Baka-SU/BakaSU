@@ -23,7 +23,7 @@ define check_ksu_manual_guard
     endif
 endef
 
-$(info -- You are using SUSFS, if you face any issues, please MAKE SURE you are using LATEST SUSFS KERNEL SIDE before submit issue to ReSukiSU.)
+$(info -- You are using SUSFS, if you face any issues, please MAKE SURE you are using LATEST SUSFS KERNEL SIDE before submit issue to BakaSU.)
 $(info -- We keep tracking simonpunk's latest changes, and don't maintain ANY backward compatibility for old version of susfs.)
 
 $(eval $(call check_ksu_hook_incompatible,ksu_vfs_read_hook,$(srctree)/fs/read_write.c))

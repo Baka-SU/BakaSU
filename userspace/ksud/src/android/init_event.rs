@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, time::Instant};
 
 use anyhow::{Context, Result};
 use log::{error, info, warn};
@@ -6,14 +6,14 @@ use log::{error, info, warn};
 use crate::{
     android::{
         dynamic_manager, ksucalls,
-        module::{self, handle_updated_modules, metamodule, prune_modules},
+        module::{self, ScriptWait, handle_updated_modules, metamodule, prune_modules},
         restorecon,
         utils::{self, is_safe_mode},
     },
     assets, defs,
 };
 
-pub fn on_post_data_fs() -> Result<()> {
+pub fn on_post_fs_data() -> Result<()> {
     if let Err(e) = ksucalls::ensure_uapi_version_matched() {
         error!("{e:#}, skip on_post_fs_data");
         return Ok(());
@@ -28,11 +28,8 @@ pub fn on_post_data_fs() -> Result<()> {
         warn!("clear temp configs failed: {e}");
     }
 
-    #[cfg(unix)]
-    {
-        let _ = catch_bootlog("logcat", &["logcat", "-b", "all"]);
-        let _ = catch_bootlog("dmesg", &["dmesg", "-w", "-r"]);
-    }
+    let _ = catch_bootlog("logcat", &["logcat", "-b", "all"]);
+    let _ = catch_bootlog("dmesg", &["dmesg", "-w", "-r"]);
 
     if utils::has_magisk() {
         warn!("Magisk detected, skip post-fs-data!");
@@ -40,6 +37,7 @@ pub fn on_post_data_fs() -> Result<()> {
     }
 
     let safe_mode = crate::android::utils::is_safe_mode();
+    let wait = ScriptWait::Until(Instant::now() + defs::BOOT_STAGE_TIMEOUT);
 
     if safe_mode {
         // we should still ensure module directory exists in safe mode
@@ -47,7 +45,7 @@ pub fn on_post_data_fs() -> Result<()> {
         warn!("safe mode, skip common post-fs-data.d scripts");
     } else {
         // Then exec common post-fs-data scripts
-        if let Err(e) = crate::android::module::exec_common_scripts("post-fs-data.d", true) {
+        if let Err(e) = crate::android::module::exec_common_scripts("post-fs-data.d", wait) {
             warn!("exec common post-fs-data scripts failed: {e}");
         }
         if let Err(e) = dynamic_manager::booted_load() {
@@ -107,13 +105,12 @@ pub fn on_post_data_fs() -> Result<()> {
     crate::android::susfs::init_event::on_post_fs_data();
 
     // execute metamodule post-fs-data script first (priority)
-    if let Err(e) = metamodule::exec_stage_script("post-fs-data", true) {
+    if let Err(e) = metamodule::exec_stage_script("post-fs-data", wait) {
         warn!("exec metamodule post-fs-data script failed: {e}");
     }
 
     // exec modules post-fs-data scripts
-    // TODO: Add timeout
-    if let Err(e) = module::exec_stage_script("post-fs-data", true) {
+    if let Err(e) = module::exec_stage_script("post-fs-data", wait) {
         warn!("exec post-fs-data scripts failed: {e}");
     }
 
@@ -132,14 +129,14 @@ pub fn on_post_data_fs() -> Result<()> {
         warn!("load umount config failed: {e}");
     }
 
-    run_stage("post-mount", true);
+    run_stage("post-mount", wait);
 
     std::env::set_current_dir("/").with_context(|| "failed to chdir to /")?;
 
     Ok(())
 }
 
-pub fn run_stage(stage: &str, block: bool) {
+pub fn run_stage(stage: &str, wait: ScriptWait) {
     utils::umask(0);
 
     if utils::has_magisk() {
@@ -152,17 +149,17 @@ pub fn run_stage(stage: &str, block: bool) {
         return;
     }
 
-    if let Err(e) = module::exec_common_scripts(&format!("{stage}.d"), block) {
+    if let Err(e) = module::exec_common_scripts(&format!("{stage}.d"), wait) {
         warn!("Failed to exec common {stage} scripts: {e}");
     }
 
     // execute metamodule stage script first (priority)
-    if let Err(e) = metamodule::exec_stage_script(stage, block) {
+    if let Err(e) = metamodule::exec_stage_script(stage, wait) {
         warn!("Failed to exec metamodule {stage} script: {e}");
     }
 
     // execute regular modules stage scripts
-    if let Err(e) = module::exec_stage_script(stage, block) {
+    if let Err(e) = module::exec_stage_script(stage, wait) {
         warn!("Failed to exec {stage} scripts: {e}");
     }
 }
@@ -173,8 +170,20 @@ pub fn on_services() {
         return;
     }
 
+    match ksucalls::report_services() {
+        Ok(true) => {}
+        Ok(false) => {
+            info!("services already started, skipping");
+            return;
+        }
+        Err(e) => {
+            error!("Failed to report services: {e:#}");
+            return;
+        }
+    }
+
     info!("on_services triggered!");
-    run_stage("service", false);
+    run_stage("service", ScriptWait::NoWait);
 }
 
 pub fn on_boot_completed() {
@@ -185,14 +194,13 @@ pub fn on_boot_completed() {
 
     ksucalls::report_boot_complete();
     info!("on_boot_completed triggered!");
-    run_stage("boot-completed", false);
+    run_stage("boot-completed", ScriptWait::NoWait);
     // Load susfs boot-completed
     if !is_safe_mode() {
         crate::android::susfs::init_event::on_boot_completed();
     }
 }
 
-#[cfg(unix)]
 fn catch_bootlog(logname: &str, command: &[&str]) -> Result<()> {
     use std::{os::unix::process::CommandExt, process::Stdio};
 
@@ -207,7 +215,7 @@ fn catch_bootlog(logname: &str, command: &[&str]) -> Result<()> {
 
     let bootlog = std::fs::File::create(bootlog)?;
 
-    let mut args = vec!["-s", "9", "30s"];
+    let mut args = vec!["-s", "9", defs::BOOTLOG_TIMEOUT];
     args.extend_from_slice(command);
     // timeout -s 9 30s logcat > boot.log
     let result = unsafe {

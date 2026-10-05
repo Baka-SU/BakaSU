@@ -58,7 +58,7 @@
     <string name="reboot_download">Reboot to Download</string>
     <string name="reboot_edl">Reboot to EDL</string>
     <string name="about">About</string>
-    <string name="about_anime_character_sticker"><![CDATA[The icons are licensed under a special arrangement: drawn by 怡子曰曰, the copyright is held by 明风 OuO, and the vectorized icons are provided by this project.]]></string>
+    <string name="about_app_icon"><![CDATA[The icons are ALL RIGHTS RESERVED and copyright is held by %1$s]]></string>
     <string name="get_source_code">Check for source code</string>
     <string name="get_source_code_detail">Check for source code on GitHub</string>
     <string name="join_telegram_group">Join community</string>

@@ -98,7 +98,7 @@ Branch: {branch}
 </pre>
 {commit_line}
 <a href="{run_url}">Workflow run</a>
-<a href="https://nightly.link/ReSukiSU/ReSukiSU/workflows/build-manager/main/Manager-debug.zip">Get latest main Debug build</a>
+<a href="https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main/Manager-debug.zip">Get latest main Debug build</a>
 """.strip()
 
 MAIN_UPDATED_MSG ="""

@@ -200,7 +200,7 @@ jobs:
             export BUILD_EXTRA_ARGS="-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME"
           elif [ "${{ github.ref_type }}" != "tag" ] && [ "${{ github.ref_name }}" != "main" ]; then
             export KSU_PACKAGE_NAME="com.resukisu.resukisu.dev"
-            export KSU_NAME="ReSukiSU-DEV"
+            export KSU_NAME="BakaSU-DEV"
             export BUILD_EXTRA_ARGS="-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME -PKSU_NAME=$KSU_NAME"
           fi
 
@@ -363,6 +363,7 @@ jobs:
 
   telegram-bot-api:
     name: Telegram Bot API
+    if: github.event_name != 'pull_request' && github.event_name != 'workflow_call'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
