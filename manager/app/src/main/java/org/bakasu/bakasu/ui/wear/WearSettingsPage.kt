@@ -6,8 +6,8 @@ import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.twotone.Adb
 import androidx.compose.material.icons.twotone.Apps
 import androidx.compose.material.icons.twotone.AspectRatio
-import androidx.compose.material.icons.twotone.Build
 import androidx.compose.material.icons.twotone.BugReport
+import androidx.compose.material.icons.twotone.Build
 import androidx.compose.material.icons.twotone.Delete
 import androidx.compose.material.icons.twotone.ElectricalServices
 import androidx.compose.material.icons.twotone.Extension
@@ -15,8 +15,8 @@ import androidx.compose.material.icons.twotone.Fence
 import androidx.compose.material.icons.twotone.FolderDelete
 import androidx.compose.material.icons.twotone.FolderOff
 import androidx.compose.material.icons.twotone.FolderOpen
-import androidx.compose.material.icons.twotone.Info
 import androidx.compose.material.icons.twotone.FormatSize
+import androidx.compose.material.icons.twotone.Info
 import androidx.compose.material.icons.twotone.Language
 import androidx.compose.material.icons.twotone.Palette
 import androidx.compose.material.icons.twotone.Policy
@@ -37,19 +37,19 @@ import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.KernelStatus
-import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
-import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
-import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
-import org.bakasu.bakasu.ui.wear.component.WearList
-import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearScaledItem
-import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
-import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
-import org.bakasu.bakasu.ui.wear.component.wearGroupGap
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
+import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearScaledItem
+import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
+import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
+import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
+import org.bakasu.bakasu.ui.wear.component.wearGroupGap
 import org.koin.compose.koinInject
 
 /**
@@ -118,13 +118,21 @@ private fun settingsCategoryIcon(category: WearSettingsCategory): ImageVector = 
 
 private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
     WearRoute.DynamicManager -> Icons.TwoTone.Security
+
     WearRoute.Color -> Icons.TwoTone.Palette
+
     WearRoute.Dpi -> Icons.TwoTone.FormatSize
+
     WearRoute.Logs -> Icons.AutoMirrored.TwoTone.Article
+
     WearRoute.Bugreport -> Icons.TwoTone.BugReport
+
     WearRoute.Templates -> Icons.TwoTone.Fence
+
     WearRoute.Umount -> Icons.TwoTone.FolderOff
+
     WearRoute.Uninstall -> Icons.TwoTone.Delete
+
     is WearRoute.Selection -> when (route.selection) {
         WearSelection.ScreenShape -> Icons.TwoTone.AspectRatio
         WearSelection.Language -> Icons.TwoTone.Translate
@@ -132,6 +140,7 @@ private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
         WearSelection.PickerMode -> Icons.TwoTone.FolderOpen
         WearSelection.SuCompat -> Icons.TwoTone.RemoveModerator
     }
+
     else -> Icons.TwoTone.Settings
 }
 
@@ -159,8 +168,11 @@ internal fun WearSettingsPage(
     val pickerSummary = pickerModeLabel(preferences.picker)
     val linkSummary = linkModeLabel(preferences.link)
     val suCompatSummary = suCompatModeLabel(state.suCompatMode)
-    val colorSummary = if (state.useDynamicColor) stringResource(R.string.dynamic_color_title)
-        else "#%06X".format(themeConfig.seedColor and 0xFFFFFF)
+    val colorSummary = if (state.useDynamicColor) {
+        stringResource(R.string.dynamic_color_title)
+    } else {
+        "#%06X".format(themeConfig.seedColor and 0xFFFFFF)
+    }
     val dpiSummary = stringResource(R.string.wear_ui_scale, state.currentDpi.toFloat() / state.systemDpi.coerceAtLeast(1))
     val shapeSummary = screenShapeLabel(preferences.shape)
     val version = wearAppVersion()
@@ -177,30 +189,53 @@ internal fun WearSettingsPage(
                 add(WearSettingsCategory.Display)
             }
             LazySegmentedColumn(categories, { it.name }) { entry ->
-                WearSettingsJumpPageWidget(spec, stringResource(settingsCategoryTitle(entry)),
-                    { onOpen(WearRoute.Settings(entry)) }, icon = settingsCategoryIcon(entry))
+                WearSettingsJumpPageWidget(
+                    spec,
+                    stringResource(settingsCategoryTitle(entry)),
+                    { onOpen(WearRoute.Settings(entry)) },
+                    icon = settingsCategoryIcon(entry),
+                )
             }
-            if (status.isFullFeatured && susfsAvailable) item {
-                WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_config_setting_title),
-                    { onOpen(WearRoute.SuSFS) }, icon = Icons.TwoTone.VisibilityOff)
+            if (status.isFullFeatured && susfsAvailable) {
+                item {
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(R.string.susfs_config_setting_title),
+                        { onOpen(WearRoute.SuSFS) },
+                        icon = Icons.TwoTone.VisibilityOff,
+                    )
+                }
             }
             wearGroupGap("about-gap")
             item {
-                WearSettingsJumpPageWidget(spec, stringResource(R.string.about), { onOpen(WearRoute.About) },
-                    icon = Icons.TwoTone.Info, description = version)
+                WearSettingsJumpPageWidget(
+                    spec,
+                    stringResource(R.string.about),
+                    { onOpen(WearRoute.About) },
+                    icon = Icons.TwoTone.Info,
+                    description = version,
+                )
             }
         } else if (category == WearSettingsCategory.Display) {
             item { WearSectionHeader(spec, stringResource(R.string.wear_display_appearance)) }
             item {
-                WearSettingsJumpPageWidget(spec, stringResource(R.string.theme_color), { onOpen(WearRoute.Color) },
-                    icon = settingsRouteIcon(WearRoute.Color), description = colorSummary)
+                WearSettingsJumpPageWidget(
+                    spec,
+                    stringResource(R.string.theme_color),
+                    { onOpen(WearRoute.Color) },
+                    icon = settingsRouteIcon(WearRoute.Color),
+                    description = colorSummary,
+                )
             }
             item { WearSectionHeader(spec, stringResource(R.string.wear_display_screen_layout)) }
             SegmentedColumn(listOf(WearRoute.Dpi, WearRoute.Selection(WearSelection.ScreenShape)), { it.toString() }) { route ->
-                WearSettingsJumpPageWidget(spec,
+                WearSettingsJumpPageWidget(
+                    spec,
                     stringResource(if (route == WearRoute.Dpi) R.string.wear_display_scaling else R.string.wear_screen_shape),
-                    { onOpen(route) }, icon = settingsRouteIcon(route),
-                    description = if (route == WearRoute.Dpi) dpiSummary else shapeSummary)
+                    { onOpen(route) },
+                    icon = settingsRouteIcon(route),
+                    description = if (route == WearRoute.Dpi) dpiSummary else shapeSummary,
+                )
             }
             // Android 13+ keeps the app language in the system per-app settings, which Wear does not
             // offer, so the in-app choice is only shown where the shared locale handling applies it.
@@ -208,41 +243,130 @@ internal fun WearSettingsPage(
                 val language = WearRoute.Selection(WearSelection.Language)
                 item { WearSectionHeader(spec, stringResource(R.string.settings_language)) }
                 item {
-                    WearSettingsJumpPageWidget(spec, stringResource(R.string.settings_language), { onOpen(language) },
-                        icon = settingsRouteIcon(language), description = languageSummary)
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(R.string.settings_language),
+                        { onOpen(language) },
+                        icon = settingsRouteIcon(language),
+                        description = languageSummary,
+                    )
                 }
             }
         } else {
             val toggles = buildList {
                 if (category == WearSettingsCategory.General) {
-                    add(SettingsToggle(SettingsSection.Updates, R.string.settings_check_manager_update, R.string.settings_check_manager_update_summary,
-                        state.checkManagerUpdate, SettingsUiAction.SetManagerUpdateCheck(!state.checkManagerUpdate)))
-                    if (state.checkManagerUpdate) add(SettingsToggle(SettingsSection.Updates, R.string.settings_check_beta_update,
-                        R.string.settings_check_beta_update_summary, state.checkBetaUpdate,
-                        SettingsUiAction.SetBetaUpdateCheck(!state.checkBetaUpdate)))
-                    add(SettingsToggle(SettingsSection.Updates, R.string.settings_check_module_update, R.string.settings_check_module_update_summary,
-                        state.checkModuleUpdate, SettingsUiAction.SetModuleUpdateCheck(!state.checkModuleUpdate)))
-                    if (status.isFullFeatured) add(SettingsToggle(SettingsSection.AppBehavior, R.string.settings_soft_reboot, R.string.settings_soft_reboot_summary,
-                        status.isLateLoadMode || state.useSoftReboot, SettingsUiAction.SetUseSoftReboot(!state.useSoftReboot)))
-                    add(SettingsToggle(SettingsSection.AppBehavior, R.string.icon_switch_title, R.string.icon_switch_summary,
-                        state.useAltIcon, SettingsUiAction.SetAlternateIcon(!state.useAltIcon)))
+                    add(
+                        SettingsToggle(
+                            SettingsSection.Updates,
+                            R.string.settings_check_manager_update,
+                            R.string.settings_check_manager_update_summary,
+                            state.checkManagerUpdate,
+                            SettingsUiAction.SetManagerUpdateCheck(!state.checkManagerUpdate),
+                        ),
+                    )
+                    if (state.checkManagerUpdate) {
+                        add(
+                            SettingsToggle(
+                                SettingsSection.Updates,
+                                R.string.settings_check_beta_update,
+                                R.string.settings_check_beta_update_summary,
+                                state.checkBetaUpdate,
+                                SettingsUiAction.SetBetaUpdateCheck(!state.checkBetaUpdate),
+                            ),
+                        )
+                    }
+                    add(
+                        SettingsToggle(
+                            SettingsSection.Updates,
+                            R.string.settings_check_module_update,
+                            R.string.settings_check_module_update_summary,
+                            state.checkModuleUpdate,
+                            SettingsUiAction.SetModuleUpdateCheck(!state.checkModuleUpdate),
+                        ),
+                    )
+                    if (status.isFullFeatured) {
+                        add(
+                            SettingsToggle(
+                                SettingsSection.AppBehavior,
+                                R.string.settings_soft_reboot,
+                                R.string.settings_soft_reboot_summary,
+                                status.isLateLoadMode || state.useSoftReboot,
+                                SettingsUiAction.SetUseSoftReboot(!state.useSoftReboot),
+                            ),
+                        )
+                    }
+                    add(
+                        SettingsToggle(
+                            SettingsSection.AppBehavior,
+                            R.string.icon_switch_title,
+                            R.string.icon_switch_summary,
+                            state.useAltIcon,
+                            SettingsUiAction.SetAlternateIcon(!state.useAltIcon),
+                        ),
+                    )
                 }
                 if (category == WearSettingsCategory.Security && status.isFullFeatured) {
-                    add(SettingsToggle(SettingsSection.MountIsolation, R.string.settings_kernel_umount, R.string.settings_kernel_umount_summary,
-                        state.isKernelUmountEnabled, SettingsUiAction.SetKernelUmount(!state.isKernelUmountEnabled)))
-                    add(SettingsToggle(SettingsSection.MountIsolation, R.string.settings_umount_modules_default, R.string.settings_umount_modules_default_summary,
-                        state.defaultUmountModules, SettingsUiAction.SetDefaultUmountModules(!state.defaultUmountModules)))
-                    add(SettingsToggle(SettingsSection.LoggingPrivacy, R.string.settings_sulog, R.string.settings_sulog_summary,
-                        state.isSuLogEnabled, SettingsUiAction.SetSuLog(!state.isSuLogEnabled)))
+                    add(
+                        SettingsToggle(
+                            SettingsSection.MountIsolation,
+                            R.string.settings_kernel_umount,
+                            R.string.settings_kernel_umount_summary,
+                            state.isKernelUmountEnabled,
+                            SettingsUiAction.SetKernelUmount(!state.isKernelUmountEnabled),
+                        ),
+                    )
+                    add(
+                        SettingsToggle(
+                            SettingsSection.MountIsolation,
+                            R.string.settings_umount_modules_default,
+                            R.string.settings_umount_modules_default_summary,
+                            state.defaultUmountModules,
+                            SettingsUiAction.SetDefaultUmountModules(!state.defaultUmountModules),
+                        ),
+                    )
+                    add(
+                        SettingsToggle(
+                            SettingsSection.LoggingPrivacy,
+                            R.string.settings_sulog,
+                            R.string.settings_sulog_summary,
+                            state.isSuLogEnabled,
+                            SettingsUiAction.SetSuLog(!state.isSuLogEnabled),
+                        ),
+                    )
                     // A short Wear summary keeps this row compact; the phone summary wraps around "SELinux".
-                    add(SettingsToggle(SettingsSection.LoggingPrivacy, R.string.settings_selinux_hide, R.string.wear_settings_selinux_hide_summary,
-                        state.isSelinuxHideEnabled, SettingsUiAction.SetSelinuxHide(!state.isSelinuxHideEnabled)))
+                    add(
+                        SettingsToggle(
+                            SettingsSection.LoggingPrivacy,
+                            R.string.settings_selinux_hide,
+                            R.string.wear_settings_selinux_hide_summary,
+                            state.isSelinuxHideEnabled,
+                            SettingsUiAction.SetSelinuxHide(!state.isSelinuxHideEnabled),
+                        ),
+                    )
                 }
                 if (category == WearSettingsCategory.Advanced && status.isFullFeatured) {
-                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) add(SettingsToggle(SettingsSection.PrivilegesStartup, R.string.settings_adb_root,
-                        R.string.settings_adb_root_summary, state.isAdbRootEnabled, SettingsUiAction.SetAdbRoot(!state.isAdbRootEnabled)))
-                    if (status.isLateLoadMode) add(SettingsToggle(SettingsSection.PrivilegesStartup, R.string.settings_auto_jailbreak, R.string.settings_auto_jailbreak_summary,
-                        state.autoJailbreakEnabled, SettingsUiAction.SetAutoJailbreak(!state.autoJailbreakEnabled)))
+                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
+                        add(
+                            SettingsToggle(
+                                SettingsSection.PrivilegesStartup,
+                                R.string.settings_adb_root,
+                                R.string.settings_adb_root_summary,
+                                state.isAdbRootEnabled,
+                                SettingsUiAction.SetAdbRoot(!state.isAdbRootEnabled),
+                            ),
+                        )
+                    }
+                    if (status.isLateLoadMode) {
+                        add(
+                            SettingsToggle(
+                                SettingsSection.PrivilegesStartup,
+                                R.string.settings_auto_jailbreak,
+                                R.string.settings_auto_jailbreak_summary,
+                                state.autoJailbreakEnabled,
+                                SettingsUiAction.SetAutoJailbreak(!state.autoJailbreakEnabled),
+                            ),
+                        )
+                    }
                 }
             }
             // Pages that open from this category, with the current value or phone summary as description.
@@ -250,14 +374,32 @@ internal fun WearSettingsPage(
                 if (category == WearSettingsCategory.General) {
                     if (status.isFullFeatured) add(SettingsPageLink(SettingsSection.Diagnostics, R.string.sulog, WearRoute.Logs))
                     add(SettingsPageLink(SettingsSection.Diagnostics, R.string.send_log, WearRoute.Bugreport))
-                    add(SettingsPageLink(SettingsSection.LinksFiles, R.string.wear_link_mode,
-                        WearRoute.Selection(WearSelection.LinkMode), linkSummary))
-                    add(SettingsPageLink(SettingsSection.LinksFiles, R.string.wear_picker_mode,
-                        WearRoute.Selection(WearSelection.PickerMode), pickerSummary))
+                    add(
+                        SettingsPageLink(
+                            SettingsSection.LinksFiles,
+                            R.string.wear_link_mode,
+                            WearRoute.Selection(WearSelection.LinkMode),
+                            linkSummary,
+                        ),
+                    )
+                    add(
+                        SettingsPageLink(
+                            SettingsSection.LinksFiles,
+                            R.string.wear_picker_mode,
+                            WearRoute.Selection(WearSelection.PickerMode),
+                            pickerSummary,
+                        ),
+                    )
                 }
                 if (category == WearSettingsCategory.Security && status.isFullFeatured) {
-                    add(SettingsPageLink(SettingsSection.AccessProfiles, R.string.settings_sucompat,
-                        WearRoute.Selection(WearSelection.SuCompat), suCompatSummary))
+                    add(
+                        SettingsPageLink(
+                            SettingsSection.AccessProfiles,
+                            R.string.settings_sucompat,
+                            WearRoute.Selection(WearSelection.SuCompat),
+                            suCompatSummary,
+                        ),
+                    )
                     add(SettingsPageLink(SettingsSection.AccessProfiles, R.string.settings_profile_template, WearRoute.Templates))
                 }
                 if (category == WearSettingsCategory.Advanced) {
@@ -282,19 +424,29 @@ internal fun WearSettingsPage(
                             R.string.settings_soft_reboot -> !status.isLateLoadMode
                             else -> true
                         }
-                        WearSettingsSwitchWidget(spec, stringResource(toggle.label), toggle.checked,
-                            { onAction(toggle.action) }, enabled, icon = settingsToggleIcon(toggle.label),
-                            secondaryLabel = toggle.summary?.let { stringResource(it) })
+                        WearSettingsSwitchWidget(
+                            spec,
+                            stringResource(toggle.label),
+                            toggle.checked,
+                            { onAction(toggle.action) },
+                            enabled,
+                            icon = settingsToggleIcon(toggle.label),
+                            secondaryLabel = toggle.summary?.let { stringResource(it) },
+                        )
                     }
                     LazySegmentedColumn(sectionPages, { it.label }) { entry ->
-                        WearSettingsJumpPageWidget(spec, stringResource(entry.label), { onOpen(entry.route) },
+                        WearSettingsJumpPageWidget(
+                            spec,
+                            stringResource(entry.label),
+                            { onOpen(entry.route) },
                             icon = settingsRouteIcon(entry.route),
                             description = entry.summary ?: when (entry.route) {
                                 WearRoute.Templates -> stringResource(R.string.settings_profile_template_summary)
                                 WearRoute.DynamicManager -> stringResource(R.string.dynamic_manager_settings_summary)
                                 WearRoute.Umount -> stringResource(R.string.umount_path_manager_summary)
                                 else -> null
-                            })
+                            },
+                        )
                     }
                 }
             }

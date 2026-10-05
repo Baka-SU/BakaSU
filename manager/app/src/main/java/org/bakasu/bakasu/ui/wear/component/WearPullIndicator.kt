@@ -40,13 +40,22 @@ import androidx.wear.compose.material3.ProgressIndicatorDefaults
 fun WearPullIndicator(progress: Float, closing: Boolean, modifier: Modifier = Modifier) {
     val motion = MaterialTheme.motionScheme
     val reduceMotion = LocalReduceMotion.current
-    val shown by animateFloatAsState(progress.coerceIn(0f, 1f),
-        if (reduceMotion) snap() else motion.fastEffectsSpec(), label = "pull-shown")
+    val shown by animateFloatAsState(
+        progress.coerceIn(0f, 1f),
+        if (reduceMotion) snap() else motion.fastEffectsSpec(),
+        label = "pull-shown",
+    )
     val armed = progress >= 1f
-    val flip by animateFloatAsState(if (armed) 180f else 0f,
-        if (reduceMotion) snap() else motion.fastSpatialSpec(), label = "pull-flip")
-    val scale by animateFloatAsState(if (armed && !reduceMotion) 1.15f else 1f,
-        if (reduceMotion) snap() else motion.fastSpatialSpec(), label = "pull-scale")
+    val flip by animateFloatAsState(
+        if (armed) 180f else 0f,
+        if (reduceMotion) snap() else motion.fastSpatialSpec(),
+        label = "pull-flip",
+    )
+    val scale by animateFloatAsState(
+        if (armed && !reduceMotion) 1.15f else 1f,
+        if (reduceMotion) snap() else motion.fastSpatialSpec(),
+        label = "pull-scale",
+    )
     if (shown <= 0.01f) return
     Box(
         modifier.size(36.dp)
@@ -61,13 +70,16 @@ fun WearPullIndicator(progress: Float, closing: Boolean, modifier: Modifier = Mo
     ) {
         val ringColor = MaterialTheme.colorScheme.onPrimaryContainer
         // Once armed, a solid ring shows the pull is complete; before that the ring fills with it.
-        if (armed) Box(Modifier.fillMaxSize().border(3.dp, ringColor, CircleShape))
-        else CircularProgressIndicator(
-            progress = { progress.coerceIn(0f, 1f) },
-            modifier = Modifier.fillMaxSize(),
-            colors = ProgressIndicatorDefaults.colors(indicatorColor = ringColor, trackColor = ringColor.copy(alpha = 0.25f)),
-            strokeWidth = 3.dp,
-        )
+        if (armed) {
+            Box(Modifier.fillMaxSize().border(3.dp, ringColor, CircleShape))
+        } else {
+            CircularProgressIndicator(
+                progress = { progress.coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxSize(),
+                colors = ProgressIndicatorDefaults.colors(indicatorColor = ringColor, trackColor = ringColor.copy(alpha = 0.25f)),
+                strokeWidth = 3.dp,
+            )
+        }
         Icon(
             if (closing) Icons.Default.Close else Icons.Default.KeyboardArrowDown,
             contentDescription = null,

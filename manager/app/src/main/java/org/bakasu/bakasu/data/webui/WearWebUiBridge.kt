@@ -7,9 +7,6 @@ import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.Wearable
-import org.bakasu.bakasu.domain.model.WebUiCommandResult
-import org.bakasu.bakasu.domain.model.WebUiProcess
-import org.json.JSONObject
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
@@ -17,6 +14,9 @@ import java.io.InputStream
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
+import org.bakasu.bakasu.domain.model.WebUiCommandResult
+import org.bakasu.bakasu.domain.model.WebUiProcess
+import org.json.JSONObject
 
 /**
  * Showing a watch module's WebUI on the phone. The watch offers a session for one module to the
@@ -31,6 +31,7 @@ object WearWebUiProtocol {
     const val CLAIM_PATH = "/resukisu/webui/claim"
     const val RPC_PATH = "/resukisu/webui/rpc"
     const val CLOSED_PATH = "/resukisu/webui/closed"
+
     /** Advertised by the app on every device, through `android_wear_capabilities`. */
     const val CAPABILITY = "resukisu_webui"
     const val SCHEME = "resukisu-webui"
@@ -60,8 +61,7 @@ object WearWebUiProtocol {
         return type to payload
     }
 
-    fun WebUiCommandResult.toJson(): String =
-        JSONObject().put("code", code).put("stdout", stdout).put("stderr", stderr).toString()
+    fun WebUiCommandResult.toJson(): String = JSONObject().put("code", code).put("stdout", stdout).put("stderr", stderr).toString()
 
     fun commandResult(json: String): WebUiCommandResult = JSONObject(json).let {
         WebUiCommandResult(it.getInt("code"), it.optString("stdout"), it.optString("stderr"))
@@ -90,10 +90,9 @@ object WearWebUiSession {
 
     /** Offers a session for [moduleId] to [phoneNodeId]; the returned token withdraws it. */
     @Synchronized
-    fun offer(moduleId: String, moduleName: String, phoneNodeId: String): String =
-        UUID.randomUUID().toString().also {
-            current = Session(it, moduleId, moduleName, phoneNodeId, SystemClock.elapsedRealtime())
-        }
+    fun offer(moduleId: String, moduleName: String, phoneNodeId: String): String = UUID.randomUUID().toString().also {
+        current = Session(it, moduleId, moduleName, phoneNodeId, SystemClock.elapsedRealtime())
+    }
 
     /** The pending session as JSON for the node it was offered to, at most once; otherwise null. */
     @Synchronized
@@ -108,8 +107,7 @@ object WearWebUiSession {
 
     /** The module of the claimed session when [token] and [nodeId] both match it, otherwise null. */
     @Synchronized
-    fun moduleFor(token: String, nodeId: String): String? =
-        current?.takeIf { it.claimed && it.token == token && it.phoneNodeId == nodeId }?.moduleId
+    fun moduleFor(token: String, nodeId: String): String? = current?.takeIf { it.claimed && it.token == token && it.phoneNodeId == nodeId }?.moduleId
 
     /** Ends the session of [token]; a phone may only end the session it claimed. */
     @Synchronized
@@ -187,17 +185,13 @@ class RemoteWebUiBackend private constructor(
 
     override fun listModules(): String = runCatching { single("modules", "")?.decodeToString() }.getOrNull() ?: "[]"
 
-    override fun openFile(path: String): InputStream? =
-        runCatching { single("file", path)?.inputStream() }.getOrNull()
+    override fun openFile(path: String): InputStream? = runCatching { single("file", path)?.inputStream() }.getOrNull()
 
-    override fun listPackages(type: String): String =
-        runCatching { single("packages", type)?.decodeToString() }.getOrNull() ?: "[]"
+    override fun listPackages(type: String): String = runCatching { single("packages", type)?.decodeToString() }.getOrNull() ?: "[]"
 
-    override fun getPackagesInfo(packageNamesJson: String): String =
-        runCatching { single("packagesInfo", packageNamesJson)?.decodeToString() }.getOrNull() ?: "[]"
+    override fun getPackagesInfo(packageNamesJson: String): String = runCatching { single("packagesInfo", packageNamesJson)?.decodeToString() }.getOrNull() ?: "[]"
 
-    override fun iconPng(packageName: String, size: Int): ByteArray? =
-        runCatching { single("icon", packageName, size) }.getOrNull()
+    override fun iconPng(packageName: String, size: Int): ByteArray? = runCatching { single("icon", packageName, size) }.getOrNull()
 
     /** Tells the watch the page was closed, so it ends the session and reloads its modules. */
     fun close(context: Context) {
@@ -212,8 +206,12 @@ class RemoteWebUiBackend private constructor(
         fun claim(context: Context): RemoteWebUiBackend? = runCatching {
             val localId = Tasks.await(Wearable.getNodeClient(context).localNode, 5, TimeUnit.SECONDS).id
             val client = Wearable.getChannelClient(context)
-            Tasks.await(Wearable.getCapabilityClient(context)
-                .getCapability(WearWebUiProtocol.CAPABILITY, CapabilityClient.FILTER_REACHABLE), 5, TimeUnit.SECONDS)
+            Tasks.await(
+                Wearable.getCapabilityClient(context)
+                    .getCapability(WearWebUiProtocol.CAPABILITY, CapabilityClient.FILTER_REACHABLE),
+                5,
+                TimeUnit.SECONDS,
+            )
                 .nodes.filter { it.id != localId }
                 .firstNotNullOfOrNull { node -> runCatching { claimFrom(context, client, node.id) }.getOrNull() }
         }.onFailure { Log.w("RemoteWebUi", "Session claim failed", it) }.getOrNull()
@@ -227,8 +225,13 @@ class RemoteWebUiBackend private constructor(
                 val session = JSONObject(payload.decodeToString())
                 val moduleId = session.getString("module")
                 require(moduleId.isNotEmpty() && '/' !in moduleId && moduleId != "..") { "Invalid module" }
-                return RemoteWebUiBackend(context, nodeId, session.getString("token"), moduleId,
-                    session.optString("name").ifEmpty { moduleId })
+                return RemoteWebUiBackend(
+                    context,
+                    nodeId,
+                    session.getString("token"),
+                    moduleId,
+                    session.optString("name").ifEmpty { moduleId },
+                )
             } finally {
                 client.close(channel)
             }
@@ -242,8 +245,11 @@ internal fun serveWebUiClaim(client: ChannelClient, channel: ChannelClient.Chann
         val output = DataOutputStream(Tasks.await(client.getOutputStream(channel)).buffered())
         val session = WearWebUiSession.claim(channel.nodeId)
         with(WearWebUiProtocol) {
-            if (session == null) output.writeFrame(FRAME_ERROR, ByteArray(0))
-            else output.writeFrame(FRAME_OK, session.toString().toByteArray())
+            if (session == null) {
+                output.writeFrame(FRAME_ERROR, ByteArray(0))
+            } else {
+                output.writeFrame(FRAME_OK, session.toString().toByteArray())
+            }
         }
     } catch (_: Exception) {
         // The phone closed the channel or the connection dropped; the claim simply fails.
@@ -274,19 +280,30 @@ internal suspend fun serveWebUiCall(
                 return
             }
             val arg = request.optString("arg")
-            fun answer(payload: ByteArray?) =
-                if (payload == null) output.writeFrame(FRAME_ERROR, ByteArray(0)) else output.writeFrame(FRAME_OK, payload)
+            fun answer(payload: ByteArray?) = if (payload == null) output.writeFrame(FRAME_ERROR, ByteArray(0)) else output.writeFrame(FRAME_OK, payload)
             when (request.optString("op")) {
                 "exec" -> answer(backend.execute(arg).toJson().toByteArray())
+
                 "modules" -> answer(backend.listModules().toByteArray())
-                "packages" -> { ensurePackages(); answer(backend.listPackages(arg).toByteArray()) }
-                "packagesInfo" -> { ensurePackages(); answer(backend.getPackagesInfo(arg).toByteArray()) }
+
+                "packages" -> {
+                    ensurePackages()
+                    answer(backend.listPackages(arg).toByteArray())
+                }
+
+                "packagesInfo" -> {
+                    ensurePackages()
+                    answer(backend.getPackagesInfo(arg).toByteArray())
+                }
+
                 "icon" -> answer(backend.iconPng(arg, request.optInt("extra", 128)))
+
                 "file" -> {
                     val webRoot = File("/data/adb/modules/$moduleId/webroot")
                     val file = File(arg).normalize()
                     answer(if (file.path.startsWith(webRoot.path + "/")) backend.openFile(file.path)?.use { it.readBytes() } else null)
                 }
+
                 "spawn" -> {
                     val done = java.util.concurrent.CountDownLatch(1)
                     backend.spawn(arg).start(
@@ -299,6 +316,7 @@ internal suspend fun serveWebUiCall(
                     )
                     done.await()
                 }
+
                 else -> answer(null)
             }
         }

@@ -21,8 +21,8 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
-import org.bakasu.bakasu.R
 import kotlin.math.abs
+import org.bakasu.bakasu.R
 
 /**
  * @author Hanhan_awa
@@ -112,8 +112,11 @@ internal fun Modifier.wearRefreshGesture(
                     val pointer = event.changes.firstOrNull { it.id == down.id } ?: break
                     if (!pointer.pressed) {
                         if (!canceled && active) {
-                            if (pullDown >= threshold) panel?.invoke()
-                            else if (pullUp >= threshold) (closePanel ?: refresh)?.invoke()
+                            if (pullDown >= threshold) {
+                                panel?.invoke()
+                            } else if (pullUp >= threshold) {
+                                (closePanel ?: refresh)?.invoke()
+                            }
                         }
                         break
                     }
@@ -145,10 +148,33 @@ internal fun Modifier.wearRefreshGesture(
             }
         }
     }.semantics {
-        if (enabled) customActions = buildList {
-            if (onRefresh != null) add(CustomAccessibilityAction(refreshLabel) { onRefresh(); true })
-            if (onOpenPanel != null && panelLabel != null) add(CustomAccessibilityAction(panelLabel) { onOpenPanel(); true })
-            if (onClosePanel != null) add(CustomAccessibilityAction(backLabel) { onClosePanel(); true })
+        if (enabled) {
+            customActions = buildList {
+                if (onRefresh != null) {
+                    add(
+                        CustomAccessibilityAction(refreshLabel) {
+                            onRefresh()
+                            true
+                        },
+                    )
+                }
+                if (onOpenPanel != null && panelLabel != null) {
+                    add(
+                        CustomAccessibilityAction(panelLabel) {
+                            onOpenPanel()
+                            true
+                        },
+                    )
+                }
+                if (onClosePanel != null) {
+                    add(
+                        CustomAccessibilityAction(backLabel) {
+                            onClosePanel()
+                            true
+                        },
+                    )
+                }
+            }
         }
     }
 }

@@ -1,11 +1,11 @@
 package org.bakasu.bakasu.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
-import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
-import org.bakasu.bakasu.domain.usecase.SetStringPreferenceUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
+import org.bakasu.bakasu.domain.usecase.SetStringPreferenceUseCase
 
 /**
  * @author Hanhan_awa
@@ -13,10 +13,13 @@ import kotlinx.coroutines.flow.update
  */
 data class WearPreferences(val picker: String = "auto", val link: String = "auto", val shape: String = "auto")
 class WearPreferencesViewModel(getPreference: GetStringPreferenceUseCase, private val setPreference: SetStringPreferenceUseCase) : ViewModel() {
-    private val mutableState = MutableStateFlow(WearPreferences(
-        getPreference("wear_file_picker", "auto").orEmpty(), getPreference("wear_link_mode", "auto").orEmpty().let { if (it in LinkModes) it else "auto" },
-        getPreference("wear_screen_shape", "auto").orEmpty(),
-    ))
+    private val mutableState = MutableStateFlow(
+        WearPreferences(
+            getPreference("wear_file_picker", "auto").orEmpty(),
+            getPreference("wear_link_mode", "auto").orEmpty().let { if (it in LinkModes) it else "auto" },
+            getPreference("wear_screen_shape", "auto").orEmpty(),
+        ),
+    )
     val state = mutableState.asStateFlow()
     fun setPicker(mode: String) {
         setPreference("wear_file_picker", mode)

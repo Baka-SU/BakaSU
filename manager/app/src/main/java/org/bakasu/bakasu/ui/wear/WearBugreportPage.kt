@@ -20,18 +20,18 @@ import androidx.wear.compose.material3.ConfirmationDialogDefaults
 import androidx.wear.compose.material3.FailureConfirmationDialog
 import androidx.wear.compose.material3.SuccessConfirmationDialog
 import androidx.wear.compose.material3.confirmationDialogCurvedText
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.usecase.GenerateBugreportUseCase
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 /** Saving or sharing the bugreport, as the phone's log sheet does. */
 @Composable
@@ -52,13 +52,15 @@ internal fun WearBugreportPage(onBack: () -> Unit) {
         }
     }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gzip")) { uri: Uri? ->
-        if (uri != null) run {
-            withContext(Dispatchers.IO) {
-                checkNotNull(context.contentResolver.openOutputStream(uri)).use { output ->
-                    generateBugreport().inputStream().use { it.copyTo(output) }
+        if (uri != null) {
+            run {
+                withContext(Dispatchers.IO) {
+                    checkNotNull(context.contentResolver.openOutputStream(uri)).use { output ->
+                        generateBugreport().inputStream().use { it.copyTo(output) }
+                    }
                 }
+                saved = true
             }
-            saved = true
         }
     }
     WearList(isLoading = busy, onBack = onBack) { spec ->
@@ -66,7 +68,7 @@ internal fun WearBugreportPage(onBack: () -> Unit) {
         item {
             WearActionButton(spec, Icons.TwoTone.Save, stringResource(R.string.save_log), {
                 val current = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm"))
-                runCatching { exportLauncher.launch("KernelSU_bugreport_${current}.tar.gz") }.onFailure { failed = true }
+                runCatching { exportLauncher.launch("KernelSU_bugreport_$current.tar.gz") }.onFailure { failed = true }
             })
         }
         item {
@@ -74,9 +76,14 @@ internal fun WearBugreportPage(onBack: () -> Unit) {
                 run {
                     val bugreport = withContext(Dispatchers.IO) { generateBugreport() }
                     val uri = FileProvider.getUriForFile(context, "${BuildConfig.APPLICATION_ID}.fileprovider", bugreport)
-                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND)
-                        .putExtra(Intent.EXTRA_STREAM, uri).setDataAndType(uri, "application/gzip")
-                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), sendLog))
+                    context.startActivity(
+                        Intent.createChooser(
+                            Intent(Intent.ACTION_SEND)
+                                .putExtra(Intent.EXTRA_STREAM, uri).setDataAndType(uri, "application/gzip")
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                            sendLog,
+                        ),
+                    )
                 }
             })
         }
@@ -84,8 +91,14 @@ internal fun WearBugreportPage(onBack: () -> Unit) {
     val savedText = stringResource(R.string.log_saved)
     val failedText = stringResource(R.string.operation_failed)
     val style = ConfirmationDialogDefaults.curvedTextStyle
-    SuccessConfirmationDialog(visible = saved, onDismissRequest = { saved = false },
-        curvedText = { confirmationDialogCurvedText(savedText, style) })
-    FailureConfirmationDialog(visible = failed, onDismissRequest = { failed = false },
-        curvedText = { confirmationDialogCurvedText(failedText, style) })
+    SuccessConfirmationDialog(
+        visible = saved,
+        onDismissRequest = { saved = false },
+        curvedText = { confirmationDialogCurvedText(savedText, style) },
+    )
+    FailureConfirmationDialog(
+        visible = failed,
+        onDismissRequest = { failed = false },
+        curvedText = { confirmationDialogCurvedText(failedText, style) },
+    )
 }

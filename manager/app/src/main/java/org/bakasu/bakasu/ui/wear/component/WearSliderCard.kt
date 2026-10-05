@@ -54,16 +54,31 @@ fun TransformingLazyColumnItemScope.WearSliderCard(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-            Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                label,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             // Numbers use the numeral style, whose tabular digits keep the value from jumping while dragging.
-            Text(valueText, style = MaterialTheme.typography.numeralExtraSmall, color = MaterialTheme.colorScheme.primary,
-                maxLines = 1)
+            Text(
+                valueText,
+                style = MaterialTheme.typography.numeralExtraSmall,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+            )
         }
         // The slider's own container would otherwise stack a second copy of the card's surface on
         // top of it, which reads as a darker pill once the card is translucent.
-        Slider(value, onValueChange, steps = steps, valueRange = valueRange, enabled = enabled,
+        Slider(
+            value,
+            onValueChange,
+            steps = steps,
+            valueRange = valueRange,
+            enabled = enabled,
             colors = SliderDefaults.sliderColors(containerColor = Color.Transparent),
-            modifier = Modifier.fillMaxWidth())
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

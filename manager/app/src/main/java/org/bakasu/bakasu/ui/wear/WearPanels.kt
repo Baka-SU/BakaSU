@@ -2,35 +2,35 @@ package org.bakasu.bakasu.ui.wear
 
 import android.os.Build
 import android.os.PowerManager
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.RestartAlt
-import androidx.compose.material.icons.automirrored.twotone.Sort
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.twotone.Sort
+import androidx.compose.material.icons.twotone.RestartAlt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.transformedHeight
-import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.ui.wear.component.WearActionButton
-import org.bakasu.bakasu.ui.wear.component.WearList
-import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
 import org.bakasu.bakasu.ui.viewmodel.SortType
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
+import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 
 /**
  * @author Hanhan_awa
@@ -42,8 +42,14 @@ internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onA
     val listState = rememberPanelListState()
     WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_filter_sort)) }
-        item { WearSettingsSwitchWidget(spec, stringResource(R.string.show_system_apps), state.showSystemApps,
-            { onAction(SuperUserUiAction.SetShowSystemApps(it)) }) }
+        item {
+            WearSettingsSwitchWidget(
+                spec,
+                stringResource(R.string.show_system_apps),
+                state.showSystemApps,
+                { onAction(SuperUserUiAction.SetShowSystemApps(it)) },
+            )
+        }
         LazySegmentedColumn(SortType.entries, { it }) { sort ->
             RadioButton(
                 selected = sort == state.currentSortType,
@@ -55,8 +61,14 @@ internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onA
                 label = { Text(stringResource(sort.displayNameRes), maxLines = 3, overflow = TextOverflow.Ellipsis) },
             )
         }
-        item { WearSettingsSwitchWidget(spec, stringResource(R.string.reverse_order), state.reverseOrder,
-            { onAction(SuperUserUiAction.SetReverseOrder(it)) }) }
+        item {
+            WearSettingsSwitchWidget(
+                spec,
+                stringResource(R.string.reverse_order),
+                state.reverseOrder,
+                { onAction(SuperUserUiAction.SetReverseOrder(it)) },
+            )
+        }
     }
 }
 
@@ -65,10 +77,22 @@ internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction:
     val listState = rememberPanelListState()
     WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_sort)) }
-        item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_action_first), state.sortActionFirst,
-            { onAction(ModuleUiAction.Sort(state.sortEnabledFirst, it)) }) }
-        item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_enabled_first), state.sortEnabledFirst,
-            { onAction(ModuleUiAction.Sort(it, state.sortActionFirst)) }) }
+        item {
+            WearSettingsSwitchWidget(
+                spec,
+                stringResource(R.string.module_sort_action_first),
+                state.sortActionFirst,
+                { onAction(ModuleUiAction.Sort(state.sortEnabledFirst, it)) },
+            )
+        }
+        item {
+            WearSettingsSwitchWidget(
+                spec,
+                stringResource(R.string.module_sort_enabled_first),
+                state.sortEnabledFirst,
+                { onAction(ModuleUiAction.Sort(it, state.sortActionFirst)) },
+            )
+        }
     }
 }
 
@@ -77,19 +101,33 @@ internal fun WearRebootPanel(rootAvailable: Boolean, onBack: () -> Unit, onReboo
     val listState = rememberPanelListState()
     val context = LocalContext.current
     val methods = linkedMapOf(
-        R.string.reboot to "", R.string.reboot_soft to "soft_reboot", R.string.reboot_recovery to "recovery",
-        R.string.reboot_bootloader to "bootloader", R.string.reboot_download to "download", R.string.reboot_edl to "edl",
+        R.string.reboot to "",
+        R.string.reboot_soft to "soft_reboot",
+        R.string.reboot_recovery to "recovery",
+        R.string.reboot_bootloader to "bootloader",
+        R.string.reboot_download to "download",
+        R.string.reboot_edl to "edl",
     )
     @Suppress("DEPRECATION")
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-        context.getSystemService(PowerManager::class.java)?.isRebootingUserspaceSupported == true)
+        context.getSystemService(PowerManager::class.java)?.isRebootingUserspaceSupported == true
+    ) {
         methods[R.string.reboot_userspace] = "userspace"
+    }
     WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.reboot)) }
-        methods.forEach { (label, reason) -> item {
-            WearActionButton(spec, Icons.TwoTone.RestartAlt, stringResource(label), { onReboot(reason) }, rootAvailable,
-                colors = ButtonDefaults.filledTonalButtonColors())
-        } }
+        methods.forEach { (label, reason) ->
+            item {
+                WearActionButton(
+                    spec,
+                    Icons.TwoTone.RestartAlt,
+                    stringResource(label),
+                    { onReboot(reason) },
+                    rootAvailable,
+                    colors = ButtonDefaults.filledTonalButtonColors(),
+                )
+            }
+        }
     }
 }
 

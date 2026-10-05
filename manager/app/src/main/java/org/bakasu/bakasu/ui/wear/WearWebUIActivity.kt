@@ -56,12 +56,12 @@ import org.bakasu.bakasu.data.packageinfo.InstalledPackageRepository
 import org.bakasu.bakasu.data.webui.WebUiRepository
 import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
+import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
-import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.webui.HandleConfigurationChanges
 import org.bakasu.bakasu.ui.webui.HandleWebViewLifecycle
 import org.bakasu.bakasu.ui.webui.MonetColorsProvider
@@ -129,7 +129,9 @@ private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) 
             Toast.makeText(activity, event.message, Toast.LENGTH_SHORT).show()
             onFinish()
         }
+
         is WebUIEvent.Close -> LaunchedEffect(event) { onFinish() }
+
         else -> Unit
     }
     WearWebUIScreen(webUIState, onFinish)
@@ -147,18 +149,23 @@ private fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
                     WebUIEvent.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
+
                     else -> Box(Modifier.fillMaxSize()) {
                         // Keep the WebView attached while a prompt is open, including its history,
                         // file result launcher and lifecycle observer.
                         WearWebContent(state, back)
                         // Pages over the WebView take the opaque app backdrop so it does not show through.
-                        if (!state.pageLoaded) WearBackground {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
+                        if (!state.pageLoaded) {
+                            WearBackground {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
                             }
                         }
-                        if (event is WebUIEvent.ShowPrompt) WearSubPage({ state.onPromptResult(null) }) {
-                            WearBackground { WearTextInputPage(event.message, event.defaultValue) { state.onPromptResult(it) } }
+                        if (event is WebUIEvent.ShowPrompt) {
+                            WearSubPage({ state.onPromptResult(null) }) {
+                                WearBackground { WearTextInputPage(event.message, event.defaultValue) { state.onPromptResult(it) } }
+                            }
                         }
                     }
                 }
@@ -230,7 +237,7 @@ private const val WEBUI_HOME_PAGE = "https://mui.kernelsu.org/index.html"
 
 /** The module WebView, loading the module's home page once it has been laid out. */
 @Composable
-private fun WearWebView(state: WebUIState, modifier: Modifier) {
+private fun WearWebView(state: WebUIState, modifier: Modifier = Modifier) {
     val webView = state.webView ?: return
     AndroidView(modifier = modifier.fillMaxSize(), factory = {
         webView.apply {
@@ -238,8 +245,15 @@ private fun WearWebView(state: WebUIState, modifier: Modifier) {
             if (!state.isUrlLoaded) {
                 addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
                     override fun onLayoutChange(
-                        v: View, left: Int, top: Int, right: Int, bottom: Int,
-                        oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int,
+                        v: View,
+                        left: Int,
+                        top: Int,
+                        right: Int,
+                        bottom: Int,
+                        oldLeft: Int,
+                        oldTop: Int,
+                        oldRight: Int,
+                        oldBottom: Int,
                     ) {
                         if (v.width > 0 && v.height > 0 && !state.isUrlLoaded) {
                             (v as WebView).loadUrl(WEBUI_HOME_PAGE)
@@ -260,9 +274,12 @@ private fun WearWebView(state: WebUIState, modifier: Modifier) {
 private fun HandleWearWebUIEvent(state: WebUIState) {
     val fileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val data = result.data
-        val uris: Array<Uri>? = if (result.resultCode != Activity.RESULT_OK || data == null) null
-        else data.clipData?.let { clip -> Array(clip.itemCount) { clip.getItemAt(it).uri } }
-            ?: data.data?.let { arrayOf(it) }
+        val uris: Array<Uri>? = if (result.resultCode != Activity.RESULT_OK || data == null) {
+            null
+        } else {
+            data.clipData?.let { clip -> Array(clip.itemCount) { clip.getItemAt(it).uri } }
+                ?: data.data?.let { arrayOf(it) }
+        }
         state.onFileChooserResult(uris)
     }
     val event = state.uiEvent
@@ -284,8 +301,10 @@ private fun HandleWearWebUIEvent(state: WebUIState) {
             dismiss()
         }
         AlertDialog(
-            visible = true, onDismissRequest = { respond(false) },
-            title = { Text(title) }, text = { Text(message) },
+            visible = true,
+            onDismissRequest = { respond(false) },
+            title = { Text(title) },
+            text = { Text(message) },
             confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = { respond(true) }) },
             dismissButton = { AlertDialogDefaults.DismissButton(onClick = { respond(false) }) },
         )

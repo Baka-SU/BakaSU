@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -46,13 +46,19 @@ fun TransformingLazyColumnItemScope.WearPageHeader(
             .minimumVerticalContentPadding(ListHeaderDefaults.minimumTopListContentPadding),
         transformation = SurfaceTransformation(transformationSpec),
         contentPadding = PaddingValues(
-            start = side, end = side,
-            top = defaults.calculateTopPadding(), bottom = defaults.calculateBottomPadding(),
+            start = side,
+            end = side,
+            top = defaults.calculateTopPadding(),
+            bottom = defaults.calculateBottomPadding(),
         ),
     ) {
         // Titles keep the ListHeader title style, as the Wear typography guidance assigns titles to way-finding.
-        Text(title, textAlign = TextAlign.Center,
-            maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(
+            title,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

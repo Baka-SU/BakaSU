@@ -27,7 +27,9 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
     enabled: Boolean = true,
     description: String? = null,
 ) {
-    FilledTonalButton(onClick = onClick, enabled = enabled,
+    FilledTonalButton(
+        onClick = onClick,
+        enabled = enabled,
         modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
         transformation = SurfaceTransformation(spec),

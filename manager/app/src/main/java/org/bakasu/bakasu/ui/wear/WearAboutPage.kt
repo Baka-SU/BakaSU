@@ -66,19 +66,31 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
         }
         wearGroupGap("identity-gap")
         item {
-            WearChip(spec, stringResource(R.string.get_source_code),
+            WearChip(
+                spec,
+                stringResource(R.string.get_source_code),
                 secondaryLabel = stringResource(R.string.get_source_code_detail),
-                icon = Icons.TwoTone.Code, onClick = { onOpenLink(projectUrl) })
+                icon = Icons.TwoTone.Code,
+                onClick = { onOpenLink(projectUrl) },
+            )
         }
         item {
-            WearChip(spec, stringResource(R.string.join_telegram_group),
+            WearChip(
+                spec,
+                stringResource(R.string.join_telegram_group),
                 secondaryLabel = stringResource(R.string.join_telegram_group_detail),
-                icon = Icons.TwoTone.Group, onClick = { onOpenLink("https://t.me/BakaSU") })
+                icon = Icons.TwoTone.Group,
+                onClick = { onOpenLink("https://t.me/BakaSU") },
+            )
         }
         item {
-            WearChip(spec, stringResource(R.string.open_source_license),
+            WearChip(
+                spec,
+                stringResource(R.string.open_source_license),
                 secondaryLabel = stringResource(R.string.license, stringResource(R.string.wear_project_license)),
-                icon = Icons.TwoTone.Copyright, onClick = onLicenses)
+                icon = Icons.TwoTone.Copyright,
+                onClick = onLicenses,
+            )
         }
         item {
             WearScaledItem(spec) {

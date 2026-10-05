@@ -1,14 +1,14 @@
 package org.bakasu.bakasu.data.webui
 
 import android.graphics.Bitmap
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import org.bakasu.bakasu.data.packageinfo.AppIconDataSource
 import org.bakasu.bakasu.data.packageinfo.InstalledPackageRepository
 import org.bakasu.bakasu.domain.model.WebUiCommandResult
 import org.bakasu.bakasu.domain.model.WebUiProcess
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
-import java.io.InputStream
 
 /**
  * What a module WebUI needs from the device that owns the module: root commands, module files and

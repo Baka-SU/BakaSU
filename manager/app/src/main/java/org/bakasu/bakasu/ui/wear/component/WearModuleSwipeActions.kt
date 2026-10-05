@@ -30,8 +30,8 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import androidx.wear.compose.material3.rememberRevealState
-import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 private const val RevealHoldMillis = 400L
 
@@ -52,8 +52,11 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
     val haptic = LocalHapticFeedback.current
     val active = LocalScreenIsActive.current
     LaunchedEffect(scrolling, active) {
-        if (!active) state.snapTo(RevealValue.Covered)
-        else if (scrolling) state.animateTo(RevealValue.Covered)
+        if (!active) {
+            state.snapTo(RevealValue.Covered)
+        } else if (scrolling) {
+            state.animateTo(RevealValue.Covered)
+        }
     }
     // The reveal component never drags the row itself; the gesture below opens and closes it.
     val gestureInclusion = remember {
@@ -79,10 +82,14 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
                 text = { Text(primary.label) },
             )
         },
-        secondaryAction = secondary?.let { action -> {
-            SecondaryActionButton(onClick = { run(action) },
-                icon = { Icon(action.icon, contentDescription = action.label) })
-        } },
+        secondaryAction = secondary?.let { action ->
+            {
+                SecondaryActionButton(
+                    onClick = { run(action) },
+                    icon = { Icon(action.icon, contentDescription = action.label) },
+                )
+            }
+        },
         // The row is never dragged by the component, so a full swipe cannot happen.
         onSwipePrimaryAction = {},
         // Match the Wear 1.7 SwipeToReveal list sample: keep the row transformation, but avoid
@@ -143,7 +150,10 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
             }
         }.semantics {
             customActions = listOfNotNull(primary, secondary).map { action ->
-                CustomAccessibilityAction(action.label) { run(action); true }
+                CustomAccessibilityAction(action.label) {
+                    run(action)
+                    true
+                }
             }
         },
         content = content,

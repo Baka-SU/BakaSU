@@ -1,14 +1,13 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.compose.material.icons.twotone.Apps
-import androidx.compose.material.icons.twotone.Error
-import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.twotone.Apps
 import androidx.compose.material.icons.twotone.Badge
 import androidx.compose.material.icons.twotone.Delete
+import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Extension
 import androidx.compose.material.icons.twotone.Folder
 import androidx.compose.material.icons.twotone.Language
@@ -31,26 +30,27 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.AppProfile
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.domain.model.InstalledModule
-import org.bakasu.bakasu.domain.model.AppProfile
-import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
-import org.bakasu.bakasu.ui.wear.component.WearAppProfileConfig
-import org.bakasu.bakasu.ui.wear.component.WearSubPage
-import org.bakasu.bakasu.ui.wear.component.WearActionButton
-import org.bakasu.bakasu.ui.wear.component.WearDetailField
-import org.bakasu.bakasu.ui.wear.component.WearIconText
-import org.bakasu.bakasu.ui.wear.component.WearInfoCard
-import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
-import org.bakasu.bakasu.ui.wear.component.WearList
-import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearScaledItem
-import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
-import org.bakasu.bakasu.ui.wear.component.WearStatusItem
-import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiAction
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiEvent
 import org.bakasu.bakasu.ui.viewmodel.AppProfileViewModel
+import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearAppProfileConfig
+import org.bakasu.bakasu.ui.wear.component.WearDetailField
+import org.bakasu.bakasu.ui.wear.component.WearIconText
+import org.bakasu.bakasu.ui.wear.component.WearInfoCard
+import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
+import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearScaledItem
+import org.bakasu.bakasu.ui.wear.component.WearStatusItem
+import org.bakasu.bakasu.ui.wear.component.WearStatusTone
+import org.bakasu.bakasu.ui.wear.component.WearSubPage
+import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -75,8 +75,10 @@ internal fun WearModuleDetail(
             item {
                 WearPageHeader(spec, stringResource(R.string.unknown_module))
             }
-            if (!error.isNullOrBlank()) item {
-                WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
+            if (!error.isNullOrBlank()) {
+                item {
+                    WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
+                }
             }
         }
         return
@@ -86,8 +88,11 @@ internal fun WearModuleDetail(
     val removeDialog = rememberWearConfirmDialog(
         title = stringResource(R.string.uninstall),
         message = stringResource(
-            if (module.metamodule) R.string.metamodule_uninstall_confirm
-            else R.string.module_uninstall_confirm,
+            if (module.metamodule) {
+                R.string.metamodule_uninstall_confirm
+            } else {
+                R.string.module_uninstall_confirm
+            },
             module.name,
         ),
         onConfirm = { onRemove(module.id, true) },
@@ -96,8 +101,10 @@ internal fun WearModuleDetail(
         item {
             WearPageHeader(spec, module.name)
         }
-        if (!error.isNullOrBlank()) item {
-            WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
+        if (!error.isNullOrBlank()) {
+            item {
+                WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
+            }
         }
         item {
             WearModuleInfoCard(spec) {
@@ -137,27 +144,45 @@ internal fun WearModuleDetail(
         }
         item {
             WearActionButton(
-                spec, Icons.TwoTone.Delete, stringResource(R.string.uninstall),
-                onClick = removeDialog::show, enabled = !module.remove,
+                spec,
+                Icons.TwoTone.Delete,
+                stringResource(R.string.uninstall),
+                onClick = removeDialog::show,
+                enabled = !module.remove,
             )
         }
-        if (module.hasWebUi) item {
-            WearActionButton(
-                spec, Icons.TwoTone.Language, stringResource(R.string.wear_webui),
-                onClick = { onWebUi(module) }, enabled = module.enabled && !module.remove,
-            )
+        if (module.hasWebUi) {
+            item {
+                WearActionButton(
+                    spec,
+                    Icons.TwoTone.Language,
+                    stringResource(R.string.wear_webui),
+                    onClick = { onWebUi(module) },
+                    enabled = module.enabled && !module.remove,
+                )
+            }
         }
-        if (module.hasActionScript) item {
-            WearActionButton(
-                spec, Icons.TwoTone.PlayArrow, stringResource(R.string.action),
-                onClick = { onExecute(module) }, enabled = module.enabled && !module.remove,
-            )
+        if (module.hasActionScript) {
+            item {
+                WearActionButton(
+                    spec,
+                    Icons.TwoTone.PlayArrow,
+                    stringResource(R.string.action),
+                    onClick = { onExecute(module) },
+                    enabled = module.enabled && !module.remove,
+                )
+            }
         }
-        if (module.moduleUpdate?.zipUrl?.isNotBlank() == true) item {
-            WearActionButton(
-                spec, Icons.TwoTone.Update, stringResource(R.string.module_update),
-                onClick = { onUpdate(module) }, enabled = !module.remove,
-            )
+        if (module.moduleUpdate?.zipUrl?.isNotBlank() == true) {
+            item {
+                WearActionButton(
+                    spec,
+                    Icons.TwoTone.Update,
+                    stringResource(R.string.module_update),
+                    onClick = { onUpdate(module) },
+                    enabled = !module.remove,
+                )
+            }
         }
     }
 }
@@ -191,8 +216,11 @@ internal fun WearAppDetail(
     val failedSepolicy = stringResource(R.string.failed_to_update_sepolicy, group.mainApp.label)
     val suNotAllowed = stringResource(R.string.su_not_allowed, group.mainApp.label)
     val save: (AppProfile) -> Unit = { profile ->
-        if (profile.allowSu && group.uid < 2000 && group.uid != 1000) error = suNotAllowed
-        else viewModel.dispatch(AppProfileUiAction.Save(profile))
+        if (profile.allowSu && group.uid < 2000 && group.uid != 1000) {
+            error = suNotAllowed
+        } else {
+            viewModel.dispatch(AppProfileUiAction.Save(profile))
+        }
     }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -206,44 +234,55 @@ internal fun WearAppDetail(
         }
     }
 
-    if (editingProfile) WearSubPage({ editingProfile = false }) {
-        state.profile?.let { profile ->
-            WearAppProfileConfig(profile, state.defaultUmountModules, state.sepolicyValid, error,
-                { viewModel.dispatch(AppProfileUiAction.ValidateSepolicy(it)) }, save,
-                onManageTemplates = { onOpen(WearRoute.Templates) },
-                onViewTemplate = { onOpen(WearRoute.TemplateEditor(it, readOnly = true, creation = false)) },
-                onBack = { editingProfile = false })
-        }
-    } else WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, group.mainApp.label) }
-        val profile = state.profile
-        if (profile != null) {
-            item {
-                WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
-                    WearDetailField(Icons.TwoTone.Badge, group.mainApp.label, group.mainApp.displayIdentifier)
-                    WearIconText(
-                        Icons.TwoTone.Security,
-                        stringResource(if (profile.allowSu) R.string.wear_allowed else R.string.wear_denied),
-                    )
-                }
-            }
-            item {
-                WearSettingsSwitchWidget(
-                    spec,
-                    label = stringResource(R.string.superuser),
-                    checked = profile.allowSu,
-                    onCheckedChange = { save(profile.copy(allowSu = it)) },
-                    enabled = !isManager && !group.isWebViewZygote,
-                    icon = Icons.TwoTone.Security,
+    if (editingProfile) {
+        WearSubPage({ editingProfile = false }) {
+            state.profile?.let { profile ->
+                WearAppProfileConfig(
+                    profile, state.defaultUmountModules, state.sepolicyValid, error,
+                    { viewModel.dispatch(AppProfileUiAction.ValidateSepolicy(it)) }, save,
+                    onManageTemplates = { onOpen(WearRoute.Templates) },
+                    onViewTemplate = { onOpen(WearRoute.TemplateEditor(it, readOnly = true, creation = false)) },
+                    onBack = { editingProfile = false },
                 )
             }
-            item {
-                WearSettingsJumpPageWidget(spec, stringResource(R.string.profile), { editingProfile = true },
-                    icon = Icons.TwoTone.Security, enabled = !isManager)
-            }
-        } else {
-            item { WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
         }
-        error?.let { item { WearStatusItem(spec, Icons.TwoTone.Error, it, tone = WearStatusTone.ERROR) } }
+    } else {
+        WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
+            item { WearPageHeader(spec, group.mainApp.label) }
+            val profile = state.profile
+            if (profile != null) {
+                item {
+                    WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
+                        WearDetailField(Icons.TwoTone.Badge, group.mainApp.label, group.mainApp.displayIdentifier)
+                        WearIconText(
+                            Icons.TwoTone.Security,
+                            stringResource(if (profile.allowSu) R.string.wear_allowed else R.string.wear_denied),
+                        )
+                    }
+                }
+                item {
+                    WearSettingsSwitchWidget(
+                        spec,
+                        label = stringResource(R.string.superuser),
+                        checked = profile.allowSu,
+                        onCheckedChange = { save(profile.copy(allowSu = it)) },
+                        enabled = !isManager && !group.isWebViewZygote,
+                        icon = Icons.TwoTone.Security,
+                    )
+                }
+                item {
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(R.string.profile),
+                        { editingProfile = true },
+                        icon = Icons.TwoTone.Security,
+                        enabled = !isManager,
+                    )
+                }
+            } else {
+                item { WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
+            }
+            error?.let { item { WearStatusItem(spec, Icons.TwoTone.Error, it, tone = WearStatusTone.ERROR) } }
+        }
     }
 }

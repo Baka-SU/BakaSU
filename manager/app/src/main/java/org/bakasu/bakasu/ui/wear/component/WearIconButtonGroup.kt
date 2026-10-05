@@ -23,7 +23,6 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 /** One icon action of a [WearIconButtonGroup]; [label] is its accessibility description. */
 data class WearIconAction(val icon: ImageVector, val label: String, val onClick: () -> Unit)
 
-
 @Composable
 fun TransformingLazyColumnItemScope.WearIconButtonGroup(
     transformationSpec: TransformationSpec,

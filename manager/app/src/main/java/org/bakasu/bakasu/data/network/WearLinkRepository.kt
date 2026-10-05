@@ -5,22 +5,22 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
-import androidx.webkit.WebViewCompat
 import androidx.wear.remote.interactions.RemoteActivityHelper
+import androidx.webkit.WebViewCompat
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.Wearable
-import org.bakasu.bakasu.data.webui.WearWebUiProtocol
-import org.bakasu.bakasu.data.webui.WearWebUiSession
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import org.bakasu.bakasu.data.webui.WearWebUiProtocol
+import org.bakasu.bakasu.data.webui.WearWebUiSession
 
 private const val TAG = "WearLink"
 
@@ -46,7 +46,9 @@ class WearLinkRepository(private val application: Application) {
         val hasWebView = hasWebView()
         val target = when (mode) {
             "webview" -> if (hasWebView) WearLinkTarget.WEBVIEW else throw WearLinkException(WearLinkFailure.WEBVIEW_UNAVAILABLE)
+
             "phone" -> WearLinkTarget.PHONE
+
             // Automatic: the watch WebView when present, otherwise the phone.
             else -> if (hasWebView) WearLinkTarget.WEBVIEW else WearLinkTarget.PHONE
         }
@@ -54,7 +56,8 @@ class WearLinkRepository(private val application: Application) {
             val helper = RemoteActivityHelper(application, java.util.concurrent.Executor { it.run() })
             val availability = withTimeoutOrNull(1_000) { helper.availabilityStatus.first() }
             if (availability == RemoteActivityHelper.STATUS_UNAVAILABLE ||
-                availability == RemoteActivityHelper.STATUS_TEMPORARILY_UNAVAILABLE) {
+                availability == RemoteActivityHelper.STATUS_TEMPORARILY_UNAVAILABLE
+            ) {
                 throw WearLinkException(WearLinkFailure.PHONE_UNAVAILABLE)
             }
             startOnPhone(Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE), null)
@@ -70,18 +73,31 @@ class WearLinkRepository(private val application: Application) {
     suspend fun openWebUiOnPhone(moduleId: String, moduleName: String) = withContext(Dispatchers.IO) {
         val nodeClient = Wearable.getNodeClient(application)
         val connected = runCatching { Tasks.await(nodeClient.connectedNodes, 5, TimeUnit.SECONDS) }
-            .getOrElse { Log.w(TAG, "Connected nodes unavailable", it); throw WearLinkException(WearLinkFailure.PHONE_FAILED, it) }
+            .getOrElse {
+                Log.w(TAG, "Connected nodes unavailable", it)
+                throw WearLinkException(WearLinkFailure.PHONE_FAILED, it)
+            }
         Log.i(TAG, "Connected nodes: ${connected.joinToString { "${it.displayName}(${it.id}, nearby=${it.isNearby})" }}")
         if (connected.isEmpty()) throw WearLinkException(WearLinkFailure.PHONE_UNAVAILABLE)
         val localId = runCatching { Tasks.await(nodeClient.localNode, 5, TimeUnit.SECONDS).id }
-            .getOrElse { Log.w(TAG, "Local node unavailable", it); throw WearLinkException(WearLinkFailure.PHONE_FAILED, it) }
+            .getOrElse {
+                Log.w(TAG, "Local node unavailable", it)
+                throw WearLinkException(WearLinkFailure.PHONE_FAILED, it)
+            }
         // The Data Layer only links apps with the same package name and signing certificate, so a
         // phone app from another build (for example a release signed with another key, or a version
         // without the capability) is not found here.
         val phones = runCatching {
-            Tasks.await(Wearable.getCapabilityClient(application)
-                .getCapability(WearWebUiProtocol.CAPABILITY, CapabilityClient.FILTER_REACHABLE), 5, TimeUnit.SECONDS).nodes
-        }.getOrElse { Log.w(TAG, "Capability query failed", it); throw WearLinkException(WearLinkFailure.PHONE_FAILED, it) }
+            Tasks.await(
+                Wearable.getCapabilityClient(application)
+                    .getCapability(WearWebUiProtocol.CAPABILITY, CapabilityClient.FILTER_REACHABLE),
+                5,
+                TimeUnit.SECONDS,
+            ).nodes
+        }.getOrElse {
+            Log.w(TAG, "Capability query failed", it)
+            throw WearLinkException(WearLinkFailure.PHONE_FAILED, it)
+        }
             .filter { it.id != localId }
         Log.i(TAG, "Nodes with ${WearWebUiProtocol.CAPABILITY}: ${phones.joinToString { "${it.displayName}(${it.id})" }}")
         val phone = phones.firstOrNull { it.isNearby } ?: phones.firstOrNull()
@@ -91,8 +107,11 @@ class WearLinkRepository(private val application: Application) {
         val token = WearWebUiSession.offer(moduleId, moduleName, phone.id)
         val uri = Uri.Builder().scheme(WearWebUiProtocol.SCHEME).authority(WearWebUiProtocol.HOST).build()
         try {
-            startOnPhone(Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)
-                .setPackage(application.packageName), phone.id)
+            startOnPhone(
+                Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)
+                    .setPackage(application.packageName),
+                phone.id,
+            )
         } catch (error: Exception) {
             WearWebUiSession.end(token)
             throw error
@@ -106,8 +125,12 @@ class WearLinkRepository(private val application: Application) {
         try {
             suspendCancellableCoroutine<Unit> { continuation ->
                 future.addListener({
-                    try { future.get(); if (continuation.isActive) continuation.resume(Unit) }
-                    catch (error: Exception) { if (continuation.isActive) continuation.resumeWithException(error) }
+                    try {
+                        future.get()
+                        if (continuation.isActive) continuation.resume(Unit)
+                    } catch (error: Exception) {
+                        if (continuation.isActive) continuation.resumeWithException(error)
+                    }
                 }, java.util.concurrent.Executor { it.run() })
                 continuation.invokeOnCancellation { future.cancel(true) }
             }

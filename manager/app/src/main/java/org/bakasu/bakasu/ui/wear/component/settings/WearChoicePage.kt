@@ -11,14 +11,21 @@ import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.transformedHeight
-import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
+import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 
 @Composable
-fun WearChoicePage(title: String, choices: List<Pair<String, String>>, selected: String,
-    onBack: () -> Unit, enabled: Boolean = true, message: String? = null,
-    icon: ((String) -> ImageVector)? = null, onChoose: (String) -> Unit) {
+fun WearChoicePage(
+    title: String,
+    choices: List<Pair<String, String>>,
+    selected: String,
+    onBack: () -> Unit,
+    enabled: Boolean = true,
+    message: String? = null,
+    icon: ((String) -> ImageVector)? = null,
+    onChoose: (String) -> Unit,
+) {
     WearList(onBack = onBack, snap = true) { spec ->
         item { WearPageHeader(spec, title) }
         if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }

@@ -2,17 +2,17 @@ package org.bakasu.bakasu.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import org.bakasu.bakasu.data.network.WearLinkException
-import org.bakasu.bakasu.data.network.WearLinkFailure
-import org.bakasu.bakasu.data.network.WearLinkRepository
-import org.bakasu.bakasu.data.network.WearLinkTarget
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.bakasu.bakasu.data.network.WearLinkException
+import org.bakasu.bakasu.data.network.WearLinkFailure
+import org.bakasu.bakasu.data.network.WearLinkRepository
+import org.bakasu.bakasu.data.network.WearLinkTarget
 
 /**
  * @author Hanhan_awa
@@ -22,10 +22,13 @@ sealed interface WearLinkEvent {
     data class WebView(val url: String) : WearLinkEvent
     data class WebUi(val moduleId: String, val moduleName: String) : WearLinkEvent
     data object SentToPhone : WearLinkEvent
+
     /** A module WebUI was opened on the phone. */
     data object WebUiOnPhone : WearLinkEvent
+
     /** Opening a module WebUI on the phone failed for [reason]; null is an unexpected failure. */
     data class WebUiPhoneFailed(val reason: WearLinkFailure?) : WearLinkEvent
+
     /** A null [reason] is an unexpected failure. [webUi] marks failures of the module WebUI flow. */
     data class Failed(val reason: WearLinkFailure?, val webUi: Boolean = false) : WearLinkEvent
 }
@@ -39,13 +42,18 @@ class WearLinkViewModel(private val repository: WearLinkRepository) : ViewModel(
         if (task?.isActive == true) return
         task = viewModelScope.launch {
             mutableLoading.value = true
-            try { when (repository.resolve(url, mode)) {
-                WearLinkTarget.WEBVIEW -> mutableEvents.emit(WearLinkEvent.WebView(url))
-                WearLinkTarget.PHONE -> mutableEvents.emit(WearLinkEvent.SentToPhone)
-            } }
-            catch (error: CancellationException) { throw error }
-            catch (error: Exception) { mutableEvents.emit(WearLinkEvent.Failed((error as? WearLinkException)?.reason)) }
-            finally { mutableLoading.value = false }
+            try {
+                when (repository.resolve(url, mode)) {
+                    WearLinkTarget.WEBVIEW -> mutableEvents.emit(WearLinkEvent.WebView(url))
+                    WearLinkTarget.PHONE -> mutableEvents.emit(WearLinkEvent.SentToPhone)
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                mutableEvents.emit(WearLinkEvent.Failed((error as? WearLinkException)?.reason))
+            } finally {
+                mutableLoading.value = false
+            }
         }
     }
 
@@ -58,19 +66,29 @@ class WearLinkViewModel(private val repository: WearLinkRepository) : ViewModel(
         task = viewModelScope.launch {
             val onPhone = mode == "phone" || mode != "webview" && !repository.hasWebView()
             if (!onPhone) {
-                mutableEvents.emit(if (repository.hasWebView()) WearLinkEvent.WebUi(moduleId, moduleName)
-                    else WearLinkEvent.Failed(WearLinkFailure.WEBVIEW_UNAVAILABLE, webUi = true))
+                mutableEvents.emit(
+                    if (repository.hasWebView()) {
+                        WearLinkEvent.WebUi(moduleId, moduleName)
+                    } else {
+                        WearLinkEvent.Failed(WearLinkFailure.WEBVIEW_UNAVAILABLE, webUi = true)
+                    },
+                )
                 return@launch
             }
             mutableLoading.value = true
             try {
                 repository.openWebUiOnPhone(moduleId, moduleName)
                 mutableEvents.emit(WearLinkEvent.WebUiOnPhone)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                mutableEvents.emit(WearLinkEvent.WebUiPhoneFailed((error as? WearLinkException)?.reason))
+            } finally {
+                mutableLoading.value = false
             }
-            catch (error: CancellationException) { throw error }
-            catch (error: Exception) { mutableEvents.emit(WearLinkEvent.WebUiPhoneFailed((error as? WearLinkException)?.reason)) }
-            finally { mutableLoading.value = false }
         }
     }
-    fun cancel() { task?.cancel() }
+    fun cancel() {
+        task?.cancel()
+    }
 }

@@ -20,13 +20,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.AppSettingsRepository
 import org.bakasu.bakasu.data.webui.RemoteWebUiBackend
 import org.bakasu.bakasu.data.webui.WearWebUiProtocol
 import org.bakasu.bakasu.ui.theme.KernelSUTheme
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 
 /**
@@ -70,8 +70,14 @@ class RemoteWebUIActivity : ComponentActivity() {
                     backend = remote
                     webUIState.moduleName = remote.moduleName
                     webUIState.modDir = "/data/adb/modules/${remote.moduleId}"
-                    createWebView(this@RemoteWebUIActivity, webUIState, remote, settingsRepository,
-                        restrictToModule = true, colorsCssProvider = { currentColorsCss.value })
+                    createWebView(
+                        this@RemoteWebUIActivity,
+                        webUIState,
+                        remote,
+                        settingsRepository,
+                        restrictToModule = true,
+                        colorsCssProvider = { currentColorsCss.value },
+                    )
                 }
                 DisposableEffect(Unit) { onDispose { webUIState.dispose() } }
 
@@ -80,12 +86,17 @@ class RemoteWebUIActivity : ComponentActivity() {
                         Toast.makeText(this@RemoteWebUIActivity, event.message, Toast.LENGTH_SHORT).show()
                         finish()
                     }
+
                     is WebUIEvent.Close -> LaunchedEffect(event) { finish() }
+
                     else -> Unit
                 }
                 Crossfade(targetState = webUIState.uiEvent is WebUIEvent.Loading, animationSpec = tween(300)) { loading ->
-                    if (loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator() }
-                    else WebUIScreen(webUIState = webUIState)
+                    if (loading) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator() }
+                    } else {
+                        WebUIScreen(webUIState = webUIState)
+                    }
                 }
             }
         }

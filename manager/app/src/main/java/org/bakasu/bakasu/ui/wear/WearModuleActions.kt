@@ -19,12 +19,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.Text
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiEvent
+import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearFlashProgress
 import org.bakasu.bakasu.ui.wear.component.WearFlashStatus
@@ -39,12 +45,6 @@ import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.toLogLines
 import org.bakasu.bakasu.ui.wear.component.wearLogLines
-import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiEvent
-import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -66,22 +66,35 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
     val update = module?.moduleUpdate
     LaunchedEffect(update?.changelog) {
         val url = update?.changelog ?: return@LaunchedEffect
-        if (changelog == null) fetchRemoteText(url).fold(
-            onSuccess = { changelog = it },
-            onFailure = { changelogError = it.message.orEmpty() },
-        )
+        if (changelog == null) {
+            fetchRemoteText(url).fold(
+                onSuccess = { changelog = it },
+                onFailure = { changelogError = it.message.orEmpty() },
+            )
+        }
     }
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_update)) }
         if (module != null && update != null) {
-            item { WearInfoCard(spec) { Text(module.name); Text(update.version) } }
+            item {
+                WearInfoCard(spec) {
+                    Text(module.name)
+                    Text(update.version)
+                }
+            }
             item { WearSectionHeader(spec, stringResource(R.string.module_changelog)) }
             when {
                 changelogError != null -> item {
-                    WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.module_changelog_failed, changelogError.orEmpty()),
-                        tone = WearStatusTone.ERROR)
+                    WearStatusItem(
+                        spec,
+                        Icons.TwoTone.Error,
+                        stringResource(R.string.module_changelog_failed, changelogError.orEmpty()),
+                        tone = WearStatusTone.ERROR,
+                    )
                 }
+
                 changelog == null -> item { WearScaledItem(spec) { CircularProgressIndicator(Modifier.size(24.dp)) } }
+
                 else -> changelog.orEmpty().chunked(350).forEach { chunk -> item { WearInfoCard(spec) { Text(chunk) } } }
             }
             progress?.let { percent ->
@@ -135,11 +148,17 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
     WearList(onBack = onBack, listState = listState) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.action)) }
         item {
-            WearFlashStatusChip(spec, status, stringResource(when (status) {
-                WearFlashStatus.RUNNING -> R.string.action
-                WearFlashStatus.SUCCESS -> R.string.module_action_success
-                WearFlashStatus.FAILED -> R.string.operation_failed
-            }))
+            WearFlashStatusChip(
+                spec,
+                status,
+                stringResource(
+                    when (status) {
+                        WearFlashStatus.RUNNING -> R.string.action
+                        WearFlashStatus.SUCCESS -> R.string.module_action_success
+                        WearFlashStatus.FAILED -> R.string.operation_failed
+                    },
+                ),
+            )
         }
         if (state.running) item { WearFlashProgress(spec) }
         wearLogLines(spec, lines)

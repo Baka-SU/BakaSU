@@ -13,10 +13,18 @@ import org.bakasu.bakasu.ui.component.rememberCustomDialog
  */
 
 @Composable
-fun rememberWearConfirmDialog(title: String, message: String, onConfirm: () -> Unit): DialogHandle =
-    rememberCustomDialog { dismiss ->
-        AlertDialog(visible = true, onDismissRequest = dismiss,
-            title = { Text(title) }, text = { Text(message) },
-            confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = { dismiss(); onConfirm() }) },
-            dismissButton = { AlertDialogDefaults.DismissButton(onClick = dismiss) })
-    }
+fun rememberWearConfirmDialog(title: String, message: String, onConfirm: () -> Unit): DialogHandle = rememberCustomDialog { dismiss ->
+    AlertDialog(
+        visible = true,
+        onDismissRequest = dismiss,
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = {
+            AlertDialogDefaults.ConfirmButton(onClick = {
+                dismiss()
+                onConfirm()
+            })
+        },
+        dismissButton = { AlertDialogDefaults.DismissButton(onClick = dismiss) },
+    )
+}

@@ -1,10 +1,7 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.compose.material.icons.twotone.Error
-import org.bakasu.bakasu.ui.wear.component.WearStatusTone
-import org.bakasu.bakasu.ui.wear.component.wearGroupGap
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -13,6 +10,7 @@ import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.twotone.Apps
+import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,12 +33,14 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.ui.component.PackageIcon
+import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
-import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
+import org.bakasu.bakasu.ui.wear.component.WearStatusTone
+import org.bakasu.bakasu.ui.wear.component.wearGroupGap
 
 /**
  * @author Hanhan_awa
@@ -63,25 +63,31 @@ internal fun WearSuperUserPage(
     // As on the phone: an empty list shows the loading indicator in place of the page; once it has
     // content, refreshing shows at the pull refresh, in the edge button.
     val loading = state.isRefreshing && state.appGroupList.isEmpty() && state.search.isEmpty()
-    WearList(isLoading = loading, isRefreshing = state.isRefreshing && !loading, onRefresh = onRefresh,
+    WearList(
+        isLoading = loading, isRefreshing = state.isRefreshing && !loading, onRefresh = onRefresh,
         onBack = onBack, onOpenPanel = onFilter, panelLabel = stringResource(R.string.wear_filter_sort),
         snap = true, listState = listState, backToTop = backToTop,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.superuser)) }
         // Search and SU log as one compact button group, matching the Modules page actions.
         item {
-            WearIconButtonGroup(spec, listOf(
-                WearIconAction(Icons.TwoTone.Search, stringResource(R.string.search_apps), onSearch),
-                WearIconAction(Icons.AutoMirrored.TwoTone.Article, stringResource(R.string.sulog), onLogs),
-            ))
+            WearIconButtonGroup(
+                spec,
+                listOf(
+                    WearIconAction(Icons.TwoTone.Search, stringResource(R.string.search_apps), onSearch),
+                    WearIconAction(Icons.AutoMirrored.TwoTone.Article, stringResource(R.string.sulog), onLogs),
+                ),
+            )
         }
         // The app list follows the actions directly, separated by the 8dp group gap of the Wear list guidance.
         wearGroupGap("apps-gap")
         if (!error.isNullOrBlank()) {
             item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR) }
         }
-        if (state.appGroupList.isEmpty() && error.isNullOrBlank()) item {
-            WearStatusItem(spec, Icons.TwoTone.Apps, stringResource(R.string.no_apps_in_category))
+        if (state.appGroupList.isEmpty() && error.isNullOrBlank()) {
+            item {
+                WearStatusItem(spec, Icons.TwoTone.Apps, stringResource(R.string.no_apps_in_category))
+            }
         }
         // An app button list: 32dp app icon, one-line name and a one-line authorization status.
         items(state.appGroupList, key = { "${it.uid}:${it.primaryPackageName}" }) { group ->
@@ -118,8 +124,11 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
                     // On the primary container of an authorized app the mark uses its content color.
-                    tint = if (group.allowSu) MaterialTheme.colorScheme.onPrimary
-                        else MaterialTheme.colorScheme.error,
+                    tint = if (group.allowSu) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(

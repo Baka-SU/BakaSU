@@ -1,31 +1,31 @@
 package org.bakasu.bakasu.ui.wear.component
 
-import androidx.wear.compose.material3.LocalContentColor
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.painter.ColorPainter
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.LocalContentColor
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
@@ -116,8 +116,12 @@ fun TransformingLazyColumnItemScope.WearStatusItem(
     if (!centered) {
         WearInfoCard(transformationSpec, modifier.fillMaxWidth(), containerColor = container) {
             Row(verticalAlignment = Alignment.Top) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp),
-                    tint = if (neutral) LocalContentColor.current else content)
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = if (neutral) LocalContentColor.current else content,
+                )
                 Spacer(Modifier.width(6.dp))
                 Text(
                     message,
@@ -136,9 +140,18 @@ fun TransformingLazyColumnItemScope.WearStatusItem(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = if (neutral) MaterialTheme.colorScheme.onSurfaceVariant else content,
-            modifier = Modifier.size(24.dp).align(Alignment.CenterHorizontally))
-        Text(message, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium,
-            color = if (neutral) MaterialTheme.colorScheme.onSurface else content, textAlign = TextAlign.Center)
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (neutral) MaterialTheme.colorScheme.onSurfaceVariant else content,
+            modifier = Modifier.size(24.dp).align(Alignment.CenterHorizontally),
+        )
+        Text(
+            message,
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (neutral) MaterialTheme.colorScheme.onSurface else content,
+            textAlign = TextAlign.Center,
+        )
     }
 }

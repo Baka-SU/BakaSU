@@ -39,7 +39,9 @@ fun TransformingLazyColumnItemScope.WearFlashStatusChip(
     detail: String? = null,
 ) {
     WearChip(
-        transformationSpec, label, secondaryLabel = detail?.ifBlank { null },
+        transformationSpec,
+        label,
+        secondaryLabel = detail?.ifBlank { null },
         icon = when (status) {
             WearFlashStatus.RUNNING -> Icons.TwoTone.HourglassTop
             WearFlashStatus.SUCCESS -> Icons.TwoTone.CheckCircle
@@ -58,8 +60,11 @@ fun TransformingLazyColumnItemScope.WearFlashStatusChip(
 fun TransformingLazyColumnItemScope.WearFlashProgress(transformationSpec: TransformationSpec, progress: Float? = null) {
     WearScaledItem(transformationSpec) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            if (progress == null) CircularProgressIndicator(modifier = Modifier.size(32.dp))
-            else CircularProgressIndicator(progress = { progress }, modifier = Modifier.size(32.dp))
+            if (progress == null) {
+                CircularProgressIndicator(modifier = Modifier.size(32.dp))
+            } else {
+                CircularProgressIndicator(progress = { progress }, modifier = Modifier.size(32.dp))
+            }
         }
     }
 }

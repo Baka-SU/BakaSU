@@ -13,10 +13,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.ButtonDefaults
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.FlashOperation
 import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
 import org.bakasu.bakasu.domain.usecase.TakeModuleUriPermissionUseCase
+import org.bakasu.bakasu.ui.viewmodel.FlashUiAction
+import org.bakasu.bakasu.ui.viewmodel.FlashViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearFlashProgress
 import org.bakasu.bakasu.ui.wear.component.WearFlashStatus
@@ -26,10 +30,6 @@ import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.toLogLines
 import org.bakasu.bakasu.ui.wear.component.wearLogLines
-import org.bakasu.bakasu.ui.viewmodel.FlashUiAction
-import org.bakasu.bakasu.ui.viewmodel.FlashViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -56,8 +56,11 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
                 isUriAccessible(uri).also { if (it) takeUriPermission(uri) }
             }.getOrDefault(false)
         }
-        if (accessible) viewModel.dispatch(FlashUiAction.Start(operation))
-        else fileError = true
+        if (accessible) {
+            viewModel.dispatch(FlashUiAction.Start(operation))
+        } else {
+            fileError = true
+        }
     }
     LaunchedEffect(state.exitCode) { if (state.exitCode == 0) onInstalled() }
 
@@ -73,25 +76,38 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
 
     WearList(onBack = onBack, listState = listState) { spec ->
         item {
-            WearPageHeader(spec, stringResource(when (operation) {
-                FlashOperation.Uninstall -> R.string.settings_uninstall_permanent
-                FlashOperation.Restore -> R.string.settings_restore_stock_image
-                is FlashOperation.Boot, is FlashOperation.Module -> R.string.install
-            }))
+            WearPageHeader(
+                spec,
+                stringResource(
+                    when (operation) {
+                        FlashOperation.Uninstall -> R.string.settings_uninstall_permanent
+                        FlashOperation.Restore -> R.string.settings_restore_stock_image
+                        is FlashOperation.Boot, is FlashOperation.Module -> R.string.install
+                    },
+                ),
+            )
         }
         item {
-            WearFlashStatusChip(spec, status, stringResource(when {
-                fileError -> R.string.wear_module_file_unreadable
-                status == WearFlashStatus.FAILED -> R.string.flash_failed
-                status == WearFlashStatus.SUCCESS -> R.string.flash_success
-                else -> R.string.flashing
-            }))
+            WearFlashStatusChip(
+                spec,
+                status,
+                stringResource(
+                    when {
+                        fileError -> R.string.wear_module_file_unreadable
+                        status == WearFlashStatus.FAILED -> R.string.flash_failed
+                        status == WearFlashStatus.SUCCESS -> R.string.flash_success
+                        else -> R.string.flashing
+                    },
+                ),
+            )
         }
         if (status == WearFlashStatus.RUNNING) item { WearFlashProgress(spec) }
-        if (status == WearFlashStatus.SUCCESS && state.showReboot) item {
-            WearActionButton(spec, Icons.TwoTone.PowerSettingsNew, stringResource(R.string.reboot), {
-                viewModel.dispatch(FlashUiAction.Reboot(allowSoftReboot = operation is FlashOperation.Module))
-            }, colors = ButtonDefaults.buttonColors())
+        if (status == WearFlashStatus.SUCCESS && state.showReboot) {
+            item {
+                WearActionButton(spec, Icons.TwoTone.PowerSettingsNew, stringResource(R.string.reboot), {
+                    viewModel.dispatch(FlashUiAction.Reboot(allowSoftReboot = operation is FlashOperation.Module))
+                }, colors = ButtonDefaults.buttonColors())
+            }
         }
         if (!fileError) wearLogLines(spec, lines)
     }

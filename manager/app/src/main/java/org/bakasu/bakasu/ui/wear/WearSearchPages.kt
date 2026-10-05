@@ -1,8 +1,7 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.compose.material.icons.twotone.Error
-import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Search
 import androidx.compose.material.icons.twotone.SearchOff
 import androidx.compose.material.icons.twotone.Warning
@@ -13,12 +12,13 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
+import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
-import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
-import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
+import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 
 /**
  * @author Hanhan_awa

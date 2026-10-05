@@ -9,6 +9,7 @@ import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
  * Entries keep the standard Wear button shape and the list's 4dp in-group spacing instead of the
  * phone's segmented corners.
  */
+@Suppress("ktlint:standard:function-naming")
 fun <T> TransformingLazyColumnScope.LazySegmentedColumn(
     entries: List<T>,
     key: (T) -> Any,
@@ -17,6 +18,7 @@ fun <T> TransformingLazyColumnScope.LazySegmentedColumn(
     items(count = entries.size, key = { key(entries[it]) }) { index -> content(entries[index]) }
 }
 
+@Suppress("ktlint:standard:function-naming")
 fun <T> TransformingLazyColumnScope.SegmentedColumn(
     entries: List<T>,
     key: (T) -> Any,

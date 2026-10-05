@@ -27,8 +27,11 @@ class WearFilePickerActivity : ComponentActivity() {
         val name = intent.getStringExtra(Intent.EXTRA_TITLE).orEmpty()
         setContent {
             WearManagerTheme {
-                AppScaffold(timeText = { WearTimeText() }, containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.onSurface) {
+                AppScaffold(
+                    timeText = { WearTimeText() },
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ) {
                     WearFilePage(mimeTypes, saving, name, onBack = { finish() }) { uri ->
                         setResult(RESULT_OK, Intent().setData(uri))
                         finish()
@@ -51,7 +54,9 @@ fun Context.withDocumentPickerFallback(intent: Intent, pickerMode: String?): Int
     if (intent.action !in DocumentActions || intent.component != null || intent.`package` != null) return intent
     val useBuiltin = when (pickerMode) {
         "builtin" -> true
+
         "system" -> false
+
         else -> packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
             ?.activityInfo?.name.let { it == null || it.endsWith("DocumentsStub") }
     }

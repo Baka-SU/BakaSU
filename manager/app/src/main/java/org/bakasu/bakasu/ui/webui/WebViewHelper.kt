@@ -5,13 +5,13 @@ import android.app.Activity
 import android.app.ActivityManager
 import android.content.Intent
 import android.graphics.Bitmap
-import android.view.ViewGroup
-import android.webkit.RenderProcessGoneDetail
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
+import android.view.ViewGroup
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -19,6 +19,11 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.webkit.WebViewAssetLoader
+import java.io.ByteArrayInputStream
+import java.io.File
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.AppSettingsRepository
 import org.bakasu.bakasu.data.packageinfo.AppIconDataSource
@@ -28,12 +33,6 @@ import org.bakasu.bakasu.data.webui.WebUiBackend
 import org.bakasu.bakasu.data.webui.WebUiRepository
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.ByteArrayInputStream
-import java.io.File
-
 
 @SuppressLint("SetJavaScriptEnabled")
 internal suspend fun prepareWebView(
@@ -129,7 +128,7 @@ internal fun createWebView(
     webView.setBackgroundColor(Color.TRANSPARENT)
 
     WebView.setWebContentsDebuggingEnabled(
-        settingsRepository.getBoolean("enable_web_debugging", false)
+        settingsRepository.getBoolean("enable_web_debugging", false),
     )
 
     webView.settings.apply {
@@ -149,7 +148,7 @@ internal fun createWebView(
                 { webUIState.currentInsets },
                 { enable -> webUIState.isInsetsEnabled = enable },
                 colorsCssProvider,
-            )
+            ),
         )
         .build()
 
@@ -182,16 +181,21 @@ internal fun createWebView(
                     val icon = backend.iconPng(packageName, 512)
                     if (icon != null) {
                         return WebResourceResponse(
-                            "image/png", null, 200, "OK",
+                            "image/png",
+                            null,
+                            200,
+                            "OK",
                             mapOf("Access-Control-Allow-Origin" to "*"),
-                            ByteArrayInputStream(icon)
+                            ByteArrayInputStream(icon),
                         )
                     }
                 }
             }
             return webViewAssetLoader.shouldInterceptRequest(url) ?: if (restrictToModule && !url.isModuleOrigin()) {
                 WebResourceResponse("text/plain", null, 403, "Forbidden", emptyMap(), ByteArrayInputStream(ByteArray(0)))
-            } else null
+            } else {
+                null
+            }
         }
 
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -230,7 +234,9 @@ internal fun createWebView(
         }
 
         override fun onShowFileChooser(
-            webView: WebView?, filePathCallback: ValueCallback<Array<Uri>>?, fileChooserParams: FileChooserParams?
+            webView: WebView?,
+            filePathCallback: ValueCallback<Array<Uri>>?,
+            fileChooserParams: FileChooserParams?,
         ): Boolean {
             webUIState.filePathCallback?.onReceiveValue(null)
             webUIState.filePathCallback = filePathCallback

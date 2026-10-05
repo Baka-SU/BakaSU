@@ -47,12 +47,18 @@ fun WearManagerUpdateDialog(update: ManagerUpdateInfo?) {
     val deniedText = stringResource(R.string.notification_permission_denied)
     // As on the phone, the download notification needs the notification permission on Android 13+.
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) current?.let(enqueue::invoke)
-        else Toast.makeText(context, deniedText, Toast.LENGTH_SHORT).show()
+        if (granted) {
+            current?.let(enqueue::invoke)
+        } else {
+            Toast.makeText(context, deniedText, Toast.LENGTH_SHORT).show()
+        }
     }
     fun download(info: ManagerUpdateInfo) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
-        else enqueue(info)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            enqueue(info)
+        }
     }
     val dialog = rememberCustomDialog { dismiss ->
         val info = current ?: return@rememberCustomDialog
@@ -64,10 +70,19 @@ fun WearManagerUpdateDialog(update: ManagerUpdateInfo?) {
             icon = { Icon(Icons.TwoTone.SystemUpdate, contentDescription = null) },
             title = { Text(stringResource(if (stable) R.string.manager_update_stable else R.string.manager_update_beta)) },
             text = {
-                Text(stringResource(if (stable) R.string.new_version_available else R.string.beta_version_available,
-                    info.versionCode))
+                Text(
+                    stringResource(
+                        if (stable) R.string.new_version_available else R.string.beta_version_available,
+                        info.versionCode,
+                    ),
+                )
             },
-            confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = { dismiss(); download(info) }) },
+            confirmButton = {
+                AlertDialogDefaults.ConfirmButton(onClick = {
+                    dismiss()
+                    download(info)
+                })
+            },
             dismissButton = { AlertDialogDefaults.DismissButton(onClick = dismiss) },
         ) {
             item { Text(details, style = MaterialTheme.typography.bodySmall) }

@@ -4,14 +4,14 @@ import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
-import org.bakasu.bakasu.data.packageinfo.AppIconDataSource
-import org.bakasu.bakasu.data.packageinfo.InstalledPackageRepository
-import org.bakasu.bakasu.data.profile.ProfileTemplateRepository
-import org.bakasu.bakasu.domain.usecase.RefreshInstalledModulesUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.bakasu.bakasu.data.packageinfo.AppIconDataSource
+import org.bakasu.bakasu.data.packageinfo.InstalledPackageRepository
+import org.bakasu.bakasu.data.profile.ProfileTemplateRepository
+import org.bakasu.bakasu.domain.usecase.RefreshInstalledModulesUseCase
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -21,7 +21,9 @@ import org.koin.core.component.inject
  * only from this app on paired devices signed with the same key. Calls run off the binder thread
  * in a process-wide scope, since the service may be unbound as soon as a callback returns.
  */
-class WearWebUiService : WearableListenerService(), KoinComponent {
+class WearWebUiService :
+    WearableListenerService(),
+    KoinComponent {
     private val webUiRepository: WebUiRepository by inject()
     private val packageRepository: InstalledPackageRepository by inject()
     private val appIconDataSource: AppIconDataSource by inject()
@@ -33,13 +35,16 @@ class WearWebUiService : WearableListenerService(), KoinComponent {
         when (channel.path) {
             ProfileTemplateRepository.ONLINE_TEMPLATES_PATH ->
                 bridgeScope.launch { templateRepository.serveOnlineTemplates(client, channel) }
+
             WearWebUiProtocol.CLAIM_PATH -> bridgeScope.launch { serveWebUiClaim(client, channel) }
+
             WearWebUiProtocol.RPC_PATH -> bridgeScope.launch {
                 serveWebUiCall(client, channel, LocalWebUiBackend(webUiRepository, packageRepository, appIconDataSource)) {
                     // Like the local WebUI, the package list is loaded on first use.
                     if (packageRepository.packages.value.isEmpty()) packageRepository.refresh()
                 }
             }
+
             else -> client.close(channel)
         }
     }

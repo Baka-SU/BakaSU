@@ -52,29 +52,41 @@ import androidx.wear.compose.material3.TimeTextDefaults
 /** M3 chrome is curved; rectangular screens use the same scaffold slots and time source. */
 @Composable
 fun WearTimeText() {
-    if (LocalConfiguration.current.isScreenRound) TimeText()
-    else {
+    if (LocalConfiguration.current.isScreenRound) {
+        TimeText()
+    } else {
         val time = TimeTextDefaults.rememberTimeSource(TimeTextDefaults.timeFormat()).currentTime()
         Box(Modifier.fillMaxWidth().padding(TimeTextDefaults.ContentPadding), contentAlignment = Alignment.TopCenter) {
-            Text(time, style = MaterialTheme.typography.labelMedium,
+            Text(
+                time,
+                style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.background(TimeTextDefaults.backgroundColor(), RoundedCornerShape(50))
-                    .padding(horizontal = 6.dp).clearAndSetSemantics {})
+                    .padding(horizontal = 6.dp).clearAndSetSemantics {},
+            )
         }
     }
 }
 
 @Composable
 fun WearHorizontalPageIndicator(state: PagerState) {
-    if (LocalConfiguration.current.isScreenRound) HorizontalPageIndicator(state)
-    else {
+    if (LocalConfiguration.current.isScreenRound) {
+        HorizontalPageIndicator(state)
+    } else {
         val selectedColor = PageIndicatorDefaults.selectedColor
         val unselectedColor = PageIndicatorDefaults.unselectedColor
         val backgroundColor = PageIndicatorDefaults.backgroundColor
         val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-        Canvas(Modifier.padding(bottom = 4.dp).size(width = (state.pageCount * 10 + 6).dp, height = 12.dp)
-            .clearAndSetSemantics {}) {
-            drawLine(backgroundColor, Offset(6.dp.toPx(), center.y), Offset(size.width - 6.dp.toPx(), center.y),
-                strokeWidth = size.height, cap = StrokeCap.Round)
+        Canvas(
+            Modifier.padding(bottom = 4.dp).size(width = (state.pageCount * 10 + 6).dp, height = 12.dp)
+                .clearAndSetSemantics {},
+        ) {
+            drawLine(
+                backgroundColor,
+                Offset(6.dp.toPx(), center.y),
+                Offset(size.width - 6.dp.toPx(), center.y),
+                strokeWidth = size.height,
+                cap = StrokeCap.Round,
+            )
             val position = state.currentPage + state.currentPageOffsetFraction
             repeat(state.pageCount) { page ->
                 val x = 8.dp.toPx() + (if (rtl) state.pageCount - 1 - page else page) * 10.dp.toPx()
@@ -89,8 +101,9 @@ fun WearHorizontalPageIndicator(state: PagerState) {
 /** Visible item fractions follow the AndroidX TransformingLazyColumn indicator adapter. */
 @Composable
 fun WearScrollIndicator(state: TransformingLazyColumnState) {
-    if (LocalConfiguration.current.isScreenRound) ScrollIndicator(state)
-    else {
+    if (LocalConfiguration.current.isScreenRound) {
+        ScrollIndicator(state)
+    } else {
         val colors = ScrollIndicatorDefaults.colors()
         Canvas(Modifier.padding(horizontal = 2.dp).size(5.dp, 50.dp).clearAndSetSemantics {}) {
             val info = state.layoutInfo
@@ -113,10 +126,20 @@ fun WearScrollIndicator(state: TransformingLazyColumnState) {
             val fraction = ((end - start) / info.totalItemsCount.coerceAtLeast(1)).coerceIn(0.3f, 0.7f)
             val trackHeight = size.height - size.width
             val top = size.width / 2 + position * trackHeight * (1 - fraction)
-            drawLine(colors.trackColor, Offset(center.x, size.width / 2),
-                Offset(center.x, size.height - size.width / 2), size.width, StrokeCap.Round)
-            drawLine(colors.indicatorColor, Offset(center.x, top),
-                Offset(center.x, top + trackHeight * fraction), size.width, StrokeCap.Round)
+            drawLine(
+                colors.trackColor,
+                Offset(center.x, size.width / 2),
+                Offset(center.x, size.height - size.width / 2),
+                size.width,
+                StrokeCap.Round,
+            )
+            drawLine(
+                colors.indicatorColor,
+                Offset(center.x, top),
+                Offset(center.x, top + trackHeight * fraction),
+                size.width,
+                StrokeCap.Round,
+            )
         }
     }
 }

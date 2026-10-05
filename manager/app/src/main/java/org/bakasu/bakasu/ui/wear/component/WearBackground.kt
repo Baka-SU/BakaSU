@@ -5,16 +5,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import coil.compose.AsyncImage
-import org.bakasu.bakasu.ui.theme.ThemeConfig
-import org.koin.compose.koinInject
-import androidx.compose.runtime.LaunchedEffect
 import androidx.wear.compose.foundation.SwipeToDismissValue
 import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
 import androidx.wear.compose.material3.SwipeToDismissBox
+import coil.compose.AsyncImage
+import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.koin.compose.koinInject
 
 /**
  * @author Hanhan_awa
@@ -32,8 +32,12 @@ fun WearBackground(content: @Composable BoxScope.() -> Unit) {
     val config = koinInject<ThemeConfig>()
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         config.customBackgroundUri?.let { uri ->
-            AsyncImage(model = uri, contentDescription = null, contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize())
+            AsyncImage(
+                model = uri,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = config.backgroundDim.coerceIn(0f, 1f))))
         }
         content()

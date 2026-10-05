@@ -40,7 +40,6 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 /** Chip emphasis levels; a screen should lead with at most one [HIGH] chip. [ERROR] marks a failed state in red. */
 enum class WearChipEmphasis { HIGH, MEDIUM, OUTLINED, LOW, ERROR }
 
-
 @Composable
 fun TransformingLazyColumnItemScope.WearChip(
     transformationSpec: TransformationSpec,
@@ -53,7 +52,13 @@ fun TransformingLazyColumnItemScope.WearChip(
     secondaryLabelStyle: TextStyle? = null,
     onClick: (() -> Unit)? = null,
 ) {
-    val labelLines = if (secondaryLabel != null) 1 else if (onClick != null) 3 else 2
+    val labelLines = if (secondaryLabel != null) {
+        1
+    } else if (onClick != null) {
+        3
+    } else {
+        2
+    }
     val centered = icon == null && secondaryLabel == null
     val border = if (emphasis == WearChipEmphasis.OUTLINED) ButtonDefaults.outlinedButtonBorder(enabled = true) else null
     if (onClick != null) {
@@ -64,9 +69,13 @@ fun TransformingLazyColumnItemScope.WearChip(
             transformation = SurfaceTransformation(transformationSpec),
             colors = when (emphasis) {
                 WearChipEmphasis.HIGH -> ButtonDefaults.buttonColors()
+
                 WearChipEmphasis.MEDIUM -> ButtonDefaults.filledTonalButtonColors()
+
                 WearChipEmphasis.OUTLINED -> ButtonDefaults.outlinedButtonColors()
+
                 WearChipEmphasis.LOW -> ButtonDefaults.childButtonColors()
+
                 WearChipEmphasis.ERROR -> ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -90,10 +99,14 @@ fun TransformingLazyColumnItemScope.WearChip(
     val scheme = MaterialTheme.colorScheme
     val (container, content, secondaryContent) = when (emphasis) {
         WearChipEmphasis.HIGH -> Triple(scheme.primary, scheme.onPrimary, scheme.onPrimary)
+
         // A null container keeps the surface container, which follows the card transparency.
         WearChipEmphasis.MEDIUM -> Triple(null, scheme.onSurface, scheme.onSurfaceVariant)
+
         WearChipEmphasis.OUTLINED -> Triple(Color.Transparent, scheme.primary, scheme.onSurfaceVariant)
+
         WearChipEmphasis.LOW -> Triple(Color.Transparent, scheme.onSurface, scheme.onSurfaceVariant)
+
         WearChipEmphasis.ERROR -> Triple(scheme.errorContainer, scheme.onErrorContainer, scheme.onErrorContainer)
     }
     WearInfoCard(
@@ -112,10 +125,15 @@ fun TransformingLazyColumnItemScope.WearChip(
             }
             Column(Modifier.weight(1f)) {
                 WearChipHeadline(label, labelLines, centered, headlineBadges, content, MaterialTheme.typography.labelMedium)
-                if (secondaryLabel != null) Text(
-                    secondaryLabel, color = secondaryContent, style = secondaryLabelStyle ?: MaterialTheme.typography.labelSmall,
-                    maxLines = 3, overflow = TextOverflow.Ellipsis,
-                )
+                if (secondaryLabel != null) {
+                    Text(
+                        secondaryLabel,
+                        color = secondaryContent,
+                        style = secondaryLabelStyle ?: MaterialTheme.typography.labelSmall,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
@@ -132,7 +150,11 @@ private fun WearChipHeadline(
 ) {
     if (badges.isEmpty()) {
         Text(
-            label, color = contentColor, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis,
+            label,
+            color = contentColor,
+            style = style,
+            maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis,
             modifier = if (centered) Modifier.fillMaxWidth() else Modifier,
             textAlign = if (centered) TextAlign.Center else TextAlign.Start,
         )
@@ -144,7 +166,11 @@ private fun WearChipHeadline(
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(
-            label, color = contentColor, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis,
+            label,
+            color = contentColor,
+            style = style,
+            maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.align(Alignment.CenterVertically),
         )
         badges.forEach { badge ->

@@ -6,6 +6,21 @@ import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.Wearable
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.text.Collator
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.Natives
 import org.bakasu.bakasu.Natives.Profile.Namespace
 import org.bakasu.bakasu.Natives.Profile.RootProfileFlag
@@ -17,23 +32,8 @@ import org.bakasu.bakasu.domain.model.ProfileTemplateException
 import org.bakasu.bakasu.domain.model.ProfileTemplateFailure
 import org.bakasu.bakasu.profile.Capabilities
 import org.bakasu.bakasu.profile.Groups
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.DataInputStream
-import java.io.DataOutputStream
-import java.text.Collator
-import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 class ProfileTemplateRepository(
     private val application: Application,
@@ -75,9 +75,9 @@ class ProfileTemplateRepository(
                             compareBy(ProfileTemplate::local).reversed().then(
                                 compareBy(
                                     Collator.getInstance(Locale.getDefault()),
-                                    ProfileTemplate::id
-                                )
-                            )
+                                    ProfileTemplate::id,
+                                ),
+                            ),
                         )
                 }
             }
@@ -95,7 +95,10 @@ class ProfileTemplateRepository(
                     JSONObject(checkNotNull(fetchRemoteBodies())).toString().toByteArray()
                 }.getOrNull()
                 output.writeBoolean(bytes != null)
-                bytes?.let { output.writeInt(it.size); output.write(it) }
+                bytes?.let {
+                    output.writeInt(it.size)
+                    output.write(it)
+                }
                 output.flush()
             }
         } catch (e: Exception) {
@@ -119,8 +122,12 @@ class ProfileTemplateRepository(
     /** The template bodies by ID fetched by a reachable paired phone, or null when none answers. */
     private suspend fun fetchBodiesFromPhone(): Map<String, String>? = runCatching {
         val localId = Tasks.await(Wearable.getNodeClient(application).localNode, 5, TimeUnit.SECONDS).id
-        val nodes = Tasks.await(Wearable.getCapabilityClient(application)
-            .getCapability(ONLINE_TEMPLATES_CAPABILITY, CapabilityClient.FILTER_REACHABLE), 5, TimeUnit.SECONDS)
+        val nodes = Tasks.await(
+            Wearable.getCapabilityClient(application)
+                .getCapability(ONLINE_TEMPLATES_CAPABILITY, CapabilityClient.FILTER_REACHABLE),
+            5,
+            TimeUnit.SECONDS,
+        )
             .nodes.filter { it.id != localId }
         val phone = nodes.firstOrNull { it.isNearby } ?: nodes.firstOrNull() ?: return null
         val client = Wearable.getChannelClient(application)
@@ -128,7 +135,10 @@ class ProfileTemplateRepository(
         try {
             val input = DataInputStream(Tasks.await(client.getInputStream(channel), 5, TimeUnit.SECONDS))
             // Closing the stream bounds a blocking read even if the phone disconnects mid-transfer.
-            val timeout = CoroutineScope(Dispatchers.IO).launch { delay(45_000); input.close() }
+            val timeout = CoroutineScope(Dispatchers.IO).launch {
+                delay(45_000)
+                input.close()
+            }
             try {
                 input.use {
                     check(it.readBoolean()) { "Phone template fetch failed" }
@@ -152,26 +162,25 @@ class ProfileTemplateRepository(
             ?: Result.failure(ProfileTemplateException(ProfileTemplateFailure.NotFound))
     }
 
-    suspend fun save(template: ProfileTemplate, create: Boolean = false): Result<Unit> =
-        withContext(Dispatchers.IO) {
-            if (!isValidId(template.id)) {
-                return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.Invalid))
-            }
-            if (create && ksuCliRepository.getAppProfileTemplate(template.id).isNotBlank()) {
-                return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.Conflict))
-            }
-            if (!ksuCliRepository.setAppProfileTemplate(
-                    template.id,
-                    template.copy(local = true).toJson().toString(),
-                )
-            ) {
-                return@withContext Result.failure(
-                    ProfileTemplateException(ProfileTemplateFailure.Command("save failed"))
-                )
-            }
-            refreshLocalCache()
-            Result.success(Unit)
+    suspend fun save(template: ProfileTemplate, create: Boolean = false): Result<Unit> = withContext(Dispatchers.IO) {
+        if (!isValidId(template.id)) {
+            return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.Invalid))
         }
+        if (create && ksuCliRepository.getAppProfileTemplate(template.id).isNotBlank()) {
+            return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.Conflict))
+        }
+        if (!ksuCliRepository.setAppProfileTemplate(
+                template.id,
+                template.copy(local = true).toJson().toString(),
+            )
+        ) {
+            return@withContext Result.failure(
+                ProfileTemplateException(ProfileTemplateFailure.Command("save failed")),
+            )
+        }
+        refreshLocalCache()
+        Result.success(Unit)
+    }
 
     suspend fun delete(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         if (!ksuCliRepository.deleteAppProfileTemplate(id)) {
@@ -195,7 +204,9 @@ class ProfileTemplateRepository(
                         parsed.id,
                         parsed.copy(local = true).toJson().toString(),
                     )
-                ) saved++
+                ) {
+                    saved++
+                }
             }
             check(saved > 0) { "No valid templates" }
             refreshLocalCache()
@@ -217,7 +228,7 @@ class ProfileTemplateRepository(
         mutableTemplates.value =
             ksuCliRepository.listAppProfileTemplates().mapNotNull(::readTemplate)
                 .sortedWith(
-                    compareBy(ProfileTemplate::local).reversed().thenBy(ProfileTemplate::id)
+                    compareBy(ProfileTemplate::local).reversed().thenBy(ProfileTemplate::id),
                 )
     }
 
@@ -236,7 +247,9 @@ class ProfileTemplateRepository(
                     id,
                     template.copy(local = false).toJson().toString(),
                 )
-            ) fetchedAny = true
+            ) {
+                fetchedAny = true
+            }
         }
         fetchedAny
     }.getOrDefault(false)
@@ -275,19 +288,23 @@ class ProfileTemplateRepository(
         put("namespace", Namespace.entries[namespace].name)
         put("uid", uid)
         put("gid", gid)
-        if (groups.isNotEmpty()) put(
-            "groups",
-            JSONArray(Groups.entries.filter { it.gid in groups }.map { it.name })
-        )
-        if (capabilities.isNotEmpty()) put(
-            "capabilities",
-            JSONArray(Capabilities.entries.filter { it.cap in capabilities }.map { it.name }),
-        )
+        if (groups.isNotEmpty()) {
+            put(
+                "groups",
+                JSONArray(Groups.entries.filter { it.gid in groups }.map { it.name }),
+            )
+        }
+        if (capabilities.isNotEmpty()) {
+            put(
+                "capabilities",
+                JSONArray(Capabilities.entries.filter { it.cap in capabilities }.map { it.name }),
+            )
+        }
         if (context.isNotEmpty()) put("context", context)
         if (rules.isNotEmpty()) put("rules", JSONArray(rules))
         put(
             "flags",
-            JSONArray(RootProfileFlag.entries.filter { it.ordinal in flags }.map { it.name })
+            JSONArray(RootProfileFlag.entries.filter { it.ordinal in flags }.map { it.name }),
         )
     }
 
@@ -301,13 +318,11 @@ class ProfileTemplateRepository(
             ?: fallback
     }
 
-    private inline fun <reified T : Enum<T>> enumOrdinals(array: JSONArray?): List<T> =
-        array.strings().mapNotNull { runCatching { enumValueOf<T>(it.uppercase()) }.getOrNull() }
+    private inline fun <reified T : Enum<T>> enumOrdinals(array: JSONArray?): List<T> = array.strings().mapNotNull { runCatching { enumValueOf<T>(it.uppercase()) }.getOrNull() }
 
     private fun JSONArray?.strings(): List<String> = this?.let { array ->
         (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotEmpty) }
     }.orEmpty()
 
-    private fun isValidId(id: String) =
-        Regex("""^([A-Za-z][A-Za-z\d_]*\.)*[A-Za-z][A-Za-z\d_]*$""").matches(id)
+    private fun isValidId(id: String) = Regex("""^([A-Za-z][A-Za-z\d_]*\.)*[A-Za-z][A-Za-z\d_]*$""").matches(id)
 }

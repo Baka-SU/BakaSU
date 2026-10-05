@@ -36,12 +36,15 @@ fun rememberWearRemoteInput(
     }
     return {
         val intent = RemoteInputIntentHelper.createActionRemoteInputIntent()
-        RemoteInputIntentHelper.putRemoteInputsExtra(intent, listOf(
-            RemoteInput.Builder(RemoteInputKey).setLabel(label).wearableExtender {
-                setEmojisAllowed(false)
-                setInputActionType(EditorInfo.IME_ACTION_SEARCH)
-            }.build(),
-        ))
+        RemoteInputIntentHelper.putRemoteInputsExtra(
+            intent,
+            listOf(
+                RemoteInput.Builder(RemoteInputKey).setLabel(label).wearableExtender {
+                    setEmojisAllowed(false)
+                    setInputActionType(EditorInfo.IME_ACTION_SEARCH)
+                }.build(),
+            ),
+        )
         runCatching { launcher.launch(intent) }.onFailure { unavailable() }
     }
 }

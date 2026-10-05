@@ -1,12 +1,13 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -20,19 +21,18 @@ import androidx.compose.material.icons.twotone.Restore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.toColorInt
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.FilledTonalButton
@@ -44,22 +44,22 @@ import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
+import kotlin.math.roundToInt
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
+import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
-import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 import org.bakasu.bakasu.ui.wear.component.WearSliderCard
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
-import org.bakasu.bakasu.ui.theme.ThemeConfig
-import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
-import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 import org.koin.compose.koinInject
-import kotlin.math.roundToInt
 
 /**
  * @author Hanhan_awa
@@ -79,7 +79,11 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
     val resources = LocalResources.current
     val swatches = remember(resources) {
         resources.obtainTypedArray(R.array.wear_theme_swatches).run {
-            try { List(length()) { getColor(it, 0) } } finally { recycle() }
+            try {
+                List(length()) { getColor(it, 0) }
+            } finally {
+                recycle()
+            }
         }
     }
     var hex by rememberSaveable { mutableStateOf(config.seedColor.toHex()) }
@@ -100,9 +104,14 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
                 item { WearPageHeader(spec, stringResource(R.string.theme_color)) }
                 if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
                 item {
-                    WearSettingsSwitchWidget(spec, stringResource(R.string.dynamic_color_title), state.useDynamicColor,
-                        { onAction(SettingsUiAction.SetDynamicColor(it)) }, icon = Icons.TwoTone.Palette,
-                        secondaryLabel = stringResource(R.string.dynamic_color_summary))
+                    WearSettingsSwitchWidget(
+                        spec,
+                        stringResource(R.string.dynamic_color_title),
+                        state.useDynamicColor,
+                        { onAction(SettingsUiAction.SetDynamicColor(it)) },
+                        icon = Icons.TwoTone.Palette,
+                        secondaryLabel = stringResource(R.string.dynamic_color_summary),
+                    )
                 }
                 item { WearSectionHeader(spec, stringResource(R.string.choose_theme_color)) }
                 // Swatches share the row equally so they fill the screen width (margins stretch evenly).
@@ -133,26 +142,50 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
                 }
                 item { WearSectionHeader(spec, stringResource(R.string.settings_custom_background)) }
                 item {
-                    WearActionButton(spec, Icons.TwoTone.Image, stringResource(R.string.settings_custom_background_summary), onImage,
-                        colors = ButtonDefaults.filledTonalButtonColors())
+                    WearActionButton(
+                        spec,
+                        Icons.TwoTone.Image,
+                        stringResource(R.string.settings_custom_background_summary),
+                        onImage,
+                        colors = ButtonDefaults.filledTonalButtonColors(),
+                    )
                 }
                 // Dimming only affects the custom background image, so it appears with one.
                 if (state.isCustomBackgroundEnabled) {
                     item {
-                        WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.wear_remove_background),
-                            { onAction(SettingsUiAction.RemoveCustomBackground) }, colors = ButtonDefaults.filledTonalButtonColors())
+                        WearActionButton(
+                            spec,
+                            Icons.TwoTone.Delete,
+                            stringResource(R.string.wear_remove_background),
+                            { onAction(SettingsUiAction.RemoveCustomBackground) },
+                            colors = ButtonDefaults.filledTonalButtonColors(),
+                        )
                     }
                     item {
-                        WearSliderCard(spec, Icons.TwoTone.Image, stringResource(R.string.settings_background_dim),
-                            "${(state.backgroundDim * 100).roundToInt()}%", state.backgroundDim,
-                            { onAction(SettingsUiAction.SetBackgroundDim(it)) }, valueRange = 0f..1f, steps = 19)
+                        WearSliderCard(
+                            spec,
+                            Icons.TwoTone.Image,
+                            stringResource(R.string.settings_background_dim),
+                            "${(state.backgroundDim * 100).roundToInt()}%",
+                            state.backgroundDim,
+                            { onAction(SettingsUiAction.SetBackgroundDim(it)) },
+                            valueRange = 0f..1f,
+                            steps = 19,
+                        )
                     }
                     // How much of the background the components let through, matching the phone's
                     // card transparency slider.
                     item {
-                        WearSliderCard(spec, Icons.TwoTone.Opacity, stringResource(R.string.settings_card_alpha),
-                            "${(state.cardAlpha * 100).roundToInt()}%", state.cardAlpha,
-                            { onAction(SettingsUiAction.SetCardAlpha(it)) }, valueRange = 0f..1f, steps = 19)
+                        WearSliderCard(
+                            spec,
+                            Icons.TwoTone.Opacity,
+                            stringResource(R.string.settings_card_alpha),
+                            "${(state.cardAlpha * 100).roundToInt()}%",
+                            state.cardAlpha,
+                            { onAction(SettingsUiAction.SetCardAlpha(it)) },
+                            valueRange = 0f..1f,
+                            steps = 19,
+                        )
                     }
                 }
             }
@@ -169,8 +202,10 @@ private fun ColorSwatch(color: Color, selected: Boolean, onSelect: () -> Unit) {
         // Fill the wider weighted cell while retaining the Wear toggle's selection animation.
         modifier = Modifier.fillMaxWidth(0.9f).heightIn(min = 48.dp),
         colors = IconToggleButtonDefaults.colors(
-            checkedContainerColor = color, checkedContentColor = Color.Black,
-            uncheckedContainerColor = color, uncheckedContentColor = Color.Black,
+            checkedContainerColor = color,
+            checkedContentColor = Color.Black,
+            uncheckedContainerColor = color,
+            uncheckedContentColor = Color.Black,
         ),
         shapes = IconToggleButtonDefaults.variantAnimatedShapes(),
         border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface) else null,
@@ -194,14 +229,17 @@ private fun TransformingLazyColumnItemScope.HexColorButton(spec: TransformationS
         modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
         transformation = SurfaceTransformation(spec),
-        colors = if (valid) ButtonDefaults.filledTonalButtonColors() else ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
-        ),
+        colors = if (valid) {
+            ButtonDefaults.filledTonalButtonColors()
+        } else {
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
+            )
+        },
         icon = {
-            Box(Modifier.size(ButtonDefaults.IconSize).background(
-                if (valid) Color(hex.toColorInt()) else Color.Transparent, CircleShape))
+            Box(Modifier.size(ButtonDefaults.IconSize).background(if (valid) Color(hex.toColorInt()) else Color.Transparent, CircleShape))
         },
         secondaryLabel = { Text(stringResource(R.string.wear_invalid_color), maxLines = 2) },
     ) { Text(hex, maxLines = 1) }
@@ -221,19 +259,37 @@ internal fun WearDpiPage(state: SettingsUiState, message: String?, onBack: () ->
         if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
         // The scale label and value sit inside the slider card, above its track.
         item {
-            WearSliderCard(spec, Icons.TwoTone.FormatSize, stringResource(R.string.app_dpi_title),
-                stringResource(R.string.wear_ui_scale, pending), pending,
+            WearSliderCard(
+                spec,
+                Icons.TwoTone.FormatSize,
+                stringResource(R.string.app_dpi_title),
+                stringResource(R.string.wear_ui_scale, pending),
+                pending,
                 { onAction(SettingsUiAction.SetTempDpi((it * systemDpi).roundToInt())) },
-                valueRange = 0.75f..1.5f, steps = 14)
+                valueRange = 0.75f..1.5f,
+                steps = 14,
+            )
         }
         item {
-            WearActionButton(spec, Icons.TwoTone.Check, stringResource(R.string.dpi_apply_settings),
-                { onAction(SettingsUiAction.ApplyDpi) }, state.tempDpi != state.currentDpi, colors = ButtonDefaults.buttonColors())
+            WearActionButton(
+                spec,
+                Icons.TwoTone.Check,
+                stringResource(R.string.dpi_apply_settings),
+                { onAction(SettingsUiAction.ApplyDpi) },
+                state.tempDpi != state.currentDpi,
+                colors = ButtonDefaults.buttonColors(),
+            )
         }
         item {
-            WearActionButton(spec, Icons.TwoTone.Restore, stringResource(R.string.language_system_default),
-                { onAction(SettingsUiAction.SetTempDpi(systemDpi)) }, state.tempDpi != systemDpi,
-                secondaryText = stringResource(R.string.wear_ui_scale, 1f), colors = ButtonDefaults.filledTonalButtonColors())
+            WearActionButton(
+                spec,
+                Icons.TwoTone.Restore,
+                stringResource(R.string.language_system_default),
+                { onAction(SettingsUiAction.SetTempDpi(systemDpi)) },
+                state.tempDpi != systemDpi,
+                secondaryText = stringResource(R.string.wear_ui_scale, 1f),
+                colors = ButtonDefaults.filledTonalButtonColors(),
+            )
         }
     }
 }

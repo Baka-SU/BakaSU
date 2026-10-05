@@ -10,15 +10,15 @@ import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import android.util.Log
-import org.bakasu.bakasu.BuildConfig
+import java.io.FileNotFoundException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.bakasu.bakasu.BuildConfig
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import java.io.FileNotFoundException
 
 /**
  * Serves the files picked in the app's own document picker as `content://` URIs, so the existing
@@ -27,13 +27,19 @@ import java.io.FileNotFoundException
  * staging file that is copied to the target when the caller closes it. The provider is not
  * exported and grants no URI permissions, so only this app can use it.
  */
-class WearFileProvider : ContentProvider(), KoinComponent {
+class WearFileProvider :
+    ContentProvider(),
+    KoinComponent {
     private val files: WearFileRepository by inject()
 
     override fun onCreate() = true
 
     override fun query(
-        uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?,
+        uri: Uri,
+        projection: Array<out String>?,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+        sortOrder: String?,
     ): Cursor {
         val columns = projection?.filter { it == OpenableColumns.DISPLAY_NAME }?.toTypedArray()
             ?: arrayOf(OpenableColumns.DISPLAY_NAME)
@@ -52,9 +58,12 @@ class WearFileProvider : ContentProvider(), KoinComponent {
         }
         val staged = files.stagingFile(name)
         return ParcelFileDescriptor.open(staged, ParcelFileDescriptor.parseMode(mode), Handler(Looper.getMainLooper())) { error ->
-            if (error != null) staged.delete()
-            else commitScope.launch {
-                runCatching { files.commit(staged, path) }.onFailure { Log.e("WearFileProvider", "Failed to write $path", it) }
+            if (error != null) {
+                staged.delete()
+            } else {
+                commitScope.launch {
+                    runCatching { files.commit(staged, path) }.onFailure { Log.e("WearFileProvider", "Failed to write $path", it) }
+                }
             }
         }
     }

@@ -2,15 +2,15 @@ package org.bakasu.bakasu.data.file
 
 import android.app.Application
 import android.os.Environment
-import org.bakasu.bakasu.R
-import org.bakasu.bakasu.data.shell.KsuCliRepository
-import org.bakasu.bakasu.ui.webui.MimeUtil
 import com.topjohnwu.superuser.io.SuFile
 import com.topjohnwu.superuser.io.SuFileInputStream
 import com.topjohnwu.superuser.io.SuFileOutputStream
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
+import org.bakasu.bakasu.R
+import org.bakasu.bakasu.data.shell.KsuCliRepository
+import org.bakasu.bakasu.ui.webui.MimeUtil
 
 data class WearFileEntry(val path: String, val name: String, val directory: Boolean, val size: Long)
 data class WearDirectory(val path: String, val parent: String?, val entries: List<WearFileEntry>, val writable: Boolean)
@@ -38,21 +38,28 @@ class WearFileRepository(
     /** Lists [path] (or a default storage folder) with the files whose MIME type matches [mimeTypes]. */
     suspend fun list(path: String?, mimeTypes: List<String>, directoriesOnly: Boolean): WearDirectory = withContext(Dispatchers.IO) {
         cli.withNewRootShell(true) {
-        val operationShell = this
-        fun file(path: String) = SuFile(path).apply { shell = operationShell }
-        val directory = path?.let(::file) ?: listOf(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path,
-            Environment.getExternalStorageDirectory().path,
-            application.getExternalFilesDir(null)?.path,
-            application.filesDir.path,
-        ).filterNotNull().map(::file).firstOrNull { it.isDirectory && it.canRead() }
-            ?: fail(R.string.wear_directory_unavailable)
-        val children = directory.listFiles() ?: fail(R.string.wear_directory_unavailable)
-        WearDirectory(directory.path, directory.parent, children.filter { child ->
-            child.canRead() && (child.isDirectory ||
-                !directoriesOnly && matchesMimeType(wearFileMimeType(child.name), mimeTypes))
-        }.sortedWith(compareBy<File> { !it.isDirectory }.thenBy { it.name.lowercase() })
-            .map { WearFileEntry(it.path, it.name, it.isDirectory, if (it.isDirectory) 0 else it.length()) }, directory.canWrite())
+            val operationShell = this
+            fun file(path: String) = SuFile(path).apply { shell = operationShell }
+            val directory = path?.let(::file) ?: listOf(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path,
+                Environment.getExternalStorageDirectory().path,
+                application.getExternalFilesDir(null)?.path,
+                application.filesDir.path,
+            ).filterNotNull().map(::file).firstOrNull { it.isDirectory && it.canRead() }
+                ?: fail(R.string.wear_directory_unavailable)
+            val children = directory.listFiles() ?: fail(R.string.wear_directory_unavailable)
+            WearDirectory(
+                directory.path,
+                directory.parent,
+                children.filter { child ->
+                    child.canRead() && (
+                        child.isDirectory ||
+                            !directoriesOnly && matchesMimeType(wearFileMimeType(child.name), mimeTypes)
+                        )
+                }.sortedWith(compareBy<File> { !it.isDirectory }.thenBy { it.name.lowercase() })
+                    .map { WearFileEntry(it.path, it.name, it.isDirectory, if (it.isDirectory) 0 else it.length()) },
+                directory.canWrite(),
+            )
         }
     }
 
@@ -69,12 +76,12 @@ class WearFileRepository(
     /** Root paths must be staged before the app can read them through a file descriptor. */
     suspend fun stage(path: String): File = withContext(Dispatchers.IO) {
         cli.withNewRootShell(true) {
-        val operationShell = this
-        val source = SuFile(path).apply { shell = operationShell }
-        if (!source.isFile || !source.canRead()) fail(R.string.wear_module_file_unreadable)
-        val target = File(stagingDirectory, source.name)
-        SuFileInputStream.open(source).use { input -> target.outputStream().use { input.copyTo(it) } }
-        target
+            val operationShell = this
+            val source = SuFile(path).apply { shell = operationShell }
+            if (!source.isFile || !source.canRead()) fail(R.string.wear_module_file_unreadable)
+            val target = File(stagingDirectory, source.name)
+            SuFileInputStream.open(source).use { input -> target.outputStream().use { input.copyTo(it) } }
+            target
         }
     }
 

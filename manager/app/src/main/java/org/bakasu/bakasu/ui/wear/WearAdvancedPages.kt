@@ -127,8 +127,12 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
             }
         }
         item {
-            WearActionButton(spec, Icons.TwoTone.Search, stringResource(R.string.search_apps),
-                { input = DynamicManagerInput.Search })
+            WearActionButton(
+                spec,
+                Icons.TwoTone.Search,
+                stringResource(R.string.search_apps),
+                { input = DynamicManagerInput.Search },
+            )
         }
         LazySegmentedColumn(state.apps, { it.packageName }) { app ->
             WearSettingsSwitchWidget(
@@ -146,19 +150,29 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
             )
         }
         item {
-            WearSettingsJumpPageWidget(spec, stringResource(R.string.signature_size),
-                { input = DynamicManagerInput.Size }, icon = Icons.TwoTone.FormatSize)
+            WearSettingsJumpPageWidget(
+                spec,
+                stringResource(R.string.signature_size),
+                { input = DynamicManagerInput.Size },
+                icon = Icons.TwoTone.FormatSize,
+            )
         }
         item {
-            WearSettingsJumpPageWidget(spec, stringResource(R.string.signature_hash),
-                { input = DynamicManagerInput.Hash }, icon = Icons.TwoTone.Fingerprint)
+            WearSettingsJumpPageWidget(
+                spec,
+                stringResource(R.string.signature_hash),
+                { input = DynamicManagerInput.Hash },
+                icon = Icons.TwoTone.Fingerprint,
+            )
         }
         item {
             WearActionButton(spec, Icons.TwoTone.Settings, stringResource(R.string.dynamic_manager_manual_config), {
                 val length = size.toIntOrNull()
                 when {
                     length == null || length <= 0 -> message = failed
+
                     !hash.matches(Regex("[0-9a-fA-F]{64}")) -> message = invalidHash
+
                     else -> {
                         pending = DynamicManagerUiAction.SetManual(length, hash)
                         grant.show()
@@ -219,19 +233,32 @@ internal fun WearUmountPage(onBack: () -> Unit) {
             }, secondaryText = entry.flags.toUmountFlagName())
         }
         item {
-            WearSettingsJumpPageWidget(spec, stringResource(R.string.add_umount_path), { input = UmountInput.Path },
-                icon = Icons.TwoTone.Folder, description = path.ifEmpty { null })
+            WearSettingsJumpPageWidget(
+                spec,
+                stringResource(R.string.add_umount_path),
+                { input = UmountInput.Path },
+                icon = Icons.TwoTone.Folder,
+                description = path.ifEmpty { null },
+            )
         }
         item {
-            WearSettingsJumpPageWidget(spec, stringResource(R.string.umount_flags), { input = UmountInput.Flags },
-                icon = Icons.TwoTone.Flag, description = flags)
+            WearSettingsJumpPageWidget(
+                spec,
+                stringResource(R.string.umount_flags),
+                { input = UmountInput.Flags },
+                icon = Icons.TwoTone.Flag,
+                description = flags,
+            )
         }
         item { WearInfoCard(spec) { Text(stringResource(R.string.umount_flags_hint)) } }
         item {
             WearActionButton(spec, Icons.TwoTone.Add, stringResource(R.string.add), {
                 val parsed = flags.toIntOrNull()
-                if (!path.startsWith('/') || parsed == null) message = failed
-                else viewModel.dispatch(UmountManagerUiAction.Add(path, parsed))
+                if (!path.startsWith('/') || parsed == null) {
+                    message = failed
+                } else {
+                    viewModel.dispatch(UmountManagerUiAction.Add(path, parsed))
+                }
             })
         }
     }

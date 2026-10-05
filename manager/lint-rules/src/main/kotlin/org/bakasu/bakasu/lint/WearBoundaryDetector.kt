@@ -15,7 +15,9 @@ import org.jetbrains.uast.UImportStatement
  * Keeps the phone and Wear sides apart, reported as warnings in both directions: phone code must
  * not import from the Wear package tree, and Wear screens must not import phone UI components.
  */
-class WearBoundaryDetector : Detector(), SourceCodeScanner {
+class WearBoundaryDetector :
+    Detector(),
+    SourceCodeScanner {
     override fun getApplicableUastTypes() = listOf(UImportStatement::class.java)
 
     override fun createUastHandler(context: JavaContext) = object : UElementHandler() {
@@ -26,8 +28,10 @@ class WearBoundaryDetector : Detector(), SourceCodeScanner {
             val message = when {
                 inWear && imported.startsWith("$PHONE_COMPONENT_PACKAGE.") && imported !in SHARED_COMPONENTS ->
                     "Wear UI should not use phone components from $PHONE_COMPONENT_PACKAGE; use $WEAR_COMPONENT_PACKAGE."
+
                 !inWear && imported.startsWith("$WEAR_PACKAGE.") ->
                     "Phone code should not use Wear components from $WEAR_PACKAGE."
+
                 else -> return
             }
             context.report(ISSUE, node, context.getLocation(node), message)
@@ -60,8 +64,8 @@ class WearBoundaryDetector : Detector(), SourceCodeScanner {
             severity = Severity.WARNING,
             implementation = Implementation(
                 WearBoundaryDetector::class.java,
-                Scope.JAVA_FILE_SCOPE
-            )
+                Scope.JAVA_FILE_SCOPE,
+            ),
         )
     }
 }
