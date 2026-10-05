@@ -2,6 +2,17 @@ package org.bakasu.bakasu.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.AllowlistOperationResult
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
@@ -15,24 +26,14 @@ import org.bakasu.bakasu.domain.usecase.RefreshSuperUsersUseCase
 import org.bakasu.bakasu.domain.usecase.SetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.SetStringPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.TransliterateTextUseCase
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 enum class SortType(val displayNameRes: Int, val persistKey: String) {
     NAME(R.string.sort_name, "NAME"),
     INSTALL_TIME(R.string.sort_install_time, "INSTALL_TIME"),
     UPDATE_TIME(R.string.sort_update_time, "UPDATE_TIME"),
     SIZE(R.string.sort_size, "SIZE"),
-    USAGE_FREQ(R.string.sort_usage_freq, "USAGE_FREQ");
+    USAGE_FREQ(R.string.sort_usage_freq, "USAGE_FREQ"),
+    ;
 
     companion object {
         fun fromPersistKey(key: String): SortType = entries.find { it.persistKey == key } ?: NAME
@@ -93,10 +94,10 @@ class SuperUserViewModel(
             showSystemApps = getBooleanPreference(KEY_SHOW_SYSTEM_APPS, false),
             sortType = SortType.fromPersistKey(
                 getStringPreference(KEY_CURRENT_SORT_TYPE, SortType.NAME.persistKey)
-                    ?: SortType.NAME.persistKey
+                    ?: SortType.NAME.persistKey,
             ),
             reverseOrder = getBooleanPreference(KEY_REVERSE_ORDER, false),
-        )
+        ),
     )
     private val mutableEvents = MutableSharedFlow<SuperUserUiEvent>(extraBufferCapacity = 1)
     private var refreshJob: Job? = null
@@ -112,7 +113,9 @@ class SuperUserViewModel(
     }
 
     val state: StateFlow<SuperUserUiState> = combine(
-        sourceState, controls, managerUids,
+        sourceState,
+        controls,
+        managerUids,
     ) { source, local, uids ->
         SuperUserUiState(
             appGroupList = buildAppGroupList(
@@ -136,12 +139,13 @@ class SuperUserViewModel(
     fun dispatch(action: SuperUserUiAction) {
         when (action) {
             SuperUserUiAction.Refresh -> refresh()
+
             is SuperUserUiAction.BackupAllowlist -> viewModelScope.launch {
                 mutableEvents.emit(
                     SuperUserUiEvent.AllowlistOperationFinished(
                         result = backupAllowlistUseCase(action.uri),
                         restore = false,
-                    )
+                    ),
                 )
             }
 
@@ -154,12 +158,13 @@ class SuperUserViewModel(
                     SuperUserUiEvent.AllowlistOperationFinished(
                         result = result,
                         restore = true,
-                    )
+                    ),
                 )
             }
 
-            is SuperUserUiAction.Search -> controls.value =
-                controls.value.copy(search = action.query)
+            is SuperUserUiAction.Search ->
+                controls.value =
+                    controls.value.copy(search = action.query)
 
             is SuperUserUiAction.SetShowSystemApps -> {
                 setBooleanPreference(KEY_SHOW_SYSTEM_APPS, action.enabled)
@@ -208,8 +213,8 @@ class SuperUserViewModel(
         .filter { group ->
             group.apps.any { app ->
                 app.label.contains(search, true) ||
-                        app.displayIdentifier.contains(search, true) ||
-                        transliterateText(app.label).contains(search, true)
+                    app.displayIdentifier.contains(search, true) ||
+                    transliterateText(app.label).contains(search, true)
             }
         }
         .filter { group ->

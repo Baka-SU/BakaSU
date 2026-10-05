@@ -15,26 +15,25 @@ class HomeRuntimeRepository(
     suspend fun getBasicInfo(
         managerUapiVersion: Int,
         includeSelinuxStatus: Boolean = true,
-    ): HomeBasicInfo =
-        withContext(Dispatchers.IO) {
-            val uname = runCatching { Os.uname() }.getOrNull()
-            HomeBasicInfo(
-                kernelRelease = uname?.release ?: "Unknown",
-                androidVersion = Build.VERSION.RELEASE ?: "Unknown",
-                deviceModel = getDeviceModel(),
-                managerVersion = Triple(
-                    BuildConfig.VERSION_NAME,
-                    BuildConfig.VERSION_CODE,
-                    managerUapiVersion,
-                ),
-                selinuxStatus = if (includeSelinuxStatus) {
-                    runCatching { getSELinuxStatus(application) }.getOrDefault("Unknown")
-                } else {
-                    ""
-                },
-                seccompStatus = runCatching { Os.prctl(21, 0, 0, 0, 0) }.getOrDefault(-1),
-            )
-        }
+    ): HomeBasicInfo = withContext(Dispatchers.IO) {
+        val uname = runCatching { Os.uname() }.getOrNull()
+        HomeBasicInfo(
+            kernelRelease = uname?.release ?: "Unknown",
+            androidVersion = Build.VERSION.RELEASE ?: "Unknown",
+            deviceModel = getDeviceModel(),
+            managerVersion = Triple(
+                BuildConfig.VERSION_NAME,
+                BuildConfig.VERSION_CODE,
+                managerUapiVersion,
+            ),
+            selinuxStatus = if (includeSelinuxStatus) {
+                runCatching { getSELinuxStatus(application) }.getOrDefault("Unknown")
+            } else {
+                ""
+            },
+            seccompStatus = runCatching { Os.prctl(21, 0, 0, 0, 0) }.getOrDefault(-1),
+        )
+    }
 
     @SuppressLint("PrivateApi")
     private fun getDeviceModel(): String = runCatching {

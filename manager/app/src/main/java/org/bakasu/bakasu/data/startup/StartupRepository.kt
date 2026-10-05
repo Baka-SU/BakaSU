@@ -1,9 +1,9 @@
 package org.bakasu.bakasu.data.startup
 
-import org.bakasu.bakasu.domain.model.StartupState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.bakasu.bakasu.domain.model.StartupState
 
 class StartupRepository {
     private val mutableState = MutableStateFlow<StartupState>(StartupState.Loading)

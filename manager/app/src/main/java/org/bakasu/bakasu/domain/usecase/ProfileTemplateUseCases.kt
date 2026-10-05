@@ -24,8 +24,7 @@ class GetProfileTemplateUseCase(private val repository: ProfileTemplateRepositor
 }
 
 class SaveProfileTemplateUseCase(private val repository: ProfileTemplateRepository) {
-    suspend operator fun invoke(template: ProfileTemplate, create: Boolean = false) =
-        repository.save(template, create)
+    suspend operator fun invoke(template: ProfileTemplate, create: Boolean = false) = repository.save(template, create)
 }
 
 class DeleteProfileTemplateUseCase(private val repository: ProfileTemplateRepository) {

@@ -62,12 +62,11 @@ data class SulogState(
 
 fun defaultSulogEventFilters(): Set<SulogEventFilter> = SulogEventFilter.entries.toSet()
 
-fun String.toSulogDisplayName(): String =
-    if (startsWith("sulog-") && endsWith(".log")) {
-        removePrefix("sulog-").removeSuffix(".log")
-    } else {
-        this
-    }
+fun String.toSulogDisplayName(): String = if (startsWith("sulog-") && endsWith(".log")) {
+    removePrefix("sulog-").removeSuffix(".log")
+} else {
+    this
+}
 
 fun filterSulogEntries(
     entries: List<SulogEntry>,
@@ -160,6 +159,7 @@ private fun parseQuotedValue(line: String, startIndex: Int): Pair<String, Int> {
     while (index < line.length) {
         when (val char = line[index]) {
             '"' -> return value.toString() to (index + 1)
+
             '\\' -> {
                 val next = line.getOrNull(index + 1)
                 when (next) {

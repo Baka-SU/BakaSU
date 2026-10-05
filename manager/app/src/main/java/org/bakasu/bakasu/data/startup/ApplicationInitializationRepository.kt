@@ -6,12 +6,12 @@ import android.system.Os
 import coil.Coil
 import coil.ImageLoader
 import com.topjohnwu.superuser.internal.MainShell
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.data.flash.FlashRepository
 import org.bakasu.bakasu.data.shell.KsuCliRepository
 import org.bakasu.bakasu.data.theme.MonetCompatColorSource
-import java.io.File
 
 class ApplicationInitializationRepository(
     private val application: Application,

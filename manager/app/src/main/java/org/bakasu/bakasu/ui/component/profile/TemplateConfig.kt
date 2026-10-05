@@ -22,15 +22,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.koin.compose.viewmodel.koinViewModel
-import org.bakasu.bakasu.domain.model.AppProfile
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.AppProfile
 import org.bakasu.bakasu.ui.component.NetworkRefreshContent
 import org.bakasu.bakasu.ui.component.settings.SettingsChooseWidget
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
-import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateUiAction
-import kotlinx.coroutines.launch
+import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * @author weishu
@@ -41,7 +41,7 @@ import kotlinx.coroutines.launch
 fun TemplateConfig(
     profile: AppProfile,
     onViewTemplate: (id: String) -> Unit = {},
-    onProfileChange: (AppProfile) -> Unit
+    onProfileChange: (AppProfile) -> Unit,
 ) {
     val viewModel = koinViewModel<TemplateViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -91,9 +91,9 @@ fun TemplateConfig(
                     .clickable {
                         onViewTemplate(profileTemplates[index])
                     }
-                    .padding(5.dp)
+                    .padding(5.dp),
             )
-        }
+        },
     ) { index ->
         if (index == 0) {
             template = ""
@@ -116,7 +116,7 @@ fun TemplateConfig(
                 context = templateInfo.context,
                 rules = templateInfo.rules.joinToString("\n"),
                 namespace = templateInfo.namespace,
-            )
+            ),
         )
     }
 }

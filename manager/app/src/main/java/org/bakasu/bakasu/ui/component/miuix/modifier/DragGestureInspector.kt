@@ -16,7 +16,7 @@ suspend fun PointerInputScope.inspectDragGestures(
     onDragStart: (down: PointerInputChange) -> Unit = {},
     onDragEnd: (change: PointerInputChange) -> Unit = {},
     onDragCancel: () -> Unit = {},
-    onDrag: (change: PointerInputChange, dragAmount: Offset) -> Unit
+    onDrag: (change: PointerInputChange, dragAmount: Offset) -> Unit,
 ) {
     awaitEachGesture {
         val initialDown = awaitFirstDown(false, PointerEventPass.Initial)
@@ -28,7 +28,7 @@ suspend fun PointerInputScope.inspectDragGestures(
         val upEvent =
             drag(
                 pointerId = initialDown.id,
-                onDrag = { onDrag(it, it.positionChange()) }
+                onDrag = { onDrag(it, it.positionChange()) },
             )
         if (upEvent == null) {
             onDragCancel()
@@ -40,7 +40,7 @@ suspend fun PointerInputScope.inspectDragGestures(
 
 private suspend inline fun AwaitPointerEventScope.drag(
     pointerId: PointerId,
-    onDrag: (PointerInputChange) -> Unit
+    onDrag: (PointerInputChange) -> Unit,
 ): PointerInputChange? {
     val isPointerUp = currentEvent.changes.fastFirstOrNull { it.id == pointerId }?.pressed != true
     if (isPointerUp) {
@@ -61,7 +61,7 @@ private suspend inline fun AwaitPointerEventScope.drag(
 }
 
 private suspend inline fun AwaitPointerEventScope.awaitDragOrUp(
-    pointerId: PointerId
+    pointerId: PointerId,
 ): PointerInputChange? {
     var pointer = pointerId
     while (true) {

@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.SusPathItem
 import org.bakasu.bakasu.ui.component.settings.SettingsJumpPageWidget
@@ -38,7 +39,6 @@ import org.bakasu.bakasu.ui.viewmodel.SuSFSUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSBoolean
 import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSConfig
-import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -185,12 +185,12 @@ fun SusPathTab(
                     enabled = !isLoading,
                     lineLimits = TextFieldLineLimits.MultiLine(
                         minHeightInLines = 4,
-                        maxHeightInLines = 8
+                        maxHeightInLines = 8,
                     ),
-                    renderBackgroundBlur = false
+                    renderBackgroundBlur = false,
                 )
             }
-        }
+        },
     )
 
     detailItem?.let { item ->
@@ -199,7 +199,7 @@ fun SusPathTab(
             title = detailTitle,
             fields = listOf(
                 pathLabel to item.path,
-                isLoopLabel to if (item.is_loop) isLoopLabel else isNotLoopLabel
+                isLoopLabel to if (item.is_loop) isLoopLabel else isNotLoopLabel,
             ),
             onDismiss = { detailItem = null },
             onDelete = {

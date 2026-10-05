@@ -8,8 +8,8 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import org.bakasu.bakasu.data.AppSettingsRepository
 import java.util.Locale
+import org.bakasu.bakasu.data.AppSettingsRepository
 
 /**
  * Launch system app locale settings (Android 13+)
@@ -33,60 +33,57 @@ fun launchSystemLanguageSettings(context: Context) {
 class LocaleHelper(
     private val settings: AppSettingsRepository,
 ) {
-fun applyLanguage(context: Context): Context {
-    // On Android 13+, language is handled by system
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        return context
-    }
+    fun applyLanguage(context: Context): Context {
+        // On Android 13+, language is handled by system
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return context
+        }
 
-    val localeTag = settings.getString("app_locale", "system") ?: "system"
+        val localeTag = settings.getString("app_locale", "system") ?: "system"
 
-    return if (localeTag == "system") {
-        context
-    } else {
-        val locale = parseLocaleTag(localeTag)
-        setLocale(context, locale)
+        return if (localeTag == "system") {
+            context
+        } else {
+            val locale = parseLocaleTag(localeTag)
+            setLocale(context, locale)
+        }
     }
-}
 
 /**
- * Set locale for context (Android < 13)
- */
-@SuppressLint("ObsoleteSdkInt")
-private fun setLocale(context: Context, locale: Locale): Context {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+     * Set locale for context (Android < 13)
+     */
+    @SuppressLint("ObsoleteSdkInt")
+    private fun setLocale(context: Context, locale: Locale): Context = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
         updateResources(context, locale)
     } else {
         updateResourcesLegacy(context, locale)
     }
-}
 
-@SuppressLint("UseRequiresApi", "ObsoleteSdkInt")
-@TargetApi(Build.VERSION_CODES.N)
-private fun updateResources(context: Context, locale: Locale): Context {
-    val configuration = Configuration()
-    configuration.setLocale(locale)
-    configuration.setLayoutDirection(locale)
-    return context.createConfigurationContext(configuration)
-}
+    @SuppressLint("UseRequiresApi", "ObsoleteSdkInt")
+    @TargetApi(Build.VERSION_CODES.N)
+    private fun updateResources(context: Context, locale: Locale): Context {
+        val configuration = Configuration()
+        configuration.setLocale(locale)
+        configuration.setLayoutDirection(locale)
+        return context.createConfigurationContext(configuration)
+    }
 
-@Suppress("DEPRECATION")
-@SuppressWarnings("deprecation")
-private fun updateResourcesLegacy(context: Context, locale: Locale): Context {
-    Locale.setDefault(locale)
-    val resources = context.resources
-    val configuration = resources.configuration
-    configuration.locale = locale
-    configuration.setLayoutDirection(locale)
-    resources.updateConfiguration(configuration, resources.displayMetrics)
-    return context
-}
+    @Suppress("DEPRECATION")
+    @SuppressWarnings("deprecation")
+    private fun updateResourcesLegacy(context: Context, locale: Locale): Context {
+        Locale.setDefault(locale)
+        val resources = context.resources
+        val configuration = resources.configuration
+        configuration.locale = locale
+        configuration.setLayoutDirection(locale)
+        resources.updateConfiguration(configuration, resources.displayMetrics)
+        return context
+    }
 
 /**
- * Parse locale tag to Locale object
- */
-private fun parseLocaleTag(tag: String): Locale {
-    return try {
+     * Parse locale tag to Locale object
+     */
+    private fun parseLocaleTag(tag: String): Locale = try {
         if (tag.contains("_")) {
             val parts = tag.split("_")
             Locale.Builder()
@@ -101,14 +98,12 @@ private fun parseLocaleTag(tag: String): Locale {
     } catch (_: Exception) {
         Locale.getDefault()
     }
-}
 
 /**
- * Get current app locale
- */
-@SuppressLint("ObsoleteSdkInt")
-fun getCurrentAppLocale(context: Context): Locale? {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+     * Get current app locale
+     */
+    @SuppressLint("ObsoleteSdkInt")
+    fun getCurrentAppLocale(context: Context): Locale? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         try {
             val localeManager =
                 context.getSystemService(Context.LOCALE_SERVICE) as? android.app.LocaleManager
@@ -129,5 +124,4 @@ fun getCurrentAppLocale(context: Context): Locale? {
             parseLocaleTag(localeTag)
         }
     }
-}
 }

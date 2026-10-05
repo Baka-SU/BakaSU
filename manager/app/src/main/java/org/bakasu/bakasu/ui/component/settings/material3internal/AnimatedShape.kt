@@ -62,26 +62,22 @@ internal class AnimatedShapeState(
 
     private var bottomEnd: Animatable<Float, AnimationVector1D>? = null
 
-    fun topStart(size: Size = this.size, density: Density = this.density): Float {
-        return (topStart ?: Animatable(shape.topStart.toPx(size, density)).also { topStart = it })
-            .value
-    }
+    fun topStart(size: Size = this.size, density: Density = this.density): Float = (topStart ?: Animatable(shape.topStart.toPx(size, density)).also { topStart = it })
+        .value
 
-    fun topEnd(size: Size = this.size, density: Density = this.density): Float {
-        return (topEnd ?: Animatable(shape.topEnd.toPx(size, density)).also { topEnd = it }).value
-    }
+    fun topEnd(size: Size = this.size, density: Density = this.density): Float = (topEnd ?: Animatable(shape.topEnd.toPx(size, density)).also { topEnd = it }).value
 
-    fun bottomStart(size: Size = this.size, density: Density = this.density): Float {
-        return (bottomStart
-            ?: Animatable(shape.bottomStart.toPx(size, density)).also { bottomStart = it })
-            .value
-    }
+    fun bottomStart(size: Size = this.size, density: Density = this.density): Float = (
+        bottomStart
+            ?: Animatable(shape.bottomStart.toPx(size, density)).also { bottomStart = it }
+        )
+        .value
 
-    fun bottomEnd(size: Size = this.size, density: Density = this.density): Float {
-        return (bottomEnd
-            ?: Animatable(shape.bottomEnd.toPx(size, density)).also { bottomEnd = it })
-            .value
-    }
+    fun bottomEnd(size: Size = this.size, density: Density = this.density): Float = (
+        bottomEnd
+            ?: Animatable(shape.bottomEnd.toPx(size, density)).also { bottomEnd = it }
+        )
+        .value
 
     suspend fun animateToShape(shape: CornerBasedShape) = coroutineScope {
         launch { topStart?.animateTo(shape.topStart.toPx(size, density), spec) }
@@ -168,26 +164,22 @@ internal class AnimatedCornerBasedShapeState(
 
     private var bottomEnd: Animatable<Float, AnimationVector1D>? = null
 
-    fun topStart(size: Size = this.size, density: Density = this.density): Float {
-        return (topStart ?: Animatable(shape.topStart.toPx(size, density)).also { topStart = it })
-            .value
-    }
+    fun topStart(size: Size = this.size, density: Density = this.density): Float = (topStart ?: Animatable(shape.topStart.toPx(size, density)).also { topStart = it })
+        .value
 
-    fun topEnd(size: Size = this.size, density: Density = this.density): Float {
-        return (topEnd ?: Animatable(shape.topEnd.toPx(size, density)).also { topEnd = it }).value
-    }
+    fun topEnd(size: Size = this.size, density: Density = this.density): Float = (topEnd ?: Animatable(shape.topEnd.toPx(size, density)).also { topEnd = it }).value
 
-    fun bottomStart(size: Size = this.size, density: Density = this.density): Float {
-        return (bottomStart
-            ?: Animatable(shape.bottomStart.toPx(size, density)).also { bottomStart = it })
-            .value
-    }
+    fun bottomStart(size: Size = this.size, density: Density = this.density): Float = (
+        bottomStart
+            ?: Animatable(shape.bottomStart.toPx(size, density)).also { bottomStart = it }
+        )
+        .value
 
-    fun bottomEnd(size: Size = this.size, density: Density = this.density): Float {
-        return (bottomEnd
-            ?: Animatable(shape.bottomEnd.toPx(size, density)).also { bottomEnd = it })
-            .value
-    }
+    fun bottomEnd(size: Size = this.size, density: Density = this.density): Float = (
+        bottomEnd
+            ?: Animatable(shape.bottomEnd.toPx(size, density)).also { bottomEnd = it }
+        )
+        .value
 
     suspend fun animateToShape(shape: CornerBasedShape) = coroutineScope {
         launch { topStart?.animateTo(shape.topStart.toPx(size, density), spec) }

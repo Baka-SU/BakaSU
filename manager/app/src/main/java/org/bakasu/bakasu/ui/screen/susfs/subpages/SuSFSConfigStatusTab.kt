@@ -34,6 +34,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.SuSFSStatusInfo
 import org.bakasu.bakasu.ui.component.WarningCard
@@ -49,7 +50,6 @@ import org.bakasu.bakasu.ui.viewmodel.SuSFSUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSBoolean
 import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSStatusInfo
-import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -82,7 +82,7 @@ fun StatusTab(
 
         item {
             AnimatedVisibility(
-                visible = configEnabledLoaded && !configEnabled
+                visible = configEnabledLoaded && !configEnabled,
             ) {
                 WarningCard(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -109,7 +109,7 @@ fun StatusTab(
                         title = stringResource(R.string.susfs_status_version),
                         description = statusInfo.version.ifBlank {
                             stringResource(R.string.susfs_status_no_data)
-                        }
+                        },
                     )
                 }
                 item {
@@ -118,7 +118,7 @@ fun StatusTab(
                         title = stringResource(R.string.susfs_status_variant),
                         description = statusInfo.variant.ifBlank {
                             stringResource(R.string.susfs_status_no_data)
-                        }
+                        },
                     )
                 }
                 item {
@@ -127,7 +127,7 @@ fun StatusTab(
                         title = stringResource(R.string.susfs_status_enabled_features),
                         description = statusInfo.enabledFeatures.ifBlank {
                             stringResource(R.string.susfs_status_no_data)
-                        }
+                        },
                     )
                 }
             }
@@ -142,7 +142,6 @@ fun StatusTab(
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,7 +173,7 @@ fun BackupRestoreSection(
     val operationFailedMsg = stringResource(R.string.susfs_operation_failed)
 
     val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
+        ActivityResultContracts.CreateDocument("application/json"),
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
@@ -188,7 +187,7 @@ fun BackupRestoreSection(
     }
 
     val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
+        ActivityResultContracts.OpenDocument(),
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
         pendingImportUri = uri
@@ -203,7 +202,7 @@ fun BackupRestoreSection(
                 description = exportDesc,
                 onClick = {
                     exportLauncher.launch("susfs_backup.json")
-                }
+                },
             )
         }
         item {
@@ -213,7 +212,7 @@ fun BackupRestoreSection(
                 description = importDesc,
                 onClick = {
                     importLauncher.launch(arrayOf("application/json"))
-                }
+                },
             )
         }
         item {
@@ -255,7 +254,7 @@ fun BackupRestoreSection(
                                 }
                             }
                         }
-                    }
+                    },
                 ) {
                     Text(importLabel)
                 }
@@ -297,6 +296,6 @@ private fun RestoreDefaultRow(
                 }
                 snackbarHost.showReplacingSnackbar(if (ok) operationSuccessMsg else operationFailedMsg)
             }
-        }
+        },
     )
 }

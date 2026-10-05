@@ -23,10 +23,11 @@ class CardConfig(
 
     var cardAlpha: Float
         get() = run {
-            if (isCustomBackgroundEnabled)
+            if (isCustomBackgroundEnabled) {
                 _cardAlpha
-            else
+            } else {
                 1f
+            }
         }
         set(value) {
             _cardAlpha = value.coerceIn(0f, 1f)
@@ -147,16 +148,20 @@ object CardStyleProvider {
     @Composable
     fun getCardColors(
         originalColor: Color,
-        transparent: Boolean
+        transparent: Boolean,
     ): androidx.compose.material3.CardColors {
         val cardConfig = koinInject<CardConfig>()
         return CardDefaults.cardColors(
             containerColor = if (transparent) Color.Transparent else originalColor.copy(alpha = cardConfig.cardAlpha),
             contentColor = contentColorFor(originalColor),
-            disabledContainerColor = if (transparent) Color.Transparent else originalColor.copy(
-                alpha = cardConfig.cardAlpha * 0.38f
-            ),
-            disabledContentColor = contentColorFor(originalColor).copy(alpha = 0.38f)
+            disabledContainerColor = if (transparent) {
+                Color.Transparent
+            } else {
+                originalColor.copy(
+                    alpha = cardConfig.cardAlpha * 0.38f,
+                )
+            },
+            disabledContentColor = contentColorFor(originalColor).copy(alpha = 0.38f),
         )
     }
 
@@ -167,25 +172,33 @@ object CardStyleProvider {
             defaultElevation = cardConfig.cardElevation,
             pressedElevation = if (cardConfig.isShadowEnabled) {
                 (cardConfig.cardElevation.value + 0).dp
-        } else 0.dp,
+            } else {
+                0.dp
+            },
             focusedElevation = if (cardConfig.isShadowEnabled) {
                 (cardConfig.cardElevation.value + 0).dp
-        } else 0.dp,
+            } else {
+                0.dp
+            },
             hoveredElevation = if (cardConfig.isShadowEnabled) {
                 (cardConfig.cardElevation.value + 0).dp
-        } else 0.dp,
+            } else {
+                0.dp
+            },
             draggedElevation = if (cardConfig.isShadowEnabled) {
                 (cardConfig.cardElevation.value + 0).dp
-        } else 0.dp,
-        disabledElevation = 0.dp
-    )
+            } else {
+                0.dp
+            },
+            disabledElevation = 0.dp,
+        )
     }
 }
 
 @Composable
 fun getCardColors(
     originalColor: Color,
-    renderBackground: Boolean = true
+    renderBackground: Boolean = true,
 ): androidx.compose.material3.CardColors {
     val themeConfig = koinInject<ThemeConfig>()
     return CardStyleProvider.getCardColors(

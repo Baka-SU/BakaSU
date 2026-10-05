@@ -5,13 +5,13 @@ import android.os.Build
 import android.system.Os
 import androidx.core.content.pm.PackageInfoCompat
 import com.topjohnwu.superuser.ShellUtils
-import org.bakasu.bakasu.Natives
-import org.bakasu.bakasu.data.shell.KsuCliRepository
 import java.io.File
 import java.io.FileWriter
 import java.io.PrintWriter
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import org.bakasu.bakasu.Natives
+import org.bakasu.bakasu.data.shell.KsuCliRepository
 
 fun getManagerVersion(context: Context): Pair<String, Long> {
     val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)!!
@@ -20,7 +20,6 @@ fun getManagerVersion(context: Context): Pair<String, Long> {
 }
 
 fun getBugreportFile(context: Context, ksuCliRepository: KsuCliRepository): File {
-
     val bugreportDir = File(context.cacheDir, "bugreport")
     bugreportDir.mkdirs()
 
@@ -116,7 +115,7 @@ fun getBugreportFile(context: Context, ksuCliRepository: KsuCliRepository): File
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm")
     val current = LocalDateTime.now().format(formatter)
 
-    val targetFile = File(context.cacheDir, "KernelSU_bugreport_${current}.tar.gz")
+    val targetFile = File(context.cacheDir, "KernelSU_bugreport_$current.tar.gz")
 
     shell.newJob().add("tar czf ${targetFile.absolutePath} -C ${bugreportDir.absolutePath} .").exec()
     shell.newJob().add("rm -rf ${bugreportDir.absolutePath}").exec()
@@ -124,4 +123,3 @@ fun getBugreportFile(context: Context, ksuCliRepository: KsuCliRepository): File
 
     return targetFile
 }
-

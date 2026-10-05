@@ -69,7 +69,7 @@ class DynamicManagerViewModel(
             } else {
                 source.apps.filter { app ->
                     app.label.contains(normalized, ignoreCase = true) ||
-                            app.packageName.contains(normalized, ignoreCase = true)
+                        app.packageName.contains(normalized, ignoreCase = true)
                 }
             },
             search = query,
@@ -87,7 +87,9 @@ class DynamicManagerViewModel(
     fun dispatch(action: DynamicManagerUiAction) {
         when (action) {
             DynamicManagerUiAction.Refresh -> viewModelScope.launch { refresh() }
+
             is DynamicManagerUiAction.Search -> search.value = action.query
+
             is DynamicManagerUiAction.SelectApp -> submit(DynamicManagerOperation.Set) {
                 selectDynamicManager(action.app.apkPath)
             }

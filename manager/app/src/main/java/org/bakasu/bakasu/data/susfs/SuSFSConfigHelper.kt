@@ -6,12 +6,12 @@ import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
-import org.bakasu.bakasu.data.shell.KsuCliRepository
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
+import org.bakasu.bakasu.data.shell.KsuCliRepository
 
 class SuSFSConfigHelper(
     private val ksuCliRepository: KsuCliRepository,
@@ -61,7 +61,7 @@ class SuSFSConfigHelper(
             if (config.version != CURRENT_VERSION) {
                 Log.e(
                     TAG,
-                    "Incompatible SUSFS config version: ${config.version}, expected: $CURRENT_VERSION"
+                    "Incompatible SUSFS config version: ${config.version}, expected: $CURRENT_VERSION",
                 )
                 return@withContext SuSFSConfig.createDefault().also { cachedConfig = it }
             }
@@ -73,13 +73,9 @@ class SuSFSConfigHelper(
         }
     }
 
-    suspend fun restoreDefaultConfig(): Boolean {
-        return executeConfigMutation("restore")
-    }
+    suspend fun restoreDefaultConfig(): Boolean = executeConfigMutation("restore")
 
-    suspend fun setConfigEnabled(enabled: Boolean): Boolean {
-        return executeConfigMutation(if (enabled) "enable" else "disable")
-    }
+    suspend fun setConfigEnabled(enabled: Boolean): Boolean = executeConfigMutation(if (enabled) "enable" else "disable")
 
     suspend fun loadStatusInfo(forceRefresh: Boolean = false): SuSFSStatusInfo {
         if (!forceRefresh) {
@@ -109,23 +105,17 @@ class SuSFSConfigHelper(
         }
     }
 
-    suspend fun addSusPath(path: String): Boolean {
-        return executeConfigMutation(
-            command = "sus_path add ${shellQuote(path)}",
-            currentKernelCommands = listOf("add_sus_path ${shellQuote(path)}"),
-        )
-    }
+    suspend fun addSusPath(path: String): Boolean = executeConfigMutation(
+        command = "sus_path add ${shellQuote(path)}",
+        currentKernelCommands = listOf("add_sus_path ${shellQuote(path)}"),
+    )
 
-    suspend fun addSusPathLoop(path: String): Boolean {
-        return executeConfigMutation(
-            command = "sus_path add ${shellQuote(path)} --loop",
-            currentKernelCommands = listOf("add_sus_path_loop ${shellQuote(path)}"),
-        )
-    }
+    suspend fun addSusPathLoop(path: String): Boolean = executeConfigMutation(
+        command = "sus_path add ${shellQuote(path)} --loop",
+        currentKernelCommands = listOf("add_sus_path_loop ${shellQuote(path)}"),
+    )
 
-    suspend fun removeSusPath(path: String): Boolean {
-        return executeConfigMutation("sus_path remove ${shellQuote(path)}")
-    }
+    suspend fun removeSusPath(path: String): Boolean = executeConfigMutation("sus_path remove ${shellQuote(path)}")
 
     suspend fun addSusKstat(path: String): Boolean {
         val quotedPath = shellQuote(path)
@@ -186,9 +176,7 @@ class SuSFSConfigHelper(
         )
     }
 
-    suspend fun removeSusKstat(path: String): Boolean {
-        return executeConfigMutation("sus_kstat remove ${shellQuote(path)}")
-    }
+    suspend fun removeSusKstat(path: String): Boolean = executeConfigMutation("sus_kstat remove ${shellQuote(path)}")
 
     suspend fun setUname(release: String, version: String): Boolean {
         val arguments = "${shellQuote(release)} ${shellQuote(version)}"
@@ -207,14 +195,14 @@ class SuSFSConfigHelper(
 
         return try {
             val slots = checkNotNull(
-                gson.fromJson(result.stdout, Array<SuSFSSlotInfo>::class.java)
+                gson.fromJson(result.stdout, Array<SuSFSSlotInfo>::class.java),
             )
             check(
                 slots.all { slot ->
                     slot.slotName.isNotBlank() &&
-                            slot.uname.isNotBlank() &&
-                            slot.buildTime.isNotBlank()
-                }
+                        slot.uname.isNotBlank() &&
+                        slot.buildTime.isNotBlank()
+                },
             )
             slots.toList()
         } catch (e: Exception) {
@@ -223,30 +211,24 @@ class SuSFSConfigHelper(
         }
     }
 
-    suspend fun enableLog(enabled: Boolean): Boolean {
-        return executeConfigMutation(
-            command = "logging ${if (enabled) "add" else "remove"}",
-            currentKernelCommands = listOf("enable_log ${if (enabled) 1 else 0}"),
-        )
-    }
+    suspend fun enableLog(enabled: Boolean): Boolean = executeConfigMutation(
+        command = "logging ${if (enabled) "add" else "remove"}",
+        currentKernelCommands = listOf("enable_log ${if (enabled) 1 else 0}"),
+    )
 
-    suspend fun hideSusMntsForNonSuProcs(enabled: Boolean): Boolean {
-        return executeConfigMutation(
-            command = "hide_sus_mnts_for_non_su_procs ${if (enabled) "add" else "remove"}",
-            currentKernelCommands = listOf(
-                "hide_sus_mnts_for_non_su_procs ${if (enabled) 1 else 0}"
-            ),
-        )
-    }
+    suspend fun hideSusMntsForNonSuProcs(enabled: Boolean): Boolean = executeConfigMutation(
+        command = "hide_sus_mnts_for_non_su_procs ${if (enabled) "add" else "remove"}",
+        currentKernelCommands = listOf(
+            "hide_sus_mnts_for_non_su_procs ${if (enabled) 1 else 0}",
+        ),
+    )
 
-    suspend fun enableAvcLogSpoofing(enabled: Boolean): Boolean {
-        return executeConfigMutation(
-            command = "avc_log_spoofing ${if (enabled) "add" else "remove"}",
-            currentKernelCommands = listOf(
-                "enable_avc_log_spoofing ${if (enabled) 1 else 0}"
-            ),
-        )
-    }
+    suspend fun enableAvcLogSpoofing(enabled: Boolean): Boolean = executeConfigMutation(
+        command = "avc_log_spoofing ${if (enabled) "add" else "remove"}",
+        currentKernelCommands = listOf(
+            "enable_avc_log_spoofing ${if (enabled) 1 else 0}",
+        ),
+    )
 
     suspend fun setCmdlineOrBootconfig(path: String): Boolean {
         val command = if (path.isBlank()) {
@@ -260,7 +242,7 @@ class SuSFSConfigHelper(
             executeConfigMutation(
                 command = command,
                 currentKernelCommands = listOf(
-                    "set_cmdline_or_bootconfig ${shellQuote(path)}"
+                    "set_cmdline_or_bootconfig ${shellQuote(path)}",
                 ),
             )
         }
@@ -279,27 +261,20 @@ class SuSFSConfigHelper(
         )
     }
 
-    suspend fun removeOpenRedirect(targetPath: String): Boolean {
-        return executeConfigMutation("open_redirect remove ${shellQuote(targetPath)}")
-    }
+    suspend fun removeOpenRedirect(targetPath: String): Boolean = executeConfigMutation("open_redirect remove ${shellQuote(targetPath)}")
 
-    suspend fun addSusMap(path: String): Boolean {
-        return executeConfigMutation(
-            command = "sus_map add ${shellQuote(path)}",
-            currentKernelCommands = listOf("add_sus_map ${shellQuote(path)}"),
-        )
-    }
+    suspend fun addSusMap(path: String): Boolean = executeConfigMutation(
+        command = "sus_map add ${shellQuote(path)}",
+        currentKernelCommands = listOf("add_sus_map ${shellQuote(path)}"),
+    )
 
-    suspend fun removeSusMap(path: String): Boolean {
-        return executeConfigMutation("sus_map remove ${shellQuote(path)}")
-    }
+    suspend fun removeSusMap(path: String): Boolean = executeConfigMutation("sus_map remove ${shellQuote(path)}")
 
     suspend fun showVersion(): String = loadStatusInfo().version
 
     suspend fun showEnabledFeatures(): String = loadStatusInfo().enabledFeatures
 
-    suspend fun exportConfigToUri(context: Context, uri: Uri): Boolean =
-        withContext(Dispatchers.IO) {
+    suspend fun exportConfigToUri(context: Context, uri: Uri): Boolean = withContext(Dispatchers.IO) {
         try {
             val result = executeSusfsCommand("config backup")
             if (!result.success || result.stdout.isBlank()) {
@@ -319,9 +294,8 @@ class SuSFSConfigHelper(
         }
     }
 
-    suspend fun importConfigFromUri(context: Context, uri: Uri): Boolean =
-        withContext(Dispatchers.IO) {
-            val tempFile = File.createTempFile("susfs_restore", ".json", context.cacheDir)
+    suspend fun importConfigFromUri(context: Context, uri: Uri): Boolean = withContext(Dispatchers.IO) {
+        val tempFile = File.createTempFile("susfs_restore", ".json", context.cacheDir)
         try {
             val fileName = DocumentFile.fromSingleUri(context, uri)?.name.orEmpty()
             if (!fileName.endsWith(".json", ignoreCase = true)) {
@@ -358,7 +332,7 @@ class SuSFSConfigHelper(
             if (!result.success) {
                 Log.e(
                     TAG,
-                    "SUSFS kernel command failed: $currentKernelCommand: ${result.stderr}"
+                    "SUSFS kernel command failed: $currentKernelCommand: ${result.stderr}",
                 )
                 return false
             }
@@ -374,32 +348,29 @@ class SuSFSConfigHelper(
         return result.success
     }
 
-    private suspend fun executeSusfsCommand(command: String): CommandResult =
-        withContext(Dispatchers.IO) {
-            try {
-                val stdout = ArrayList<String>()
-                val stderr = ArrayList<String>()
-                val result = ksuCliRepository.withNewRootShell {
-                    newJob()
-                        .add("${shellQuote(ksuCliRepository.getKsuDaemonPath())} susfs $command")
-                        .to(stdout, stderr)
-                        .exec()
-                }
-
-                CommandResult(
-                    success = result.isSuccess,
-                    stdout = stdout.joinToString("\n").trim(),
-                    stderr = stderr.joinToString("\n").trim(),
-                )
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to execute ksud susfs $command", e)
-                CommandResult(false, "", e.message.orEmpty())
+    private suspend fun executeSusfsCommand(command: String): CommandResult = withContext(Dispatchers.IO) {
+        try {
+            val stdout = ArrayList<String>()
+            val stderr = ArrayList<String>()
+            val result = ksuCliRepository.withNewRootShell {
+                newJob()
+                    .add("${shellQuote(ksuCliRepository.getKsuDaemonPath())} susfs $command")
+                    .to(stdout, stderr)
+                    .exec()
             }
-        }
 
-    private fun shellQuote(value: String): String {
-        return "'${value.replace("'", "'\"'\"'")}'"
+            CommandResult(
+                success = result.isSuccess,
+                stdout = stdout.joinToString("\n").trim(),
+                stderr = stderr.joinToString("\n").trim(),
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to execute ksud susfs $command", e)
+            CommandResult(false, "", e.message.orEmpty())
+        }
     }
+
+    private fun shellQuote(value: String): String = "'${value.replace("'", "'\"'\"'")}'"
 }
 
 enum class SusKstatType {
@@ -529,20 +500,18 @@ data class SuSFSConfig(
     val sus_map: Set<String>,
 ) {
     companion object {
-        fun createDefault(): SuSFSConfig {
-            return SuSFSConfig(
-                version = SuSFSConfigHelper.CURRENT_VERSION,
-                enabled = true,
-                cmdline_or_bootconfig = "",
-                avc_log_spoofing = false,
-                logging = false,
-                hide_sus_mnts_for_non_su_procs = false,
-                uname = UnameConfig(version = "default", release = "default"),
-                sus_path = emptySet(),
-                sus_kstat = emptySet(),
-                open_redirect = emptySet(),
-                sus_map = emptySet(),
-            )
-        }
+        fun createDefault(): SuSFSConfig = SuSFSConfig(
+            version = SuSFSConfigHelper.CURRENT_VERSION,
+            enabled = true,
+            cmdline_or_bootconfig = "",
+            avc_log_spoofing = false,
+            logging = false,
+            hide_sus_mnts_for_non_su_procs = false,
+            uname = UnameConfig(version = "default", release = "default"),
+            sus_path = emptySet(),
+            sus_kstat = emptySet(),
+            open_redirect = emptySet(),
+            sus_map = emptySet(),
+        )
     }
 }

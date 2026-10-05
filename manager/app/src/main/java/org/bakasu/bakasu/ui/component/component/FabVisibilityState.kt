@@ -51,14 +51,13 @@ fun rememberFabVisibilityState(listState: LazyListState): State<Boolean> {
 fun AnimatedFab(
     visible: Boolean,
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
-
     AnimatedVisibility(
         modifier = modifier,
         visible = visible,
         enter = fadeIn() + scaleIn(),
-        exit = fadeOut() + scaleOut(targetScale = 0.8f)
+        exit = fadeOut() + scaleOut(targetScale = 0.8f),
     ) {
         content()
     }

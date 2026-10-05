@@ -88,6 +88,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
+import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
@@ -95,11 +99,7 @@ import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
 import org.bakasu.bakasu.ui.util.LocalPagerPage
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
-import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.milliseconds
 
 private val SearchBarExpandedHeight = 77.dp
 
@@ -242,7 +242,7 @@ class SearchAppBarScrollBehavior internal constructor(
                 if (searchBarHeightOffset > -searchBarHeight && searchBarHeightOffset < 0f) {
                     val shouldExpand =
                         available.y > 0f ||
-                                (available.y == 0f && lastSearchBarScrollDelta > 0f)
+                            (available.y == 0f && lastSearchBarScrollDelta > 0f)
                     animateSearchBarTo(
                         targetOffset = if (shouldExpand) 0f else -searchBarHeight,
                         initialVelocity = available.y,
@@ -286,25 +286,23 @@ fun rememberSearchAppBarScrollBehavior(
     }
 }
 
-private fun Modifier.textFieldBackground(color: ColorProducer, shape: Shape): Modifier =
-    this.drawWithCache {
-        val outline = shape.createOutline(size, layoutDirection, this)
-        onDrawBehind { drawOutline(outline, color = color()) }
-    }
+private fun Modifier.textFieldBackground(color: ColorProducer, shape: Shape): Modifier = this.drawWithCache {
+    val outline = shape.createOutline(size, layoutDirection, this)
+    onDrawBehind { drawOutline(outline, color = color()) }
+}
 
-private fun Modifier.collapseWithTopAppBar(expandedFraction: Float): Modifier =
-    clipToBounds().layout { measurable, constraints ->
-        val placeable = measurable.measure(constraints.copy(minHeight = 0))
-        val fraction = expandedFraction.coerceIn(0f, 1f)
-        val visibleHeight = (placeable.height * fraction).roundToInt()
+private fun Modifier.collapseWithTopAppBar(expandedFraction: Float): Modifier = clipToBounds().layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints.copy(minHeight = 0))
+    val fraction = expandedFraction.coerceIn(0f, 1f)
+    val visibleHeight = (placeable.height * fraction).roundToInt()
 
-        layout(placeable.width, visibleHeight) {
-            placeable.placeRelative(
-                x = 0,
-                y = visibleHeight - placeable.height,
-            )
-        }
+    layout(placeable.width, visibleHeight) {
+        placeable.placeRelative(
+            x = 0,
+            y = visibleHeight - placeable.height,
+        )
     }
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -388,8 +386,11 @@ private fun CompactSearchBar(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                if (themeConfig.isEnableBlurExp) Color.Transparent else
+                if (themeConfig.isEnableBlurExp) {
+                    Color.Transparent
+                } else {
                     MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = cardConfig.cardAlpha)
+                },
             )
             .heightIn(0.dp, 45.dp)
             .focusRequester(focusRequester)
@@ -397,7 +398,7 @@ private fun CompactSearchBar(
                 canFocus = allowFocus
             },
         textStyle = MaterialTheme.typography.bodyMedium.copy(
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         ),
         interactionSource = interactionSource,
         onKeyboardAction = {
@@ -444,7 +445,7 @@ private fun CompactSearchBar(
             lineLimits = TextFieldLineLimits.SingleLine,
             interactionSource = interactionSource,
             outputTransformation = null,
-        )
+        ),
     )
 }
 
@@ -535,7 +536,7 @@ fun SearchAppBar(
             scrollBehavior = scrollBehavior,
             title = {
                 Text(
-                    text = title
+                    text = title,
                 )
             },
             navigationIcon = {
@@ -543,7 +544,7 @@ fun SearchAppBar(
                     AppBackButton(
                         onClick = {
                             onBackClick.invoke()
-                        }
+                        },
                     )
                 } else {
                     navigationContent?.invoke()
@@ -559,7 +560,7 @@ fun SearchAppBar(
                         onClick = {
                             searchAppBarScrollBehavior?.expandSearchBar()
                             requestSearchFocus = true
-                        }
+                        },
                     ) {
                         Icon(
                             imageVector = Icons.TwoTone.Search,
@@ -572,11 +573,17 @@ fun SearchAppBar(
             windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor =
-                    if (themeConfig.isEnableBlur) Color.Transparent
-                    else MaterialTheme.colorScheme.surfaceContainer.copy(alpha = cardConfig.cardAlpha),
+                    if (themeConfig.isEnableBlur) {
+                        Color.Transparent
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = cardConfig.cardAlpha)
+                    },
                 scrolledContainerColor =
-                    if (themeConfig.isEnableBlur) Color.Transparent
-                    else MaterialTheme.colorScheme.surfaceContainer.copy(alpha = cardConfig.cardAlpha),
+                    if (themeConfig.isEnableBlur) {
+                        Color.Transparent
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = cardConfig.cardAlpha)
+                    },
             ),
         )
 
@@ -604,14 +611,14 @@ fun SearchAppBar(
                     placeholder = {
                         Text(
                             text = searchBarPlaceHolderText,
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
                         )
                     },
                     leadingIcon = {
                         Icon(
                             Icons.TwoTone.Search,
                             contentDescription = null,
-                            modifier = Modifier.padding(start = 8.dp)
+                            modifier = Modifier.padding(start = 8.dp),
                         )
                     },
                     requestFocus = requestSearchFocus,

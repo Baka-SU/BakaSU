@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -52,8 +54,8 @@ class MainActivity : ComponentActivity() {
     private val applyLanguage: ApplyLanguageUseCase by inject()
     private val startupState by lazy { observeStartupState() }
 
-    private var showConfirmationDialog: MutableState<Boolean> = mutableStateOf(false)
-    private var pendingZipFiles = mutableStateOf<List<ZipFileInfo>>(emptyList())
+    private var showConfirmationDialog by mutableStateOf(false)
+    private var pendingZipFiles by mutableStateOf<List<ZipFileInfo>>(emptyList())
 
     private lateinit var themeChangeObserver: ThemeChangeContentObserver
     private var isInitialized = false
@@ -136,6 +138,7 @@ class MainActivity : ComponentActivity() {
 
                 else -> when {
                     intent?.data != null -> arrayListOf(intent.data!!)
+
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
                         intent.getParcelableArrayListExtra("uris", Uri::class.java)
                     }
@@ -151,13 +154,19 @@ class MainActivity : ComponentActivity() {
                 KernelSUTheme {
                     when (val state = startupState.collectAsStateWithLifecycle().value) {
                         is StartupState.Failed -> StartupFailureContent(state.message)
-                        else -> NavContainer(
-                            zipUri = zipUri,
-                            intentState = intentState,
-                            settingsViewModel = settingsViewModel,
-                            showConfirmationDialog = showConfirmationDialog,
-                            pendingZipFiles = pendingZipFiles,
-                        )
+
+                        else -> {
+                            val intentId by intentState.collectAsState()
+                            NavContainer(
+                                zipUri = zipUri,
+                                intentId = intentId,
+                                settingsViewModel = settingsViewModel,
+                                showConfirmationDialog = showConfirmationDialog,
+                                pendingZipFiles = pendingZipFiles,
+                                onShowConfirmationDialogChange = { showConfirmationDialog = it },
+                                onPendingZipFilesChange = { pendingZipFiles = it },
+                            )
+                        }
                     }
                 }
             }

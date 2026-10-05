@@ -32,8 +32,8 @@ inline fun <T> LazyListScope.lazySegmentColumn(
                 modifier = Modifier.padding(
                     top = 8.dp,
                     start = if (noHorizontalPadding) 0.dp else 32.dp, // 16.dp + 16.dp
-                    bottom = 8.dp
-                )
+                    bottom = 8.dp,
+                ),
             )
         }
     }
@@ -41,7 +41,7 @@ inline fun <T> LazyListScope.lazySegmentColumn(
     items(
         count = items.size,
         key = if (key != null) { index: Int -> key(index, items[index]) } else null,
-        contentType = { index: Int -> contentType(index, items[index]) }
+        contentType = { index: Int -> contentType(index, items[index]) },
     ) { index ->
         val item = items[index]
 
@@ -55,7 +55,7 @@ inline fun <T> LazyListScope.lazySegmentColumn(
             topStart = topRadius,
             topEnd = topRadius,
             bottomStart = bottomRadius,
-            bottomEnd = bottomRadius
+            bottomEnd = bottomRadius,
         )
 
         val topPadding = if (isFirst) 0.dp else ListItemDefaults.SegmentedGap
@@ -65,7 +65,7 @@ inline fun <T> LazyListScope.lazySegmentColumn(
         Box(
             modifier = Modifier
                 .padding(top = topPadding)
-                .padding(horizontal = horizontalPadding)
+                .padding(horizontal = horizontalPadding),
         ) {
             CompositionLocalProvider(LocalSegmentedItemShape provides shape) {
                 itemContent(index, item)

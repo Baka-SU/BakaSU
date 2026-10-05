@@ -3,6 +3,7 @@ package org.bakasu.bakasu.data.download
 import android.app.Application
 import android.content.Intent
 import androidx.core.content.ContextCompat
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,7 +12,6 @@ import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.ManagerApkSource
 import org.bakasu.bakasu.domain.model.ManagerUpdateInfo
-import java.util.concurrent.atomic.AtomicInteger
 
 class DownloadRepository(
     private val application: Application,
@@ -31,11 +31,13 @@ class DownloadRepository(
 
             val id = idCounter.incrementAndGet()
             _downloads.update {
-                it + (id to DownloadState(
-                    id = id,
-                    fileName = fileName,
-                    url = url
-                ))
+                it + (
+                    id to DownloadState(
+                        id = id,
+                        fileName = fileName,
+                        url = url,
+                    )
+                    )
             }
             val intent = Intent(application, DownloadService::class.java).apply {
                 action = DownloadService.ACTION_DOWNLOAD
@@ -69,14 +71,14 @@ class DownloadRepository(
                     is ManagerApkSource.DirectApk -> {
                         putExtra(
                             DownloadService.EXTRA_MANAGER_SOURCE,
-                            DownloadService.SOURCE_DIRECT_APK
+                            DownloadService.SOURCE_DIRECT_APK,
                         )
                     }
 
                     is ManagerApkSource.NightlyArtifact -> {
                         putExtra(
                             DownloadService.EXTRA_MANAGER_SOURCE,
-                            DownloadService.SOURCE_NIGHTLY_ARTIFACT
+                            DownloadService.SOURCE_NIGHTLY_ARTIFACT,
                         )
                         putExtra(DownloadService.EXTRA_MANAGER_ABI, source.preferredAbi)
                         putExtra(
@@ -101,11 +103,13 @@ class DownloadRepository(
     fun markCompleted(id: Int, uri: String) {
         _downloads.update { map ->
             val state = map[id] ?: return@update map
-            map + (id to state.copy(
-                status = DownloadStatus.COMPLETED,
-                progress = 100,
-                resultUri = uri
-            ))
+            map + (
+                id to state.copy(
+                    status = DownloadStatus.COMPLETED,
+                    progress = 100,
+                    resultUri = uri,
+                )
+                )
         }
     }
 

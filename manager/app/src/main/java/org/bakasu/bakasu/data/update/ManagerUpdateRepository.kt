@@ -30,7 +30,7 @@ class ManagerUpdateRepository(
     }
 
     private val managerApkPattern = Regex(
-        "^BakaSU_(.+)_(\\d+)-(arm64-v8a|armeabi-v7a|x86_64|universal)-release\\.apk$"
+        "^BakaSU_(.+)_(\\d+)-(arm64-v8a|armeabi-v7a|x86_64|universal)-release\\.apk$",
     )
     private val commitCountLinkPattern = Regex("""[?&]page=(\d+)>; rel="last"""")
 
@@ -66,7 +66,7 @@ class ManagerUpdateRepository(
         val currentVersionCode = BuildConfig.VERSION_CODE
         val workflowRuns = requestJson(
             "https://api.github.com/repos/$REPOSITORY/actions/workflows/$WORKFLOW_FILE/runs" +
-                    "?branch=$BRANCH&status=success&per_page=1&event=push"
+                "?branch=$BRANCH&status=success&per_page=1&event=push",
         )?.optJSONArray("workflow_runs") ?: return@withContext null
         val run = workflowRuns.optJSONObject(0) ?: return@withContext null
         val runId = run.optLong("id", -1L)
@@ -84,7 +84,7 @@ class ManagerUpdateRepository(
             versionName = headSha.take(SHORT_SHA_LENGTH),
             abi = preferredAbi,
             fileName = "BakaSU_${headSha.take(SHORT_SHA_LENGTH)}_" +
-                    "$versionCode-$preferredAbi-release.apk",
+                "$versionCode-$preferredAbi-release.apk",
             source = ManagerApkSource.NightlyArtifact(
                 url = "https://nightly.link/$REPOSITORY/actions/runs/$runId/$RELEASE_ARTIFACT.zip",
                 preferredAbi = preferredAbi,
@@ -135,11 +135,10 @@ class ManagerUpdateRepository(
         return parseCommitCount(response.header("Link")) ?: 1
     }
 
-    internal fun parseCommitCount(linkHeader: String?): Int? =
-        commitCountLinkPattern.find(linkHeader.orEmpty())
-            ?.groupValues
-            ?.getOrNull(1)
-            ?.toIntOrNull()
+    internal fun parseCommitCount(linkHeader: String?): Int? = commitCountLinkPattern.find(linkHeader.orEmpty())
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.toIntOrNull()
 
     private fun parseApkName(fileName: String): ParsedApkName? {
         val match = managerApkPattern.matchEntire(fileName) ?: return null

@@ -5,8 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
-import org.bakasu.bakasu.R
 import java.util.Properties
+import org.bakasu.bakasu.R
 
 class ModuleUtils {
     private companion object {
@@ -40,7 +40,7 @@ class ModuleUtils {
             if (!name.isNullOrBlank()) {
                 return name.replace(
                     Regex("[^a-zA-Z0-9\\s\\-_.@()\\u4e00-\\u9fa5]"),
-                    ""
+                    "",
                 ).trim()
             }
         } catch (e: Exception) {
@@ -52,7 +52,7 @@ class ModuleUtils {
             ?.removeSuffix(".zip")
             ?.replace(
                 Regex("[^a-zA-Z0-9\\s\\-_.@()\\u4e00-\\u9fa5]"),
-                ""
+                "",
             )
             ?.trim()
             ?: context.getString(R.string.unknown_module)

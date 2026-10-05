@@ -1,6 +1,9 @@
 package org.bakasu.bakasu.di
 
 import coil.ImageLoader
+import java.io.File
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -179,9 +182,6 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
-import java.io.File
-import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 val applicationScopeQualifier = named("applicationScope")
 
@@ -197,7 +197,7 @@ val coreModule = module {
                     chain.request().newBuilder()
                         .header("User-Agent", "BakaSU/${BuildConfig.VERSION_CODE}")
                         .header("Accept-Language", Locale.getDefault().toLanguageTag())
-                        .build()
+                        .build(),
                 )
             }
             .connectTimeout(5, TimeUnit.SECONDS)

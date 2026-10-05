@@ -5,4 +5,3 @@ data class SuSFSStatus(
     val version: String,
     val enabledFeatures: String,
 )
-

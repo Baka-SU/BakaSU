@@ -27,39 +27,38 @@ enum class BottomBarDestination(
         R.string.home,
         Icons.TwoTone.Home,
         Icons.TwoTone.Home,
-        false
+        false,
     ),
     SuperUser(
         { bottomPadding -> SuperUserPage(bottomPadding) },
         R.string.superuser,
         Icons.TwoTone.AdminPanelSettings,
         Icons.TwoTone.AdminPanelSettings,
-        true
+        true,
     ),
     Module(
         { bottomPadding -> ModulePage(bottomPadding) },
         R.string.module,
         Icons.TwoTone.Extension,
         Icons.TwoTone.Extension,
-        true
+        true,
     ),
     Settings(
         { bottomPadding -> SettingsPage(bottomPadding) },
         R.string.settings,
         Icons.TwoTone.Settings,
         Icons.TwoTone.Settings,
-        false
-    );
+        false,
+    ),
+    ;
 
     companion object {
-        fun getPages(isKsuValid: Boolean): List<BottomBarDestination> {
-            return if (isKsuValid) {
-                // 全功能管理器
-                BottomBarDestination.entries.toList()
-            } else {
-                BottomBarDestination.entries.filter {
-                    !it.rootRequired
-                }
+        fun getPages(isKsuValid: Boolean): List<BottomBarDestination> = if (isKsuValid) {
+            // 全功能管理器
+            BottomBarDestination.entries.toList()
+        } else {
+            BottomBarDestination.entries.filter {
+                !it.rootRequired
             }
         }
     }

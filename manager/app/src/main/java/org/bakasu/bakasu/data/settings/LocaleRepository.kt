@@ -9,6 +9,5 @@ class LocaleRepository(
 ) {
     fun applyLanguage(context: Context): Context = localeHelper.applyLanguage(context)
     fun isSystemLanguageSettings(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-    fun launchSystemLanguageSettings(context: Context) =
-        launchSystemLanguageSettingsInternal(context)
+    fun launchSystemLanguageSettings(context: Context) = launchSystemLanguageSettingsInternal(context)
 }

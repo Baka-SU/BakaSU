@@ -4,8 +4,7 @@ package org.bakasu.bakasu.ui.animation.predictiveback
 
 import kotlin.math.roundToInt
 
-internal fun snapScaleToPixelExtent(scale: Float, extent: Float): Float =
-    if (extent > 0f) (scale * extent).roundToInt() / extent else scale
+internal fun snapScaleToPixelExtent(scale: Float, extent: Float): Float = if (extent > 0f) (scale * extent).roundToInt() / extent else scale
 
 internal fun snapTranslationToPixelEdge(
     translation: Float,

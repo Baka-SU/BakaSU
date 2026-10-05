@@ -63,6 +63,7 @@ class KernelFlashViewModel(
     fun dispatch(action: KernelFlashUiAction) {
         when (action) {
             is KernelFlashUiAction.Start -> startKernelFlash(action.uri, action.selectedSlot, action.skipKsud)
+
             KernelFlashUiAction.ConsumeAutoExit -> {
                 removePreference(AUTO_EXIT_KEY)
                 autoExit.value = false

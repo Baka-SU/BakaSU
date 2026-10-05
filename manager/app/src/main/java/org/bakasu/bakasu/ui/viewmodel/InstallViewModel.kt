@@ -35,7 +35,7 @@ class InstallViewModel(
     private val mutableState = MutableStateFlow(
         getInstallEnvironment.cached()?.let { cached ->
             InstallUiState(environment = cached, loading = false)
-        } ?: InstallUiState()
+        } ?: InstallUiState(),
     )
     private val mutableEvents = MutableSharedFlow<InstallUiEvent>(extraBufferCapacity = 1)
 
@@ -49,6 +49,7 @@ class InstallViewModel(
     fun dispatch(action: InstallUiAction) {
         when (action) {
             InstallUiAction.Refresh -> load(forceRefresh = true)
+
             InstallUiAction.Reboot -> viewModelScope.launch {
                 reboot().onFailure {
                     mutableEvents.tryEmit(InstallUiEvent.Error(it.message.orEmpty()))

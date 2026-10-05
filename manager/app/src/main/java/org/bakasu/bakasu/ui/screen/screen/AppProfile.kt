@@ -40,9 +40,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -116,7 +118,7 @@ fun AppProfileScreen(
     val appLabel = appGroup?.mainApp?.label ?: packageName
     val isSpecial = appGroup?.isWebViewZygote == true
     val failToUpdateAppProfile = stringResource(R.string.failed_to_update_app_profile).format(
-        appLabel
+        appLabel,
     )
     val failToUpdateSepolicy =
         stringResource(R.string.failed_to_update_sepolicy).format(appLabel)
@@ -126,7 +128,7 @@ fun AppProfileScreen(
         viewModel.events.collectLatest { event ->
             when (event) {
                 is AppProfileUiEvent.Error -> snackBarHost.showReplacingSnackbar(
-                    failToUpdateAppProfile
+                    failToUpdateAppProfile,
                 )
 
                 AppProfileUiEvent.SepolicyUpdateFailed ->
@@ -167,16 +169,16 @@ fun AppProfileScreen(
                 },
                 subtitle = {
                     Text(
-                        text = appGroup.mainApp.displayIdentifier
+                        text = appGroup.mainApp.displayIdentifier,
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = cardColor,
-                    scrolledContainerColor = cardColor
+                    scrolledContainerColor = cardColor,
                 ),
                 navigationIcon = {
                     AppBackButton(
-                        onClick = dropUnlessResumed { navigator.pop() }
+                        onClick = dropUnlessResumed { navigator.pop() },
                     )
                 },
                 windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
@@ -186,7 +188,7 @@ fun AppProfileScreen(
         snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        contentWindowInsets = adaptiveScaffoldWindowInsets()
+        contentWindowInsets = adaptiveScaffoldWindowInsets(),
     ) { paddingValues ->
         AppProfileInner(
             modifier = Modifier
@@ -258,6 +260,8 @@ private fun AppProfileInner(
     val themeConfig: ThemeConfig = koinInject()
     val isRootGranted = !isSpecial && profile.allowSu
     val affectedApplicationsTitle = stringResource(R.string.affected_applications)
+    val currentAppIcon by rememberUpdatedState(appIcon)
+    val iconContent = remember { movableContentOf { currentAppIcon() } }
 
     LazyColumn(modifier = modifier) {
         item {
@@ -272,7 +276,7 @@ private fun AppProfileInner(
                     description = appGroup.mainApp.displayIdentifier,
                     iconPlaceholder = false,
                     leadingContent = {
-                        appIcon()
+                        iconContent()
                     },
                 )
             } else {
@@ -282,14 +286,14 @@ private fun AppProfileInner(
                     description = appGroup.mainApp.displayIdentifier,
                     iconPlaceholder = false,
                     leadingContent = {
-                        appIcon()
+                        iconContent()
                     },
                     choice = -1,
                     data = listOf(
                         stringResource(id = R.string.launch_app),
                         stringResource(id = R.string.force_stop_app),
-                        stringResource(id = R.string.restart_app)
-                    )
+                        stringResource(id = R.string.restart_app),
+                    ),
                 ) { choice ->
                     when (choice) {
                         0 -> onControlApp(AppControlAction.LAUNCH)
@@ -309,7 +313,7 @@ private fun AppProfileInner(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surfaceBright.copy(
-                        alpha = cardConfig.cardAlpha
+                        alpha = cardConfig.cardAlpha,
                     ),
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 )
@@ -327,7 +331,7 @@ private fun AppProfileInner(
         item {
             Crossfade(
                 targetState = isRootGranted,
-                label = "RootAccess"
+                label = "RootAccess",
             )
             { current ->
                 Column {
@@ -351,9 +355,11 @@ private fun AppProfileInner(
                                 .clip(RoundedCornerShape(16.dp))
                                 .renderBackgroundBlur(MaterialTheme.colorScheme.surfaceBright),
                             shape = RoundedCornerShape(16.dp),
-                            color = if (themeConfig.isEnableBlurExp) Color.Transparent else {
+                            color = if (themeConfig.isEnableBlurExp) {
+                                Color.Transparent
+                            } else {
                                 MaterialTheme.colorScheme.surfaceBright.copy(
-                                    alpha = cardConfig.cardAlpha
+                                    alpha = cardConfig.cardAlpha,
                                 )
                             },
                             contentColor = MaterialTheme.colorScheme.onSurface,
@@ -364,8 +370,8 @@ private fun AppProfileInner(
                                     onProfileChange(
                                         profile.copy(
                                             rootUseDefault = it == Mode.Default,
-                                            rootTemplate = null
-                                        )
+                                            rootTemplate = null,
+                                        ),
                                     )
                                 }
                                 mode = it
@@ -375,11 +381,11 @@ private fun AppProfileInner(
                         AnimatedVisibility(
                             visible = mode != Mode.Default,
                             enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
+                            exit = fadeOut() + shrinkVertically(),
                         ) {
                             Crossfade(
                                 targetState = mode,
-                                label = "ProfileMode"
+                                label = "ProfileMode",
                             ) { currentMode ->
                                 when (currentMode) {
                                     Mode.Template -> {
@@ -388,7 +394,7 @@ private fun AppProfileInner(
                                                 TemplateConfig(
                                                     profile = profile,
                                                     onViewTemplate = onViewTemplate,
-                                                    onProfileChange = onProfileChange
+                                                    onProfileChange = onProfileChange,
                                                 )
                                             }
 
@@ -399,7 +405,7 @@ private fun AppProfileInner(
                                                     description = stringResource(R.string.settings_profile_template_summary),
                                                     onClick = {
                                                         onManageTemplate()
-                                                    }
+                                                    },
                                                 )
                                             }
                                         }
@@ -410,7 +416,7 @@ private fun AppProfileInner(
                                             profile = profile,
                                             sepolicyValid = sepolicyValid,
                                             onValidateSepolicy = onValidateSepolicy,
-                                            onProfileChange = onProfileChange
+                                            onProfileChange = onProfileChange,
                                         )
                                     }
 
@@ -429,9 +435,11 @@ private fun AppProfileInner(
                                 .clip(RoundedCornerShape(16.dp))
                                 .renderBackgroundBlur(MaterialTheme.colorScheme.surfaceBright),
                             shape = RoundedCornerShape(16.dp),
-                            color = if (themeConfig.isEnableBlurExp) Color.Transparent else {
+                            color = if (themeConfig.isEnableBlurExp) {
+                                Color.Transparent
+                            } else {
                                 MaterialTheme.colorScheme.surfaceBright.copy(
-                                    alpha = cardConfig.cardAlpha
+                                    alpha = cardConfig.cardAlpha,
                                 )
                             },
                             contentColor = MaterialTheme.colorScheme.onSurface,
@@ -444,7 +452,7 @@ private fun AppProfileInner(
                         AnimatedVisibility(
                             visible = mode == Mode.Custom,
                             enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
+                            exit = fadeOut() + shrinkVertically(),
                         ) {
                             Surface(
                                 modifier = Modifier
@@ -453,7 +461,7 @@ private fun AppProfileInner(
                                     .padding(top = 8.dp),
                                 shape = RoundedCornerShape(16.dp),
                                 color = MaterialTheme.colorScheme.surfaceBright.copy(
-                                    alpha = cardConfig.cardAlpha
+                                    alpha = cardConfig.cardAlpha,
                                 ),
                                 contentColor = MaterialTheme.colorScheme.onSurface,
                             ) {
@@ -461,7 +469,7 @@ private fun AppProfileInner(
                                     enabled = mode == Mode.Custom,
                                     profile = profile,
                                     defaultUmountModules = defaultUmountModules,
-                                    onProfileChange = onProfileChange
+                                    onProfileChange = onProfileChange,
                                 )
                             }
                         }
@@ -498,15 +506,18 @@ private fun AppProfileInner(
         item {
             Spacer(
                 modifier = Modifier.height(
-                    bottomPadding + 6.dp + 48.dp + 6.dp /* SnackBar height */
-                )
+                    bottomPadding + 6.dp + 48.dp + 6.dp, /* SnackBar height */
+                ),
             )
         }
     }
 }
 
 private enum class Mode(@param:StringRes private val res: Int) {
-    Default(R.string.profile_default), Template(R.string.profile_template), Custom(R.string.profile_custom);
+    Default(R.string.profile_default),
+    Template(R.string.profile_template),
+    Custom(R.string.profile_custom),
+    ;
 
     val text: String
         @Composable get() = stringResource(res)
@@ -531,7 +542,7 @@ private fun ProfileBox(
         Row(
             modifier = Modifier
                 .fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         )
         {
             FilterChip(
@@ -540,7 +551,7 @@ private fun ProfileBox(
                 label = {
                     Text(
                         text = stringResource(R.string.profile_default),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 },
                 shape = MaterialTheme.shapes.medium,
@@ -553,7 +564,7 @@ private fun ProfileBox(
                     label = {
                         Text(
                             text = stringResource(R.string.profile_template),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     },
                     shape = MaterialTheme.shapes.medium,
@@ -566,7 +577,7 @@ private fun ProfileBox(
                 label = {
                     Text(
                         text = stringResource(R.string.profile_custom),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 },
                 shape = MaterialTheme.shapes.medium,
@@ -582,7 +593,7 @@ private fun AppProfilePreview() {
     var profile by remember { mutableStateOf(AppProfile("")) }
 
     Surface(
-        color = if (cardConfig.isCustomBackgroundEnabled) Color.Transparent else MaterialTheme.colorScheme.surfaceBright
+        color = if (cardConfig.isCustomBackgroundEnabled) Color.Transparent else MaterialTheme.colorScheme.surfaceBright,
     ) {
         AppProfileInner(
             appGroup = InstalledAppGroup(

@@ -42,38 +42,37 @@ class KsuService : RootService() {
         override fun getPackages(start: Int, maxCount: Int): List<PackageInfo> {
             val list = allPackages
             val end = (start + maxCount).coerceAtMost(list.size)
-            return if (start >= list.size) emptyList()
-            else list.subList(start, end)
+            return if (start >= list.size) {
+                emptyList()
+            } else {
+                list.subList(start, end)
+            }
         }
     }
 
     override fun onBind(intent: Intent): IBinder = Stub()
 
     @SuppressLint("PrivateApi")
-    private fun getInstalledPackagesAsUser(userId: Int): List<PackageInfo> {
-        return try {
-            val pm = packageManager
-            val m = pm.javaClass.getDeclaredMethod(
-                "getInstalledPackagesAsUser",
-                Int::class.java,
-                Int::class.java
-            )
-            @Suppress("UNCHECKED_CAST")
-            m.invoke(pm, 0, userId) as List<PackageInfo>
-        } catch (e: Throwable) {
-            Log.e(TAG, "getInstalledPackagesAsUser", e)
-            emptyList()
-        }
+    private fun getInstalledPackagesAsUser(userId: Int): List<PackageInfo> = try {
+        val pm = packageManager
+        val m = pm.javaClass.getDeclaredMethod(
+            "getInstalledPackagesAsUser",
+            Int::class.java,
+            Int::class.java,
+        )
+        @Suppress("UNCHECKED_CAST")
+        m.invoke(pm, 0, userId) as List<PackageInfo>
+    } catch (e: Throwable) {
+        Log.e(TAG, "getInstalledPackagesAsUser", e)
+        emptyList()
     }
 
-    private fun UserHandle.getUserIdCompat(): Int {
-        return try {
-            javaClass.getDeclaredField("identifier").apply { isAccessible = true }.getInt(this)
-        } catch (_: NoSuchFieldException) {
-            javaClass.getDeclaredMethod("getIdentifier").invoke(this) as Int
-        } catch (e: Throwable) {
-            Log.e("KsuService", "getUserIdCompat", e)
-            0
-        }
+    private fun UserHandle.getUserIdCompat(): Int = try {
+        javaClass.getDeclaredField("identifier").apply { isAccessible = true }.getInt(this)
+    } catch (_: NoSuchFieldException) {
+        javaClass.getDeclaredMethod("getIdentifier").invoke(this) as Int
+    } catch (e: Throwable) {
+        Log.e("KsuService", "getUserIdCompat", e)
+        0
     }
 }

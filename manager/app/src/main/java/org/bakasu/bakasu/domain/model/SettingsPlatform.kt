@@ -59,14 +59,11 @@ private val spec2025IncompatiblePaletteStyles = setOf(
     PaletteStyle.Content,
 )
 
-fun PaletteStyle.isCompatibleWith(spec: ColorSpec.SpecVersion): Boolean =
-    spec != ColorSpec.SpecVersion.SPEC_2025 || this !in spec2025IncompatiblePaletteStyles
+fun PaletteStyle.isCompatibleWith(spec: ColorSpec.SpecVersion): Boolean = spec != ColorSpec.SpecVersion.SPEC_2025 || this !in spec2025IncompatiblePaletteStyles
 
-fun PaletteStyle.coerceCompatibleWith(spec: ColorSpec.SpecVersion): PaletteStyle =
-    takeIf { it.isCompatibleWith(spec) } ?: PaletteStyle.TonalSpot
+fun PaletteStyle.coerceCompatibleWith(spec: ColorSpec.SpecVersion): PaletteStyle = takeIf { it.isCompatibleWith(spec) } ?: PaletteStyle.TonalSpot
 
-fun ColorSpec.SpecVersion.availablePaletteStyles(): List<PaletteStyle> =
-    PaletteStyle.entries.filter { it.isCompatibleWith(this) }
+fun ColorSpec.SpecVersion.availablePaletteStyles(): List<PaletteStyle> = PaletteStyle.entries.filter { it.isCompatibleWith(this) }
 
 sealed interface PlatformSetting {
     data object InitializeFirstRun : PlatformSetting

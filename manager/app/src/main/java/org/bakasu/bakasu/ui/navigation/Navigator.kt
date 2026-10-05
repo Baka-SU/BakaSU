@@ -14,7 +14,7 @@ import top.yukonga.miuix.kmp.nav.core.NavKey
  * Supports push/replace/pop/popUntil and result APIs: navigateForResult/setResult/observeResult/clearResult.
  */
 class Navigator(
-    val backStack: NavBackStack
+    val backStack: NavBackStack,
 ) {
     constructor(vararg initial: NavKey) : this(mutableStateListOf(*initial))
 
@@ -56,8 +56,8 @@ class Navigator(
         }
     }
 
-
     private var lastPopTime = 0L
+
     /**
      * Pop the top key if present.
      */
@@ -101,9 +101,7 @@ class Navigator(
      * Observe results for a given request key as a SharedFlow.
      */
     @Suppress("UNCHECKED_CAST")
-    fun <T : Any> observeResult(requestKey: String): SharedFlow<T> {
-        return ensureChannel(requestKey) as SharedFlow<T>
-    }
+    fun <T : Any> observeResult(requestKey: String): SharedFlow<T> = ensureChannel(requestKey) as SharedFlow<T>
 
     /**
      * Clear the last emitted result for the request key.
@@ -116,20 +114,14 @@ class Navigator(
     /**
      * Get current NavKey on the back stack.
      */
-    fun current(): NavKey? {
-        return backStack.lastOrNull()
-    }
+    fun current(): NavKey? = backStack.lastOrNull()
 
     /**
      * Get current size of back stack.
      */
-    fun backStackSize(): Int {
-        return backStack.size
-    }
+    fun backStackSize(): Int = backStack.size
 
-    private fun ensureChannel(key: String): MutableSharedFlow<Any> {
-        return resultBus.getOrPut(key) { MutableSharedFlow(replay = 1, extraBufferCapacity = 0) }
-    }
+    private fun ensureChannel(key: String): MutableSharedFlow<Any> = resultBus.getOrPut(key) { MutableSharedFlow(replay = 1, extraBufferCapacity = 0) }
 }
 
 val LocalNavigator = staticCompositionLocalOf<Navigator> {

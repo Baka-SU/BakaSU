@@ -57,7 +57,7 @@ class ModuleCatalogRepository(
                         },
                         onFailure = {
                             ModuleCatalogResult.Failure(
-                                ModuleCatalogFailure.Network(it.message.orEmpty())
+                                ModuleCatalogFailure.Network(it.message.orEmpty()),
                             )
                         },
                     )
@@ -73,6 +73,7 @@ class ModuleCatalogRepository(
         }
         return when (val refreshed = refresh()) {
             is ModuleCatalogResult.Failure -> refreshed
+
             is ModuleCatalogResult.Success -> refreshed.value.firstOrNull { it.moduleId == moduleId }
                 ?.let { ModuleCatalogResult.Success(it) }
                 ?: ModuleCatalogResult.Failure(ModuleCatalogFailure.NotFound)
@@ -132,24 +133,22 @@ class ModuleCatalogRepository(
         )
     }
 
-    private suspend fun fetchModuleDetail(moduleId: String): Detail? {
-        return networkRequestRepository
-            .fetch("https://modules.kernelsu.org/module/$moduleId.json")
-            .getOrNull()
-            ?.let { body ->
-                val json = JSONObject(body)
-                val releases = json.optJSONArray("releases")?.let { array ->
-                    (0 until array.length()).mapNotNull { index ->
-                        array.optJSONObject(index)?.toRelease()
-                    }
-                }.orEmpty()
-                Detail(
-                    readme = json.optString("readmeHTML"),
-                    sourceUrl = stripTicks(json.optString("sourceUrl")),
-                    releases = releases,
-                )
-            }
-    }
+    private suspend fun fetchModuleDetail(moduleId: String): Detail? = networkRequestRepository
+        .fetch("https://modules.kernelsu.org/module/$moduleId.json")
+        .getOrNull()
+        ?.let { body ->
+            val json = JSONObject(body)
+            val releases = json.optJSONArray("releases")?.let { array ->
+                (0 until array.length()).mapNotNull { index ->
+                    array.optJSONObject(index)?.toRelease()
+                }
+            }.orEmpty()
+            Detail(
+                readme = json.optString("readmeHTML"),
+                sourceUrl = stripTicks(json.optString("sourceUrl")),
+                releases = releases,
+            )
+        }
 
     private fun JSONObject.toRelease(): ModuleRelease {
         val releaseName = optString("name", optString("tagName", optString("version")))
@@ -158,12 +157,16 @@ class ModuleCatalogRepository(
                 array.optJSONObject(index)?.let { asset ->
                     val name = asset.optString("name")
                     val url = stripTicks(asset.optString("downloadUrl"))
-                    if (name.isBlank() || url.isBlank()) null else ModuleReleaseAsset(
-                        name = name,
-                        downloadUrl = url,
-                        size = asset.optLong("size"),
-                        downloadCount = asset.opt("downloadCount").toIntCompat(),
-                    )
+                    if (name.isBlank() || url.isBlank()) {
+                        null
+                    } else {
+                        ModuleReleaseAsset(
+                            name = name,
+                            downloadUrl = url,
+                            size = asset.optLong("size"),
+                            downloadCount = asset.opt("downloadCount").toIntCompat(),
+                        )
+                    }
                 }
             }
         }.orEmpty()

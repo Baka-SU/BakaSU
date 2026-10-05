@@ -49,7 +49,7 @@ sealed interface FlashUiAction {
     ) : FlashUiAction
 
     data class Reboot(
-        val allowSoftReboot: Boolean
+        val allowSoftReboot: Boolean,
     ) : FlashUiAction
 }
 
@@ -135,7 +135,7 @@ class FlashViewModel(
                                         update.showReboot,
                                         update.code,
                                         moduleNeedsMount,
-                                    )
+                                    ),
                                 )
                             }
                         }
@@ -168,7 +168,7 @@ class FlashViewModel(
                             ?: current.failedModules,
                         verifiedModules = action.verifiedModule?.let(current.verifiedModules::plus)
                             ?: current.verifiedModules,
-                    )
+                    ),
                 )
             }
 

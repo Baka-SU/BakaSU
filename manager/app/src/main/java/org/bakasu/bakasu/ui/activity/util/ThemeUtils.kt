@@ -14,7 +14,7 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 
 class ThemeChangeContentObserver(
     handler: Handler,
-    private val onThemeChanged: () -> Unit
+    private val onThemeChanged: () -> Unit,
 ) : ContentObserver(handler) {
     override fun onChange(selfChange: Boolean) {
         super.onChange(selfChange)
@@ -49,7 +49,7 @@ class ThemeUtils(
         activity.contentResolver.registerContentObserver(
             Settings.System.getUriFor("ui_night_mode"),
             false,
-            contentObserver
+            contentObserver,
         )
 
         return contentObserver

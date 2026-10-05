@@ -46,10 +46,10 @@ import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.theme.CardConfig
-import org.bakasu.bakasu.ui.theme.MonospaceFontFamily
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
+import org.bakasu.bakasu.ui.theme.monospaceFontFamily
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
@@ -59,7 +59,6 @@ import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -135,14 +134,14 @@ fun ExecuteModuleActionScreen(moduleId: String) {
                     icon = { Icon(Icons.TwoTone.Close, contentDescription = null) },
                     onClick = {
                         navigator.pop()
-                    }
+                    },
                 )
             }
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
-        snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) }
+        snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) },
     ) { innerPadding ->
         KeyEventBlocker {
             it.key == Key.VolumeDown || it.key == Key.VolumeUp
@@ -164,7 +163,7 @@ fun ExecuteModuleActionScreen(moduleId: String) {
                     modifier = Modifier.padding(8.dp),
                     text = moduleActionState.output,
                     fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                    fontFamily = MonospaceFontFamily(),
+                    fontFamily = monospaceFontFamily(),
                     lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
                 )
             }
@@ -186,19 +185,18 @@ private fun TopBar(
     val themeConfig: ThemeConfig = koinInject()
     val cardConfig: CardConfig = koinInject()
     LargeFlexibleTopAppBar(
-        modifier = Modifier.blurEffect(
-        ),
+        modifier = Modifier.blurEffect(),
         title = { Text(stringResource(R.string.action)) },
         scrollBehavior = scrollBehavior,
         navigationIcon = {
             AppBackButton(
-                onClick = onBack
+                onClick = onBack,
             )
         },
         actions = {
             IconButton(
                 onClick = onSave,
-                enabled = !isActionRunning
+                enabled = !isActionRunning,
             ) {
                 Icon(
                     imageVector = Icons.TwoTone.Save,
@@ -208,16 +206,18 @@ private fun TopBar(
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor =
-                if (themeConfig.isEnableBlur)
+                if (themeConfig.isEnableBlur) {
                     Color.Transparent
-                else
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
+                },
             scrolledContainerColor =
-                if (themeConfig.isEnableBlur)
+                if (themeConfig.isEnableBlur) {
                     Color.Transparent
-                else
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
+                },
         ),
-        windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp))
+        windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
     )
 }

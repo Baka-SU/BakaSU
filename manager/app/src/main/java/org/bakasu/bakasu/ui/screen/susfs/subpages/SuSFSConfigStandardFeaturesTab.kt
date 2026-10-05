@@ -50,12 +50,9 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.SuSFSSlotInfo
-import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
-import org.bakasu.bakasu.ui.viewmodel.SuSFSUiAction
-import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSBoolean
-import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSSlotInfo
 import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
 import org.bakasu.bakasu.ui.component.settings.SettingsJumpPageWidget
@@ -66,7 +63,10 @@ import org.bakasu.bakasu.ui.screen.susfs.RegisterSuSFSRefresh
 import org.bakasu.bakasu.ui.screen.susfs.SuSFSRefreshRegistrar
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
-import kotlinx.coroutines.launch
+import org.bakasu.bakasu.ui.viewmodel.SuSFSUiAction
+import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
+import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSBoolean
+import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSSlotInfo
 import org.koin.compose.viewmodel.koinViewModel
 
 private enum class UnameDialogTab {
@@ -201,7 +201,7 @@ fun StandardFeaturesTab(
             val unameValues = when (unameDialogTab) {
                 UnameDialogTab.Manual -> {
                     unameReleaseInput.text.toString().trim() to
-                            unameVersionInput.text.toString().trim()
+                        unameVersionInput.text.toString().trim()
                 }
 
                 UnameDialogTab.SlotInfo -> {
@@ -237,22 +237,22 @@ fun StandardFeaturesTab(
     val handleCmdlineSave: () -> Unit = remember(scope, snackbarHost, operationFailedMsg) {
         {
             val p = cmdlineInput.text.toString().trim()
-                scope.launch {
-                    isLoading = true
-                    val ok = awaitSuSFSBoolean(configHelper) { reply ->
-                        SuSFSUiAction.SetCmdlineOrBootconfig(p, reply)
-                    }
-                    if (ok) {
-                        cmdlineOrBootconfig = p
-                        showCmdlineDialog = false
-                    } else {
-                        isLoading = false
-                        scope.launch {
-                            snackbarHost.showReplacingSnackbar(operationFailedMsg)
-                        }
-                    }
-                    isLoading = false
+            scope.launch {
+                isLoading = true
+                val ok = awaitSuSFSBoolean(configHelper) { reply ->
+                    SuSFSUiAction.SetCmdlineOrBootconfig(p, reply)
                 }
+                if (ok) {
+                    cmdlineOrBootconfig = p
+                    showCmdlineDialog = false
+                } else {
+                    isLoading = false
+                    scope.launch {
+                        snackbarHost.showReplacingSnackbar(operationFailedMsg)
+                    }
+                }
+                isLoading = false
+            }
         }
     }
 
@@ -275,7 +275,7 @@ fun StandardFeaturesTab(
                                 title = stringResource(R.string.susfs_standard_logging),
                                 description = stringResource(R.string.susfs_standard_logging_desc),
                                 checked = loggingEnabled,
-                                onCheckedChange = handleLoggingChange
+                                onCheckedChange = handleLoggingChange,
                             )
                         }
 
@@ -285,7 +285,7 @@ fun StandardFeaturesTab(
                                 title = stringResource(R.string.susfs_standard_avc_log_spoofing),
                                 description = stringResource(R.string.susfs_standard_avc_log_spoofing_desc),
                                 checked = avcLogSpoofingEnabled,
-                                onCheckedChange = handleAvcLogSpoofingChange
+                                onCheckedChange = handleAvcLogSpoofingChange,
                             )
                         }
 
@@ -295,7 +295,7 @@ fun StandardFeaturesTab(
                                 title = stringResource(R.string.susfs_standard_hide_sus_mnts),
                                 description = stringResource(R.string.susfs_standard_hide_sus_mnts_desc),
                                 checked = hideSusMntsEnabled,
-                                onCheckedChange = handleHideSusMntsChange
+                                onCheckedChange = handleHideSusMntsChange,
                             )
                         }
 
@@ -305,7 +305,7 @@ fun StandardFeaturesTab(
                                 title = stringResource(R.string.susfs_standard_uname),
                                 description = stringResource(
                                     R.string.susfs_standard_current_value,
-                                    "$unameRelease / $unameVersion"
+                                    "$unameRelease / $unameVersion",
                                 ),
                                 onClick = {
                                     unameReleaseInput.setTextAndPlaceCursorAtEnd(unameRelease)
@@ -316,7 +316,7 @@ fun StandardFeaturesTab(
                                     isSlotInfoLoading = false
                                     slotInfoLoadFailed = false
                                     showUnameDialog = true
-                                }
+                                },
                             )
                         }
 
@@ -326,12 +326,12 @@ fun StandardFeaturesTab(
                                 title = stringResource(R.string.susfs_standard_cmdline_or_bootconfig),
                                 description = stringResource(
                                     R.string.susfs_standard_current_value,
-                                    cmdlineOrBootconfig.ifBlank { stringResource(R.string.susfs_standard_not_set) }
+                                    cmdlineOrBootconfig.ifBlank { stringResource(R.string.susfs_standard_not_set) },
                                 ),
                                 onClick = {
                                     cmdlineInput.setTextAndPlaceCursorAtEnd(cmdlineOrBootconfig)
                                     showCmdlineDialog = true
-                                }
+                                },
                             )
                         }
                     }
@@ -346,7 +346,7 @@ fun StandardFeaturesTab(
         if (isLoading && !hasLoadedConfig) {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 LoadingIndicator()
             }
@@ -361,7 +361,7 @@ fun StandardFeaturesTab(
                         PrimaryTabRow(
                             selectedTabIndex = unameDialogTab.ordinal,
                             containerColor = Color.Transparent,
-                            divider = {}
+                            divider = {},
                         ) {
                             Tab(
                                 selected = unameDialogTab == UnameDialogTab.Manual,
@@ -405,7 +405,7 @@ fun StandardFeaturesTab(
                                                 title = stringResource(R.string.susfs_standard_uname_release),
                                                 useLabelAsPlaceholder = true,
                                                 lineLimits = TextFieldLineLimits.SingleLine,
-                                                renderBackgroundBlur = false
+                                                renderBackgroundBlur = false,
                                             )
                                         }
                                         item {
@@ -414,7 +414,7 @@ fun StandardFeaturesTab(
                                                 title = stringResource(R.string.susfs_standard_uname_version),
                                                 useLabelAsPlaceholder = true,
                                                 lineLimits = TextFieldLineLimits.SingleLine,
-                                                renderBackgroundBlur = false
+                                                renderBackgroundBlur = false,
                                             )
                                         }
                                     }
@@ -423,7 +423,7 @@ fun StandardFeaturesTab(
                                 UnameDialogTab.SlotInfo -> {
                                     when {
                                         isSlotInfoLoading ||
-                                                (slotInfos == null && !slotInfoLoadFailed) -> {
+                                            (slotInfos == null && !slotInfoLoadFailed) -> {
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
@@ -448,7 +448,7 @@ fun StandardFeaturesTab(
                                                             R.string.susfs_standard_uname_slot_info_load_failed
                                                         } else {
                                                             R.string.susfs_standard_uname_slot_info_empty
-                                                        }
+                                                        },
                                                     ),
                                                 )
                                                 TextButton(
@@ -533,14 +533,14 @@ fun StandardFeaturesTab(
                                 title = stringResource(R.string.susfs_standard_cmdline_path),
                                 useLabelAsPlaceholder = true,
                                 lineLimits = TextFieldLineLimits.SingleLine,
-                                renderBackgroundBlur = false
+                                renderBackgroundBlur = false,
                             )
                         }
                     }
                 },
                 confirmButton = {
                     TextButton(
-                        onClick = handleCmdlineSave
+                        onClick = handleCmdlineSave,
                     ) {
                         Text(stringResource(R.string.susfs_save))
                     }

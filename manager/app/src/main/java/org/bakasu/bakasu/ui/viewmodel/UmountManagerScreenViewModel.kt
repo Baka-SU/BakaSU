@@ -3,12 +3,6 @@ package org.bakasu.bakasu.ui.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import org.bakasu.bakasu.R
-import org.bakasu.bakasu.domain.model.UmountPath
-import org.bakasu.bakasu.domain.usecase.AddUmountPathUseCase
-import org.bakasu.bakasu.domain.usecase.ObserveUmountStateUseCase
-import org.bakasu.bakasu.domain.usecase.RefreshUmountPathsUseCase
-import org.bakasu.bakasu.domain.usecase.RemoveUmountPathUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,6 +11,12 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.UmountPath
+import org.bakasu.bakasu.domain.usecase.AddUmountPathUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveUmountStateUseCase
+import org.bakasu.bakasu.domain.usecase.RefreshUmountPathsUseCase
+import org.bakasu.bakasu.domain.usecase.RemoveUmountPathUseCase
 
 data class UmountManagerUiState(
     val umountPaths: List<UmountPath> = emptyList(),
@@ -58,6 +58,7 @@ class UmountManagerScreenViewModel(
     fun dispatch(action: UmountManagerUiAction) {
         when (action) {
             is UmountManagerUiAction.Refresh -> viewModelScope.launch { refreshPaths() }
+
             is UmountManagerUiAction.Remove -> submit(
                 command = { removePath(action.entry) },
                 successMessage = R.string.umount_path_removed,

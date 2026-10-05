@@ -81,19 +81,19 @@ class FlashRepository(
                 val abDevice = runCatching { ksuCliRepository.isAbDevice() }.getOrDefault(false)
                 InstallEnvironment(
                     rootAvailable = runCatching { ksuCliRepository.rootAvailable() }.getOrDefault(
-                        false
+                        false,
                     ),
                     isGki = runCatching { getKernelVersion().isGKI() }.getOrDefault(false),
                     isAbDevice = abDevice,
                     currentKmi = runCatching { ksuCliRepository.getCurrentKmi() }.getOrDefault(""),
                     defaultPartition = runCatching { ksuCliRepository.getDefaultPartition() }.getOrDefault(
-                        "boot"
+                        "boot",
                     ),
                     availablePartitions = runCatching { ksuCliRepository.getAvailablePartitions() }.getOrDefault(
-                        emptyList()
+                        emptyList(),
                     ),
                     activeSlotSuffix = runCatching { ksuCliRepository.getSlotSuffix(false) }.getOrDefault(
-                        ""
+                        "",
                     ),
                     inactiveSlotSuffix = if (abDevice) {
                         runCatching { ksuCliRepository.getSlotSuffix(true) }.getOrDefault("")
@@ -101,7 +101,7 @@ class FlashRepository(
                         ""
                     },
                     supportedKmis = runCatching { ksuCliRepository.getSupportedKmis() }.getOrDefault(
-                        emptyList()
+                        emptyList(),
                     ),
                 )
             }.also { mutableInstallEnvironment.value = it }
@@ -143,13 +143,13 @@ class FlashRepository(
                     FlashOperation.Restore -> ksuCliRepository.restoreBoot(
                         onFinish,
                         onStdout,
-                        onStderr
+                        onStderr,
                     )
 
                     FlashOperation.Uninstall -> ksuCliRepository.uninstallPermanently(
                         onFinish,
                         onStdout,
-                        onStderr
+                        onStderr,
                     )
                 }
             }

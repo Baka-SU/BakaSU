@@ -30,18 +30,16 @@ class ProfileRepository(
     val profiles: StateFlow<Map<AppProfileKey, AppProfileSnapshot>> =
         mutableProfiles.asStateFlow()
 
-    suspend fun getProfile(packageName: String, uid: Int): AppProfile =
-        getProfileSnapshot(packageName, uid).profile
+    suspend fun getProfile(packageName: String, uid: Int): AppProfile = getProfileSnapshot(packageName, uid).profile
 
-    suspend fun getProfileSnapshot(packageName: String, uid: Int): AppProfileSnapshot =
-        withContext(Dispatchers.IO) {
-            AppProfileSnapshot(
-                profile = Natives.getAppProfile(packageName, uid).toDomain(),
-                shouldUmount = Natives.uidShouldUmount(uid),
-            ).also { snapshot ->
-                updateProfile(AppProfileKey(packageName, uid), snapshot)
-            }
+    suspend fun getProfileSnapshot(packageName: String, uid: Int): AppProfileSnapshot = withContext(Dispatchers.IO) {
+        AppProfileSnapshot(
+            profile = Natives.getAppProfile(packageName, uid).toDomain(),
+            shouldUmount = Natives.uidShouldUmount(uid),
+        ).also { snapshot ->
+            updateProfile(AppProfileKey(packageName, uid), snapshot)
         }
+    }
 
     suspend fun setProfile(profile: AppProfile): Boolean = withContext(Dispatchers.IO) {
         Natives.setAppProfile(profile.toNative()).also { saved ->
@@ -57,39 +55,36 @@ class ProfileRepository(
         }
     }
 
-    suspend fun getUserName(uid: Int): String? =
-        withContext(Dispatchers.IO) { Natives.getUserName(uid) }
+    suspend fun getUserName(uid: Int): String? = withContext(Dispatchers.IO) { Natives.getUserName(uid) }
 
-    suspend fun uidShouldUmount(uid: Int): Boolean =
-        withContext(Dispatchers.IO) { Natives.uidShouldUmount(uid) }
+    suspend fun uidShouldUmount(uid: Int): Boolean = withContext(Dispatchers.IO) { Natives.uidShouldUmount(uid) }
 
-    suspend fun isDefaultUmountModules(): Boolean =
-        withContext(Dispatchers.IO) { Natives.isDefaultUmountModules() }
+    suspend fun isDefaultUmountModules(): Boolean = withContext(Dispatchers.IO) { Natives.isDefaultUmountModules() }
 
-    suspend fun restoreAllowlist(fd: Int): AllowlistRestoreResult =
-        withContext(Dispatchers.IO) {
-            val failedUid = IntArray(1)
-            when (Natives.restoreAllowlistFromFd(fd, failedUid)) {
-                Natives.ALLOWLIST_RESTORE_SUCCESS -> AllowlistRestoreResult.Success
-                Natives.ALLOWLIST_RESTORE_INVALID_FILE -> AllowlistRestoreResult.InvalidFile
-                Natives.ALLOWLIST_RESTORE_UNSUPPORTED_VERSION -> AllowlistRestoreResult.UnsupportedVersion
-                Natives.ALLOWLIST_RESTORE_PROFILE_ERROR -> AllowlistRestoreResult.ProfileUpdateFailed(
-                    failedUid[0]
-                )
+    suspend fun restoreAllowlist(fd: Int): AllowlistRestoreResult = withContext(Dispatchers.IO) {
+        val failedUid = IntArray(1)
+        when (Natives.restoreAllowlistFromFd(fd, failedUid)) {
+            Natives.ALLOWLIST_RESTORE_SUCCESS -> AllowlistRestoreResult.Success
 
-                else -> AllowlistRestoreResult.Failed
-            }
+            Natives.ALLOWLIST_RESTORE_INVALID_FILE -> AllowlistRestoreResult.InvalidFile
+
+            Natives.ALLOWLIST_RESTORE_UNSUPPORTED_VERSION -> AllowlistRestoreResult.UnsupportedVersion
+
+            Natives.ALLOWLIST_RESTORE_PROFILE_ERROR -> AllowlistRestoreResult.ProfileUpdateFailed(
+                failedUid[0],
+            )
+
+            else -> AllowlistRestoreResult.Failed
         }
+    }
 
     suspend fun getSepolicy(packageName: String): String = withContext(Dispatchers.IO) {
         ksuCliRepository.getSepolicy(packageName)
     }
 
-    suspend fun setSepolicy(packageName: String, rules: String): Boolean =
-        withContext(Dispatchers.IO) { ksuCliRepository.setSepolicy(packageName, rules) }
+    suspend fun setSepolicy(packageName: String, rules: String): Boolean = withContext(Dispatchers.IO) { ksuCliRepository.setSepolicy(packageName, rules) }
 
-    suspend fun isSepolicyValid(rules: String): Boolean =
-        withContext(Dispatchers.IO) { ksuCliRepository.isSepolicyValid(rules) }
+    suspend fun isSepolicyValid(rules: String): Boolean = withContext(Dispatchers.IO) { ksuCliRepository.isSepolicyValid(rules) }
 
     suspend fun controlApp(
         packageName: String,

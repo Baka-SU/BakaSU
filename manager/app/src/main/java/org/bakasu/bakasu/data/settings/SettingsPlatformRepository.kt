@@ -6,8 +6,10 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import com.materialkolor.PaletteStyle
-import com.materialkolor.dynamiccolor.ColorSpec
+import com.topjohnwu.superuser.ShellUtils
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.Natives
 import org.bakasu.bakasu.data.AppSettingsRepository
 import org.bakasu.bakasu.data.shell.KsuCliRepository
@@ -20,10 +22,6 @@ import org.bakasu.bakasu.magica.BootCompletedReceiver
 import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
-import com.topjohnwu.superuser.ShellUtils
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class SettingsPlatformRepository(
     private val application: Application,
@@ -94,6 +92,7 @@ class SettingsPlatformRepository(
     ): Result<SettingsPlatformSnapshot> = try {
         when (setting) {
             is AppearanceSetting.ThemeMode -> setThemeMode(setting.index)
+
             is AppearanceSetting.SeedColor -> {
                 themeRepository.saveSeedColor(setting.color)
                 themeConfig.seedColor = setting.color
@@ -123,8 +122,8 @@ class SettingsPlatformRepository(
                 check(
                     backgroundManager.saveAndApplyCustomBackground(
                         application,
-                        setting.uri.toUri()
-                    )
+                        setting.uri.toUri(),
+                    ),
                 )
                 backgroundManager.saveBackgroundDim(0.3f)
                 backgroundManager.saveEnableBlur(true)
@@ -137,6 +136,7 @@ class SettingsPlatformRepository(
             }
 
             AppearanceSetting.RemoveCustomBackground -> removeCustomBackground()
+
             is AppearanceSetting.CardAlpha -> {
                 cardConfig.cardAlpha = setting.value
                 cardConfig.isCustomAlphaSet = true
@@ -161,6 +161,7 @@ class SettingsPlatformRepository(
     ): Result<SettingsPlatformSnapshot> = try {
         when (setting) {
             PlatformSetting.InitializeFirstRun -> initializeFirstRun()
+
             is PlatformSetting.PredictiveBackAnimation ->
                 settings.putString("predictive_back_animation", setting.value)
 
@@ -168,6 +169,7 @@ class SettingsPlatformRepository(
                 settings.putString("predictive_back_exit_direction", setting.value)
 
             is PlatformSetting.Dpi -> settings.putInt("app_dpi", setting.value)
+
             is PlatformSetting.AlternateIcon -> {
                 settings.putBoolean("use_alt_icon", setting.enabled)
                 toggleLauncherIcon(setting.enabled)
@@ -185,9 +187,13 @@ class SettingsPlatformRepository(
                 settings.putBoolean("check_module_update", setting.enabled)
 
             is PlatformSetting.Locale -> settings.putString("app_locale", setting.tag)
+
             is PlatformSetting.AutoJailbreak -> setAutoJailbreak(setting.enabled)
+
             is PlatformSetting.AdbRoot -> setAdbRoot(setting.enabled)
+
             is PlatformSetting.SuCompatMode -> settings.putInt("su_compat_mode", setting.value)
+
             is PlatformSetting.BuiltinMonospaceFont -> {
                 settings.putBoolean("use_builtin_monospace_font", setting.enabled)
                 themeConfig.useBuiltinMonoFont = setting.enabled
@@ -209,9 +215,8 @@ class SettingsPlatformRepository(
         Result.failure(error)
     }
 
-    fun isSoftRebootPreferred(): Boolean =
-        Natives.isFullFeatured() &&
-            (Natives.isLateLoadMode || settings.getBoolean("use_soft_reboot", false))
+    fun isSoftRebootPreferred(): Boolean = Natives.isFullFeatured() &&
+        (Natives.isLateLoadMode || settings.getBoolean("use_soft_reboot", false))
 
     suspend fun getFeatureStatus(): PlatformFeatureStatus = withContext(Dispatchers.IO) {
         PlatformFeatureStatus(
@@ -291,8 +296,11 @@ class SettingsPlatformRepository(
     private fun setAutoJailbreak(enabled: Boolean) {
         application.packageManager.setComponentEnabledSetting(
             ComponentName(application, BootCompletedReceiver::class.java),
-            if (enabled) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            if (enabled) {
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            } else {
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            },
             PackageManager.DONT_KILL_APP,
         )
         settings.putBoolean("auto_jailbreak", enabled)
@@ -332,7 +340,6 @@ class SettingsPlatformRepository(
         return enabled
     }
 
-    private fun isSystemDark(): Boolean =
-        application.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
-                Configuration.UI_MODE_NIGHT_YES
+    private fun isSystemDark(): Boolean = application.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
+        Configuration.UI_MODE_NIGHT_YES
 }

@@ -43,6 +43,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.noties.markwon.Markwon
 import io.noties.markwon.utils.NoCopySpannableFactory
+import kotlin.coroutines.resume
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -54,7 +55,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
-import kotlin.coroutines.resume
 
 private const val TAG = "DialogComponent"
 
@@ -77,11 +77,13 @@ private data class ConfirmDialogVisualsImpl(
     override val dismiss: String?,
 ) : ConfirmDialogVisuals {
     companion object {
-        val Empty: ConfirmDialogVisuals = ConfirmDialogVisualsImpl("", "",
+        val Empty: ConfirmDialogVisuals = ConfirmDialogVisualsImpl(
+            "",
+            "",
             isMarkdown = false,
             isHtml = false,
             confirm = null,
-            dismiss = null
+            dismiss = null,
         )
     }
 }
@@ -112,23 +114,22 @@ interface ConfirmDialogHandle : DialogHandle {
         markdown: Boolean = false,
         html: Boolean = false,
         confirm: String? = null,
-        dismiss: String? = null
+        dismiss: String? = null,
     )
 
     suspend fun awaitConfirm(
-
         title: String,
         content: String,
         markdown: Boolean = false,
         html: Boolean = false,
         confirm: String? = null,
-        dismiss: String? = null
+        dismiss: String? = null,
     ): ConfirmResult
 }
 
 private abstract class DialogHandleBase(
     val visible: MutableState<Boolean>,
-    val coroutineScope: CoroutineScope
+    val coroutineScope: CoroutineScope,
 ) : DialogHandle {
     override val isShown: Boolean
         get() = visible.value
@@ -145,25 +146,22 @@ private abstract class DialogHandleBase(
         }
     }
 
-    override fun toString(): String {
-        return dialogType
-    }
+    override fun toString(): String = dialogType
 }
 
 private class LoadingDialogHandleImpl(
     visible: MutableState<Boolean>,
-    coroutineScope: CoroutineScope
-) : LoadingDialogHandle, DialogHandleBase(visible, coroutineScope) {
-    override suspend fun <R> withLoading(block: suspend () -> R): R {
-        return coroutineScope.async {
-            try {
-                visible.value = true
-                block()
-            } finally {
-                visible.value = false
-            }
-        }.await()
-    }
+    coroutineScope: CoroutineScope,
+) : DialogHandleBase(visible, coroutineScope),
+    LoadingDialogHandle {
+    override suspend fun <R> withLoading(block: suspend () -> R): R = coroutineScope.async {
+        try {
+            visible.value = true
+            block()
+        } finally {
+            visible.value = false
+        }
+    }.await()
 
     override fun showLoading() {
         show()
@@ -183,13 +181,14 @@ interface ConfirmCallback {
     val isEmpty: Boolean get() = onConfirm == null && onDismiss == null
 
     companion object {
-        operator fun invoke(onConfirmProvider: () -> NullableCallback, onDismissProvider: () -> NullableCallback): ConfirmCallback {
-            return object : ConfirmCallback {
-                override val onConfirm: NullableCallback
-                    get() = onConfirmProvider()
-                override val onDismiss: NullableCallback
-                    get() = onDismissProvider()
-            }
+        operator fun invoke(
+            onConfirmProvider: () -> NullableCallback,
+            onDismissProvider: () -> NullableCallback,
+        ): ConfirmCallback = object : ConfirmCallback {
+            override val onConfirm: NullableCallback
+                get() = onConfirmProvider()
+            override val onDismiss: NullableCallback
+                get() = onDismissProvider()
         }
     }
 }
@@ -199,10 +198,11 @@ private class ConfirmDialogHandleImpl(
     coroutineScope: CoroutineScope,
     callback: ConfirmCallback,
     override var visuals: ConfirmDialogVisuals = ConfirmDialogVisualsImpl.Empty,
-    private val resultFlow: ReceiveChannel<ConfirmResult>
-) : ConfirmDialogHandle, DialogHandleBase(visible, coroutineScope) {
+    private val resultFlow: ReceiveChannel<ConfirmResult>,
+) : DialogHandleBase(visible, coroutineScope),
+    ConfirmDialogHandle {
     private class ResultCollector(
-        private val callback: ConfirmCallback
+        private val callback: ConfirmCallback,
     ) : FlowCollector<ConfirmResult> {
         fun handleResult(result: ConfirmResult) {
             Log.d(TAG, "handleResult: ${result.javaClass.simpleName}")
@@ -248,13 +248,11 @@ private class ConfirmDialogHandleImpl(
         }
     }
 
-    private suspend fun awaitResult(): ConfirmResult {
-        return suspendCancellableCoroutine {
-            awaitContinuation = it.apply {
-                if (isCallbackEmpty) {
-                    invokeOnCancellation {
-                        visible.value = false
-                    }
+    private suspend fun awaitResult(): ConfirmResult = suspendCancellableCoroutine {
+        awaitContinuation = it.apply {
+            if (isCallbackEmpty) {
+                invokeOnCancellation {
+                    visible.value = false
                 }
             }
         }
@@ -278,7 +276,7 @@ private class ConfirmDialogHandleImpl(
         markdown: Boolean,
         html: Boolean,
         confirm: String?,
-        dismiss: String?
+        dismiss: String?,
     ) {
         coroutineScope.launch {
             updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss))
@@ -292,10 +290,10 @@ private class ConfirmDialogHandleImpl(
         markdown: Boolean,
         html: Boolean,
         confirm: String?,
-        dismiss: String?
+        dismiss: String?,
     ): ConfirmResult {
         coroutineScope.launch {
-            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html,confirm, dismiss))
+            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss))
             show()
         }
         return awaitResult()
@@ -303,16 +301,14 @@ private class ConfirmDialogHandleImpl(
 
     override val dialogType: String get() = "ConfirmDialog"
 
-    override fun toString(): String {
-        return "${super.toString()}(visuals: $visuals)"
-    }
+    override fun toString(): String = "${super.toString()}(visuals: $visuals)"
 
     companion object {
         fun Saver(
             visible: MutableState<Boolean>,
             coroutineScope: CoroutineScope,
             callback: ConfirmCallback,
-            resultChannel: ReceiveChannel<ConfirmResult>
+            resultChannel: ReceiveChannel<ConfirmResult>,
         ) = Saver<ConfirmDialogHandle, ConfirmDialogVisuals>(
             save = {
                 it.visuals
@@ -320,14 +316,14 @@ private class ConfirmDialogHandleImpl(
             restore = {
                 Log.d(TAG, "ConfirmDialog restore, visuals: $it")
                 ConfirmDialogHandleImpl(visible, coroutineScope, callback, it, resultChannel)
-            }
+            },
         )
     }
 }
 
 private class CustomDialogHandleImpl(
     visible: MutableState<Boolean>,
-    coroutineScope: CoroutineScope
+    coroutineScope: CoroutineScope,
 ) : DialogHandleBase(visible, coroutineScope) {
     override val dialogType: String get() = "CustomDialog"
 }
@@ -362,14 +358,14 @@ private fun rememberConfirmDialog(visuals: ConfirmDialogVisuals, callback: Confi
         saver = ConfirmDialogHandleImpl.Saver(visible, coroutineScope, callback, resultChannel),
         init = {
             ConfirmDialogHandleImpl(visible, coroutineScope, callback, visuals, resultChannel)
-        }
+        },
     )
 
     if (visible.value) {
         ConfirmDialog(
             handle.visuals,
             confirm = { coroutineScope.launch { resultChannel.send(ConfirmResult.Confirmed) } },
-            dismiss = { coroutineScope.launch { resultChannel.send(ConfirmResult.Canceled) } }
+            dismiss = { coroutineScope.launch { resultChannel.send(ConfirmResult.Canceled) } },
         )
     }
 
@@ -386,14 +382,10 @@ fun rememberConfirmCallback(onConfirm: NullableCallback, onDismiss: NullableCall
 }
 
 @Composable
-fun rememberConfirmDialog(onConfirm: NullableCallback = null, onDismiss: NullableCallback = null): ConfirmDialogHandle {
-    return rememberConfirmDialog(rememberConfirmCallback(onConfirm, onDismiss))
-}
+fun rememberConfirmDialog(onConfirm: NullableCallback = null, onDismiss: NullableCallback = null): ConfirmDialogHandle = rememberConfirmDialog(rememberConfirmCallback(onConfirm, onDismiss))
 
 @Composable
-fun rememberConfirmDialog(callback: ConfirmCallback): ConfirmDialogHandle {
-    return rememberConfirmDialog(ConfirmDialogVisualsImpl.Empty, callback)
-}
+fun rememberConfirmDialog(callback: ConfirmCallback): ConfirmDialogHandle = rememberConfirmDialog(ConfirmDialogVisualsImpl.Empty, callback)
 
 @Composable
 fun rememberCustomDialog(composable: @Composable (dismiss: () -> Unit) -> Unit): DialogHandle {
@@ -414,10 +406,11 @@ fun rememberCustomDialog(composable: @Composable (dismiss: () -> Unit) -> Unit):
 private fun LoadingDialog() {
     Dialog(
         onDismissRequest = {},
-        properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false)
+        properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false),
     ) {
         Surface(
-            modifier = Modifier.size(100.dp), shape = RoundedCornerShape(8.dp)
+            modifier = Modifier.size(100.dp),
+            shape = RoundedCornerShape(8.dp),
         ) {
             Box(
                 contentAlignment = Alignment.Center,
@@ -440,7 +433,7 @@ private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, di
         text = {
             LazyColumn(
                 modifier = Modifier
-                    .heightIn(max = 325.dp)
+                    .heightIn(max = 325.dp),
             ) {
                 item {
                     if (visuals.isMarkdown) {
@@ -448,7 +441,7 @@ private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, di
                     } else if (visuals.isHtml) {
                         GithubMarkdown(
                             content = visuals.content,
-                            backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                            backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         )
                     } else {
                         Text(text = visuals.content)
@@ -476,7 +469,7 @@ private fun MarkdownContent(content: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(12.dp)
+            .padding(12.dp),
     ) {
         AndroidView(
             factory = { context ->
@@ -489,14 +482,14 @@ private fun MarkdownContent(content: String) {
                     hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
                     )
                 }
             },
             update = {
                 Markwon.create(it.context).setMarkdown(it, content)
                 it.setTextColor(contentColor.toArgb())
-            }
+            },
         )
     }
 }

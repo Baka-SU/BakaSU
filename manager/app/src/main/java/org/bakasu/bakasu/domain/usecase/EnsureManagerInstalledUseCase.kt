@@ -7,4 +7,3 @@ class EnsureManagerInstalledUseCase(
 ) {
     suspend operator fun invoke(): Result<Unit> = repository.ensureManagerInstalled()
 }
-

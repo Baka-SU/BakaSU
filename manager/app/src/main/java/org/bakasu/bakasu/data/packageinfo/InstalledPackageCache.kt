@@ -13,7 +13,5 @@ class InstalledPackageCache {
         mutablePackages.value = packages.toList()
     }
 
-    fun find(packageName: String): PackageInfo? =
-        mutablePackages.value.firstOrNull { it.packageName == packageName }
+    fun find(packageName: String): PackageInfo? = mutablePackages.value.firstOrNull { it.packageName == packageName }
 }
-

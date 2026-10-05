@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.webkit.WebViewAssetLoader
+import java.nio.charset.StandardCharsets
+import kotlin.math.abs
 import org.bakasu.bakasu.data.network.WebResourceRepository
 import org.bakasu.bakasu.ui.activity.util.adjustLightnessArgb
 import org.bakasu.bakasu.ui.activity.util.cssColorFromArgb
@@ -41,9 +43,6 @@ import org.bakasu.bakasu.ui.activity.util.relativeLuminance
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.isInDarkTheme
 import org.koin.compose.koinInject
-import java.nio.charset.StandardCharsets
-import kotlin.math.abs
-
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -51,7 +50,7 @@ fun GithubMarkdown(
     content: String,
     backgroundColor: androidx.compose.ui.graphics.Color,
     loading: MutableState<Boolean> = remember { mutableStateOf(true) },
-    callerProvideLoadingIndicator: Boolean = false
+    callerProvideLoadingIndicator: Boolean = false,
 ) {
     val themeConfig: ThemeConfig = koinInject()
     val isDark = isInDarkTheme(themeConfig.forceDarkMode)
@@ -93,8 +92,8 @@ fun GithubMarkdown(
             }
           </style>
         </head>
-        <body dir='${dir}'>
-          <article class='markdown-body' data-theme='${if (isDark) "dark" else "light"}'>${content}</article>
+        <body dir='$dir'>
+          <article class='markdown-body' data-theme='${if (isDark) "dark" else "light"}'>$content</article>
         </body>
         </html>
     """.trimIndent()
@@ -105,12 +104,11 @@ fun GithubMarkdown(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.Center,
         ) {
             LoadingIndicator()
         }
     }
-
 }
 
 @SuppressLint("ClickableViewAccessibility", "JavascriptInterface", "SetJavaScriptEnabled")
@@ -215,7 +213,8 @@ private fun GithubMarkdownWebView(loading: MutableState<Boolean>, html: String) 
                         }
 
                         override fun shouldOverrideUrlLoading(
-                            view: WebView, request: WebResourceRequest
+                            view: WebView,
+                            request: WebResourceRequest,
                         ): Boolean {
                             val url = request.url.toString()
                             val intent = Intent(Intent.ACTION_VIEW, url.toUri())
@@ -225,7 +224,8 @@ private fun GithubMarkdownWebView(loading: MutableState<Boolean>, html: String) 
                         }
 
                         override fun shouldInterceptRequest(
-                            view: WebView, request: WebResourceRequest
+                            view: WebView,
+                            request: WebResourceRequest,
                         ): WebResourceResponse? {
                             assetLoader.shouldInterceptRequest(request.url)?.let { return it }
                             val scheme = request.url.scheme ?: return null
@@ -291,8 +291,11 @@ private fun GithubMarkdownWebView(loading: MutableState<Boolean>, html: String) 
                         }
                     })
                     loadDataWithBaseURL(
-                        "https://appassets.androidplatform.net", html,
-                        "text/html", StandardCharsets.UTF_8.name(), null
+                        "https://appassets.androidplatform.net",
+                        html,
+                        "text/html",
+                        StandardCharsets.UTF_8.name(),
+                        null,
                     )
                 } catch (e: Throwable) {
                     Log.e("GithubMarkdown", "WebView setup failed", e)

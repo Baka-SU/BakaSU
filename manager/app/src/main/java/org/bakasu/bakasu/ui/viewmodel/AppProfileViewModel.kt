@@ -83,7 +83,7 @@ class AppProfileViewModel(
                     } else if (profile.allowSu) {
                         profile.copy(
                             rules = runCatching { getSepolicy(packageName) }
-                                .getOrDefault(profile.rules)
+                                .getOrDefault(profile.rules),
                         )
                     } else {
                         profile

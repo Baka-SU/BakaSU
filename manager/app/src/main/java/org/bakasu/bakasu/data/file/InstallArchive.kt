@@ -2,9 +2,9 @@ package org.bakasu.bakasu.data.file
 
 import android.content.Context
 import android.net.Uri
-import org.apache.commons.compress.archivers.zip.ZipFile
 import java.io.File
 import java.io.FileNotFoundException
+import org.apache.commons.compress.archivers.zip.ZipFile
 
 /** Reads selected entries without decompressing unrelated files in the installation ZIP. */
 internal fun <T> withInstallArchive(

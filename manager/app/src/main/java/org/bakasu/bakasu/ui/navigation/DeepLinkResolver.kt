@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -40,22 +39,21 @@ fun resolveDeepLink(intent: Intent?): List<Route> {
  */
 @Composable
 fun HandleDeepLink(
-    intentState: State<Int>,
+    intentId: Int,
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
-    val currentIntentId by intentState
     val navigator = LocalNavigator.current
     var lastHandledIntentId by rememberSaveable { mutableIntStateOf(-1) }
 
-    LaunchedEffect(currentIntentId) {
-        if (currentIntentId != lastHandledIntentId) {
+    LaunchedEffect(intentId) {
+        if (intentId != lastHandledIntentId) {
             val intent = activity?.intent
             val initialStack = resolveDeepLink(intent)
             if (initialStack.isNotEmpty()) {
                 navigator.replaceAll(initialStack)
             }
-            lastHandledIntentId = currentIntentId
+            lastHandledIntentId = intentId
         }
     }
 }

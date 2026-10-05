@@ -63,27 +63,23 @@ class MonetColorsProvider {
                 "filledCardContentColor" to colorScheme.onPrimaryContainer.toCssValue(),
                 "filledCardContainerColor" to colorScheme.primaryContainer.toCssValue(),
                 "filledCardDisabledContentColor" to colorScheme.onSurfaceVariant.toCssValue(),
-                "filledCardDisabledContainerColor" to colorScheme.surfaceVariant.toCssValue()
+                "filledCardDisabledContainerColor" to colorScheme.surfaceVariant.toCssValue(),
             )
 
             monetColors.toCssVars()
         }
     }
 
-    private fun Map<String, String>.toCssVars(): String {
-        return buildString {
-            append(":root {\n")
-            for ((k, v) in this@toCssVars) {
-                append("  --$k: $v;\n")
-            }
-            append("}\n")
+    private fun Map<String, String>.toCssVars(): String = buildString {
+        append(":root {\n")
+        for ((k, v) in this@toCssVars) {
+            append("  --$k: $v;\n")
         }
+        append("}\n")
     }
 
     private fun Color.toCssValue(): String {
-        fun Float.toHex(): String {
-            return (this * 255).toInt().coerceIn(0, 255).toString(16).padStart(2, '0')
-        }
+        fun Float.toHex(): String = (this * 255).toInt().coerceIn(0, 255).toString(16).padStart(2, '0')
         return if (alpha == 1f) {
             "#${red.toHex()}${green.toHex()}${blue.toHex()}"
         } else {

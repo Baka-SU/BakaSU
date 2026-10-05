@@ -42,6 +42,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
@@ -65,11 +67,8 @@ import org.bakasu.bakasu.ui.viewmodel.SuSFSUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuSFSUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSBoolean
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-
 
 private class SuSFSConfigSubpage(
     val requirePersist: Boolean,
@@ -127,7 +126,8 @@ fun SuSFSConfigScreen() {
         coroutineScope.launch {
             if (awaitSuSFSBoolean(configHelper) { reply ->
                     SuSFSUiAction.SetEnabled(newValue, reply)
-                }) {
+                }
+            ) {
                 configEnabled = newValue
             } else {
                 snackBarHost.showReplacingSnackbar(operationFailedMsg)
@@ -239,20 +239,22 @@ fun SuSFSConfigScreen() {
                         AppBackButton(
                             onClick = {
                                 navigator.pop()
-                            }
+                            },
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors().copy(
                         containerColor =
-                            if (themeConfig.isEnableBlur)
+                            if (themeConfig.isEnableBlur) {
                                 Color.Transparent
-                            else
-                                MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
-                        scrolledContainerColor =
-                            if (themeConfig.isEnableBlur)
-                                Color.Transparent
-                            else
+                            } else {
                                 MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
+                            },
+                        scrolledContainerColor =
+                            if (themeConfig.isEnableBlur) {
+                                Color.Transparent
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
+                            },
                     ),
                     windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
                 )
@@ -260,13 +262,14 @@ fun SuSFSConfigScreen() {
                 PrimaryScrollableTabRow(
                     selectedTabIndex = selectedTabIndex,
                     containerColor =
-                        if (themeConfig.isEnableBlur)
+                        if (themeConfig.isEnableBlur) {
                             Color.Transparent
-                        else
-                            MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
+                        },
                     edgePadding = 0.dp,
                     minTabWidth = 0.dp,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     subpages.forEachIndexed { index, subpage ->
                         val tabVisible = !subpage.requirePersist || configEnabled == true
@@ -283,17 +286,17 @@ fun SuSFSConfigScreen() {
                                     }
                                 },
                                 modifier = Modifier.widthIn(
-                                    min = TabRowDefaults.ScrollableTabRowMinTabWidth
+                                    min = TabRowDefaults.ScrollableTabRowMinTabWidth,
                                 ),
                                 unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                text = { Text(subpage.title) }
+                                text = { Text(subpage.title) },
                             )
                         }
                     }
                 }
 
                 BackHandler(
-                    enabled = pagerState.currentPage != defaultPage
+                    enabled = pagerState.currentPage != defaultPage,
                 ) {
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(defaultPage)
@@ -304,7 +307,7 @@ fun SuSFSConfigScreen() {
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
-        snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) }
+        snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) },
     ) { innerPadding ->
         PullToRefreshBox(
             state = pullRefreshState,
@@ -325,7 +328,7 @@ fun SuSFSConfigScreen() {
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxSize(),
             ) {
                 HorizontalPagerWithInteraction(
                     state = pagerState,

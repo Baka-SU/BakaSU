@@ -59,6 +59,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.AllowlistOperationResult
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
@@ -82,12 +87,7 @@ import org.bakasu.bakasu.ui.viewmodel.SuperUserUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 private data class SuperUserMenuItem(
     val checked: Boolean = false,
@@ -105,7 +105,7 @@ fun SuperUserPage(bottomPadding: Dp) {
     val scope = rememberCoroutineScope()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState),
     )
     val listState = rememberLazyListState()
     val snackBarHostState = LocalSnackbarHost.current
@@ -149,14 +149,14 @@ fun SuperUserPage(bottomPadding: Dp) {
     }
 
     val backupLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
     ) { uri ->
         if (uri != null) {
             viewModel.dispatch(SuperUserUiAction.BackupAllowlist(uri.toString()))
         }
     }
     val restoreLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) {
             scope.launch {
@@ -212,7 +212,7 @@ fun SuperUserPage(bottomPadding: Dp) {
                     }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.TwoTone.Article,
-                            contentDescription = stringResource(R.string.sulog)
+                            contentDescription = stringResource(R.string.sulog),
                         )
                     }
                 },
@@ -225,7 +225,7 @@ fun SuperUserPage(bottomPadding: Dp) {
         snackbarHost = {
             SwipeableSnackbarHost(
                 modifier = Modifier.padding(bottom = bottomPadding),
-                hostState = snackBarHostState
+                hostState = snackBarHostState,
             )
         },
         contentWindowInsets = adaptiveScaffoldWindowInsets(includeBottom = false),
@@ -245,29 +245,27 @@ private fun Context.allowlistOperationMessage(
     result: AllowlistOperationResult,
     successMessage: Int,
     failureMessage: Int,
-): String {
-    return when (result) {
-        AllowlistOperationResult.Success ->
-            getString(successMessage)
+): String = when (result) {
+    AllowlistOperationResult.Success ->
+        getString(successMessage)
 
-        AllowlistOperationResult.InvalidFile ->
-            getString(failureMessage, getString(R.string.unknown_file))
+    AllowlistOperationResult.InvalidFile ->
+        getString(failureMessage, getString(R.string.unknown_file))
 
-        AllowlistOperationResult.UnsupportedVersion ->
-            getString(failureMessage, getString(R.string.home_unsupported))
+    AllowlistOperationResult.UnsupportedVersion ->
+        getString(failureMessage, getString(R.string.home_unsupported))
 
-        is AllowlistOperationResult.ProfileUpdateFailed ->
-            getString(
-                failureMessage,
-                getString(R.string.failed_to_update_app_profile, result.uid.toString()),
-            )
+    is AllowlistOperationResult.ProfileUpdateFailed ->
+        getString(
+            failureMessage,
+            getString(R.string.failed_to_update_app_profile, result.uid.toString()),
+        )
 
-        is AllowlistOperationResult.Failed ->
-            getString(
-                failureMessage,
-                result.cause?.localizedMessage ?: getString(R.string.unknown),
-            )
-    }
+    is AllowlistOperationResult.Failed ->
+        getString(
+            failureMessage,
+            result.cause?.localizedMessage ?: getString(R.string.unknown),
+        )
 }
 
 private fun createAllowlistBackupFileName(): String {
@@ -293,7 +291,7 @@ private fun SuperUserContent(
             modifier = Modifier
                 .fillMaxSize()
                 .blurSource(),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             if (uiState.isRefreshing && uiState.search.isEmpty()) {
                 LoadingIndicator()
@@ -309,7 +307,7 @@ private fun SuperUserContent(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .size(96.dp)
-                            .padding(bottom = 16.dp)
+                            .padding(bottom = 16.dp),
                     )
                     Text(
                         text = if (isSearchEmpty) {
@@ -395,7 +393,7 @@ private fun SuperUserDropdown(
                 closeOnClick = false,
                 onClick = {
                     viewModel.dispatch(SuperUserUiAction.SetReverseOrder(!uiState.reverseOrder))
-                }
+                },
             ),
             SuperUserMenuItem(
                 checked = uiState.showSystemApps,
@@ -403,7 +401,7 @@ private fun SuperUserDropdown(
                 closeOnClick = false,
                 onClick = {
                     viewModel.dispatch(SuperUserUiAction.SetShowSystemApps(!uiState.showSystemApps))
-                }
+                },
             ),
             SuperUserMenuItem(
                 titleRes = R.string.backup_allowlist,
@@ -412,7 +410,7 @@ private fun SuperUserDropdown(
             SuperUserMenuItem(
                 titleRes = R.string.restore_allowlist,
                 onClick = onRestoreAllowlist,
-            )
+            ),
         )
     }
 
@@ -484,7 +482,7 @@ private fun AppGroupItem(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 if (appGroup.allowSu) {
                     LabelText(label = "ROOT")
@@ -504,7 +502,7 @@ private fun AppGroupItem(
                 } else if (!appGroup.allowSu) {
                     LabelText(
                         label = "DEFAULT",
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
                     )
                 }
                 if (isManager) {
@@ -524,7 +522,7 @@ private fun AppGroupItem(
                 if (appGroup.isRecentlyInstalled) {
                     LabelText(
                         label = stringResource(R.string.recently_installed),
-                        containerColor = MaterialTheme.colorScheme.surfaceBright
+                        containerColor = MaterialTheme.colorScheme.surfaceBright,
                     )
                 }
             }
@@ -544,7 +542,7 @@ private fun AppGroupItem(
             imageVector = Icons.TwoTone.ChevronRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(24.dp),
         )
     }
 }

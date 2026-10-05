@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.data.application
 
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +15,6 @@ import org.bakasu.bakasu.data.shell.KsuCliRepository
 import org.bakasu.bakasu.domain.model.DynamicManagerApp
 import org.bakasu.bakasu.domain.model.DynamicManagerConfig
 import org.bakasu.bakasu.domain.model.DynamicManagerState
-import java.io.File
 
 class DynamicManagerRepository(
     private val kernelRepository: KernelRepository,
@@ -49,7 +49,7 @@ class DynamicManagerRepository(
                             isSelected = signatureIndex == DYNAMIC_MANAGER_SIGNATURE_INDEX,
                             managerSignatureIndex = signatureIndex,
                             isChangeable = signatureIndex == null ||
-                                    signatureIndex == DYNAMIC_MANAGER_SIGNATURE_INDEX,
+                                signatureIndex == DYNAMIC_MANAGER_SIGNATURE_INDEX,
                         )
                     }
                     .sortedWith(appComparator)
@@ -96,7 +96,7 @@ class DynamicManagerRepository(
                                 isSelected = signatureIndex == DYNAMIC_MANAGER_SIGNATURE_INDEX,
                                 managerSignatureIndex = signatureIndex,
                                 isChangeable = signatureIndex == null ||
-                                        signatureIndex == DYNAMIC_MANAGER_SIGNATURE_INDEX,
+                                    signatureIndex == DYNAMIC_MANAGER_SIGNATURE_INDEX,
                             )
                         }.sortedWith(appComparator),
                         isSubmitting = false,
@@ -108,8 +108,7 @@ class DynamicManagerRepository(
         }
     }
 
-    private suspend fun managerSignatureIndexes(): Map<Int, Int> =
-        kernelRepository.getManagerRuntimeInfo().managers.associate { it.uid to it.signatureIndex }
+    private suspend fun managerSignatureIndexes(): Map<Int, Int> = kernelRepository.getManagerRuntimeInfo().managers.associate { it.uid to it.signatureIndex }
 
     private companion object {
         const val DYNAMIC_MANAGER_SIGNATURE_INDEX = 255

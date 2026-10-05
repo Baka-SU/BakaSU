@@ -14,6 +14,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +24,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.domain.model.AppPreferences
 import org.bakasu.bakasu.domain.model.PreferenceValue
-import java.io.IOException
 
 class AppSettingsRepository(
     context: Context,
@@ -60,26 +60,19 @@ class AppSettingsRepository(
         setPreferences(readCurrentPreferences())
     }
 
-    fun getBoolean(key: String, defaultValue: Boolean): Boolean =
-        cachedPreferences.value[booleanPreferencesKey(key)] ?: defaultValue
+    fun getBoolean(key: String, defaultValue: Boolean): Boolean = cachedPreferences.value[booleanPreferencesKey(key)] ?: defaultValue
 
-    fun getInt(key: String, defaultValue: Int): Int =
-        cachedPreferences.value[intPreferencesKey(key)] ?: defaultValue
+    fun getInt(key: String, defaultValue: Int): Int = cachedPreferences.value[intPreferencesKey(key)] ?: defaultValue
 
-    fun getLong(key: String, defaultValue: Long): Long =
-        cachedPreferences.value[longPreferencesKey(key)] ?: defaultValue
+    fun getLong(key: String, defaultValue: Long): Long = cachedPreferences.value[longPreferencesKey(key)] ?: defaultValue
 
-    fun getFloat(key: String, defaultValue: Float): Float =
-        cachedPreferences.value[floatPreferencesKey(key)] ?: defaultValue
+    fun getFloat(key: String, defaultValue: Float): Float = cachedPreferences.value[floatPreferencesKey(key)] ?: defaultValue
 
-    fun getString(key: String, defaultValue: String? = null): String? =
-        cachedPreferences.value[stringPreferencesKey(key)] ?: defaultValue
+    fun getString(key: String, defaultValue: String? = null): String? = cachedPreferences.value[stringPreferencesKey(key)] ?: defaultValue
 
-    fun getStringSet(key: String, defaultValue: Set<String> = emptySet()): Set<String> =
-        cachedPreferences.value[stringSetPreferencesKey(key)] ?: defaultValue
+    fun getStringSet(key: String, defaultValue: Set<String> = emptySet()): Set<String> = cachedPreferences.value[stringSetPreferencesKey(key)] ?: defaultValue
 
-    fun contains(key: String): Boolean =
-        cachedPreferences.value.asMap().keys.any { it.name == key }
+    fun contains(key: String): Boolean = cachedPreferences.value.asMap().keys.any { it.name == key }
 
     fun putBoolean(key: String, value: Boolean) {
         updateCachedValue(booleanPreferencesKey(key), value)
@@ -132,14 +125,13 @@ class AppSettingsRepository(
         }
     }
 
-    private suspend fun readCurrentPreferences(): Preferences =
-        withContext(Dispatchers.IO) {
-            dataStore.data
-                .catch { error ->
-                    if (error is IOException) emit(emptyPreferences()) else throw error
-                }
-                .first()
-        }
+    private suspend fun readCurrentPreferences(): Preferences = withContext(Dispatchers.IO) {
+        dataStore.data
+            .catch { error ->
+                if (error is IOException) emit(emptyPreferences()) else throw error
+            }
+            .first()
+    }
 
     private fun editAsync(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         applicationScope.launch(Dispatchers.IO) {
@@ -163,7 +155,7 @@ class AppSettingsRepository(
     private fun setPreferences(value: Preferences) {
         cachedPreferences.value = value
         mutablePreferences.value = AppPreferences(
-            value.asMap().mapKeys { it.key.name }.mapValues { (_, raw) -> raw.toDomainValue() }
+            value.asMap().mapKeys { it.key.name }.mapValues { (_, raw) -> raw.toDomainValue() },
         )
     }
 

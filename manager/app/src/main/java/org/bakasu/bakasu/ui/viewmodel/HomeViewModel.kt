@@ -85,12 +85,12 @@ class HomeViewModel(
                 superuserCount = superuserCount,
                 zygiskImplement = ksuCliRepository.getZygiskImplement(),
                 metaModuleImplement = ksuCliRepository.getMetaModuleImplement(),
-            )
+            ),
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = HomeUiState()
+        initialValue = HomeUiState(),
     )
 
     private val mutableEvents = MutableSharedFlow<HomeUiEvent>(extraBufferCapacity = 1)
@@ -172,26 +172,28 @@ class HomeViewModel(
             }
         }.also { refreshJob = it }
     }
-    fun handleSimpleModeChange(enabled: Boolean) =
-        updatePreference(PREF_SIMPLE_MODE, enabled) { it.copy(isSimpleMode = enabled) }
+    fun handleSimpleModeChange(enabled: Boolean) = updatePreference(PREF_SIMPLE_MODE, enabled) { it.copy(isSimpleMode = enabled) }
 
-    fun handleNavigationBarBadgeChange(enabled: Boolean) =
-        updatePreference(PREF_SHOW_NAVIGATION_BAR_BADGE, enabled) {
-            it.copy(showNavigationBarBadge = enabled)
-        }
+    fun handleNavigationBarBadgeChange(enabled: Boolean) = updatePreference(PREF_SHOW_NAVIGATION_BAR_BADGE, enabled) {
+        it.copy(showNavigationBarBadge = enabled)
+    }
 
-    fun handleHomeCardIconsChange(enabled: Boolean) =
-        updatePreference(PREF_SHOW_HOME_CARD_ICONS, enabled) {
-            it.copy(showHomeCardIcons = enabled)
-        }
+    fun handleHomeCardIconsChange(enabled: Boolean) = updatePreference(PREF_SHOW_HOME_CARD_ICONS, enabled) {
+        it.copy(showHomeCardIcons = enabled)
+    }
 
     fun dispatch(action: HomeUiAction) {
         when (action) {
             HomeUiAction.AwaitInitialData -> viewModelScope.launch { awaitInitialData() }
+
             is HomeUiAction.Refresh -> refreshData(action.showIndicator)
+
             is HomeUiAction.SetSimpleMode -> handleSimpleModeChange(action.enabled)
+
             is HomeUiAction.SetNavigationBarBadge -> handleNavigationBarBadgeChange(action.enabled)
+
             is HomeUiAction.SetHomeCardIcons -> handleHomeCardIconsChange(action.enabled)
+
             is HomeUiAction.Reboot -> viewModelScope.launch {
                 reboot(action.reason).onFailure {
                     mutableEvents.tryEmit(HomeUiEvent.Error(it.message.orEmpty()))
@@ -217,18 +219,22 @@ class HomeViewModel(
         if (!force && updateJob?.isActive == true) return
         updateJob?.cancel()
         updateJob = viewModelScope.launch {
-            if (stableEnabled) launch {
-                val update =
-                    runCatching { checkManagerUpdate(ManagerUpdateChannel.STABLE) }.getOrNull()
-                homeStateRepository.update { it.copy(stableManagerUpdate = update) }
+            if (stableEnabled) {
+                launch {
+                    val update =
+                        runCatching { checkManagerUpdate(ManagerUpdateChannel.STABLE) }.getOrNull()
+                    homeStateRepository.update { it.copy(stableManagerUpdate = update) }
+                }
             }
-            if (betaEnabled) launch {
-                val result = runCatching { checkManagerUpdate(ManagerUpdateChannel.BETA) }
-                homeStateRepository.update {
-                    it.copy(
-                        betaManagerUpdate = result.getOrNull(),
-                        isBetaManagerUpdateCheckFailed = result.isFailure,
-                    )
+            if (betaEnabled) {
+                launch {
+                    val result = runCatching { checkManagerUpdate(ManagerUpdateChannel.BETA) }
+                    homeStateRepository.update {
+                        it.copy(
+                            betaManagerUpdate = result.getOrNull(),
+                            isBetaManagerUpdateCheckFailed = result.isFailure,
+                        )
+                    }
                 }
             }
         }

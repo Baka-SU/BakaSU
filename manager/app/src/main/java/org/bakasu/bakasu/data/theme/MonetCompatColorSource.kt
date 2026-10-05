@@ -2,9 +2,9 @@ package org.bakasu.bakasu.data.theme
 
 import android.app.Application
 import com.kieronquinn.monetcompat.core.MonetCompat
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.time.Duration.Companion.milliseconds
 
 class MonetCompatColorSource(
     private val application: Application,

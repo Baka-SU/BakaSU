@@ -75,5 +75,4 @@ data class SuSFSConfig(
     val sus_kstat: Set<SusKstatItem>,
     val open_redirect: Set<OpenRedirectItem>,
     val sus_map: Set<String>,
-) {
-}
+)

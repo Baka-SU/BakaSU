@@ -73,6 +73,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -95,10 +100,10 @@ import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.theme.CardConfig
-import org.bakasu.bakasu.ui.theme.MonospaceFontFamily
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
+import org.bakasu.bakasu.ui.theme.monospaceFontFamily
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
@@ -111,11 +116,6 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -134,11 +134,13 @@ fun FlashScreen(flashIt: FlashIt) {
                     intent.action == Intent.ACTION_VIEW || intent.action == Intent.ACTION_SEND
                 } ?: false
             }
+
             is FlashIt.FlashModules -> {
                 (context as? ComponentActivity)?.intent?.let { intent ->
                     intent.action == Intent.ACTION_VIEW || intent.action == Intent.ACTION_SEND
                 } ?: false
             }
+
             else -> false
         }
     }
@@ -181,9 +183,10 @@ fun FlashScreen(flashIt: FlashIt) {
                 Icon(Icons.TwoTone.Info, contentDescription = null)
             },
             title = {
-                Row(modifier = Modifier
-                    .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
                 ) {
                     Text(text = stringResource(R.string.warning_of_meta_module_title))
                 }
@@ -198,7 +201,7 @@ fun FlashScreen(flashIt: FlashIt) {
             },
             dismissButton = {
                 OutlinedButton(onClick = {
-                        uriHandler.openUri("https://kernelsu.org/guide/metamodule.html")
+                    uriHandler.openUri("https://kernelsu.org/guide/metamodule.html")
                 }) {
                     Text(text = stringResource(id = R.string.learn_more))
                 }
@@ -224,11 +227,13 @@ fun FlashScreen(flashIt: FlashIt) {
                     hasExecuted = false
                 }
             }
+
             is FlashIt.FlashModuleUpdate -> {
                 shouldWarningUserMetaModule = false
                 hasUpdateCompleted = false
                 hasUpdateExecuted = false
             }
+
             else -> {
                 shouldWarningUserMetaModule = false
                 hasFlashCompleted = false
@@ -306,7 +311,7 @@ fun FlashScreen(flashIt: FlashIt) {
     if (needJailbreakWarning && !flashEnabled) {
         JailbreakFlashWarningDialog(
             onConfirm = { flashEnabled = true },
-            onDismiss = { navigator.pop() }
+            onDismiss = { navigator.pop() },
         )
     }
 
@@ -336,7 +341,7 @@ fun FlashScreen(flashIt: FlashIt) {
                     )
                     currentModuleName = moduleName
                     flashViewModel.dispatch(
-                        FlashUiAction.UpdateModule(currentModuleName = moduleName)
+                        FlashUiAction.UpdateModule(currentModuleName = moduleName),
                     )
                     text = installingModuleString.format(flashIt.currentIndex + 1, flashIt.uris.size, moduleName)
                     logContent.append(text).append("\n")
@@ -354,8 +359,8 @@ fun FlashScreen(flashIt: FlashIt) {
                     if (flashIt is FlashIt.FlashModules) {
                         flashViewModel.dispatch(
                             FlashUiAction.UpdateModule(
-                                failedModule = currentModuleName
-                            )
+                                failedModule = currentModuleName,
+                            ),
                         )
                     }
                 } else {
@@ -390,12 +395,12 @@ fun FlashScreen(flashIt: FlashIt) {
 
                 if (flashIt is FlashIt.FlashModules && flashIt.currentIndex < flashIt.uris.size - 1) {
                     val nextFlashIt = flashIt.copy(
-                        currentIndex = flashIt.currentIndex + 1
+                        currentIndex = flashIt.currentIndex + 1,
                     )
                     scope.launch {
                         delay(500.milliseconds)
                         navigator.replace(
-                            Route.Flash.modules(nextFlashIt.uris, nextFlashIt.currentIndex)
+                            Route.Flash.modules(nextFlashIt.uris, nextFlashIt.currentIndex),
                         )
                     }
                 }
@@ -453,13 +458,13 @@ fun FlashScreen(flashIt: FlashIt) {
                         val date = format.format(Date())
                         val file = File(
                             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                            "KernelSU_install_log_${date}.log"
+                            "KernelSU_install_log_$date.log",
                         )
                         file.writeText(logContent.toString())
                         snackBarHost.showReplacingSnackbar(logSavedString.format(file.absolutePath))
                     }
                 },
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
             )
         },
         floatingActionButton = {
@@ -468,14 +473,14 @@ fun FlashScreen(flashIt: FlashIt) {
                     onClick = {
                         flashViewModel.dispatch(
                             FlashUiAction.Reboot(
-                                allowSoftReboot = flashIt is FlashIt.FlashModule || flashIt is FlashIt.FlashModules || flashIt is FlashIt.FlashModuleUpdate
-                            )
+                                allowSoftReboot = flashIt is FlashIt.FlashModule || flashIt is FlashIt.FlashModules || flashIt is FlashIt.FlashModuleUpdate,
+                            ),
                         )
                     },
                     icon = {
                         Icon(
                             Icons.TwoTone.Refresh,
-                            contentDescription = stringResource(id = R.string.reboot)
+                            contentDescription = stringResource(id = R.string.reboot),
                         )
                     },
                     text = {
@@ -483,13 +488,13 @@ fun FlashScreen(flashIt: FlashIt) {
                     },
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    expanded = true
+                    expanded = true,
                 )
             }
         },
         snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) },
         containerColor = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onSurface
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) { innerPadding ->
         KeyEventBlocker {
             it.key == Key.VolumeDown || it.key == Key.VolumeUp
@@ -509,7 +514,7 @@ fun FlashScreen(flashIt: FlashIt) {
                     totalCount = flashIt.uris.size,
                     currentModuleName = currentStatus.currentModuleName,
                     status = flashUiState.flashingStatus,
-                    failedModules = currentStatus.failedModules
+                    failedModules = currentStatus.failedModules,
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -519,7 +524,7 @@ fun FlashScreen(flashIt: FlashIt) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .verticalScroll(scrollState)
+                    .verticalScroll(scrollState),
             ) {
                 LaunchedEffect(text) {
                     scrollState.animateScrollTo(scrollState.maxValue)
@@ -528,8 +533,8 @@ fun FlashScreen(flashIt: FlashIt) {
                     modifier = Modifier.padding(16.dp),
                     text = text,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = MonospaceFontFamily(),
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontFamily = monospaceFontFamily(),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
             Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
@@ -542,7 +547,7 @@ private const val JAILBREAK_WARNING_COUNTDOWN = 10
 @Composable
 fun JailbreakFlashWarningDialog(
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     var countdown by remember { mutableIntStateOf(JAILBREAK_WARNING_COUNTDOWN) }
 
@@ -559,19 +564,20 @@ fun JailbreakFlashWarningDialog(
         text = {
             Text(
                 stringResource(R.string.jailbreak_flash_warning),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
         },
         confirmButton = {
             TextButton(
                 onClick = onConfirm,
-                enabled = countdown == 0
+                enabled = countdown == 0,
             ) {
                 Text(
-                    if (countdown > 0)
+                    if (countdown > 0) {
                         stringResource(R.string.jailbreak_flash_warning_countdown, countdown)
-                    else
+                    } else {
                         stringResource(R.string.install_next)
+                    },
                 )
             }
         },
@@ -579,7 +585,7 @@ fun JailbreakFlashWarningDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(android.R.string.cancel))
             }
-        }
+        },
     )
 }
 
@@ -591,11 +597,11 @@ fun ModuleInstallProgressBar(
     totalCount: Int,
     currentModuleName: String,
     status: FlashingStatus,
-    failedModules: List<String>
+    failedModules: List<String>,
 ) {
     val themeConfig: ThemeConfig = koinInject()
     val cardConfig: CardConfig = koinInject()
-    val progressColor = when(status) {
+    val progressColor = when (status) {
         FlashingStatus.FLASHING -> MaterialTheme.colorScheme.primary
         FlashingStatus.SUCCESS -> MaterialTheme.colorScheme.tertiary
         FlashingStatus.FAILED -> MaterialTheme.colorScheme.error
@@ -603,7 +609,7 @@ fun ModuleInstallProgressBar(
 
     val progress = animateFloatAsState(
         targetValue = currentIndex.toFloat() / totalCount.toFloat(),
-        label = "InstallProgress"
+        label = "InstallProgress",
     )
 
     Card(
@@ -612,31 +618,35 @@ fun ModuleInstallProgressBar(
             .padding(16.dp)
             .renderBackgroundBlur(MaterialTheme.colorScheme.surfaceBright),
         colors = CardDefaults.cardColors(
-            containerColor = if (themeConfig.isEnableBlurExp) Color.Transparent else MaterialTheme.colorScheme.surfaceBright.copy(
-                alpha = cardConfig.cardAlpha
-            )
-        )
+            containerColor = if (themeConfig.isEnableBlurExp) {
+                Color.Transparent
+            } else {
+                MaterialTheme.colorScheme.surfaceBright.copy(
+                    alpha = cardConfig.cardAlpha,
+                )
+            },
+        ),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
         ) {
             // 模块名称和进度
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
                     text = currentModuleName.ifEmpty { stringResource(R.string.module) },
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
 
                 Text(
                     text = "$currentIndex/$totalCount",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
                 )
             }
 
@@ -649,7 +659,7 @@ fun ModuleInstallProgressBar(
                     .fillMaxWidth()
                     .height(8.dp),
                 color = progressColor,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -658,17 +668,17 @@ fun ModuleInstallProgressBar(
             AnimatedVisibility(
                 visible = failedModules.isNotEmpty(),
                 enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
+                exit = fadeOut() + shrinkVertically(),
             ) {
                 Column {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             imageVector = Icons.TwoTone.Error,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(16.dp),
                         )
 
                         Spacer(modifier = Modifier.width(4.dp))
@@ -676,7 +686,7 @@ fun ModuleInstallProgressBar(
                         Text(
                             text = stringResource(R.string.module_failed_count, failedModules.size),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.error,
                         )
                     }
 
@@ -688,15 +698,15 @@ fun ModuleInstallProgressBar(
                             .fillMaxWidth()
                             .background(
                                 MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
-                                shape = MaterialTheme.shapes.small
+                                shape = MaterialTheme.shapes.small,
                             )
-                            .padding(8.dp)
+                            .padding(8.dp),
                     ) {
                         failedModules.forEach { moduleName ->
                             Text(
                                 text = "• $moduleName",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                             )
                         }
                     }
@@ -713,19 +723,18 @@ private fun TopBar(
     moduleStatus: ModuleInstallStatus = ModuleInstallStatus(),
     onBack: () -> Unit,
     onSave: () -> Unit = {},
-    scrollBehavior: TopAppBarScrollBehavior
+    scrollBehavior: TopAppBarScrollBehavior,
 ) {
     val themeConfig: ThemeConfig = koinInject()
     val cardConfig: CardConfig = koinInject()
-    val statusColor = when(status) {
+    val statusColor = when (status) {
         FlashingStatus.FLASHING -> MaterialTheme.colorScheme.primary
         FlashingStatus.SUCCESS -> MaterialTheme.colorScheme.tertiary
         FlashingStatus.FAILED -> MaterialTheme.colorScheme.error
     }
 
     LargeFlexibleTopAppBar(
-        modifier = Modifier.blurEffect(
-        ),
+        modifier = Modifier.blurEffect(),
         title = {
             Text(
                 text = stringResource(
@@ -733,9 +742,9 @@ private fun TopBar(
                         FlashingStatus.FLASHING -> R.string.flashing
                         FlashingStatus.SUCCESS -> R.string.flash_success
                         FlashingStatus.FAILED -> R.string.flash_failed
-                    }
+                    },
                 ),
-                color = statusColor
+                color = statusColor,
             )
         },
         subtitle = {
@@ -743,28 +752,30 @@ private fun TopBar(
                 Text(
                     text = stringResource(
                         R.string.module_failed_count,
-                        moduleStatus.failedModules.size
+                        moduleStatus.failedModules.size,
                     ),
-                    color = MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.error,
                 )
             }
         },
         navigationIcon = {
             AppBackButton(
-                onClick = onBack
+                onClick = onBack,
             )
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor =
-                if (themeConfig.isEnableBlur)
+                if (themeConfig.isEnableBlur) {
                     Color.Transparent
-                else
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
+                },
             scrolledContainerColor =
-                if (themeConfig.isEnableBlur)
+                if (themeConfig.isEnableBlur) {
                     Color.Transparent
-                else
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
+                },
         ),
         actions = {
             IconButton(onClick = onSave) {
@@ -775,7 +786,7 @@ private fun TopBar(
             }
         },
         windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
-        scrollBehavior = scrollBehavior
+        scrollBehavior = scrollBehavior,
     )
 }
 
@@ -826,7 +837,7 @@ private suspend fun flashModuleUpdate(
     uri: String,
     onFinish: (Boolean, Int) -> Unit,
     onStdout: (String) -> Unit,
-    onStderr: (String) -> Unit
+    onStderr: (String) -> Unit,
 ) {
     execute(FlashOperation.Module(uri)).collect { update ->
         when (update) {
@@ -842,7 +853,7 @@ private suspend fun flashIt(
     flashIt: FlashIt,
     onFinish: (Boolean, Int) -> Unit,
     onStdout: (String) -> Unit,
-    onStderr: (String) -> Unit
+    onStderr: (String) -> Unit,
 ) {
     val operation = when (flashIt) {
         is FlashIt.FlashBoot -> FlashOperation.Boot(
@@ -860,6 +871,7 @@ private suspend fun flashIt(
         )
 
         is FlashIt.FlashModule -> FlashOperation.Module(flashIt.uri)
+
         is FlashIt.FlashModules -> {
             if (flashIt.uris.isEmpty() || flashIt.currentIndex >= flashIt.uris.size) {
                 onFinish(false, 0)
@@ -870,7 +882,9 @@ private suspend fun flashIt(
         }
 
         is FlashIt.FlashModuleUpdate -> FlashOperation.Module(flashIt.uri)
+
         FlashIt.FlashRestore -> FlashOperation.Restore
+
         FlashIt.FlashUninstall -> FlashOperation.Uninstall
     }
 
@@ -885,6 +899,6 @@ private suspend fun flashIt(
 
 @Preview
 @Composable
-fun FlashScreenPreview() {
+private fun FlashScreenPreview() {
     FlashScreen(FlashIt.FlashUninstall)
 }

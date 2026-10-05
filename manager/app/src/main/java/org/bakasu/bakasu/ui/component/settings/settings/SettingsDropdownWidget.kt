@@ -34,7 +34,7 @@ fun SettingsDropdownWidget(
     choice: Int,
     data: List<String>,
     leadingContent: (@Composable () -> Unit)? = null,
-    onChoiceChange: (Int) -> Unit
+    onChoiceChange: (Int) -> Unit,
 ) {
     var expanded by remember {
         mutableStateOf(false)
@@ -67,7 +67,7 @@ fun SettingsDropdownWidget(
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(offsetX, offsetY)
+                .offset(offsetX, offsetY),
         ) {
             // Use DropdownMenuPopup to provide the foundation for building a custom menu
             DropdownMenuPopup(
@@ -76,7 +76,7 @@ fun SettingsDropdownWidget(
             ) {
                 // Use DropdownMenuGroup to create a visually distinct group
                 DropdownMenuGroup(
-                    shapes = MenuDefaults.groupShapes()
+                    shapes = MenuDefaults.groupShapes(),
                 ) {
                     data.forEachIndexed { index, item ->
                         val isSelected = index == choice
@@ -90,7 +90,7 @@ fun SettingsDropdownWidget(
                             text = { Text(text = item) },
                             shapes = MenuDefaults.itemShape(
                                 index = index,
-                                count = data.size
+                                count = data.size,
                             ),
                         )
                     }

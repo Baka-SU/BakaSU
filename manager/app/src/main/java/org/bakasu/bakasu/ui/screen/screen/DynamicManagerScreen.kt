@@ -81,7 +81,7 @@ fun DynamicManagerScreen() {
     val viewModel = koinViewModel<DynamicManagerViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState()),
     )
     val pullToRefreshState = rememberPullToRefreshState()
     val snackbarHost = LocalSnackbarHost.current
@@ -104,7 +104,7 @@ fun DynamicManagerScreen() {
         val first = confirmDialog.awaitConfirm(
             title = grantConfirmTitle,
             content = grantConfirmMessage,
-            confirm = confirmText
+            confirm = confirmText,
         )
         return first == ConfirmResult.Confirmed
     }
@@ -121,7 +121,7 @@ fun DynamicManagerScreen() {
             val confirmed = confirmDialog.awaitConfirm(
                 title = clearConfirmTitle,
                 content = clearConfirmMessage,
-                confirm = confirmText
+                confirm = confirmText,
             )
             if (confirmed != ConfirmResult.Confirmed) return@launch
             viewModel.dispatch(DynamicManagerUiAction.Clear)
@@ -201,7 +201,7 @@ fun DynamicManagerScreen() {
                 },
                 modifier = Modifier
                     .fillMaxSize()
-                    .blurSource()
+                    .blurSource(),
             ) {
                 LazyColumn(
                     modifier = Modifier
@@ -211,8 +211,8 @@ fun DynamicManagerScreen() {
                         top = paddingValues.calculateTopPadding() + 5.dp,
                         start = 0.dp,
                         end = 0.dp,
-                        bottom = paddingValues.calculateBottomPadding() + 16.dp
-                    )
+                        bottom = paddingValues.calculateBottomPadding() + 16.dp,
+                    ),
                 ) {
                     item {
                         DynamicManagerStatusSection(
@@ -223,7 +223,7 @@ fun DynamicManagerScreen() {
                             },
                             onClearConfig = {
                                 runClearOperation()
-                            }
+                            },
                         )
                     }
 
@@ -247,7 +247,7 @@ fun DynamicManagerScreen() {
                             title = manageManagers,
                             items = uiState.apps,
                             key = { _, app -> "${app.uid}-${app.packageName}" },
-                            contentType = { _, _ -> "DynamicManagerAppItem" }
+                            contentType = { _, _ -> "DynamicManagerAppItem" },
                         ) { _, app ->
                             DynamicManagerAppItem(
                                 app = app,
@@ -270,16 +270,14 @@ fun DynamicManagerScreen() {
 @Composable
 private fun rememberDynamicManagerManualDialog(
     onConfirm: (Int, String) -> Unit,
-): DialogHandle {
-    return rememberCustomDialog { dismiss ->
-        DynamicManagerManualDialog(
-            onDismiss = dismiss,
-            onConfirm = { size, hash ->
-                dismiss()
-                onConfirm(size, hash)
-            }
-        )
-    }
+): DialogHandle = rememberCustomDialog { dismiss ->
+    DynamicManagerManualDialog(
+        onDismiss = dismiss,
+        onConfirm = { size, hash ->
+            dismiss()
+            onConfirm(size, hash)
+        },
+    )
 }
 
 @Composable
@@ -303,7 +301,7 @@ private fun DynamicManagerStatusSection(
                 icon = Icons.TwoTone.Security,
                 title = stringResource(R.string.dynamic_manager_current_status),
                 description = currentStatus,
-                onClick = {}
+                onClick = {},
             )
         }
 
@@ -312,7 +310,7 @@ private fun DynamicManagerStatusSection(
                 icon = Icons.TwoTone.Security,
                 title = stringResource(R.string.signature_hash),
                 description = config?.hash.orEmpty(),
-                onClick = {}
+                onClick = {},
             )
         }
 
@@ -353,12 +351,13 @@ private fun DynamicManagerAppItem(
             stringResource(
                 R.string.dynamic_manager_fixed_manager_summary,
                 app.packageName,
-                if ((app.managerSignatureIndex ?: 0) == 254)
+                if ((app.managerSignatureIndex ?: 0) == 254) {
                     "Debug"
-                else if ((app.managerSignatureIndex ?: 0) == 253)
+                } else if ((app.managerSignatureIndex ?: 0) == 253) {
                     "KernelSU Toolkit"
-                else
+                } else {
                     "Kernel"
+                },
             )
         } else {
             app.packageName
@@ -377,7 +376,7 @@ private fun DynamicManagerAppItem(
         Checkbox(
             checked = app.isSelected || !app.isChangeable,
             enabled = app.isChangeable,
-            onCheckedChange = null
+            onCheckedChange = null,
         )
     }
 }
@@ -450,7 +449,7 @@ private fun DynamicManagerManualDialog(
                 enabled = isValid,
                 onClick = {
                     onConfirm(sizeValue ?: return@TextButton, hash)
-                }
+                },
             ) {
                 Text(stringResource(android.R.string.ok))
             }
@@ -459,6 +458,6 @@ private fun DynamicManagerManualDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(android.R.string.cancel))
             }
-        }
+        },
     )
 }

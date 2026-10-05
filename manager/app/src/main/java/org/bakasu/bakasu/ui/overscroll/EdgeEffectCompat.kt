@@ -24,20 +24,18 @@ import android.widget.EdgeEffect
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import org.bakasu.bakasu.ui.overscroll.EdgeEffectCompat.distanceCompat
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.roundToInt
+import org.bakasu.bakasu.ui.overscroll.EdgeEffectCompat.distanceCompat
 
 internal object EdgeEffectCompat {
 
-    fun create(context: Context): EdgeEffect {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Api31Impl.create(context, null)
-        } else {
-            GlowEdgeEffectCompat(context)
-        }
+    fun create(context: Context): EdgeEffect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        Api31Impl.create(context, null)
+    } else {
+        GlowEdgeEffectCompat(context)
     }
 
     fun EdgeEffect.onPullDistanceCompat(deltaDistance: Float, displacement: Float): Float {
@@ -105,7 +103,9 @@ internal object EdgeEffectCompat {
         get() {
             return if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)) {
                 Api31Impl.getDistance(this)
-            } else 0f
+            } else {
+                0f
+            }
         }
 }
 
@@ -156,29 +156,23 @@ private class GlowEdgeEffectCompat(context: Context) : EdgeEffect(context) {
 
 @RequiresApi(Build.VERSION_CODES.S)
 private object Api31Impl {
-    fun create(context: Context, attrs: AttributeSet?): EdgeEffect {
-        return try {
-            EdgeEffect(context, attrs)
-        } catch (t: Throwable) {
-            EdgeEffect(context) // Old preview release
-        }
+    fun create(context: Context, attrs: AttributeSet?): EdgeEffect = try {
+        EdgeEffect(context, attrs)
+    } catch (t: Throwable) {
+        EdgeEffect(context) // Old preview release
     }
 
-    fun onPullDistance(edgeEffect: EdgeEffect, deltaDistance: Float, displacement: Float): Float {
-        return try {
-            edgeEffect.onPullDistance(deltaDistance, displacement)
-        } catch (t: Throwable) {
-            edgeEffect.onPull(deltaDistance, displacement) // Old preview release
-            0f
-        }
+    fun onPullDistance(edgeEffect: EdgeEffect, deltaDistance: Float, displacement: Float): Float = try {
+        edgeEffect.onPullDistance(deltaDistance, displacement)
+    } catch (t: Throwable) {
+        edgeEffect.onPull(deltaDistance, displacement) // Old preview release
+        0f
     }
 
-    fun getDistance(edgeEffect: EdgeEffect): Float {
-        return try {
-            edgeEffect.distance
-        } catch (t: Throwable) {
-            0f // Old preview release
-        }
+    fun getDistance(edgeEffect: EdgeEffect): Float = try {
+        edgeEffect.distance
+    } catch (t: Throwable) {
+        0f // Old preview release
     }
 }
 
@@ -202,7 +196,7 @@ private fun flingDistance(density: Density, velocity: Float): Float {
         ln(Inflection * abs(velocity) / (PlatformFlingScrollFriction * magicPhysicalCoefficient))
     val distance =
         PlatformFlingScrollFriction *
-                magicPhysicalCoefficient *
-                exp(DecelerationRate / DecelMinusOne * l)
+            magicPhysicalCoefficient *
+            exp(DecelerationRate / DecelMinusOne * l)
     return distance.toFloat()
 }

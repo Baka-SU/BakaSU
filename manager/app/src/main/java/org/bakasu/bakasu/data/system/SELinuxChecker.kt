@@ -1,9 +1,9 @@
 package org.bakasu.bakasu.data.system
 
 import android.content.Context
-import org.bakasu.bakasu.R
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.io.SuFile
+import org.bakasu.bakasu.R
 
 fun isSELinuxPermissive(): Boolean {
     val shell = Shell.Builder.create().build("sh")
@@ -17,10 +17,15 @@ fun isSELinuxPermissive(): Boolean {
 fun getSELinuxStatus(context: Context) = SuFile("/sys/fs/selinux/enforce").run {
     when {
         !exists() -> context.getString(R.string.selinux_status_disabled)
+
         !isFile -> context.getString(R.string.unknown)
+
         !canRead() -> context.getString(R.string.selinux_status_enforcing)
-        else -> when (runCatching { newInputStream() }.getOrNull()?.bufferedReader()
-            ?.use { it.runCatching { readLine() }.getOrNull()?.trim()?.toIntOrNull() }) {
+
+        else -> when (
+            runCatching { newInputStream() }.getOrNull()?.bufferedReader()
+                ?.use { it.runCatching { readLine() }.getOrNull()?.trim()?.toIntOrNull() }
+        ) {
             1 -> context.getString(R.string.selinux_status_enforcing)
             0 -> context.getString(R.string.selinux_status_permissive)
             else -> context.getString(R.string.unknown)

@@ -34,7 +34,6 @@ import org.koin.compose.viewmodel.koinViewModel
 class WebUIActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         // Enable edge to edge
         enableEdgeToEdge()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

@@ -17,7 +17,7 @@ interface PermissionRequestInterface {
     fun requestPermission(
         permission: String,
         callback: (Boolean) -> Unit,
-        requestDescription: String
+        requestDescription: String,
     )
 
     /**
@@ -31,6 +31,6 @@ interface PermissionRequestInterface {
     fun requestPermissions(
         permissions: Array<String>,
         callback: (Map<String, @JvmSuppressWildcards Boolean>) -> Unit,
-        requestDescription: Map<String, String>
+        requestDescription: Map<String, String>,
     )
 }

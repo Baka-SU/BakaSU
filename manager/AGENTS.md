@@ -190,6 +190,13 @@ instead.
 
 ## Recommended workflow
 
+For every implementation change under `manager/`, coding agents must run `./gradlew spotlessCheck`
+and ensure it passes before reporting completion, just as applicable lint checks must pass. When
+formatting violations are found, run `./gradlew spotlessApply`, review the formatting changes, and
+rerun `./gradlew spotlessCheck`.
+When changing `.editorconfig` or formatter rules, use `--no-daemon --no-configuration-cache` so
+ktlint reloads the configuration instead of reusing cached rules.
+
 For implementation tasks:
 
 1. Identify the affected layer and the nearest comparable implementation.
@@ -198,8 +205,10 @@ For implementation tasks:
    then use the appropriate `SettingsBaseWidget` wrapper.
 4. Add or update Android resources before wiring user-visible text into UI.
 5. Use `stringResource` for strings resolved in Compose.
-6. Verify changes by running `./gradlew assembleRelease` from the repository root.
-7. Report exactly what was changed and whether `./gradlew assembleRelease` completed successfully.
+6. Verify formatting by running `./gradlew spotlessCheck` from the manager project root.
+7. Verify changes by running `./gradlew assembleRelease` from the manager project root.
+8. Report exactly what was changed and whether `./gradlew spotlessCheck`,
+   `./gradlew assembleRelease`, and applicable lint checks completed successfully.
 
 ---
 
@@ -217,6 +226,7 @@ Before completing a UI or settings task, verify:
 * Every pager is rendered through `HorizontalPagerWithInteraction`.
 * No user-visible string is hardcoded.
 * Compose strings use `stringResource` whenever possible.
+* Verify formatting with `./gradlew spotlessCheck` and ensure it passes before reporting completion.
 * Verify the project with `./gradlew assembleRelease` before reporting completion.
 * Any build or test result is reported honestly; never claim verification passed when it was not
   run.

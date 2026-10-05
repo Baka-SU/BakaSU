@@ -18,9 +18,9 @@ package org.bakasu.bakasu.data.text
 
 import android.text.TextUtils
 import android.util.Log
-import org.bakasu.bakasu.domain.text.TextTransliterator
 import java.text.Collator
 import java.util.Locale
+import org.bakasu.bakasu.domain.text.TextTransliterator
 
 class HanziToPinyin private constructor(val hasChinaCollator: Boolean) : TextTransliterator {
 
@@ -29,7 +29,7 @@ class HanziToPinyin private constructor(val hasChinaCollator: Boolean) : TextTra
     class Token(
         var type: Int = 0,
         var source: String = "",
-        var target: String = ""
+        var target: String = "",
     ) {
         companion object {
             const val LATIN = 1
@@ -121,6 +121,7 @@ class HanziToPinyin private constructor(val hasChinaCollator: Boolean) : TextTra
                         addToken(sb, tokens, tokenType)
                     }
                 }
+
                 character < 256.toChar() -> {
                     if (tokenType != Token.LATIN && sb.isNotEmpty()) {
                         addToken(sb, tokens, tokenType)
@@ -128,6 +129,7 @@ class HanziToPinyin private constructor(val hasChinaCollator: Boolean) : TextTra
                     tokenType = Token.LATIN
                     sb.append(character)
                 }
+
                 else -> {
                     val t = getToken(character)
                     if (t.type == Token.PINYIN) {
@@ -245,7 +247,7 @@ class HanziToPinyin private constructor(val hasChinaCollator: Boolean) : TextTra
             '庢', '中', '州', '朱', '抓', '拽',
             '专', '妆', '隹', '宒', '卓', '乲',
             '宗', '邹', '租', '钻', '厜', '尊',
-            '昨', '兙', '鿃', '鿄'
+            '昨', '兙', '鿃', '鿄',
         )
 
         val PINYINS = arrayOf(
@@ -460,7 +462,7 @@ class HanziToPinyin private constructor(val hasChinaCollator: Boolean) : TextTra
             byteArrayOf(90, 85, 0, 0, 0, 0), byteArrayOf(90, 85, 65, 78, 0, 0),
             byteArrayOf(90, 85, 73, 0, 0, 0), byteArrayOf(90, 85, 78, 0, 0, 0),
             byteArrayOf(90, 85, 79, 0, 0, 0), byteArrayOf(0, 0, 0, 0, 0, 0),
-            byteArrayOf(83, 72, 65, 78, 0, 0), byteArrayOf(0, 0, 0, 0, 0, 0)
+            byteArrayOf(83, 72, 65, 78, 0, 0), byteArrayOf(0, 0, 0, 0, 0, 0),
         )
 
         private const val FIRST_PINYIN_UNIHAN = "阿"
@@ -494,7 +496,7 @@ class HanziToPinyin private constructor(val hasChinaCollator: Boolean) : TextTra
                     Log.e(
                         TAG,
                         "Internal error in Unihan table. The last string \"$lastString\" " +
-                                "is greater than current string \"$curString\"."
+                            "is greater than current string \"$curString\".",
                     )
                     return false
                 }

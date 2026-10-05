@@ -52,7 +52,7 @@ class ModuleRepoViewModel(
 ) : ViewModel() {
     private val search = MutableStateFlow("")
     private val sortStarsFirst = MutableStateFlow(
-        getBooleanPreference("module_repo_sort_star_first", false)
+        getBooleanPreference("module_repo_sort_star_first", false),
     )
     private val mutableEvents = MutableSharedFlow<ModuleRepoUiEvent>(extraBufferCapacity = 1)
 
@@ -67,11 +67,11 @@ class ModuleRepoViewModel(
         ModuleRepoUiState(
             modules = modules.filter { module ->
                 module.moduleId.contains(query, true) ||
-                        module.moduleName.contains(query, true) ||
-                        transliterateText(module.moduleName).contains(query, true)
+                    module.moduleName.contains(query, true) ||
+                    transliterateText(module.moduleName).contains(query, true)
             }.sortedWith(
                 compareByDescending<CatalogModule> { it.installed }
-                    .thenByDescending { if (starsFirst) it.stargazerCount else 0 }
+                    .thenByDescending { if (starsFirst) it.stargazerCount else 0 },
             ),
             sortStargazerCountFirst = starsFirst,
             isRefreshing = refreshing,
@@ -98,16 +98,18 @@ class ModuleRepoViewModel(
         viewModelScope.launch {
             when (val result = refreshCatalog()) {
                 is ModuleCatalogResult.Success -> Unit
+
                 is ModuleCatalogResult.Failure -> {
                     onFailure?.invoke()
                     when (val reason = result.reason) {
                         ModuleCatalogFailure.Offline -> mutableEvents.emit(ModuleRepoUiEvent.Offline)
+
                         ModuleCatalogFailure.NotFound -> mutableEvents.emit(
-                            ModuleRepoUiEvent.Error("Module not found")
+                            ModuleRepoUiEvent.Error("Module not found"),
                         )
 
                         is ModuleCatalogFailure.Network -> mutableEvents.emit(
-                            ModuleRepoUiEvent.Error(reason.message)
+                            ModuleRepoUiEvent.Error(reason.message),
                         )
                     }
                 }

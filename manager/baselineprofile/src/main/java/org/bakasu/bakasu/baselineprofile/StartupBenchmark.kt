@@ -39,7 +39,7 @@ class StartupBenchmark(
             arrayOf(
                 CompilationMode.Partial(
                     baselineProfileMode = BaselineProfileMode.Require,
-                )
+                ),
             ),
         )
     }

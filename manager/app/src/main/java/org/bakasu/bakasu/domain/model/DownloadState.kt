@@ -11,4 +11,3 @@ data class DownloadState(
     val resultUri: String? = null,
     val error: String? = null,
 )
-

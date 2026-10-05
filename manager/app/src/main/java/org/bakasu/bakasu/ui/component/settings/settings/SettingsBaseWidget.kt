@@ -156,28 +156,34 @@ fun SettingsBaseWidget(
 
     val baseShape = LocalSegmentedItemShape.current
 
-    val finalContainerColor = (containerColor
-        ?: if (selected) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceBright
-        }).run {
+    val finalContainerColor = (
+        containerColor
+            ?: if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceBright
+            }
+        ).run {
         if (isOnBackground) {
             copy(
-                alpha = cardConfig.cardAlpha
+                alpha = cardConfig.cardAlpha,
             )
-        } else this
+        } else {
+            this
+        }
     }
 
     val backgroundColor = run {
-        if (isOnBackground && themeConfig.isEnableBlurExp)
+        if (isOnBackground && themeConfig.isEnableBlurExp) {
             Color.Transparent
-        else finalContainerColor
+        } else {
+            finalContainerColor
+        }
     }
 
-    val baseContentColor = if (containerColor != null)
+    val baseContentColor = if (containerColor != null) {
         MaterialTheme.colorScheme.contentColorFor(containerColor)
-    else if (selected) {
+    } else if (selected) {
         MaterialTheme.colorScheme.contentColorFor(MaterialTheme.colorScheme.primaryContainer)
     } else {
         MaterialTheme.colorScheme.onSurface
@@ -216,7 +222,7 @@ fun SettingsBaseWidget(
         disabledContentColor = baseContentColor,
         disabledLeadingContentColor = resolvedIconColor,
         disabledTrailingContentColor = resolvedIconColor,
-        disabledSupportingContentColor = finalDescriptionColor
+        disabledSupportingContentColor = finalDescriptionColor,
     )
 
     val shapes = ListItemDefaults.shapes(
@@ -224,7 +230,7 @@ fun SettingsBaseWidget(
         pressedShape = RoundedCornerShape(16.dp),
         selectedShape = baseShape,
         focusedShape = baseShape,
-        hoveredShape = baseShape
+        hoveredShape = baseShape,
     )
 
     val clickShape = if (onClick != null || onLongClick != null) {
@@ -242,7 +248,6 @@ fun SettingsBaseWidget(
 
         val shapeAnimationSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
 
-
         shapes.shapeForInteraction(
             selected = selected,
             pressed = pressed.value,
@@ -251,7 +256,9 @@ fun SettingsBaseWidget(
             dragged = dragged.value,
             animationSpec = shapeAnimationSpec,
         )
-    } else RectangleShape
+    } else {
+        RectangleShape
+    }
 
     val safeClickShape = if (onClick != null || onLongClick != null) {
         remember(clickShape) {
@@ -287,15 +294,16 @@ fun SettingsBaseWidget(
 
     var itemModifier = (if (fillMaxWidth) modifier.fillMaxWidth() else modifier)
         .heightIn(min = adaptiveMinHeight)
-    if (isOnBackground && themeConfig.isEnableBlurExp)
+    if (isOnBackground && themeConfig.isEnableBlurExp) {
         itemModifier = itemModifier
             .clip(clipShape)
             .renderBackgroundBlur(finalContainerColor)
+    }
 
     val finalLeadingContent: (@Composable () -> Unit)? =
-        if (leadingContent == null && icon == null && !iconPlaceholder)
+        if (leadingContent == null && icon == null && !iconPlaceholder) {
             null
-        else {
+        } else {
             {
                 leadingContent?.invoke()
 
@@ -304,14 +312,14 @@ fun SettingsBaseWidget(
                         modifier = Modifier
                             .size(24.dp)
                             .alpha(alpha),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         if (icon != null) {
                             Icon(
                                 imageVector = icon,
                                 modifier = Modifier.size(iconSize),
                                 contentDescription = null,
-                                tint = resolvedIconColor
+                                tint = resolvedIconColor,
                             )
                         } else {
                             Spacer(modifier = Modifier.size(24.dp))
@@ -328,7 +336,7 @@ fun SettingsBaseWidget(
                     text = text,
                     style = descriptionStyle,
                     modifier = Modifier
-                        .alpha(alpha)
+                        .alpha(alpha),
                 )
             }
 
@@ -340,20 +348,22 @@ fun SettingsBaseWidget(
         {
             Box(
                 modifier = Modifier.alpha(alpha),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 trailingContent(interactionSource)
             }
         }
-    } else null
+    } else {
+        null
+    }
 
     val headline: @Composable () -> Unit = {
         Box(
             modifier = Modifier
-                .alpha(alpha)
+                .alpha(alpha),
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 title?.let {
                     Text(
@@ -414,7 +424,9 @@ fun SettingsBaseWidget(
                     }
                     onLongClick(touchPoint)
                 }
-            } else null,
+            } else {
+                null
+            },
             enabled = enabled,
             colors = colors,
             shapes = listItemShapes,
@@ -422,7 +434,7 @@ fun SettingsBaseWidget(
             leadingContent = finalLeadingContent,
             trailingContent = trailing,
             interactionSource = interactionSource,
-            content = expressiveContent
+            content = expressiveContent,
         )
     } else {
         /*
@@ -440,7 +452,7 @@ fun SettingsBaseWidget(
                         Modifier.semantics { disabled() }
                     } else {
                         Modifier
-                    }
+                    },
                 ),
             enabled = enabled,
             verticalAlignment = Alignment.CenterVertically,
@@ -458,21 +470,21 @@ fun SettingsBaseWidget(
 private val ListItemShapes.hasRoundedCornerShapes: Boolean
     get() =
         shape is RoundedCornerShape &&
-                selectedShape is RoundedCornerShape &&
-                pressedShape is RoundedCornerShape &&
-                focusedShape is RoundedCornerShape &&
-                hoveredShape is RoundedCornerShape &&
-                draggedShape is RoundedCornerShape
+            selectedShape is RoundedCornerShape &&
+            pressedShape is RoundedCornerShape &&
+            focusedShape is RoundedCornerShape &&
+            hoveredShape is RoundedCornerShape &&
+            draggedShape is RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private val ListItemShapes.hasCornerBasedShapes: Boolean
     get() =
         shape is CornerBasedShape &&
-                selectedShape is CornerBasedShape &&
-                pressedShape is CornerBasedShape &&
-                focusedShape is CornerBasedShape &&
-                hoveredShape is CornerBasedShape &&
-                draggedShape is CornerBasedShape
+            selectedShape is CornerBasedShape &&
+            pressedShape is CornerBasedShape &&
+            focusedShape is CornerBasedShape &&
+            hoveredShape is CornerBasedShape &&
+            draggedShape is CornerBasedShape
 
 /**
  * Equivalent to [collectIsPressedAsState], [collectIsFocusedAsState], etc. but only uses one
@@ -497,17 +509,26 @@ private fun InteractionSource.CollectInteractionsAsState(
             when (interaction) {
                 // press
                 is PressInteraction.Press -> pressInteractions?.add(interaction)
+
                 is PressInteraction.Release -> pressInteractions?.remove(interaction.press)
+
                 is PressInteraction.Cancel -> pressInteractions?.remove(interaction.press)
+
                 // focus
                 is FocusInteraction.Focus -> focusInteractions?.add(interaction)
+
                 is FocusInteraction.Unfocus -> focusInteractions?.remove(interaction.focus)
+
                 // hover
                 is HoverInteraction.Enter -> hoverInteractions?.add(interaction)
+
                 is HoverInteraction.Exit -> hoverInteractions?.remove(interaction.enter)
+
                 // drag
                 is DragInteraction.Start -> dragInteractions?.add(interaction)
+
                 is DragInteraction.Stop -> dragInteractions?.remove(interaction.start)
+
                 is DragInteraction.Cancel -> dragInteractions?.remove(interaction.start)
             }
             if (pressedState != null && pressInteractions != null) {
@@ -557,14 +578,14 @@ internal fun ListItemShapes.shapeForInteraction(
 
 @Preview
 @Composable
-fun SettingsBaseWidgetPreview() {
+private fun SettingsBaseWidgetPreview() {
     LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
             SettingsBaseWidget(
                 title = "I am title",
-                description = "I am description, I have iconPlaceholder"
+                description = "I am description, I have iconPlaceholder",
             ) {}
         }
 
@@ -572,7 +593,7 @@ fun SettingsBaseWidgetPreview() {
             SettingsBaseWidget(
                 iconPlaceholder = false,
                 title = "I am title",
-                description = "I am description, I don't have iconPlaceholder"
+                description = "I am description, I don't have iconPlaceholder",
             ) {}
         }
 
@@ -582,7 +603,7 @@ fun SettingsBaseWidgetPreview() {
                 title = "I am title",
                 descriptionColumnContent = {
                     Text("Hello from descriptionColumnContent")
-                }
+                },
             ) {}
         }
 
@@ -591,13 +612,13 @@ fun SettingsBaseWidgetPreview() {
                 item {
                     SettingsBaseWidget(
                         title = "I can click (widget 1)",
-                        onClick = {}
+                        onClick = {},
                     )
                 }
                 item {
                     SettingsBaseWidget(
                         title = "I can click (widget 2)",
-                        onClick = {}
+                        onClick = {},
                     )
                 }
             }

@@ -15,7 +15,5 @@ class EnqueueManagerUpdateUseCase(private val repository: DownloadRepository) {
 }
 
 class ObserveDownloadUseCase(private val repository: DownloadRepository) {
-    operator fun invoke(id: Int): Flow<DownloadState?> =
-        repository.downloads.map { it[id] }
+    operator fun invoke(id: Int): Flow<DownloadState?> = repository.downloads.map { it[id] }
 }
-

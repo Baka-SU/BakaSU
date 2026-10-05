@@ -5,4 +5,3 @@ sealed interface StartupState {
     data object Ready : StartupState
     data class Failed(val message: String) : StartupState
 }
-

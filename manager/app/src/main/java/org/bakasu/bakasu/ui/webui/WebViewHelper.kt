@@ -17,6 +17,12 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.webkit.WebViewAssetLoader
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.File
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.AppSettingsRepository
 import org.bakasu.bakasu.data.packageinfo.AppIconDataSource
@@ -24,13 +30,6 @@ import org.bakasu.bakasu.data.packageinfo.InstalledPackageRepository
 import org.bakasu.bakasu.data.webui.WebUiRepository
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.File
-
 
 @SuppressLint("SetJavaScriptEnabled")
 internal suspend fun prepareWebView(
@@ -92,7 +91,7 @@ internal suspend fun prepareWebView(
             webView.setBackgroundColor(Color.TRANSPARENT)
 
             WebView.setWebContentsDebuggingEnabled(
-                settingsRepository.getBoolean("enable_web_debugging", false)
+                settingsRepository.getBoolean("enable_web_debugging", false),
             )
 
             webView.settings.apply {
@@ -112,7 +111,7 @@ internal suspend fun prepareWebView(
                         { webUIState.currentInsets },
                         { enable -> webUIState.isInsetsEnabled = enable },
                         colorsCssProvider,
-                    )
+                    ),
                 )
                 .build()
 
@@ -128,9 +127,12 @@ internal suspend fun prepareWebView(
                                 val stream = ByteArrayOutputStream()
                                 icon.compress(Bitmap.CompressFormat.PNG, 100, stream)
                                 return WebResourceResponse(
-                                    "image/png", null, 200, "OK",
+                                    "image/png",
+                                    null,
+                                    200,
+                                    "OK",
                                     mapOf("Access-Control-Allow-Origin" to "*"),
-                                    ByteArrayInputStream(stream.toByteArray())
+                                    ByteArrayInputStream(stream.toByteArray()),
                                 )
                             }
                         }
@@ -166,7 +168,9 @@ internal suspend fun prepareWebView(
                 }
 
                 override fun onShowFileChooser(
-                    webView: WebView?, filePathCallback: ValueCallback<Array<Uri>>?, fileChooserParams: FileChooserParams?
+                    webView: WebView?,
+                    filePathCallback: ValueCallback<Array<Uri>>?,
+                    fileChooserParams: FileChooserParams?,
                 ): Boolean {
                     webUIState.filePathCallback?.onReceiveValue(null)
                     webUIState.filePathCallback = filePathCallback

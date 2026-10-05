@@ -12,4 +12,3 @@ sealed interface PreferenceValue {
     data class StringValue(val value: String) : PreferenceValue
     data class StringSetValue(val value: Set<String>) : PreferenceValue
 }
-

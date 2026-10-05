@@ -19,7 +19,9 @@ import org.jetbrains.uast.UMethod
 import org.jetbrains.uast.USwitchExpression
 import org.jetbrains.uast.getParentOfType
 
-class SegmentedColumnScopeConditionDetector : Detector(), SourceCodeScanner {
+class SegmentedColumnScopeConditionDetector :
+    Detector(),
+    SourceCodeScanner {
     override fun getApplicableUastTypes() = listOf(
         UIfExpression::class.java,
         USwitchExpression::class.java,
@@ -42,7 +44,7 @@ class SegmentedColumnScopeConditionDetector : Detector(), SourceCodeScanner {
             ISSUE,
             node,
             context.getLocation(node),
-            "Do not use `$keyword` directly in `SegmentedColumnScope`; use `item(visible = ...)` or move the condition outside the DSL."
+            "Do not use `$keyword` directly in `SegmentedColumnScope`; use `item(visible = ...)` or move the condition outside the DSL.",
         )
     }
 
@@ -74,18 +76,14 @@ class SegmentedColumnScopeConditionDetector : Detector(), SourceCodeScanner {
         return parameter.type.canonicalText.contains(SEGMENTED_COLUMN_SCOPE)
     }
 
-    private fun UMethod.isSegmentedColumnScopeExtension(): Boolean {
-        return javaPsi?.parameterList?.parameters
-            ?.firstOrNull()
-            ?.type
-            ?.canonicalText
-            ?.contains(SEGMENTED_COLUMN_SCOPE) == true
-    }
+    private fun UMethod.isSegmentedColumnScopeExtension(): Boolean = javaPsi?.parameterList?.parameters
+        ?.firstOrNull()
+        ?.type
+        ?.canonicalText
+        ?.contains(SEGMENTED_COLUMN_SCOPE) == true
 
-    private fun PsiMethod.hasSegmentedColumnScopeParameter(): Boolean {
-        return parameterList.parameters.any { parameter ->
-            parameter.type.canonicalText.contains(SEGMENTED_COLUMN_SCOPE)
-        }
+    private fun PsiMethod.hasSegmentedColumnScopeParameter(): Boolean = parameterList.parameters.any { parameter ->
+        parameter.type.canonicalText.contains(SEGMENTED_COLUMN_SCOPE)
     }
 
     companion object {
@@ -100,8 +98,8 @@ class SegmentedColumnScopeConditionDetector : Detector(), SourceCodeScanner {
             severity = Severity.ERROR,
             implementation = Implementation(
                 SegmentedColumnScopeConditionDetector::class.java,
-                Scope.JAVA_FILE_SCOPE
-            )
+                Scope.JAVA_FILE_SCOPE,
+            ),
         )
     }
 }

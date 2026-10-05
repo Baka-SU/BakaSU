@@ -26,4 +26,3 @@ data class ManagerUpdateInfo(
     val source: ManagerApkSource,
     val changelog: String = "",
 )
-

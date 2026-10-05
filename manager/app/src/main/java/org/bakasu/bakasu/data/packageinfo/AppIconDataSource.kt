@@ -11,9 +11,9 @@ import android.os.Process
 import android.os.UserManager
 import android.util.Log
 import android.util.LruCache
+import java.util.concurrent.ConcurrentHashMap
 import me.zhanghai.android.appiconloader.AppIconLoader
 import org.lsposed.hiddenapibypass.HiddenApiBypass
-import java.util.concurrent.ConcurrentHashMap
 
 const val TAG = "AppIconDataSource"
 const val PER_USER_RANGE = 100000
@@ -35,21 +35,19 @@ class AppIconDataSource(
     @Volatile
     private var cachedMainUserId: Int? = null
 
-    fun findCachedPackageInfo(packageName: String): PackageInfo? =
-        packageCache.find(packageName)
+    fun findCachedPackageInfo(packageName: String): PackageInfo? = packageCache.find(packageName)
 
-    fun loadPackageInfo(packageName: String): PackageInfo? =
-        findCachedPackageInfo(packageName) ?: runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                application.packageManager.getPackageInfo(
-                    packageName,
-                    PackageManager.PackageInfoFlags.of(0),
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                application.packageManager.getPackageInfo(packageName, 0)
-            }
-        }.getOrNull()
+    fun loadPackageInfo(packageName: String): PackageInfo? = findCachedPackageInfo(packageName) ?: runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            application.packageManager.getPackageInfo(
+                packageName,
+                PackageManager.PackageInfoFlags.of(0),
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            application.packageManager.getPackageInfo(packageName, 0)
+        }
+    }.getOrNull()
 
     /** Loads a software bitmap suitable for WebView response encoding. */
     fun loadSync(packageName: String, sizePx: Int): Bitmap? {
@@ -126,8 +124,7 @@ class AppIconDataSource(
         }
     }
 
-    private fun isOtherProfileGroupUser(uid: Int): Boolean =
-        userId(uid) in otherProfileGroupUserIds
+    private fun isOtherProfileGroupUser(uid: Int): Boolean = userId(uid) in otherProfileGroupUserIds
 
     private fun markOtherProfileGroupUser(uid: Int) {
         val userId = userId(uid)
@@ -137,8 +134,7 @@ class AppIconDataSource(
         }
     }
 
-    private fun buildCacheKey(applicationInfo: ApplicationInfo, sizePx: Int): String =
-        "${applicationInfo.packageName}:${applicationInfo.uid}:${applicationInfo.sourceDir}:$sizePx"
+    private fun buildCacheKey(applicationInfo: ApplicationInfo, sizePx: Int): String = "${applicationInfo.packageName}:${applicationInfo.uid}:${applicationInfo.sourceDir}:$sizePx"
 
     private fun userId(uid: Int): Int = uid / PER_USER_RANGE
 }

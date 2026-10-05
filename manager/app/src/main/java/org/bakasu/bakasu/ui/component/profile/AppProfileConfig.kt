@@ -34,10 +34,10 @@ fun AppProfileConfig(
             onProfileChange(
                 profile.copy(
                     umountModules = it,
-                    nonRootUseDefault = false
-                )
+                    nonRootUseDefault = false,
+                ),
             )
-        }
+        },
     )
 }
 

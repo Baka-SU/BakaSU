@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.runtime.Composable
 
 @Composable
-fun adaptiveScaffoldWindowInsets(includeBottom: Boolean = true): WindowInsets {
-    return if (includeBottom) {
-        WindowInsets.safeDrawing
-    } else {
-        WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
-    }
+fun adaptiveScaffoldWindowInsets(includeBottom: Boolean = true): WindowInsets = if (includeBottom) {
+    WindowInsets.safeDrawing
+} else {
+    WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
 }

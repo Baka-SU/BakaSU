@@ -62,12 +62,12 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastFirstOrNull
+import kotlin.math.roundToInt
 import org.bakasu.bakasu.ui.overscroll.EdgeEffectCompat.absorbToRelaxIfNeeded
 import org.bakasu.bakasu.ui.overscroll.EdgeEffectCompat.distanceCompat
 import org.bakasu.bakasu.ui.overscroll.EdgeEffectCompat.onAbsorbCompat
 import org.bakasu.bakasu.ui.overscroll.EdgeEffectCompat.onPullDistanceCompat
 import org.bakasu.bakasu.ui.overscroll.EdgeEffectCompat.onReleaseWithOppositeDelta
-import kotlin.math.roundToInt
 
 /**
  * Creates and remembers an instance of the platform [OverscrollFactory], with the provided
@@ -107,15 +107,13 @@ private class AndroidEdgeEffectOverscrollFactory(
     private val glowDrawPadding: PaddingValues = DefaultGlowPaddingValues,
     private val compensationState: StretchOverscrollCompensationState,
 ) : OverscrollFactory {
-    override fun createOverscrollEffect(): OverscrollEffect {
-        return AndroidEdgeEffectOverscrollEffect(
-            context,
-            density,
-            glowColor,
-            glowDrawPadding,
-            compensationState,
-        )
-    }
+    override fun createOverscrollEffect(): OverscrollEffect = AndroidEdgeEffectOverscrollEffect(
+        context,
+        density,
+        glowColor,
+        glowDrawPadding,
+        compensationState,
+    )
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -148,7 +146,9 @@ private class StretchOverscrollNode(
     private val overscrollEffect: AndroidEdgeEffectOverscrollEffect,
     private val edgeEffectWrapper: EdgeEffectWrapper,
     private val compensationState: StretchOverscrollCompensationState,
-) : DelegatingNode(), DrawModifierNode, GlobalPositionAwareModifierNode {
+) : DelegatingNode(),
+    DrawModifierNode,
+    GlobalPositionAwareModifierNode {
     init {
         delegate(pointerInputNode)
     }
@@ -232,6 +232,7 @@ private class StretchOverscrollNode(
                 // complicate the rest of the drawing logic.
                 shouldDrawVerticalStretch && shouldDrawHorizontalStretch ->
                     renderNode.setPosition(0, 0, canvas.width, canvas.height)
+
                 // Drawing vertical stretch, so expand the width to prevent clipping
                 shouldDrawVerticalStretch ->
                     renderNode.setPosition(
@@ -240,6 +241,7 @@ private class StretchOverscrollNode(
                         canvas.width + (maxElevation.roundToInt() * 2),
                         canvas.height,
                     )
+
                 // Drawing horizontal stretch, so expand the height to prevent clipping
                 shouldDrawHorizontalStretch ->
                     renderNode.setPosition(
@@ -248,6 +250,7 @@ private class StretchOverscrollNode(
                         canvas.width,
                         canvas.height + (maxElevation.roundToInt() * 2),
                     )
+
                 // Not drawing any stretch, so early return - we can draw into the existing canvas
                 else -> {
                     publishCompensation(advanceZeroFrame = true)
@@ -442,37 +445,27 @@ private class StretchOverscrollNode(
         }
     }
 
-    private fun shouldDrawVerticalStretch() =
-        with(edgeEffectWrapper) {
-            isTopAnimating() ||
-                    isTopNegationStretched() ||
-                    isBottomAnimating() ||
-                    isBottomNegationStretched()
-        }
-
-    private fun shouldDrawHorizontalStretch() =
-        with(edgeEffectWrapper) {
-            isLeftAnimating() ||
-                    isLeftNegationStretched() ||
-                    isRightAnimating() ||
-                    isRightNegationStretched()
-        }
-
-    private fun drawLeftStretch(left: EdgeEffect, canvas: android.graphics.Canvas): Boolean {
-        return drawWithRotation(rotationDegrees = 270f, edgeEffect = left, canvas = canvas)
+    private fun shouldDrawVerticalStretch() = with(edgeEffectWrapper) {
+        isTopAnimating() ||
+            isTopNegationStretched() ||
+            isBottomAnimating() ||
+            isBottomNegationStretched()
     }
 
-    private fun drawTopStretch(top: EdgeEffect, canvas: android.graphics.Canvas): Boolean {
-        return drawWithRotation(rotationDegrees = 0f, edgeEffect = top, canvas = canvas)
+    private fun shouldDrawHorizontalStretch() = with(edgeEffectWrapper) {
+        isLeftAnimating() ||
+            isLeftNegationStretched() ||
+            isRightAnimating() ||
+            isRightNegationStretched()
     }
 
-    private fun drawRightStretch(right: EdgeEffect, canvas: android.graphics.Canvas): Boolean {
-        return drawWithRotation(rotationDegrees = 90f, edgeEffect = right, canvas = canvas)
-    }
+    private fun drawLeftStretch(left: EdgeEffect, canvas: android.graphics.Canvas): Boolean = drawWithRotation(rotationDegrees = 270f, edgeEffect = left, canvas = canvas)
 
-    private fun drawBottomStretch(bottom: EdgeEffect, canvas: android.graphics.Canvas): Boolean {
-        return drawWithRotation(rotationDegrees = 180f, edgeEffect = bottom, canvas = canvas)
-    }
+    private fun drawTopStretch(top: EdgeEffect, canvas: android.graphics.Canvas): Boolean = drawWithRotation(rotationDegrees = 0f, edgeEffect = top, canvas = canvas)
+
+    private fun drawRightStretch(right: EdgeEffect, canvas: android.graphics.Canvas): Boolean = drawWithRotation(rotationDegrees = 90f, edgeEffect = right, canvas = canvas)
+
+    private fun drawBottomStretch(bottom: EdgeEffect, canvas: android.graphics.Canvas): Boolean = drawWithRotation(rotationDegrees = 180f, edgeEffect = bottom, canvas = canvas)
 
     private fun drawWithRotation(
         rotationDegrees: Float,
@@ -496,7 +489,8 @@ private class GlowOverscrollNode(
     private val overscrollEffect: AndroidEdgeEffectOverscrollEffect,
     private val edgeEffectWrapper: EdgeEffectWrapper,
     private val glowDrawPadding: PaddingValues,
-) : DelegatingNode(), DrawModifierNode {
+) : DelegatingNode(),
+    DrawModifierNode {
     init {
         delegate(pointerInputNode)
     }
@@ -648,6 +642,7 @@ internal class AndroidEdgeEffectOverscrollEffect(
         val consumedPixelsY =
             when {
                 delta.y == 0f -> 0f
+
                 edgeEffectWrapper.isTopStretched() && delta.y < 0f -> {
                     val consumed =
                         pullTop(destretchDelta).also {
@@ -677,6 +672,7 @@ internal class AndroidEdgeEffectOverscrollEffect(
         val consumedPixelsX =
             when {
                 delta.x == 0f -> 0f
+
                 edgeEffectWrapper.isLeftStretched() && delta.x < 0f -> {
                     val consumed =
                         pullLeft(destretchDelta).also {
@@ -1070,13 +1066,11 @@ private class EdgeEffectWrapper(
      *
      * Top/left are positive and bottom/right are negative after the canvas rotations used above.
      */
-    fun horizontalStretchAmount(): Float =
-        dampStretchVector(leftEffect?.distanceCompat ?: 0f) -
-                dampStretchVector(rightEffect?.distanceCompat ?: 0f)
+    fun horizontalStretchAmount(): Float = dampStretchVector(leftEffect?.distanceCompat ?: 0f) -
+        dampStretchVector(rightEffect?.distanceCompat ?: 0f)
 
-    fun verticalStretchAmount(): Float =
-        dampStretchVector(topEffect?.distanceCompat ?: 0f) -
-                dampStretchVector(bottomEffect?.distanceCompat ?: 0f)
+    fun verticalStretchAmount(): Float = dampStretchVector(topEffect?.distanceCompat ?: 0f) -
+        dampStretchVector(bottomEffect?.distanceCompat ?: 0f)
 
     fun isTopNegationStretched(): Boolean = topEffectNegation.isStretched
 
@@ -1106,44 +1100,35 @@ private class EdgeEffectWrapper(
             return !isFinished
         }
 
-    fun getOrCreateTopEffect(): EdgeEffect =
-        topEffect ?: createEdgeEffect(Orientation.Vertical).also { topEffect = it }
+    fun getOrCreateTopEffect(): EdgeEffect = topEffect ?: createEdgeEffect(Orientation.Vertical).also { topEffect = it }
 
-    fun getOrCreateBottomEffect(): EdgeEffect =
-        bottomEffect ?: createEdgeEffect(Orientation.Vertical).also { bottomEffect = it }
+    fun getOrCreateBottomEffect(): EdgeEffect = bottomEffect ?: createEdgeEffect(Orientation.Vertical).also { bottomEffect = it }
 
-    fun getOrCreateLeftEffect(): EdgeEffect =
-        leftEffect ?: createEdgeEffect(Orientation.Horizontal).also { leftEffect = it }
+    fun getOrCreateLeftEffect(): EdgeEffect = leftEffect ?: createEdgeEffect(Orientation.Horizontal).also { leftEffect = it }
 
-    fun getOrCreateRightEffect(): EdgeEffect =
-        rightEffect ?: createEdgeEffect(Orientation.Horizontal).also { rightEffect = it }
+    fun getOrCreateRightEffect(): EdgeEffect = rightEffect ?: createEdgeEffect(Orientation.Horizontal).also { rightEffect = it }
 
-    fun getOrCreateTopEffectNegation(): EdgeEffect =
-        topEffectNegation ?: createEdgeEffect(Orientation.Vertical).also { topEffectNegation = it }
+    fun getOrCreateTopEffectNegation(): EdgeEffect = topEffectNegation ?: createEdgeEffect(Orientation.Vertical).also { topEffectNegation = it }
 
-    fun getOrCreateBottomEffectNegation(): EdgeEffect =
-        bottomEffectNegation
-            ?: createEdgeEffect(Orientation.Vertical).also { bottomEffectNegation = it }
+    fun getOrCreateBottomEffectNegation(): EdgeEffect = bottomEffectNegation
+        ?: createEdgeEffect(Orientation.Vertical).also { bottomEffectNegation = it }
 
-    fun getOrCreateLeftEffectNegation(): EdgeEffect =
-        leftEffectNegation
-            ?: createEdgeEffect(Orientation.Horizontal).also { leftEffectNegation = it }
+    fun getOrCreateLeftEffectNegation(): EdgeEffect = leftEffectNegation
+        ?: createEdgeEffect(Orientation.Horizontal).also { leftEffectNegation = it }
 
-    fun getOrCreateRightEffectNegation(): EdgeEffect =
-        rightEffectNegation
-            ?: createEdgeEffect(Orientation.Horizontal).also { rightEffectNegation = it }
+    fun getOrCreateRightEffectNegation(): EdgeEffect = rightEffectNegation
+        ?: createEdgeEffect(Orientation.Horizontal).also { rightEffectNegation = it }
 
-    private fun createEdgeEffect(orientation: Orientation) =
-        EdgeEffectCompat.create(context).apply {
-            color = glowColor
-            if (size != IntSize.Zero) {
-                if (orientation == Orientation.Vertical) {
-                    setSize(size.width, size.height)
-                } else {
-                    setSize(size.height, size.width)
-                }
+    private fun createEdgeEffect(orientation: Orientation) = EdgeEffectCompat.create(context).apply {
+        color = glowColor
+        if (size != IntSize.Zero) {
+            if (orientation == Orientation.Vertical) {
+                setSize(size.width, size.height)
+            } else {
+                setSize(size.height, size.width)
             }
         }
+    }
 
     fun updateSize(size: IntSize) {
         this.size = size
@@ -1176,8 +1161,7 @@ private fun dampStretchVector(normalizedVector: Float): Float {
  * ([NestedScrollSource.SideEffect]), we want to destretch quicker than normal. See
  * [FlingDestretchFactor].
  */
-private fun destretchMultiplier(source: NestedScrollSource): Float =
-    if (source == NestedScrollSource.SideEffect) FlingDestretchFactor else 1f
+private fun destretchMultiplier(source: NestedScrollSource): Float = if (source == NestedScrollSource.SideEffect) FlingDestretchFactor else 1f
 
 /**
  * When flinging the stretch towards scrolling content, it should destretch quicker than the fling

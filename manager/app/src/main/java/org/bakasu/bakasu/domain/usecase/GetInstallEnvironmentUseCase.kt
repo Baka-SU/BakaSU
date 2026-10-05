@@ -8,6 +8,5 @@ class GetInstallEnvironmentUseCase(
 ) {
     fun cached(): InstallEnvironment? = repository.installEnvironment.value
 
-    suspend operator fun invoke(forceRefresh: Boolean = false) =
-        repository.getInstallEnvironment(forceRefresh)
+    suspend operator fun invoke(forceRefresh: Boolean = false) = repository.getInstallEnvironment(forceRefresh)
 }

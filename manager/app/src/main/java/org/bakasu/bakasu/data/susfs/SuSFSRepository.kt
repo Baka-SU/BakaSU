@@ -1,18 +1,18 @@
 package org.bakasu.bakasu.data.susfs
 
 import android.app.Application
+import androidx.core.net.toUri
 import org.bakasu.bakasu.domain.model.OpenRedirectItem as DomainOpenRedirectItem
 import org.bakasu.bakasu.domain.model.SuSFSConfig as DomainSuSFSConfig
 import org.bakasu.bakasu.domain.model.SuSFSSlotInfo as DomainSuSFSSlotInfo
-import org.bakasu.bakasu.domain.model.UidScheme as DomainUidScheme
 import org.bakasu.bakasu.domain.model.SuSFSStatus
 import org.bakasu.bakasu.domain.model.SuSFSStatusInfo as DomainSuSFSStatusInfo
 import org.bakasu.bakasu.domain.model.SusKstatItem as DomainSusKstatItem
 import org.bakasu.bakasu.domain.model.SusKstatStatically as DomainSusKstatStatically
 import org.bakasu.bakasu.domain.model.SusKstatType as DomainSusKstatType
 import org.bakasu.bakasu.domain.model.SusPathItem as DomainSusPathItem
+import org.bakasu.bakasu.domain.model.UidScheme as DomainUidScheme
 import org.bakasu.bakasu.domain.model.UnameConfig as DomainUnameConfig
-import androidx.core.net.toUri
 
 class SuSFSRepository(
     private val application: Application,
@@ -23,8 +23,11 @@ class SuSFSRepository(
         return SuSFSStatus(
             enabled = version.isNotEmpty(),
             version = version,
-            enabledFeatures = if (version.isEmpty()) "" else
-                runCatching { helper.showEnabledFeatures() }.getOrDefault(""),
+            enabledFeatures = if (version.isEmpty()) {
+                ""
+            } else {
+                runCatching { helper.showEnabledFeatures() }.getOrDefault("")
+            },
         )
     }
 
@@ -32,39 +35,35 @@ class SuSFSRepository(
     suspend fun refreshConfig(): DomainSuSFSConfig = helper.refreshConfig().toDomain()
     suspend fun restoreDefaultConfig() = helper.restoreDefaultConfig()
     suspend fun setConfigEnabled(enabled: Boolean) = helper.setConfigEnabled(enabled)
-    suspend fun loadStatusInfo(forceRefresh: Boolean = false): DomainSuSFSStatusInfo =
-        helper.loadStatusInfo(forceRefresh).toDomain()
+    suspend fun loadStatusInfo(forceRefresh: Boolean = false): DomainSuSFSStatusInfo = helper.loadStatusInfo(forceRefresh).toDomain()
 
     suspend fun addSusPath(path: String) = helper.addSusPath(path)
     suspend fun addSusPathLoop(path: String) = helper.addSusPathLoop(path)
     suspend fun removeSusPath(path: String) = helper.removeSusPath(path)
     suspend fun addSusKstat(path: String) = helper.addSusKstat(path)
     suspend fun addSusKstatFullClone(path: String) = helper.addSusKstatFullClone(path)
-    suspend fun addSusKstatStatically(path: String, values: DomainSusKstatStatically) =
-        helper.addSusKstatStatically(
-            path,
-            values.ino,
-            values.dev,
-            values.nlink,
-            values.size,
-            values.atime,
-            values.atime_nsec,
-            values.mtime,
-            values.mtime_nsec,
-            values.ctime,
-            values.ctime_nsec,
-            values.blocks,
-            values.blksize,
-        )
+    suspend fun addSusKstatStatically(path: String, values: DomainSusKstatStatically) = helper.addSusKstatStatically(
+        path,
+        values.ino,
+        values.dev,
+        values.nlink,
+        values.size,
+        values.atime,
+        values.atime_nsec,
+        values.mtime,
+        values.mtime_nsec,
+        values.ctime,
+        values.ctime_nsec,
+        values.blocks,
+        values.blksize,
+    )
 
     suspend fun removeSusKstat(path: String) = helper.removeSusKstat(path)
     suspend fun setUname(release: String, version: String) = helper.setUname(release, version)
-    suspend fun loadSlotInfo(): List<DomainSuSFSSlotInfo>? =
-        helper.loadSlotInfo()?.map { it.toDomain() }
+    suspend fun loadSlotInfo(): List<DomainSuSFSSlotInfo>? = helper.loadSlotInfo()?.map { it.toDomain() }
 
     suspend fun enableLog(enabled: Boolean) = helper.enableLog(enabled)
-    suspend fun hideSusMntsForNonSuProcs(enabled: Boolean) =
-        helper.hideSusMntsForNonSuProcs(enabled)
+    suspend fun hideSusMntsForNonSuProcs(enabled: Boolean) = helper.hideSusMntsForNonSuProcs(enabled)
 
     suspend fun enableAvcLogSpoofing(enabled: Boolean) = helper.enableAvcLogSpoofing(enabled)
     suspend fun setCmdlineOrBootconfig(path: String) = helper.setCmdlineOrBootconfig(path)
@@ -72,8 +71,7 @@ class SuSFSRepository(
         targetPath: String,
         redirectedPath: String,
         uidScheme: DomainUidScheme,
-    ) =
-        helper.addOpenRedirect(targetPath, redirectedPath, uidScheme.toData())
+    ) = helper.addOpenRedirect(targetPath, redirectedPath, uidScheme.toData())
 
     suspend fun removeOpenRedirect(targetPath: String) = helper.removeOpenRedirect(targetPath)
     suspend fun addSusMap(path: String) = helper.addSusMap(path)
@@ -105,11 +103,9 @@ class SuSFSRepository(
         sus_map = sus_map,
     )
 
-    private fun SuSFSStatusInfo.toDomain(): DomainSuSFSStatusInfo =
-        DomainSuSFSStatusInfo(version, enabledFeatures, variant)
+    private fun SuSFSStatusInfo.toDomain(): DomainSuSFSStatusInfo = DomainSuSFSStatusInfo(version, enabledFeatures, variant)
 
-    private fun SuSFSSlotInfo.toDomain(): DomainSuSFSSlotInfo =
-        DomainSuSFSSlotInfo(slotName, uname, buildTime)
+    private fun SuSFSSlotInfo.toDomain(): DomainSuSFSSlotInfo = DomainSuSFSSlotInfo(slotName, uname, buildTime)
 
     private fun SusKstatType.toDomain(): DomainSusKstatType = when (this) {
         SusKstatType.Normal -> DomainSusKstatType.Normal
@@ -117,15 +113,12 @@ class SuSFSRepository(
         SusKstatType.Statically -> DomainSusKstatType.Statically
     }
 
-    private fun SusKstatStatically.toDomain(): DomainSusKstatStatically =
-        DomainSusKstatStatically(
-            ino, dev, nlink, size, atime, atime_nsec, mtime, mtime_nsec,
-            ctime, ctime_nsec, blocks, blksize,
-        )
+    private fun SusKstatStatically.toDomain(): DomainSusKstatStatically = DomainSusKstatStatically(
+        ino, dev, nlink, size, atime, atime_nsec, mtime, mtime_nsec,
+        ctime, ctime_nsec, blocks, blksize,
+    )
 
-    private fun DomainUidScheme.toData(): UidScheme =
-        UidScheme.entries.first { it.value == value }
+    private fun DomainUidScheme.toData(): UidScheme = UidScheme.entries.first { it.value == value }
 
-    private fun UidScheme.toDomain(): DomainUidScheme =
-        DomainUidScheme.entries.first { it.value == value }
+    private fun UidScheme.toDomain(): DomainUidScheme = DomainUidScheme.entries.first { it.value == value }
 }

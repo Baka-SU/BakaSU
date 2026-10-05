@@ -229,7 +229,7 @@ fun SettingsTextFieldWidget(
                                 }
                             } else {
                                 Modifier
-                            }
+                            },
                         ) {
                             placeholderAnimationScope.AnimatedVisibility(
                                 visible = showPlaceholder,
@@ -257,7 +257,7 @@ fun SettingsTextFieldWidget(
                                 Text(
                                     text = error,
                                     color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodySmall
+                                    style = MaterialTheme.typography.bodySmall,
                                 )
                             }
 
@@ -268,18 +268,18 @@ fun SettingsTextFieldWidget(
                             visible = focused,
                             enter = expandHorizontally(
                                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                                expandFrom = Alignment.Start // Unroll downwards like a blind
+                                expandFrom = Alignment.Start, // Unroll downwards like a blind
                             ) + expandVertically(
                                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                                expandFrom = Alignment.Top // Unroll downwards like a blind
+                                expandFrom = Alignment.Top, // Unroll downwards like a blind
                             ),
                             exit = shrinkHorizontally(
                                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                                shrinkTowards = Alignment.Start // Roll up upwards
+                                shrinkTowards = Alignment.Start, // Roll up upwards
                             ) + shrinkVertically(
                                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                                shrinkTowards = Alignment.Top // Unroll downwards like a blind
-                            )
+                                shrinkTowards = Alignment.Top, // Unroll downwards like a blind
+                            ),
                         ) {
                             Spacer(modifier = Modifier.height(2.dp))
 
@@ -289,35 +289,35 @@ fun SettingsTextFieldWidget(
                                     error.isNotBlank() -> MaterialTheme.colorScheme.error
                                     !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                                     else -> MaterialTheme.colorScheme.primary
-                                }
+                                },
                             )
                         }
                     }
-                }
+                },
             )
 
             AnimatedVisibility(
                 visible = error.isNotBlank() && (focused || state.text.isNotBlank()),
                 enter = expandHorizontally(
                     animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                    expandFrom = Alignment.Start // Unroll downwards like a blind
+                    expandFrom = Alignment.Start, // Unroll downwards like a blind
                 ) + expandVertically(
                     animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                    expandFrom = Alignment.Top // Unroll downwards like a blind
+                    expandFrom = Alignment.Top, // Unroll downwards like a blind
                 ),
                 exit = shrinkHorizontally(
                     animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                    shrinkTowards = Alignment.Start // Roll up upwards
+                    shrinkTowards = Alignment.Start, // Roll up upwards
                 ) + shrinkVertically(
                     animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                    shrinkTowards = Alignment.Top // Unroll downwards like a blind
-                )
+                    shrinkTowards = Alignment.Top, // Unroll downwards like a blind
+                ),
             ) {
                 Text(
                     modifier = Modifier.padding(top = 2.dp),
                     text = error,
                     color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
         },
@@ -325,6 +325,8 @@ fun SettingsTextFieldWidget(
             {
                 trailingContent()
             }
-        } else null
+        } else {
+            null
+        },
     )
 }

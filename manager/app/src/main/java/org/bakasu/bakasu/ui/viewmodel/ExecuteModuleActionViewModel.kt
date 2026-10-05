@@ -60,6 +60,7 @@ class ExecuteModuleActionViewModel(
             executeModuleAction(moduleId).collect { update ->
                 when (update) {
                     is ModuleActionUpdate.Output -> appendOutput(update.text, update.isError)
+
                     is ModuleActionUpdate.Completed -> {
                         mutableState.update { it.copy(running = false) }
                         mutableEvents.emit(ExecuteModuleActionUiEvent.Completed(update.successful))

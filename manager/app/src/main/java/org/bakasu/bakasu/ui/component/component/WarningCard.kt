@@ -33,11 +33,11 @@ fun WarningCard(
     renderBackground: Boolean = true,
     shape: Shape = RoundedCornerShape(16.dp),
     message: String,
-    content: (@Composable () -> Unit) = {},
     color: Color? = null,
     onClick: (() -> Unit)? = null,
     onClose: (() -> Unit)? = null,
-    icon: (@Composable () -> Unit)? = null
+    icon: (@Composable () -> Unit)? = null,
+    content: (@Composable () -> Unit) = {},
 ) {
     WarningCardInner(
         modifier = modifier,
@@ -48,14 +48,14 @@ fun WarningCard(
                 text = message,
                 style = MaterialTheme.typography.bodyMediumEmphasized,
                 modifier = Modifier
-                    .wrapContentHeight(Alignment.CenterVertically)
+                    .wrapContentHeight(Alignment.CenterVertically),
             )
         },
         color = color,
         end = content,
         onClick = onClick,
         onClose = onClose,
-        icon = icon
+        icon = icon,
     )
 }
 
@@ -66,11 +66,11 @@ fun WarningCard(
     renderBackground: Boolean = true,
     shape: Shape = RoundedCornerShape(16.dp),
     message: AnnotatedString,
-    content: (@Composable () -> Unit) = {},
     color: Color? = null,
     onClick: (() -> Unit)? = null,
     onClose: (() -> Unit)? = null,
-    icon: (@Composable () -> Unit)? = null
+    icon: (@Composable () -> Unit)? = null,
+    content: (@Composable () -> Unit) = {},
 ) {
     WarningCardInner(
         modifier = modifier,
@@ -81,14 +81,14 @@ fun WarningCard(
                 text = message,
                 style = MaterialTheme.typography.bodyMediumEmphasized,
                 modifier = Modifier
-                    .wrapContentHeight(Alignment.CenterVertically)
+                    .wrapContentHeight(Alignment.CenterVertically),
             )
         },
         color = color,
         end = content,
         onClick = onClick,
         onClose = onClose,
-        icon = icon
+        icon = icon,
     )
 }
 
@@ -98,15 +98,15 @@ private fun WarningCardInner(
     modifier: Modifier = Modifier,
     renderBackground: Boolean = true,
     shape: Shape = CardDefaults.elevatedShape,
-    content: (@Composable () -> Unit),
     end: (@Composable () -> Unit),
     color: Color? = null,
     onClick: (() -> Unit)? = null,
     onClose: (() -> Unit)? = null,
-    icon: (@Composable () -> Unit)? = null
+    icon: (@Composable () -> Unit)? = null,
+    content: (@Composable () -> Unit),
 ) {
     CompositionLocalProvider(
-        LocalSegmentedItemShape provides shape
+        LocalSegmentedItemShape provides shape,
     ) {
         SettingsBaseWidget(
             modifier = modifier,
@@ -127,7 +127,7 @@ private fun WarningCardInner(
                                 onClose()
                             }
                             .size(18.dp)
-                            .align(Alignment.TopEnd)
+                            .align(Alignment.TopEnd),
                     )
                 }
 
@@ -136,7 +136,7 @@ private fun WarningCardInner(
             iconPlaceholder = false,
             onClick = {
                 onClick?.invoke()
-            }
+            },
         )
     }
 }
@@ -150,6 +150,7 @@ private fun WarningCardPreview() {
         WarningCard(
             message = "Warning message ",
             color = MaterialTheme.colorScheme.outlineVariant,
-        ) {}
+            icon = {},
+        )
     }
 }

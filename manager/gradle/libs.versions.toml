@@ -34,6 +34,9 @@ profileinstaller = "1.4.1"
 koin-bom = "4.2.2"
 commons-compress = "1.28.0"
 xz = "1.12"
+spotless = "8.10.0"
+ktlint = "1.8.0"
+compose-rules = "0.6.4"
 
 [plugins]
 agp-app = { id = "com.android.application", version.ref = "agp" }
@@ -44,6 +47,7 @@ compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 lsplugin-apksign = { id = "org.lsposed.lsplugin.apksign", version.ref = "apksign" }
 aboutLibraries = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutLibraries" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 
 [libraries]
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }

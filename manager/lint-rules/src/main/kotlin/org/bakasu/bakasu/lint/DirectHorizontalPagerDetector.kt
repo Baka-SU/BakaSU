@@ -12,7 +12,9 @@ import com.android.tools.lint.detector.api.SourceCodeScanner
 import org.jetbrains.uast.UCallExpression
 
 /** Requires screens to use the app's pager wrapper so gesture handling stays consistent. */
-class DirectHorizontalPagerDetector : Detector(), SourceCodeScanner {
+class DirectHorizontalPagerDetector :
+    Detector(),
+    SourceCodeScanner {
     override fun getApplicableUastTypes() = listOf(UCallExpression::class.java)
 
     override fun createUastHandler(context: JavaContext) = object : UElementHandler() {
@@ -26,7 +28,7 @@ class DirectHorizontalPagerDetector : Detector(), SourceCodeScanner {
                 ISSUE,
                 node,
                 context.getLocation(node),
-                "Do NOT directly calling Compose HorizontalPager, instead, use HorizontalPagerWithInteraction."
+                "Do NOT directly calling Compose HorizontalPager, instead, use HorizontalPagerWithInteraction.",
             )
         }
     }
@@ -42,8 +44,8 @@ class DirectHorizontalPagerDetector : Detector(), SourceCodeScanner {
             severity = Severity.ERROR,
             implementation = Implementation(
                 DirectHorizontalPagerDetector::class.java,
-                Scope.JAVA_FILE_SCOPE
-            )
+                Scope.JAVA_FILE_SCOPE,
+            ),
         )
     }
 }

@@ -50,13 +50,13 @@ fun SettingsJumpPageWidget(
         clickHaptic = hapticFeedbackType,
         leadingContent = leadingContent,
         foreContent = foreContent,
-        descriptionColumnContent = descriptionColumnContent
+        descriptionColumnContent = descriptionColumnContent,
     ) {
         Icon(
             imageVector = trailingIcon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(24.dp),
         )
     }
 }

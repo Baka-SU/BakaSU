@@ -2,6 +2,8 @@ package org.bakasu.bakasu.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import java.text.Collator
+import java.util.Locale
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -25,8 +27,6 @@ import org.bakasu.bakasu.domain.usecase.SetModuleEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleRemovedUseCase
 import org.bakasu.bakasu.domain.usecase.TransliterateTextUseCase
 import org.bakasu.bakasu.domain.usecase.UpdateCachedModuleEnabledUseCase
-import java.text.Collator
-import java.util.Locale
 
 data class ModuleUiState(
     val moduleList: List<InstalledModule> = emptyList(),
@@ -124,8 +124,11 @@ class ModuleViewModel(
     fun dispatch(action: ModuleUiAction) {
         when (action) {
             is ModuleUiAction.Refresh -> refresh(action.manual)
+
             ModuleUiAction.ReloadSettings -> modulePreferences.reload()
+
             is ModuleUiAction.Search -> controls.update { it.copy(search = action.query) }
+
             is ModuleUiAction.Sort -> {
                 modulePreferences.setSort(action.enabledFirst, action.actionFirst)
             }
@@ -142,20 +145,21 @@ class ModuleViewModel(
             }
 
             ModuleUiAction.MarkNeedRefresh -> controls.update { it.copy(isNeedRefresh = true) }
+
             is ModuleUiAction.UpdateCachedEnabled ->
                 updateCachedModuleEnabledUseCase(action.moduleId, action.enabled)
 
             is ModuleUiAction.SetEnabled -> viewModelScope.launch {
                 val successful = setModuleEnabled(action.moduleId, action.enabled).isSuccess
                 mutableEvents.emit(
-                    ModuleUiEvent.EnabledChanged(action.moduleId, action.enabled, successful)
+                    ModuleUiEvent.EnabledChanged(action.moduleId, action.enabled, successful),
                 )
             }
 
             is ModuleUiAction.SetRemoved -> viewModelScope.launch {
                 val successful = setModuleRemoved(action.moduleId, action.removed).isSuccess
                 mutableEvents.emit(
-                    ModuleUiEvent.RemovedChanged(action.moduleId, action.removed, successful)
+                    ModuleUiEvent.RemovedChanged(action.moduleId, action.removed, successful),
                 )
             }
 
@@ -195,6 +199,7 @@ class ModuleViewModel(
                 val executable = it.hasWebUi || it.hasActionScript
                 when {
                     it.metamodule && it.enabled -> 0
+
                     sortEnabledFirst && sortActionFirst -> when {
                         it.enabled && executable -> 1
                         it.enabled -> 2
@@ -203,7 +208,9 @@ class ModuleViewModel(
                     }
 
                     sortEnabledFirst -> if (it.enabled) 1 else 2
+
                     sortActionFirst -> if (executable) 1 else 2
+
                     else -> 1
                 }
             },
@@ -213,8 +220,8 @@ class ModuleViewModel(
 
         return modules.filter { module ->
             module.id.contains(search, ignoreCase = true) ||
-                    module.name.contains(search, ignoreCase = true) ||
-                    transliterateText(module.name).contains(search, ignoreCase = true)
+                module.name.contains(search, ignoreCase = true) ||
+                transliterateText(module.name).contains(search, ignoreCase = true)
         }.sortedWith(comparator)
     }
 

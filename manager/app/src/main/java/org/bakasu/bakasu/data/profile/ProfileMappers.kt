@@ -38,4 +38,3 @@ internal fun AppProfile.toNative(): Natives.Profile = Natives.Profile(
     rules = rules,
     flags = flags,
 )
-

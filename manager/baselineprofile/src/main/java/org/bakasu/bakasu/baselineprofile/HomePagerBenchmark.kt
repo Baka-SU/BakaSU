@@ -39,7 +39,7 @@ class HomePagerBenchmark(
             arrayOf(
                 CompilationMode.Partial(
                     baselineProfileMode = BaselineProfileMode.Require,
-                )
+                ),
             ),
         )
     }

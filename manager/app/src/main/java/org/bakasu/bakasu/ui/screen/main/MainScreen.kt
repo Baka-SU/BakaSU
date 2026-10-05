@@ -53,7 +53,6 @@ import top.yukonga.miuix.kmp.utils.PagerInterceptionMode
 import top.yukonga.miuix.kmp.utils.PagerNavigationSpringSpec
 import top.yukonga.miuix.kmp.utils.pagerGestureOverride
 
-
 @Composable
 fun MainScreen(
     pagerInterceptionMode: Int = PagerInterceptionMode.CrossAxisInterceptor.ordinal,
@@ -69,7 +68,7 @@ fun MainScreen(
     var uiSelectedPage by rememberSaveable { mutableIntStateOf(0) }
     val pagerState = rememberPagerState(
         initialPage = uiSelectedPage,
-        pageCount = { pages.size }
+        pageCount = { pages.size },
     )
     var userScrollEnabled by remember { mutableStateOf(true) }
     var animating by remember { mutableStateOf(false) }
@@ -130,7 +129,7 @@ fun MainScreen(
     CompositionLocalProvider(
         LocalPagerState provides pagerState,
         LocalHandlePageChange provides handlePageChange,
-        LocalSelectedPage provides uiSelectedPage
+        LocalSelectedPage provides uiSelectedPage,
     ) {
         val content = @Composable { paddingBottom: Dp ->
             HorizontalPagerWithInteraction(
@@ -191,7 +190,7 @@ fun MainScreen(
                 containerColor = Color.Transparent,
             ) { innerPadding ->
                 Box(
-                    modifier = Modifier.blurSource()
+                    modifier = Modifier.blurSource(),
                 ) {
                     content(innerPadding.calculateBottomPadding())
                 }
@@ -201,17 +200,17 @@ fun MainScreen(
             val density = LocalDensity.current
 
             Box(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .blurSource()
+                        .blurSource(),
                 ) {
                     Spacer(
                         modifier = Modifier.width(
-                            with(density) { navWidth.toDp() }
-                        )
+                            with(density) { navWidth.toDp() },
+                        ),
                     )
 
                     Box(Modifier.weight(1f)) {

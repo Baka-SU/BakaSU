@@ -10,7 +10,9 @@ import top.yukonga.miuix.kmp.nav.core.NavKey
  * Each destination is a NavKey (data object/data class) and can be saved/restored in the back stack.
  */
 @Serializable
-sealed interface Route : NavKey, Parcelable {
+sealed interface Route :
+    NavKey,
+    Parcelable {
     @Parcelize
     @Serializable
     data object About : Route
@@ -116,8 +118,7 @@ sealed interface Route : NavKey, Parcelable {
             )
 
             fun module(uri: String) = Flash(TYPE_MODULE, uris = listOf(uri))
-            fun modules(uris: List<String>, currentIndex: Int = 0) =
-                Flash(TYPE_MODULES, uris = uris, currentIndex = currentIndex)
+            fun modules(uris: List<String>, currentIndex: Int = 0) = Flash(TYPE_MODULES, uris = uris, currentIndex = currentIndex)
 
             fun moduleUpdate(uri: String) = Flash(TYPE_MODULE_UPDATE, uris = listOf(uri))
             fun restore() = Flash(TYPE_RESTORE)

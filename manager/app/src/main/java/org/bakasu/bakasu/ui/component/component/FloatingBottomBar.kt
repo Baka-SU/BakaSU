@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +65,13 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.lerp
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.sign
+import kotlin.math.sin
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.ui.component.liquid.InnerShadow
 import org.bakasu.bakasu.ui.component.liquid.innerShadow
@@ -86,13 +94,6 @@ import top.yukonga.miuix.kmp.blur.highlight.LightSource
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.sensor.rememberDeviceTilt
-import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.roundToInt
-import kotlin.math.sign
-import kotlin.math.sin
 
 val LocalFloatingBottomBarTabScale = staticCompositionLocalOf { { 1f } }
 
@@ -170,7 +171,7 @@ fun RowScope.FloatingBottomBarItem(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     val scale = LocalFloatingBottomBarTabScale.current
     Column(
@@ -185,11 +186,13 @@ fun RowScope.FloatingBottomBarItem(
             }
             .onKeyEvent { event ->
                 val activationKey = event.key == Key.Enter ||
-                        event.key == Key.NumPadEnter || event.key == Key.Spacebar
+                    event.key == Key.NumPadEnter || event.key == Key.Spacebar
                 if (activationKey) {
                     if (event.type == KeyEventType.KeyUp) onClick()
                     true
-                } else false
+                } else {
+                    false
+                }
             }
             .focusable()
             .fillMaxHeight()
@@ -201,7 +204,7 @@ fun RowScope.FloatingBottomBarItem(
             },
         verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
-        content = content
+        content = content,
     )
 }
 
@@ -212,7 +215,7 @@ fun FloatingBottomBar(
     onSelected: (index: Int) -> Unit,
     tabsCount: Int,
     isBlurEnabled: Boolean = true,
-    content: @Composable RowScope.((Int) -> Unit) -> Unit
+    content: @Composable RowScope.((Int) -> Unit) -> Unit,
 ) {
     val themeConfig: ThemeConfig = koinInject()
     val isInDark = isInDarkTheme(themeConfig.forceDarkMode)
@@ -297,7 +300,7 @@ fun FloatingBottomBar(
                         offsetAnimation.snapTo(offsetAnimation.value + dragAmount.x)
                     }
                 }
-            }
+            },
         )
     }
 
@@ -322,11 +325,14 @@ fun FloatingBottomBar(
             animationScope = animationScope,
             position = { size, _ ->
                 Offset(
-                    if (isLtr) (dampedDragAnimation.value + 0.5f) * tabWidthPx + panelOffset
-                    else size.width - (dampedDragAnimation.value + 0.5f) * tabWidthPx + panelOffset,
-                    size.height / 2f
+                    if (isLtr) {
+                        (dampedDragAnimation.value + 0.5f) * tabWidthPx + panelOffset
+                    } else {
+                        size.width - (dampedDragAnimation.value + 0.5f) * tabWidthPx + panelOffset
+                    },
+                    size.height / 2f,
                 )
-            }
+            },
         )
     }
 
@@ -334,10 +340,17 @@ fun FloatingBottomBar(
     val pillHighlight = rememberGravityRotatedHighlight(iosIndicatorSpecular, extraDegrees = 90f)
 
     val combinedBackdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop)
+    val currentContent by rememberUpdatedState(content)
+    // Keep the highlight copy independent from the base row and movable between blur modes.
+    val highlightedContent = remember {
+        movableContentOf<RowScope, (Int) -> Unit> { rowScope, onActivate ->
+            currentContent(rowScope, onActivate)
+        }
+    }
 
     Box(
         modifier = modifier.width(IntrinsicSize.Min),
-        contentAlignment = Alignment.CenterStart
+        contentAlignment = Alignment.CenterStart,
     ) {
         Row(
             Modifier
@@ -376,7 +389,7 @@ fun FloatingBottomBar(
                                 val s = lerp(
                                     1f,
                                     1f + 16.dp.toPx() / width,
-                                    dampedDragAnimation.pressProgress
+                                    dampedDragAnimation.pressProgress,
                                 )
                                 scaleX = s
                                 scaleY = s
@@ -385,12 +398,14 @@ fun FloatingBottomBar(
                         )
                     } else {
                         Modifier.background(containerColor, pillShape)
-                    }
+                    },
                 )
                 .then(
                     if (isBlurEnabled) {
                         interactiveHighlight.modifier.then(interactiveHighlight.gestureModifier)
-                    } else Modifier
+                    } else {
+                        Modifier
+                    },
                 )
                 .then(dampedDragAnimation.modifier)
                 .height(64.dp)
@@ -432,7 +447,7 @@ fun FloatingBottomBar(
                         .height(56.dp)
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    content = { content(::activateTab) }
+                    content = { highlightedContent(this, ::activateTab) },
                 )
             }
         }
@@ -471,9 +486,13 @@ fun FloatingBottomBar(
                             onDrawSurface = {
                                 val progress = dampedDragAnimation.pressProgress
                                 drawRect(
-                                    color = if (!isInDark) Color.Black.copy(alpha = 0.1f) else Color.White.copy(
-                                        alpha = 0.1f
-                                    ),
+                                    color = if (!isInDark) {
+                                        Color.Black.copy(alpha = 0.1f)
+                                    } else {
+                                        Color.White.copy(
+                                            alpha = 0.1f,
+                                        )
+                                    },
                                     alpha = 1f - progress,
                                 )
                                 drawRect(Color.Black.copy(alpha = 0.03f * progress))
@@ -487,7 +506,7 @@ fun FloatingBottomBar(
                             )
                         }
                         .height(56.dp)
-                        .width(tabWidthDp)
+                        .width(tabWidthDp),
                 )
             } else {
                 Box(
@@ -516,7 +535,7 @@ fun FloatingBottomBar(
                                     translationX = if (isLtr) -progressOffset else progressOffset
                                 },
                             verticalAlignment = Alignment.CenterVertically,
-                            content = { content(::activateTab) },
+                            content = { highlightedContent(this, ::activateTab) },
                         )
                     }
                 }

@@ -8,16 +8,13 @@ class ModuleFileRepository(
 ) {
     private val moduleUtils = ModuleUtils()
 
-    fun isUriAccessible(uri: String): Boolean =
-        moduleUtils.isUriAccessible(application, uri.toUri())
+    fun isUriAccessible(uri: String): Boolean = moduleUtils.isUriAccessible(application, uri.toUri())
 
     fun takePersistableUriPermission(uri: String) {
         moduleUtils.takePersistableUriPermission(application, uri.toUri())
     }
 
-    fun extractModuleName(uri: String): String =
-        moduleUtils.extractModuleName(application, uri.toUri())
+    fun extractModuleName(uri: String): String = moduleUtils.extractModuleName(application, uri.toUri())
 
-    fun extractModuleId(uri: String): String? =
-        moduleUtils.extractModuleId(application, uri.toUri())
+    fun extractModuleId(uri: String): String? = moduleUtils.extractModuleId(application, uri.toUri())
 }

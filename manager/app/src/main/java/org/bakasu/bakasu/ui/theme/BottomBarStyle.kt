@@ -2,10 +2,10 @@ package org.bakasu.bakasu.ui.theme
 
 enum class BottomBarStyle {
     MATERIAL3_EXPRESSIVE,
-    FLOATING;
+    FLOATING,
+    ;
 
     companion object {
-        fun fromOrdinal(ordinal: Int): BottomBarStyle =
-            entries.getOrElse(ordinal) { MATERIAL3_EXPRESSIVE }
+        fun fromOrdinal(ordinal: Int): BottomBarStyle = entries.getOrElse(ordinal) { MATERIAL3_EXPRESSIVE }
     }
 }

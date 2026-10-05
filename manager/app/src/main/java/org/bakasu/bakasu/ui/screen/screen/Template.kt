@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.getSystemService
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.ui.component.NetworkRefreshContent
@@ -81,7 +82,6 @@ import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.viewmodel.TemplateUiAction
 import org.bakasu.bakasu.ui.viewmodel.TemplateUiEvent
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -89,7 +89,6 @@ import org.koin.compose.viewmodel.koinViewModel
  * @author weishu
  * @date 2023/10/20.
  */
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -193,12 +192,12 @@ fun AppProfileTemplateScreen() {
                             readOnly = false,
                             isCreation = true,
                         ),
-                        "template_edit"
+                        "template_edit",
                     )
                 },
                 icon = { Icon(Icons.TwoTone.Add, null) },
                 text = { Text(stringResource(id = R.string.app_profile_template_create)) },
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             )
         },
         containerColor = Color.Transparent,
@@ -210,7 +209,7 @@ fun AppProfileTemplateScreen() {
                 modifier = Modifier
                     .fillMaxSize()
                     .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .blurSource()
+                    .blurSource(),
             ) {
                 item {
                     Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
@@ -233,7 +232,7 @@ fun AppProfileTemplateScreen() {
                 state = pullRefreshState,
                 modifier = Modifier
                     .nestedScroll(
-                        scrollBehavior.nestedScrollConnection
+                        scrollBehavior.nestedScrollConnection,
                     )
                     .blurSource(),
                 isRefreshing = isUserRefreshing,
@@ -263,7 +262,7 @@ fun AppProfileTemplateScreen() {
                         .nestedScroll(scrollBehavior.nestedScrollConnection),
                     contentPadding = remember {
                         PaddingValues(bottom = 16.dp + 56.dp + 16.dp /* Scaffold Fab Spacing + Fab container height */)
-                    }
+                    },
                 ) {
                     item {
                         Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
@@ -271,7 +270,8 @@ fun AppProfileTemplateScreen() {
 
                     lazySegmentColumn(
                         items = uiState.templateList,
-                        key = { _, app -> app.id }) { _, app ->
+                        key = { _, app -> app.id },
+                    ) { _, app ->
                         TemplateItem(app)
                     }
 
@@ -287,7 +287,7 @@ fun AppProfileTemplateScreen() {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TemplateItem(
-    template: ProfileTemplate
+    template: ProfileTemplate,
 ) {
     val navigator = LocalNavigator.current
     SettingsJumpPageWidget(
@@ -296,7 +296,7 @@ private fun TemplateItem(
         onClick = {
             navigator.navigateForResult(
                 Route.TemplateEditor(template.id, !template.local),
-                "template_edit"
+                "template_edit",
             )
         },
         description = "${template.id}${if (template.author.isEmpty()) "" else "@${template.author}"}",
@@ -308,7 +308,7 @@ private fun TemplateItem(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 5.dp)
+                    .padding(top = 5.dp),
             ) {
                 LabelText("UID: ${template.uid}")
                 LabelText(
@@ -331,15 +331,15 @@ private fun TemplateItem(
                     )
                 }
             }
-        }
+        },
     )
 }
 
 @Preview
 @Composable
-fun TemplateItemPreview() {
+private fun TemplateItemPreview() {
     CompositionLocalProvider(
-        LocalNavigator provides Navigator(Route.AppProfileTemplate)
+        LocalNavigator provides Navigator(Route.AppProfileTemplate),
     ) {
         TemplateItem(ProfileTemplate())
     }
@@ -357,33 +357,34 @@ private fun TopBar(
     val themeConfig: ThemeConfig = koinInject()
     val cardConfig: CardConfig = koinInject()
     LargeFlexibleTopAppBar(
-        modifier = Modifier.blurEffect(
-        ),
+        modifier = Modifier.blurEffect(),
         title = {
             Text(stringResource(R.string.settings_profile_template))
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor =
-                if (themeConfig.isEnableBlur)
+                if (themeConfig.isEnableBlur) {
                     Color.Transparent
-                else
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
+                },
             scrolledContainerColor =
-                if (themeConfig.isEnableBlur)
+                if (themeConfig.isEnableBlur) {
                     Color.Transparent
-                else
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
+                },
         ),
         navigationIcon = {
             AppBackButton(
-                onClick = onBack
+                onClick = onBack,
             )
         },
         actions = {
             IconButton(onClick = onSync) {
                 Icon(
                     Icons.TwoTone.Sync,
-                    contentDescription = stringResource(id = R.string.app_profile_template_sync)
+                    contentDescription = stringResource(id = R.string.app_profile_template_sync),
                 )
             }
 
@@ -393,14 +394,14 @@ private fun TopBar(
             }) {
                 Icon(
                     imageVector = Icons.TwoTone.ImportExport,
-                    contentDescription = stringResource(id = R.string.app_profile_import_export)
+                    contentDescription = stringResource(id = R.string.app_profile_import_export),
                 )
 
                 DropdownMenuPopup(expanded = showDropdown, onDismissRequest = {
                     showDropdown = false
                 }) {
                     DropdownMenuGroup(
-                        shapes = MenuDefaults.groupShapes()
+                        shapes = MenuDefaults.groupShapes(),
                     ) {
                         DropdownMenuItem(
                             shape = MenuDefaults.itemShape(0, 2).shape,
@@ -427,7 +428,7 @@ private fun TopBar(
             }
         },
         windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
-        scrollBehavior = scrollBehavior
+        scrollBehavior = scrollBehavior,
     )
 }
 
@@ -435,11 +436,11 @@ private fun TopBar(
 fun LabelText(
     label: String,
     containerColor: Color = MaterialTheme.colorScheme.primary,
-    contentColor: Color = contentColorFor(containerColor)
+    contentColor: Color = contentColorFor(containerColor),
 ) {
     Surface(
         shape = RoundedCornerShape(4.dp),
-        color = containerColor
+        color = containerColor,
     ) {
         Text(
             text = label,
@@ -447,7 +448,7 @@ fun LabelText(
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
             color = contentColor,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

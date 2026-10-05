@@ -1,9 +1,5 @@
 package org.bakasu.bakasu.data.update
 
-import okhttp3.CacheControl
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -16,6 +12,10 @@ import java.util.zip.Inflater
 import java.util.zip.InflaterInputStream
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
+import okhttp3.CacheControl
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
 
 data class ZipEntryMetadata(
     val name: String,
@@ -42,12 +42,10 @@ class ZipRangeArchive(
         .followSslRedirects(false)
         .build()
 
-    fun listEntries(url: String): List<ZipEntryMetadata> {
-        return try {
-            listRangedEntries(url)
-        } catch (_: IOException) {
-            listFullArchiveEntries(url)
-        }
+    fun listEntries(url: String): List<ZipEntryMetadata> = try {
+        listRangedEntries(url)
+    } catch (_: IOException) {
+        listFullArchiveEntries(url)
     }
 
     private fun listRangedEntries(url: String): List<ZipEntryMetadata> {
@@ -97,7 +95,7 @@ class ZipRangeArchive(
 
         val localHeader = getRangeBytes(
             url,
-            "bytes=${entry.localHeaderOffset}-${entry.localHeaderOffset + LOCAL_FILE_HEADER_SIZE - 1}"
+            "bytes=${entry.localHeaderOffset}-${entry.localHeaderOffset + LOCAL_FILE_HEADER_SIZE - 1}",
         ).bytes
         if (localHeader.readUIntAt(0) != LOCAL_FILE_HEADER_SIGNATURE) {
             throw IOException("Invalid ZIP local file header")
@@ -114,7 +112,7 @@ class ZipRangeArchive(
 
         withRangeStream(
             url,
-            "bytes=$dataOffset-${dataOffset + entry.compressedSize - 1}"
+            "bytes=$dataOffset-${dataOffset + entry.compressedSize - 1}",
         ) { compressedStream ->
             val decodedStream = when (entry.compressionMethod) {
                 METHOD_STORED -> compressedStream
@@ -176,7 +174,7 @@ class ZipRangeArchive(
                 zipFile.getInputStream(zipEntry).use { input ->
                     writeVerified(input, target, entry) { progress ->
                         FULL_ARCHIVE_DOWNLOAD_PROGRESS +
-                                ((progress * (100 - FULL_ARCHIVE_DOWNLOAD_PROGRESS)) / 100)
+                            ((progress * (100 - FULL_ARCHIVE_DOWNLOAD_PROGRESS)) / 100)
                     }
                 }
             }
@@ -185,29 +183,27 @@ class ZipRangeArchive(
         }
     }
 
-    private fun listFullArchiveEntries(url: String): List<ZipEntryMetadata> {
-        return archiveClient.newCall(newRequest(url).build()).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            val body = response.body ?: throw IOException("Empty body")
-            body.byteStream().use { input ->
-                ZipInputStream(input).use { zip ->
-                    buildList {
-                        while (true) {
-                            val entry = zip.nextEntry ?: break
-                            zip.closeEntry()
-                            add(
-                                ZipEntryMetadata(
-                                    name = entry.name,
-                                    flags = 0,
-                                    compressionMethod = entry.method,
-                                    crc32 = entry.crc,
-                                    compressedSize = entry.compressedSize,
-                                    uncompressedSize = entry.size,
-                                    localHeaderOffset = 0,
-                                    canUseRange = false,
-                                )
-                            )
-                        }
+    private fun listFullArchiveEntries(url: String): List<ZipEntryMetadata> = archiveClient.newCall(newRequest(url).build()).execute().use { response ->
+        if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+        val body = response.body ?: throw IOException("Empty body")
+        body.byteStream().use { input ->
+            ZipInputStream(input).use { zip ->
+                buildList {
+                    while (true) {
+                        val entry = zip.nextEntry ?: break
+                        zip.closeEntry()
+                        add(
+                            ZipEntryMetadata(
+                                name = entry.name,
+                                flags = 0,
+                                compressionMethod = entry.method,
+                                crc32 = entry.crc,
+                                compressedSize = entry.compressedSize,
+                                uncompressedSize = entry.size,
+                                localHeaderOffset = 0,
+                                canUseRange = false,
+                            ),
+                        )
                     }
                 }
             }
@@ -242,7 +238,7 @@ class ZipRangeArchive(
                     copied += read
                     if (entry.uncompressedSize > 0L) {
                         onProgress(
-                            ((copied * 100L) / entry.uncompressedSize).toInt().coerceIn(0, 100)
+                            ((copied * 100L) / entry.uncompressedSize).toInt().coerceIn(0, 100),
                         )
                     }
                 }
@@ -264,17 +260,15 @@ class ZipRangeArchive(
         }
     }
 
-    private fun getRangeBytes(url: String, range: String): RangeBytes {
-        return withRangeResponse(url, range) { response ->
-            val contentRange = response.header("Content-Range")
-                ?: throw IOException("Missing Content-Range")
-            val match = CONTENT_RANGE_PATTERN.matchEntire(contentRange)
-                ?: throw IOException("Invalid Content-Range")
-            val startOffset = match.groupValues[1].toLongOrNull()
-                ?: throw IOException("Invalid Content-Range")
-            val body = response.body ?: throw IOException("Empty body")
-            RangeBytes(body.bytes(), startOffset)
-        }
+    private fun getRangeBytes(url: String, range: String): RangeBytes = withRangeResponse(url, range) { response ->
+        val contentRange = response.header("Content-Range")
+            ?: throw IOException("Missing Content-Range")
+        val match = CONTENT_RANGE_PATTERN.matchEntire(contentRange)
+            ?: throw IOException("Invalid Content-Range")
+        val startOffset = match.groupValues[1].toLongOrNull()
+            ?: throw IOException("Invalid Content-Range")
+        val body = response.body ?: throw IOException("Empty body")
+        RangeBytes(body.bytes(), startOffset)
     }
 
     private fun withRangeStream(
@@ -296,7 +290,7 @@ class ZipRangeArchive(
         var currentUrl = url
         repeat(MAX_RANGE_REDIRECTS) {
             rangeClient.newCall(
-                newRequest(currentUrl).header("Range", range).build()
+                newRequest(currentUrl).header("Range", range).build(),
             ).execute().use { response ->
                 if (response.code in HTTP_REDIRECT_START..HTTP_REDIRECT_END) {
                     val location = response.header("Location")
@@ -336,10 +330,9 @@ class ZipRangeArchive(
         }
     }
 
-    private fun newRequest(url: String): Request.Builder =
-        Request.Builder()
-            .url(url)
-            .cacheControl(CacheControl.FORCE_NETWORK)
+    private fun newRequest(url: String): Request.Builder = Request.Builder()
+        .url(url)
+        .cacheControl(CacheControl.FORCE_NETWORK)
 
     private class ZipRangeUnsupportedException : IOException()
 
@@ -351,9 +344,9 @@ class ZipRangeArchive(
     private fun ByteArray.readUIntAt(offset: Int): Long {
         if (offset < 0 || offset + 4 > size) throw IOException("Truncated ZIP data")
         return (this[offset].toLong() and 0xff) or
-                ((this[offset + 1].toLong() and 0xff) shl 8) or
-                ((this[offset + 2].toLong() and 0xff) shl 16) or
-                ((this[offset + 3].toLong() and 0xff) shl 24)
+            ((this[offset + 1].toLong() and 0xff) shl 8) or
+            ((this[offset + 2].toLong() and 0xff) shl 16) or
+            ((this[offset + 3].toLong() and 0xff) shl 24)
     }
 
     private companion object {
@@ -478,9 +471,9 @@ object ZipCentralDirectory {
     private fun ByteArray.readUInt(offset: Int): Long {
         requireBounds(offset, 4)
         return (this[offset].toLong() and 0xff) or
-                ((this[offset + 1].toLong() and 0xff) shl 8) or
-                ((this[offset + 2].toLong() and 0xff) shl 16) or
-                ((this[offset + 3].toLong() and 0xff) shl 24)
+            ((this[offset + 1].toLong() and 0xff) shl 8) or
+            ((this[offset + 2].toLong() and 0xff) shl 16) or
+            ((this[offset + 3].toLong() and 0xff) shl 24)
     }
 
     private fun ByteArray.requireBounds(offset: Int, length: Int) {

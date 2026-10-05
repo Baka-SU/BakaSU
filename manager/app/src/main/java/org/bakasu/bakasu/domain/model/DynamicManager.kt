@@ -6,7 +6,6 @@ data class DynamicManagerConfig(
 ) {
     val isValid: Boolean
         get() = size > 0 && hash.length == 64
-
 }
 
 data class DynamicManagerApp(
