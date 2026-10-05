@@ -546,7 +546,6 @@
     <string name="enable_adb_summary">強制開啟 USB 偵錯並停用 adb 驗證，非必要請勿啟用</string>
     <string name="install_force_backup">備份為原廠映像</string>
     <string name="install_force_backup_summary">請確保你選擇的 boot 映像是原廠映像</string>
-    <string name="about_anime_character_sticker"><![CDATA[呢啲圖示係根據特別安排授權使用：由怡子曰曰繪製，版權由明风 OuO 持有，而向量化圖示就由本項目提供。]]></string>
     <string name="navigation_bar_badge">導覽列徽章</string>
     <string name="navigation_bar_badge_summary">喺導覽列度顯示超級用戶／模組數量</string>
     <string name="home_card_icons">喺主頁卡片度顯示圖示</string>

@@ -51,7 +51,7 @@ ccflags-y += -I$(src) -I$(src)/include
 
 obj-$(CONFIG_KSU) += kernelsu.o
 
-REPO_NAME := ReSukiSU
+REPO_NAME := BakaSU
 
 KDIR := $(KDIR)
 
@@ -98,7 +98,7 @@ ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
 ccflags-y += -DKSU_VERSION_FULL=\"$(KSU_VERSION_FULL)\"
 
 ifdef CONFIG_KSU_MULTI_MANAGER_SUPPORT
-$(info -- Supported Unofficial Manager: MKSU, RKSU, KOWSU, SukiSU-Ultra, ReSukiSU )
+$(info -- Supported Managers: KernelSU Official, KOWSU, BakaSU )
 endif
 
 KERNEL_VERSION := $(VERSION).$(PATCHLEVEL)
@@ -175,7 +175,7 @@ ifdef CONFIG_KSU_TRACEPOINT_HOOK
       $(info -- Current Kernel Type: $(KERNEL_TYPE))
       $(info -- If you really want to continue, go to Kbuild and comment out this warning.)
       $(info -- Usually, this error occurs because you forgot to enable some kernel configurations.)
-      $(info -- Read: https://resukisu.org/guide/manual-integrate.html)
+      $(info -- Read: https://bakasu.org/guide/manual-integrate.html)
       $(error TP hooks are incompatible with Non-GKI/GKI 1.0 kernels.)
     endif
   endif
@@ -204,7 +204,7 @@ endif
 
 ifndef CONFIG_KSU_TRACEPOINT_HOOK
   # For old kernel, pkg observer maybe let system freeze
-  # https://github.com/ReSukiSU/ReSukiSU/issues/82#issuecomment-4015396974
+  # https://github.com/Baka-SU/BakaSU/issues/82#issuecomment-4015396974
   #
   # 6.7- we use lsm_hooks to call ksu_handle_rename
   # 6.8+ we use pkg_observer to track_throne

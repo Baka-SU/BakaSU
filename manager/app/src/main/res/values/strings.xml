@@ -58,7 +58,7 @@
     <string name="reboot_download">Reboot to Download</string>
     <string name="reboot_edl">Reboot to EDL</string>
     <string name="about">About</string>
-    <string name="about_anime_character_sticker"><![CDATA[The icons are licensed under a special arrangement: drawn by 怡子曰曰, the copyright is held by 明风 OuO, and the vectorized icons are provided by this project.]]></string>
+    <string name="about_app_icon"><![CDATA[The icons are ALL RIGHTS RESERVED and copyright is held by %1$s]]></string>
     <string name="get_source_code">Check for source code</string>
     <string name="get_source_code_detail">Check for source code on GitHub</string>
     <string name="join_telegram_group">Join community</string>
@@ -578,7 +578,7 @@
     <string name="wear_module_file_unreadable">Cannot read the selected module ZIP</string>
     <string name="wear_general">General</string>
     <string name="wear_security">Security</string>
-    <string name="wear_project_url" translatable="false">https://github.com/ReSukiSU/ReSukiSU</string>
+    <string name="wear_project_url" translatable="false">https://github.com/Baka-SU/BakaSU</string>
     <string name="wear_project_license" translatable="false">GPL-3.0</string>
     <string name="wear_app_version" translatable="false">%1$s (%2$d)</string>
     <string name="wear_clear_search">Clear search</string>

@@ -12,7 +12,7 @@ goblin = "0.10"
 scroll = "0.13"
 
 anyhow = "1"
-rustix = { git = "https://github.com/ReSukiSU/rustix.git", rev = "4a53fbc", features = ["mount", "fs", "runtime", "system", "process"] }
+rustix = { git = "https://github.com/Baka-SU/rustix.git", rev = "4a53fbc", features = ["mount", "fs", "runtime", "system", "process"] }
 
 syscalls = { version = "0.8", default-features = false, features = [
     "aarch64",
@@ -22,7 +22,7 @@ syscalls = { version = "0.8", default-features = false, features = [
 
 # for kmsg logging
 log = "0.4"
-kernlog = { git = "https://github.com/ReSukiSU/kernlog.rs" }
+kernlog = { git = "https://github.com/Baka-SU/kernlog.rs" }
 
 [patch.crates-io]
 libc = { git = "https://github.com/rust-lang/libc", rev = "1a661633f11a261ff9c00b40875ef72f1cbec818" }

@@ -214,7 +214,6 @@
     <string name="sulog_event_dropped">Evento descartado</string>
     <string name="sulog_drop_count">%s perdido</string>
     <string name="sulog_daemon_restart_count">reinicio #%s</string>
-    <string name="about_anime_character_sticker"><![CDATA[Los iconos están sujetos a un acuerdo especial: han sido dibujados por 怡子曰曰, los derechos de autor pertenecen a 明风 OuO y las versiones vectorizadas son proporcionadas por este proyecto.]]></string>
     <string name="open_source_license">Licencia de código abierto</string>
     <string name="open_source_license_settings_description">Ver bibliotecas de código abierto de terceros y sus licencias</string>
     <string name="visit_home_page">Visitar Página de Inicio</string>
