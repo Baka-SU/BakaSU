@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -40,10 +41,11 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
+import org.bakasu.bakasu.ui.wear.WearMainActivity
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
-class MainActivity : ComponentActivity() {
+open class MainActivity : ComponentActivity() {
     private val superUserViewModel: SuperUserViewModel by viewModel()
     private val homeViewModel: HomeViewModel by viewModel()
     private val moduleViewModel: ModuleViewModel by viewModel()
@@ -67,6 +69,13 @@ class MainActivity : ComponentActivity() {
     private val intentState = MutableStateFlow(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Watches use their own activity; the launcher entries and alias stay shared with the phone.
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) {
+            super.onCreate(savedInstanceState)
+            startActivity(Intent(intent).setClass(this, WearMainActivity::class.java))
+            finish()
+            return
+        }
         try {
             val splashScreen = installSplashScreen()
 
@@ -80,11 +89,10 @@ class MainActivity : ComponentActivity() {
             super.onCreate(savedInstanceState)
 
             splashScreen.setKeepOnScreenCondition {
-                when (startupState.value) {
-                    StartupState.Loading -> true
-                    StartupState.Ready -> false
-                    is StartupState.Failed -> false
-                }
+                shouldKeepStartupSplash(
+                    startupState = startupState.value,
+                    homeInitialDataLoaded = homeViewModel.homeStateRepository.state.value.isInitialDataLoaded,
+                )
             }
 
             lifecycleScope.launch { ensureManagerInstalled() }
@@ -229,7 +237,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         try {
-            themeUtils.unregisterThemeChangeObserver(this, themeChangeObserver)
+            if (::themeChangeObserver.isInitialized) {
+                themeUtils.unregisterThemeChangeObserver(this, themeChangeObserver)
+            }
             super.onDestroy()
         } catch (e: Exception) {
             e.printStackTrace()
