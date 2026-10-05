@@ -3,6 +3,13 @@
     android:height="128dp"
     android:viewportWidth="128"
     android:viewportHeight="128">
+    <!--
+      Asset: manager/app/src/main/res/drawable/ic_launcher_foreground.xml
+      Author: OukaroMF (GitHub: @OukaroMF / https://github.com/OukaroMF)
+      Description: BakaSU App Launcher Foreground Vector Graphic
+      Copyright (c) 2026 OukaroMF. All Rights Reserved.
+      Unauthorized copying, alteration, or commercial redistribution is strictly prohibited.
+    -->
 
     <group
         android:pivotX="64"

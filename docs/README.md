@@ -1,7 +1,7 @@
 # BakaSU
-<img align='right' src='BakaSU_blue.svg' width='220px' alt="BakaSU Icon">
+<img align='right' src='BakaSU_Full.svg' width='220px' alt="BakaSU Icon">
 
-Formerly name: ReSukiSU
+Formerly known as: ReSukiSU
 
 **English** | [简体中文](./zh/README.md)
 
@@ -11,7 +11,7 @@ A [`tiann/KernelSU`](https://github.com/tiann/KernelSU)'s downstream, added some
 [![Latest CI build (nightly.link)](https://img.shields.io/badge/nightly.link-Latest%20CI%20Build-800080)](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main)
 [![Channel](https://img.shields.io/badge/Follow-Telegram-blue.svg?logo=telegram)](https://t.me/BakaSU_Grp)
 [![Kernel License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-orange.svg?logo=gnu)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-[![Other part License：GPL v3](https://img.shields.io/github/license/Baka-SU/BakaSU?logo=gnu)](/LICENSE)
+[![Other part License：GPL v3](https://img.shields.io/github/license/Baka-SU/BakaSU?logo=gnu)](../LICENSE)
 
 ## Features
 
@@ -45,7 +45,7 @@ See the [documentation](https://bakasu.org).
 
 ## Translation
 
-If you need to submit a translation for the manager, please go to [Weblate](https://hosted.weblate.org/engage/bakasu/).
+If you want to submit a translation for the manager, please go to [Weblate](https://hosted.weblate.org/engage/bakasu/).
 
 ## Sponsor
 
@@ -54,7 +54,7 @@ If you need to submit a translation for the manager, please go to [Weblate](http
 ## License
 
 - The file in the “kernel” directory is under [GPL-2.0-only](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html) license.
-- The images of the files `ic_launcher(?!.*alt.*).*` with anime character artwork are licensed under a special arrangement: drawn by [怡子曰曰](https://space.bilibili.com/10545509), the copyright is held by [明风 OuO](https://space.bilibili.com/274939213), and the vectorized icons are provided by this project. See [`LICENSE_icon_English`](./LICENSE_icon_English) and [`LICENSE_icon_SC`](./LICENSE_icon_SC) for details.
+- The artwork and visual files ([`docs/BakaSU_Clean.svg`](./BakaSU_Clean.svg), [`docs/BakaSU_Full.svg`](./BakaSU_Full.svg), and [`manager/app/src/main/res/drawable/ic_launcher_foreground.xml`](../manager/app/src/main/res/drawable/ic_launcher_foreground.xml)) are created by [OukaroMF](https://github.com/OukaroMF) under a layered license arrangement. See [`ASSETS_LICENSE.md`](../ASSETS_LICENSE.md) and [`ASSETS_LICENSE.zh-CN.md`](../ASSETS_LICENSE.zh-CN.md) for details.
 - Except for the files or directories mentioned above, all other parts are under [GPL-3.0 or later](https://www.gnu.org/licenses/gpl-3.0.html) license.
 
 ## Localization

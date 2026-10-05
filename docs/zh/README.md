@@ -1,5 +1,5 @@
 # BakaSU
-<img align='right' src='BakaSU_blue.svg' width='220px' alt="BakaSU Icon">
+<img align='right' src='../BakaSU_Full.svg' width='220px' alt="BakaSU Icon">
 
 曾用名：ReSukiSU
 
@@ -11,7 +11,7 @@
 [![最新 CI 构建（nightly.link）](https://img.shields.io/badge/nightly.link-%E6%9C%80%E6%96%B0%20CI%20%E6%9E%84%E5%BB%BA-800080)](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main)
 [![频道](https://img.shields.io/badge/Follow-Telegram-blue.svg?logo=telegram)](https://t.me/BakaSU_Grp)
 [![Kernel License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-orange.svg?logo=gnu)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-[![其他部分 License：GPL v3](https://img.shields.io/github/license/Baka-SU/BakaSU?logo=gnu)](/LICENSE)
+[![其他部分 License：GPL v3](https://img.shields.io/github/license/Baka-SU/BakaSU?logo=gnu)](../../LICENSE)
 
 ## 特性
 
@@ -48,7 +48,7 @@
 ## 许可证
 
 - 目录 `kernel` 下所有文件为 [GPL-2.0-only](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)。
-- 有动漫人物图片表情包的这些文件 `ic_launcher(?!.*alt.*).*` 图标以特别的形式授权，怡子曰曰绘制，版权明风OuO所有。矢量化图标由本项目提供。详见 [`LICENSE_icon_English`](./LICENSE_icon_English) 与 [`LICENSE_icon_SC`](./LICENSE_icon_SC)。
+- 美术及视觉资源（[`docs/BakaSU_Clean.svg`](../BakaSU_Clean.svg)、[`docs/BakaSU_Full.svg`](../BakaSU_Full.svg) 与 [`manager/app/src/main/res/drawable/ic_launcher_foreground.xml`](../../manager/app/src/main/res/drawable/ic_launcher_foreground.xml)）由 [OukaroMF](https://github.com/OukaroMF) 原创制作并采用分层版权协议，详见 [`ASSETS_LICENSE.md`](../../ASSETS_LICENSE.md) 与 [`ASSETS_LICENSE.zh-CN.md`](../../ASSETS_LICENSE.zh-CN.md)。
 - 除上述文件及目录的其他部分均为 [GPL-3.0-or-later](https://www.gnu.org/licenses/gpl-3.0.html)。
 
 ## 致谢
