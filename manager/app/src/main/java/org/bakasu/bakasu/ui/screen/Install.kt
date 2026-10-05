@@ -94,13 +94,19 @@ fun InstallScreen(
     val environment = installState.environment
     val context = LocalContext.current
 
-    val pagerState = rememberPagerState(pageCount = { 2 })
+    val pagerState = rememberPagerState(
+        initialPage = if (preselectedKernelUri != null) 1 else 0,
+        pageCount = { 2 },
+    )
     val scope = rememberCoroutineScope()
     val navigator = LocalNavigator.current
     val isGKI = environment.isGki
 
-    LaunchedEffect(isGKI) {
-        if (!isGKI) pagerState.scrollToPage(0)
+    LaunchedEffect(preselectedKernelUri, isGKI) {
+        when {
+            preselectedKernelUri != null -> pagerState.scrollToPage(1)
+            !isGKI -> pagerState.scrollToPage(0)
+        }
     }
 
     val failedReboot = stringResource(R.string.failed_reboot)
