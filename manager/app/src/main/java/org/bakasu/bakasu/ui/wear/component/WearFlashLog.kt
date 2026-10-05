@@ -19,7 +19,7 @@ import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
-import org.bakasu.bakasu.ui.theme.MonospaceFontFamily
+import org.bakasu.bakasu.ui.theme.monospaceFontFamily
 
 /**
  * @author Hanhan_awa
@@ -80,7 +80,7 @@ fun TransformingLazyColumnScope.wearLogLines(transformationSpec: TransformationS
                 lines[index],
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = MonospaceFontFamily(),
+                fontFamily = monospaceFontFamily(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

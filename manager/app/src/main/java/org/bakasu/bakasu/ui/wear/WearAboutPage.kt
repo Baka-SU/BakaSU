@@ -92,17 +92,6 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
                 onClick = onLicenses,
             )
         }
-        item {
-            WearScaledItem(spec) {
-                Text(
-                    stringResource(R.string.about_anime_character_sticker),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
     }
 }
 

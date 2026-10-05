@@ -20,6 +20,7 @@ import androidx.compose.material.icons.twotone.Security
 import androidx.compose.material.icons.twotone.SignalWifiOff
 import androidx.compose.material.icons.twotone.Storage
 import androidx.compose.material.icons.twotone.Sync
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -33,7 +34,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.ProfileTemplate
+import org.bakasu.bakasu.ui.viewmodel.TemplateEditorUiAction
+import org.bakasu.bakasu.ui.viewmodel.TemplateEditorUiEvent
 import org.bakasu.bakasu.ui.viewmodel.TemplateEditorViewModel
+import org.bakasu.bakasu.ui.viewmodel.TemplateUiAction
+import org.bakasu.bakasu.ui.viewmodel.TemplateUiEvent
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearChip
@@ -44,6 +49,8 @@ import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
+import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
+import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
