@@ -34,9 +34,9 @@ profileinstaller = "1.4.1"
 koin-bom = "4.2.2"
 commons-compress = "1.28.0"
 xz = "1.12"
-spotless = "8.10.0"
+spotless = "8.10.3"
 ktlint = "1.8.0"
-compose-rules = "0.6.4"
+compose-rules = "0.6.7"
 
 [plugins]
 agp-app = { id = "com.android.application", version.ref = "agp" }
