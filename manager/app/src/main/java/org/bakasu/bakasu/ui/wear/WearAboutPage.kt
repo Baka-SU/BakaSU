@@ -73,7 +73,7 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
         item {
             WearChip(spec, stringResource(R.string.join_telegram_group),
                 secondaryLabel = stringResource(R.string.join_telegram_group_detail),
-                icon = Icons.TwoTone.Group, onClick = { onOpenLink("https://t.me/ReSukiSU") })
+                icon = Icons.TwoTone.Group, onClick = { onOpenLink("https://t.me/BakaSU") })
         }
         item {
             WearChip(spec, stringResource(R.string.open_source_license),
