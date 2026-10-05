@@ -18,6 +18,7 @@ import org.bakasu.bakasu.data.application.DynamicManagerRepository
 import org.bakasu.bakasu.data.count.CountRepository
 import org.bakasu.bakasu.data.download.DownloadRepository
 import org.bakasu.bakasu.data.file.ModuleFileRepository
+import org.bakasu.bakasu.data.file.WearFileRepository
 import org.bakasu.bakasu.data.flash.FlashRepository
 import org.bakasu.bakasu.data.kernel.KernelRepository
 import org.bakasu.bakasu.data.kernel.UmountRepository
@@ -29,6 +30,7 @@ import org.bakasu.bakasu.data.module.ModulePreferencesRepository
 import org.bakasu.bakasu.data.module.ModuleRepository
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
+import org.bakasu.bakasu.data.network.WearLinkRepository
 import org.bakasu.bakasu.data.network.WebResourceRepository
 import org.bakasu.bakasu.data.packageinfo.AppIconDataSource
 import org.bakasu.bakasu.data.packageinfo.InstalledPackageCache
@@ -173,6 +175,9 @@ import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateEditorViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerScreenViewModel
+import org.bakasu.bakasu.ui.viewmodel.WearFileViewModel
+import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
+import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.webui.MonetColorsProvider
 import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.factoryOf
@@ -276,6 +281,8 @@ val repositoryModule = module {
     singleOf(::SuSFSRepository)
     singleOf(::MonetCompatColorSource)
     singleOf(::ThemeRepository)
+    singleOf(::WearFileRepository)
+    singleOf(::WearLinkRepository)
     single {
         val themeRepository = get<ThemeRepository>()
         ThemeConfig(themeRepository::defaultSeedColor)
@@ -431,6 +438,9 @@ val viewModelModule = module {
     viewModelOf(::DynamicManagerViewModel)
     viewModelOf(::FlashViewModel)
     viewModelOf(::UmountManagerScreenViewModel)
+    viewModelOf(::WearFileViewModel)
+    viewModelOf(::WearLinkViewModel)
+    viewModelOf(::WearPreferencesViewModel)
     viewModel { parameters ->
         ExecuteModuleActionViewModel(
             moduleId = parameters[0],
