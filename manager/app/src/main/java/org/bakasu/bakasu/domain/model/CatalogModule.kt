@@ -8,16 +8,20 @@ data class CatalogAuthor(
 data class ModuleReleaseAsset(
     val name: String,
     val downloadUrl: String,
-    val size: Long,
-    val downloadCount: Int,
-)
+    val size: Long?,
+    val downloadCount: Int?,
+) {
+    fun hasSameIdentity(other: ModuleReleaseAsset): Boolean = name == other.name && downloadUrl == other.downloadUrl
+}
 
 data class ModuleRelease(
     val name: String,
     val tagName: String,
     val publishedAt: String,
-    val descriptionHTML: String,
     val assets: List<ModuleReleaseAsset>,
+    val descriptionHTML: String = "",
+    val versionCode: Int? = null,
+    val changelogUrl: String = "",
 )
 
 data class CatalogModule(
@@ -35,10 +39,18 @@ data class CatalogModule(
     val latestVersionCode: Int,
     val latestAsset: ModuleRelease?,
     val installed: Boolean,
-    val readme: String,
     val sourceUrl: String,
     val releases: List<ModuleRelease>,
-)
+    val repositoryUrl: String,
+    val readme: String = "",
+    val repositoryName: String = "",
+    val readmeUrl: String = "",
+) {
+    val catalogId: String get() = "$repositoryUrl#$moduleId"
+    val pageUrl: String get() = sourceUrl.ifBlank { repositoryUrl }
+}
+
+data class ModuleReadme(val content: String, val baseUrl: String)
 
 sealed interface ModuleCatalogFailure {
     data object Offline : ModuleCatalogFailure

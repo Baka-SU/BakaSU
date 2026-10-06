@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -51,13 +52,18 @@ import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import kotlin.coroutines.resume
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.usecase.ExtractModuleIdUseCase
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
 import org.bakasu.bakasu.ui.animation.predictiveback.installerNavTransition
+import org.bakasu.bakasu.ui.component.LocalRepositoryModuleInstall
 import org.bakasu.bakasu.ui.navigation.IntentDispatcher
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Navigator
@@ -78,6 +84,7 @@ import org.bakasu.bakasu.ui.screen.about.AboutScreen
 import org.bakasu.bakasu.ui.screen.about.OpenSourceLicenseScreen
 import org.bakasu.bakasu.ui.screen.kernelFlash.KernelFlashScreen
 import org.bakasu.bakasu.ui.screen.main.MainScreen
+import org.bakasu.bakasu.ui.screen.moduleRepo.AddRepositoryScreen
 import org.bakasu.bakasu.ui.screen.moduleRepo.ModuleRepoScreen
 import org.bakasu.bakasu.ui.screen.moduleRepo.OnlineModuleDetailScreen
 import org.bakasu.bakasu.ui.screen.susfs.SuSFSConfigScreen
@@ -111,6 +118,7 @@ fun NavContainer(
 ) {
     val themeConfig: ThemeConfig = koinInject()
     val backgroundRenderState = LocalBackgroundRenderState.current
+    val extractModuleId = koinInject<ExtractModuleIdUseCase>()
     val activity = LocalActivity.current as MainActivity
     val context = LocalContext.current
 
@@ -134,6 +142,20 @@ fun NavContainer(
 
     val backStack = rememberNavBackStack<Route>(Route.Main)
     val navigator = remember(backStack) { Navigator(backStack) }
+    val installRepositoryModule: (Uri, () -> Boolean) -> Unit = { uri, canInstall ->
+        activity.lifecycleScope.launch(Dispatchers.IO) {
+            if (!canInstall()) return@launch
+            val moduleId = runCatching { extractModuleId(uri.toString()) }.getOrNull()
+            withContext(Dispatchers.Main) {
+                if (!canInstall()) return@withContext
+                if (!moduleId.isNullOrBlank()) {
+                    navigator.push(Route.Flash.modules(listOf(uri.toString())))
+                } else {
+                    Toast.makeText(context, R.string.repo_error_module_archive, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
     val onBack = remember(navigator) {
         {
             when (val top = navigator.current()) {
@@ -257,6 +279,7 @@ fun NavContainer(
         LocalStretchOverscrollCompensationState provides stretchOverscrollCompensationState,
         LocalPermissionRequestInterface provides permissionRequestInterface,
         LocalNavigator provides navigator,
+        LocalRepositoryModuleInstall provides installRepositoryModule,
         LocalDensity provides density,
     ) {
         IntentDispatcher(intentChannel)
@@ -402,8 +425,26 @@ fun NavContainer(
                     backgroundRenderState = backgroundRenderState,
                     useBlur = useBlur,
                 ) {
-                    OnlineModuleDetailScreen(key.moduleId)
+                    OnlineModuleDetailScreen(key.moduleId, key.repositoryUrl)
                 }
+            }
+            entry<Route.RepositoryModules>(swipeDismiss = swipeBackDirection) { key ->
+                ManagerNavEntry(
+                    interceptPredictiveBack = interceptPredictiveBack,
+                    onBack = onBack,
+                    themeConfig = themeConfig,
+                    backgroundRenderState = backgroundRenderState,
+                    useBlur = useBlur,
+                ) { ModuleRepoScreen(key.repositoryUrl) }
+            }
+            entry<Route.AddRepository>(swipeDismiss = swipeBackDirection) {
+                ManagerNavEntry(
+                    interceptPredictiveBack = interceptPredictiveBack,
+                    onBack = onBack,
+                    themeConfig = themeConfig,
+                    backgroundRenderState = backgroundRenderState,
+                    useBlur = useBlur,
+                ) { AddRepositoryScreen() }
             }
             entry<Route.Install>(swipeDismiss = NavSwipeDirection.None) { key ->
                 ManagerNavEntry(

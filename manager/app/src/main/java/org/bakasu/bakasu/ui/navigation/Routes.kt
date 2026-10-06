@@ -67,7 +67,15 @@ sealed interface Route :
 
     @Parcelize
     @Serializable
-    data class ModuleRepoDetail(val moduleId: String) : Route
+    data class ModuleRepoDetail(val moduleId: String, val repositoryUrl: String) : Route
+
+    @Parcelize
+    @Serializable
+    data class RepositoryModules(val repositoryUrl: String) : Route
+
+    @Parcelize
+    @Serializable
+    data object AddRepository : Route
 
     @Parcelize
     @Serializable

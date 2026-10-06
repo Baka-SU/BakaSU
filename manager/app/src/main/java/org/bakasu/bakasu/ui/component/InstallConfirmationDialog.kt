@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.component
 
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,14 +31,103 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.io.InputStream
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.file.withInstallArchive
+import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
+import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
+import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
+import org.bakasu.bakasu.ui.util.downloader.download
+import org.koin.compose.koinInject
+
+val LocalRepositoryModuleInstall = staticCompositionLocalOf<(Uri, () -> Boolean) -> Unit> {
+    error("Repository module installation is unavailable")
+}
+
+@Composable
+fun rememberRepositoryInstallDialog(): (CatalogModule, ModuleReleaseAsset, () -> Boolean) -> Unit {
+    val context = LocalContext.current
+    val permission = LocalPermissionRequestInterface.current
+    val installRepositoryModule = LocalRepositoryModuleInstall.current
+    val enqueueDownload = koinInject<EnqueueDownloadUseCase>()
+    val observeDownload = koinInject<ObserveDownloadUseCase>()
+    val fetchText = koinInject<FetchRemoteTextUseCase>()
+    val scope = rememberCoroutineScope()
+    val dialog = rememberConfirmDialog()
+    val loading = rememberLoadingDialog()
+    val title = stringResource(R.string.confirm_install_module_title)
+    val changelogFailed = stringResource(R.string.module_changelog_failed)
+    val downloading = stringResource(R.string.module_downloading)
+    var busy by remember { mutableStateOf(false) }
+    return { module, asset, canEnqueue ->
+        scope.launch {
+            if (busy || !canEnqueue()) return@launch
+            busy = true
+            val confirmed = try {
+                val release = module.releases.firstOrNull { release -> release.assets.any { it.hasSameIdentity(asset) } }
+                    ?: return@launch
+                val changelog = if (release.changelogUrl.isNotBlank()) {
+                    loading.withLoading { fetchText(release.changelogUrl) }.onFailure { error ->
+                        if (error is CancellationException) throw error
+                        Toast.makeText(context, changelogFailed.format(error.message), Toast.LENGTH_LONG).show()
+                    }.getOrNull()
+                } else {
+                    null
+                }
+                val html = release.changelogUrl.isBlank() && release.descriptionHTML.isNotBlank()
+                val content = changelog ?: if (html) release.descriptionHTML else module.summary
+                if (!canEnqueue()) return@launch
+                dialog.awaitConfirm(
+                    title = title.format(module.moduleName),
+                    content = content,
+                    markdown = changelog != null,
+                    html = html,
+                ) == ConfirmResult.Confirmed
+            } finally {
+                busy = false
+            }
+            if (!confirmed || !canEnqueue()) return@launch
+            withContext(Dispatchers.IO) {
+                download(
+                    context = context,
+                    permissionRequestInterface = permission,
+                    url = asset.downloadUrl,
+                    fileName = asset.name,
+                    enqueueDownload = enqueueDownload,
+                    observeDownload = observeDownload,
+                    canEnqueue = canEnqueue,
+                    onDownloaded = { uri ->
+                        if (canEnqueue()) installRepositoryModule(uri, canEnqueue)
+                    },
+                    onDownloading = {
+                        launch(Dispatchers.Main) {
+                            Toast.makeText(context, downloading.format(module.moduleName), Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
 
 enum class ZipType {
     MODULE,
@@ -308,7 +398,7 @@ fun InstallItemCard(zipFile: ZipFileInfo) {
             }
 
             // 详细信息
-            if (zipFile.version.isNotEmpty() || zipFile.author.isNotEmpty() ||
+            if (zipFile.version.isNotEmpty() || zipFile.versionCode.isNotEmpty() || zipFile.author.isNotEmpty() ||
                 zipFile.description.isNotEmpty() || zipFile.supported.isNotEmpty()
             ) {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -319,10 +409,14 @@ fun InstallItemCard(zipFile: ZipFileInfo) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // 版本信息
-                if (zipFile.version.isNotEmpty()) {
+                if (zipFile.version.isNotEmpty() || zipFile.versionCode.isNotEmpty()) {
                     InfoRow(
                         label = stringResource(R.string.version),
-                        value = zipFile.version + if (zipFile.versionCode.isNotEmpty()) " (${zipFile.versionCode})" else "",
+                        value = if (zipFile.version.isEmpty()) {
+                            zipFile.versionCode
+                        } else {
+                            zipFile.version + if (zipFile.versionCode.isNotEmpty()) " (${zipFile.versionCode})" else ""
+                        },
                     )
                 }
 

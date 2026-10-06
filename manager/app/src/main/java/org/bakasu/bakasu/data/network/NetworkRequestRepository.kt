@@ -10,6 +10,7 @@ import okhttp3.Request
 data class NetworkResponse(
     val body: String?,
     val headers: Map<String, List<String>>,
+    val url: String = "",
 ) {
     fun header(name: String): String? = headers.entries
         .firstOrNull { (key, _) -> key.equals(name, ignoreCase = true) }
@@ -62,6 +63,7 @@ class NetworkRequestRepository(
                 NetworkResponse(
                     body = response.body?.string(),
                     headers = response.headers.toMultimap(),
+                    url = response.request.url.toString(),
                 )
             }
         }
