@@ -560,4 +560,7 @@
     <string name="settings_pager_gesture_native">За замовчуванням</string>
     <string name="settings_pager_gesture_cross_axis">Поперечна вісь</string>
     <string name="settings_pager_gesture_ios_like">як в iOS</string>
+    <string name="about_app_icon"><![CDATA[Усі права на значки захищено, а авторські права належать %1$s]]></string>
+    <string name="more_than_one_kernel_file">Знайдено більше 1 файлу anykernel3 у вхідних файлах</string>
+    <string name="both_kernel_and_module_files">Вхідні zip-архіви містять як anykernel3, так і модулі</string>
 </resources>
