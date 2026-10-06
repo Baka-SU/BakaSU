@@ -4,30 +4,33 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Code
@@ -39,6 +42,7 @@ import androidx.compose.material.icons.twotone.Person
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -48,11 +52,10 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -68,31 +71,43 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.CoroutineScope
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
-import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
-import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
-import org.bakasu.bakasu.ui.component.ConfirmResult
+import org.bakasu.bakasu.ui.component.CatalogCard
 import org.bakasu.bakasu.ui.component.GithubMarkdown
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
+import org.bakasu.bakasu.ui.component.RepositoryPageScaffold
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
-import org.bakasu.bakasu.ui.component.rememberConfirmDialog
+import org.bakasu.bakasu.ui.component.moduleAssetDetails
+import org.bakasu.bakasu.ui.component.rememberCustomDialog
+import org.bakasu.bakasu.ui.component.rememberRepositoryInstallDialog
+import org.bakasu.bakasu.ui.component.rememberRepositoryScrollBehavior
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
+import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Navigator
 import org.bakasu.bakasu.ui.navigation.Route
@@ -106,7 +121,6 @@ import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
-import org.bakasu.bakasu.ui.viewmodel.formatFileSize
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
@@ -118,46 +132,75 @@ import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun OnlineModuleDetailScreen(moduleId: String) {
-    val viewModel = koinViewModel<ModuleDetailViewModel>(parameters = { parametersOf(moduleId) })
+fun OnlineModuleDetailScreen(
+    moduleId: String,
+    repositoryUrl: String,
+) {
+    val viewModel = koinViewModel<ModuleDetailViewModel>(
+        key = "$repositoryUrl#$moduleId",
+        parameters = { parametersOf(moduleId, repositoryUrl) },
+    )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val module = state.module
     if (module == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (state.loading) {
-                LoadingIndicator()
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(stringResource(R.string.please_check_network))
-                    FilledTonalButton(onClick = { viewModel.dispatch(ModuleDetailUiAction.Retry) }) {
-                        Text(stringResource(R.string.network_retry))
+        RepositoryPageScaffold(stringResource(R.string.module_repo)) { padding ->
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                if (state.loading) {
+                    LoadingIndicator()
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            stringResource(
+                                when (state.error) {
+                                    ModuleCatalogFailure.Offline -> R.string.network_offline
+                                    ModuleCatalogFailure.NotFound -> R.string.repo_module_unavailable
+                                    else -> R.string.repo_error_network
+                                },
+                            ),
+                        )
+                        if (state.error != ModuleCatalogFailure.NotFound) {
+                            FilledTonalButton(onClick = { viewModel.dispatch(ModuleDetailUiAction.Retry) }) {
+                                Text(stringResource(R.string.network_retry))
+                            }
+                        }
                     }
                 }
             }
         }
         return
     }
-    OnlineModuleDetailContent(module)
+    OnlineModuleDetailContent(module, viewModel)
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun OnlineModuleDetailContent(module: CatalogModule) {
+private fun OnlineModuleDetailContent(module: CatalogModule, viewModel: ModuleDetailViewModel) {
     val themeConfig: ThemeConfig = koinInject()
     val cardConfig: CardConfig = koinInject()
     val navigator = LocalNavigator.current
     val snackBarHost = LocalSnackbarHost.current
-    val topAppBarState = rememberTopAppBarState()
     val coroutineScope = rememberCoroutineScope()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
 
     val tabTitles = listOf(stringResource(R.string.readme), stringResource(R.string.release), stringResource(R.string.info))
     val uriHandler = LocalUriHandler.current
     val pagerState = rememberPagerState(pageCount = { tabTitles.size })
-
-    LaunchedEffect(Unit) {
-        scrollBehavior.state.heightOffset =
-            scrollBehavior.state.heightOffsetLimit
+    val scrollBehavior = rememberRepositoryScrollBehavior(pagerState.currentPage)
+    val confirmDownload = rememberRepositoryInstallDialog()
+    fun downloadLatest(asset: ModuleReleaseAsset) {
+        val current = viewModel.resolveAsset(asset) ?: return
+        if (current.latestAsset?.assets?.any { it.hasSameIdentity(asset) } != true) return
+        confirmDownload(current, asset) { viewModel.resolveAsset(asset)?.latestAsset?.assets?.any { it.hasSameIdentity(asset) } == true }
+    }
+    val chooseDialog = rememberCustomDialog { dismiss ->
+        ChooseDialogContent(module, onSelect = { downloadLatest(it) }, dismiss = dismiss)
+    }
+    val installLatest = {
+        val assets = module.latestAsset?.assets.orEmpty()
+        if (assets.size == 1) {
+            downloadLatest(assets.single())
+        } else if (assets.size > 1) {
+            chooseDialog.show()
+        }
     }
 
     Scaffold(
@@ -166,7 +209,9 @@ private fun OnlineModuleDetailContent(module: CatalogModule) {
                 modifier = Modifier.blurEffect(),
             ) {
                 LargeFlexibleTopAppBar(
-                    title = { Text(module.moduleName) },
+                    title = {
+                        Text(module.moduleName, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    },
                     scrollBehavior = scrollBehavior,
                     navigationIcon = {
                         AppBackButton(
@@ -178,7 +223,7 @@ private fun OnlineModuleDetailContent(module: CatalogModule) {
                     actions = {
                         IconButton(
                             onClick = {
-                                uriHandler.openUri("https://modules.kernelsu.org/module/${module.moduleId}")
+                                uriHandler.openUri(module.pageUrl)
                             },
                         ) {
                             Icon(
@@ -240,6 +285,15 @@ private fun OnlineModuleDetailContent(module: CatalogModule) {
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
+        floatingActionButton = {
+            if (pagerState.currentPage != 1 && module.latestAsset?.assets?.isNotEmpty() == true) {
+                ExtendedFloatingActionButton(
+                    onClick = installLatest,
+                    icon = { Icon(Icons.TwoTone.Download, contentDescription = null) },
+                    text = { Text(stringResource(R.string.repo_download_latest)) },
+                )
+            }
+        },
         snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) },
     ) { innerPadding ->
         Column(
@@ -251,15 +305,16 @@ private fun OnlineModuleDetailContent(module: CatalogModule) {
             HorizontalPagerWithInteraction(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
+                beyondViewportPageCount = 2,
             ) { page ->
                 when (page) {
-                    0 -> ReadmeTab(module, scrollBehavior.nestedScrollConnection, innerPadding)
+                    0 -> ReadmeTab(module, scrollBehavior.nestedScrollConnection, innerPadding, viewModel)
 
                     1 -> ReleasesTab(
                         module,
                         scrollBehavior.nestedScrollConnection,
-                        coroutineScope,
                         innerPadding,
+                        viewModel,
                     )
 
                     2 -> InfoTab(module, scrollBehavior.nestedScrollConnection, innerPadding)
@@ -277,6 +332,7 @@ fun InfoTab(
     innerPadding: PaddingValues,
 ) {
     val uriHandler = LocalUriHandler.current
+    val authorTitle = stringResource(R.string.author)
 
     LazyColumn(
         modifier = Modifier
@@ -288,30 +344,33 @@ fun InfoTab(
             Spacer(Modifier.height(innerPadding.calculateTopPadding()))
         }
         item {
-            SegmentedColumn(
-                title = stringResource(R.string.author),
+            SegmentedColumn(title = stringResource(R.string.info)) {
+                item {
+                    SettingsBaseWidget(
+                        title = module.moduleName,
+                        description = module.moduleId,
+                        iconPlaceholder = false,
+                    )
+                }
+            }
+        }
+        lazySegmentColumn(module.authorList, title = authorTitle) { _, author ->
+            SettingsBaseWidget(
+                icon = Icons.TwoTone.Person,
+                title = author.name,
+                onClick = if (author.link.isNotBlank()) ({ uriHandler.openUri(author.link) }) else null,
             ) {
-                module.authorList.forEach { author ->
-                    item {
-                        SettingsBaseWidget(
-                            icon = Icons.TwoTone.Person,
-                            onClick = {
-                                uriHandler.openUri(author.link)
-                            },
-                            title = author.name,
-                        ) {
-                            Icon(
-                                modifier = Modifier.size(24.dp),
-                                imageVector = Icons.TwoTone.Link,
-                                contentDescription = stringResource(R.string.author_link),
-                            )
-                        }
-                    }
+                if (author.link.isNotBlank()) {
+                    Icon(
+                        modifier = Modifier.size(24.dp),
+                        imageVector = Icons.TwoTone.Link,
+                        contentDescription = stringResource(R.string.author_link),
+                    )
                 }
             }
         }
 
-        if (module.sourceUrl.isNotEmpty() && module.sourceUrl != "null") {
+        if (module.sourceUrl.isNotBlank()) {
             item {
                 SegmentedColumn(
                     title = stringResource(R.string.source_code),
@@ -330,7 +389,20 @@ fun InfoTab(
         }
 
         item {
-            Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
+            SegmentedColumn(title = stringResource(R.string.module_repo)) {
+                item {
+                    SettingsBaseWidget(
+                        title = module.repositoryName,
+                        description = module.repositoryUrl,
+                        iconPlaceholder = false,
+                        onClick = { uriHandler.openUri(module.repositoryUrl) },
+                    )
+                }
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 88.dp))
         }
     }
 }
@@ -339,26 +411,27 @@ fun InfoTab(
 fun ReleasesTab(
     module: CatalogModule,
     nestedScrollConnection: NestedScrollConnection,
-    coroutineScope: CoroutineScope,
     innerPadding: PaddingValues,
+    viewModel: ModuleDetailViewModel? = null,
 ) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .nestedScroll(nestedScrollConnection),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            Spacer(Modifier.height(innerPadding.calculateTopPadding()))
+            // Info adds 16.dp outside the list and 16.dp before its section title.
+            Spacer(Modifier.height(innerPadding.calculateTopPadding() + 24.dp))
         }
         items(
             items = module.releases,
-            key = { it.tagName },
+            key = { "${it.versionCode ?: it.tagName}:${it.assets.firstOrNull()?.downloadUrl.orEmpty()}" },
         ) {
-            ReleaseCard(module, it, coroutineScope)
+            ReleaseCard(module, it, viewModel)
         }
         item {
-            Spacer(Modifier.height(innerPadding.calculateBottomPadding()))
+            Spacer(Modifier.height(innerPadding.calculateBottomPadding() + 88.dp))
         }
     }
 }
@@ -369,75 +442,50 @@ fun ReadmeTab(
     module: CatalogModule,
     nestedScrollConnection: NestedScrollConnection,
     innerPadding: PaddingValues,
+    viewModel: ModuleDetailViewModel? = null,
 ) {
-    val themeConfig: ThemeConfig = koinInject()
-    val cardConfig: CardConfig = koinInject()
-    val loading = remember { mutableStateOf(true) }
+    val state = viewModel?.state?.collectAsStateWithLifecycle()?.value
+    val remote = module.repositoryUrl != RepositorySource.KERNEL_SU_URL
+    val documentUrl = module.readmeUrl.ifBlank { module.sourceUrl }
+    val document = state?.documents?.get(documentUrl)
+    LaunchedEffect(module.catalogId, documentUrl) { if (remote) viewModel?.loadReadme() }
+    val content = (if (remote) document?.text else module.readme).orEmpty()
+    val htmlLoading = remember(content) { mutableStateOf(true) }
+    val documentLoading = remote && (document == null || document.loading)
+    val documentFailed = remote && document?.failed == true
+    Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+        when {
+            documentLoading -> Unit
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(nestedScrollConnection),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            item {
-                Spacer(Modifier.height(innerPadding.calculateTopPadding()))
+            documentFailed -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(stringResource(R.string.repo_document_error))
+                TextButton(onClick = { viewModel?.loadReadme(retry = true) }) {
+                    Text(stringResource(R.string.network_retry))
+                }
             }
-            item {
-                Surface(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .renderBackgroundBlur(),
-                    color =
-                        if (themeConfig.isEnableBlurExp) {
-                            Color.Transparent
-                        } else {
-                            MaterialTheme.colorScheme.surfaceBright.copy(cardConfig.cardAlpha)
-                        },
-                ) {
-                    GithubMarkdown(
-                        content = module.readme,
-                        backgroundColor = Color.Transparent,
-                        loading = loading,
-                        callerProvideLoadingIndicator = true,
-                    )
 
-                    AnimatedVisibility(
-                        visible = loading.value,
-                        enter = expandVertically(
-                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                            expandFrom = Alignment.Top, // Unroll downwards like a blind
-                        ) + fadeIn(
-                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                        ),
-                        exit = shrinkVertically(
-                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                            shrinkTowards = Alignment.Top, // Roll up upwards
-                        ) + fadeOut(
-                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                        ),
-                    ) {
-                        Spacer(modifier = Modifier.fillParentMaxSize())
+            content.isBlank() -> Text(stringResource(R.string.repo_no_readme))
+
+            else -> {
+                LazyColumn(
+                    Modifier.fillMaxSize().nestedScroll(nestedScrollConnection),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp),
+                ) {
+                    item {
+                        GithubMarkdown(
+                            content = content,
+                            backgroundColor = Color.Transparent,
+                            loading = htmlLoading,
+                            callerProvideLoadingIndicator = true,
+                            renderMarkdown = remote,
+                            baseUrl = if (remote) document?.baseUrl.orEmpty() else "https://appassets.androidplatform.net",
+                        )
                     }
                 }
             }
-            item {
-                Spacer(
-                    modifier = Modifier.height(
-                        max(
-                            innerPadding.calculateBottomPadding() - 16.dp,
-                            0.dp,
-                        ),
-                    ),
-                )
-            }
         }
-        if (loading.value) {
-            LoadingIndicator(
-                modifier = Modifier.align(Alignment.Center),
-            )
+        if (documentLoading || (!documentFailed && content.isNotBlank() && htmlLoading.value)) {
+            LoadingIndicator(Modifier.align(Alignment.Center))
         }
     }
 }
@@ -447,125 +495,95 @@ fun ReadmeTab(
 fun ReleaseCard(
     module: CatalogModule,
     release: ModuleRelease,
-    coroutineScope: CoroutineScope,
+    viewModel: ModuleDetailViewModel? = null,
 ) {
-    val themeConfig: ThemeConfig = koinInject()
-    val cardConfig: CardConfig = koinInject()
-    val navigator = LocalNavigator.current
-    val context = LocalContext.current
-    val permissionRequestInterface = LocalPermissionRequestInterface.current
-    val enqueueDownload = koinInject<EnqueueDownloadUseCase>()
-    val observeDownload = koinInject<ObserveDownloadUseCase>()
-    val confirmInstallTitle =
-        stringResource(R.string.confirm_install_module_title, module.moduleName)
-    val confirmDialog = rememberConfirmDialog()
+    val confirmDownload = rememberRepositoryInstallDialog()
+    val isLatest = release == module.latestAsset
+    val hasReleaseNotes = release.descriptionHTML.isNotBlank() || release.changelogUrl.isNotBlank()
 
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 12.dp, end = 12.dp, top = 12.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .renderBackgroundBlur(MaterialTheme.colorScheme.surfaceBright),
-        shape = RoundedCornerShape(16.dp),
-        color =
-            if (themeConfig.isEnableBlurExp) {
-                Color.Transparent
-            } else {
-                MaterialTheme.colorScheme.surfaceBright.copy(cardConfig.cardAlpha)
-            },
+    CatalogCard(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(24.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
+        CollapsibleContent(
+            enabled = hasReleaseNotes,
+            enter = EnterTransition.None,
+            title = {
+                Row(
                     modifier = Modifier.weight(1f),
-                    text = release.name,
-                    style = MaterialTheme.typography.bodyMediumEmphasized,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-                Text(
-                    text = release.publishedAt,
-                    style = MaterialTheme.typography.bodySmallEmphasized,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                )
-            }
-            HorizontalDivider(
-                modifier = Modifier.padding(
-                    top = 5.dp,
-                    bottom = 5.dp,
-                ),
-            )
-            CollapsibleContent(
-                title = stringResource(R.string.show_detail_or_hide_detail),
-                enter = EnterTransition.None,
-            ) {
-                GithubMarkdown(
-                    content = release.descriptionHTML,
-                    backgroundColor = Color.Transparent,
-                    callerProvideLoadingIndicator = true,
-                )
-            }
-            HorizontalDivider(
-                modifier = Modifier.padding(
-                    top = 5.dp,
-                    bottom = 5.dp,
-                ),
-            )
-            if (release.assets.isEmpty()) return@Surface
-
-            Column {
-                release.assets.forEach { assetInfo ->
-                    val onClick: () -> Unit = {
-                        coroutineScope.launch {
-                            val result = confirmDialog.awaitConfirm(
-                                title = confirmInstallTitle,
-                                html = true,
-                                content = release.descriptionHTML,
-                            )
-
-                            if (result == ConfirmResult.Canceled) return@launch
-
-                            downloadAssetAndInstall(
-                                context,
-                                permissionRequestInterface,
-                                module,
-                                assetInfo,
-                                navigator,
-                                coroutineScope,
-                                enqueueDownload,
-                                observeDownload,
-                            )
-                        }
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        modifier = Modifier.weight(1f, fill = false),
+                        text = release.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (isLatest) {
+                        Text(
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            text = stringResource(R.string.repo_latest_release),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
-                    SettingsBaseWidget(
+                }
+                Text(
+                    text = releaseDate(release.publishedAt, LocalConfiguration.current.locales[0]),
+                    style = MaterialTheme.typography.bodySmallEmphasized,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+        ) {
+            if (hasReleaseNotes) ReleaseNotes(release, viewModel)
+        }
+        if (release.assets.isEmpty()) return@CatalogCard
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+
+        Column {
+            release.assets.forEach { assetInfo ->
+                val downloadDescription = stringResource(R.string.repo_download_asset, assetInfo.name)
+                val onClick: () -> Unit = {
+                    val current = viewModel?.resolveAsset(assetInfo)
+                    if (current != null) {
+                        confirmDownload(current, assetInfo) { viewModel.resolveAsset(assetInfo) != null }
+                    }
+                }
+                SettingsBaseWidget(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .renderBackgroundBlur(tintColor = MaterialTheme.colorScheme.surfaceBright),
+                    title = assetInfo.name,
+                    onClick = { onClick() },
+                    iconPlaceholder = false,
+                    description = moduleAssetDetails(assetInfo),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    isOnBackground = false,
+                    containerColor = Color.Transparent,
+                ) {
+                    FilledTonalButton(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .renderBackgroundBlur(tintColor = MaterialTheme.colorScheme.surfaceBright),
-                        title = assetInfo.name,
-                        onClick = {
-                            onClick()
-                        },
-                        iconPlaceholder = false,
-                        description = stringResource(R.string.assert_support_content).format(
-                            formatFileSize(assetInfo.size),
-                            assetInfo.downloadCount,
-                        ),
-                        isOnBackground = false,
-                        containerColor = Color.Transparent,
+                            .heightIn(min = if (isLatest) 48.dp else 40.dp)
+                            .semantics { contentDescription = downloadDescription },
+                        onClick = onClick,
+                        contentPadding = if (isLatest) ButtonDefaults.ContentPadding else ButtonDefaults.TextButtonContentPadding,
                     ) {
-                        FilledTonalButton(
-                            onClick = onClick,
-                            contentPadding = ButtonDefaults.TextButtonContentPadding,
-                        ) {
-                            Icon(
-                                modifier = Modifier.size(20.dp),
-                                imageVector = Icons.TwoTone.Download,
-                                contentDescription = null,
-                            )
+                        Icon(
+                            modifier = Modifier.size(20.dp),
+                            imageVector = Icons.TwoTone.Download,
+                            contentDescription = null,
+                        )
+                        if (isLatest) {
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.repo_download))
                         }
                     }
                 }
@@ -574,44 +592,91 @@ fun ReleaseCard(
     }
 }
 
+private fun releaseDate(value: String, locale: Locale): String = runCatching {
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+        .withLocale(locale)
+        .format(Instant.parse(value).atZone(ZoneId.systemDefault()))
+}.getOrDefault(value)
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun CollapsibleContent(
+private fun ReleaseNotes(release: ModuleRelease, viewModel: ModuleDetailViewModel?) {
+    val remote = release.changelogUrl.isNotBlank()
+    val state = viewModel?.state?.collectAsStateWithLifecycle()?.value
+    val document = state?.documents?.get(release.changelogUrl)
+    LaunchedEffect(release.changelogUrl) { if (remote) viewModel?.loadChangelog(release.changelogUrl) }
+    val content = if (remote) document?.text.orEmpty() else release.descriptionHTML
+    val htmlLoading = remember(content) { mutableStateOf(true) }
+    val documentLoading = remote && (document == null || document.loading)
+    val documentFailed = remote && document?.failed == true
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        when {
+            documentLoading -> Unit
+
+            documentFailed -> Column {
+                Text(stringResource(R.string.repo_changelog_error))
+                TextButton(onClick = { viewModel?.loadChangelog(release.changelogUrl, retry = true) }) {
+                    Text(stringResource(R.string.network_retry))
+                }
+            }
+
+            else -> GithubMarkdown(
+                content = content,
+                backgroundColor = Color.Transparent,
+                loading = htmlLoading,
+                callerProvideLoadingIndicator = true,
+                renderMarkdown = remote,
+                baseUrl = if (remote) document?.baseUrl.orEmpty() else "https://appassets.androidplatform.net",
+            )
+        }
+        if (documentLoading || (!documentFailed && htmlLoading.value)) LoadingIndicator()
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun CollapsibleContent(
     modifier: Modifier = Modifier,
-    title: String,
+    title: @Composable RowScope.() -> Unit,
+    enabled: Boolean,
     enter: EnterTransition = expandVertically() + fadeIn(),
     exit: ExitTransition = shrinkVertically() + fadeOut(),
     content: @Composable () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(if (expanded) 180f else 0f)
+    val changelogLabel = stringResource(R.string.module_changelog)
 
     Column(modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .clickable { expanded = !expanded }
-                .padding(12.dp),
+                .then(
+                    if (enabled) {
+                        Modifier.clickable(role = Role.Button, onClickLabel = changelogLabel) { expanded = !expanded }
+                    } else {
+                        Modifier
+                    },
+                )
+                .heightIn(min = 48.dp)
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmallEmphasized,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.weight(1f),
-            )
-
-            Icon(
-                imageVector = Icons.TwoTone.KeyboardArrowDown,
-                contentDescription = null,
-                modifier = Modifier.rotate(rotation),
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
+            title()
+            if (enabled) {
+                Icon(
+                    imageVector = Icons.TwoTone.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier.rotate(rotation),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            }
         }
 
         AnimatedVisibility(
-            visible = expanded,
+            visible = expanded && enabled,
             enter = enter,
             exit = exit,
         ) {
@@ -627,7 +692,6 @@ private fun ReleaseCardPreview() {
         name = "name",
         tagName = "tagName",
         publishedAt = "publishedAt",
-        descriptionHTML = "descriptionHTML",
         assets = ArrayList<ModuleReleaseAsset>().apply {
             add(
                 ModuleReleaseAsset(
@@ -651,7 +715,7 @@ private fun ReleaseCardPreview() {
     val fakeModule = initFakeRepoModuleForPreview()
 
     CompositionLocalProvider(
-        LocalNavigator provides Navigator(Route.ModuleRepoDetail(fakeModule.moduleId)),
+        LocalNavigator provides Navigator(Route.ModuleRepoDetail(fakeModule.moduleId, fakeModule.repositoryUrl)),
         LocalPermissionRequestInterface provides object : PermissionRequestInterface {
             override fun requestPermission(
                 permission: String,
@@ -668,6 +732,6 @@ private fun ReleaseCardPreview() {
             }
         },
     ) {
-        ReleaseCard(fakeModule, release, rememberCoroutineScope())
+        ReleaseCard(fakeModule, release)
     }
 }

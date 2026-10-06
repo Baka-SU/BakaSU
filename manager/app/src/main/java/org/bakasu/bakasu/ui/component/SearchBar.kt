@@ -137,11 +137,15 @@ class SearchAppBarScrollBehavior internal constructor(
         ignoreCurrentScroll = false
     }
 
-    fun reset() {
+    fun reset(expandTopAppBar: Boolean = false) {
         searchBarHeightOffset = 0f
         lastSearchBarScrollDelta = 0f
         isUserScrollInProgress = false
         ignoreCurrentScroll = false
+        if (expandTopAppBar) {
+            state.heightOffset = 0f
+            state.contentOffset = 0f
+        }
     }
 
     private fun consumeSearchBarScroll(delta: Float): Float {
@@ -460,6 +464,8 @@ fun SearchAppBar(
     navigationContent: @Composable (() -> Unit)? = null,
     scrollBehavior: TopAppBarScrollBehavior? = null,
     searchBarPlaceHolderText: String,
+    preserveSearchOnNavigation: Boolean = false,
+    expandOnActivation: Boolean = false,
 ) {
     val themeConfig: ThemeConfig = koinInject()
     val cardConfig: CardConfig = koinInject()
@@ -481,18 +487,20 @@ fun SearchAppBar(
     val currentOnSearchTextChange by rememberUpdatedState(onSearchTextChange)
     val resetSearch by rememberUpdatedState {
         requestSearchFocus = false
-        textFieldState.clearText()
+        if (!preserveSearchOnNavigation) textFieldState.clearText()
         focusManager.clearFocus(force = true)
         keyboardController?.hide()
-        currentOnSearchTextChange("")
+        if (!preserveSearchOnNavigation) currentOnSearchTextChange("")
     }
 
     LaunchedEffect(textFieldState.text) {
         currentOnSearchTextChange(textFieldState.text.toString())
     }
 
-    LaunchedEffect(isPageActive) {
-        if (!isPageActive && scrollBehavior?.state?.collapsedFraction?.toDouble() == 1.0) {
+    LaunchedEffect(isPageActive, expandOnActivation) {
+        if (isPageActive && expandOnActivation) {
+            searchAppBarScrollBehavior?.reset(expandTopAppBar = true)
+        } else if (!expandOnActivation && !isPageActive && scrollBehavior?.state?.collapsedFraction?.toDouble() == 1.0) {
             searchAppBarScrollBehavior?.collapseSearchBar()
         }
     }
