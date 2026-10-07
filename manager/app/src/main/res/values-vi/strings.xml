@@ -55,9 +55,9 @@
     <string name="reboot_to_apply">Khởi động lại để có hiệu lực</string>
     <string name="module_magisk_conflict">Các module không khả dụng do xung đột với Magisk!</string>
     <string name="home_learn_kernelsu">Tìm hiểu về KernelSU</string>
-    <string name="home_click_to_learn_kernelsu">Tìm hiểu cách cài đặt KernelSU và sử dụng các module!</string>
+    <string name="home_click_to_learn_kernelsu">Tìm hiểu cách cài đặt KernelSU và sử dụng các module</string>
     <string name="home_support_title">Ủng hộ chúng tôi</string>
-    <string name="home_support_content">KernelSU sẽ luôn là miễn phí và mã nguồn mở. Tuy nhiên, bạn có thể cho chúng tôi thấy rằng bạn quan tâm bằng cách quyên góp!</string>
+    <string name="home_support_content">KernelSU sẽ luôn là miễn phí và mã nguồn mở. Tuy nhiên, bạn có thể cho chúng tôi thấy rằng bạn quan tâm bằng cách quyên góp</string>
     <string name="profile_default">Mặc định</string>
     <string name="profile_template">Bản mẫu</string>
     <string name="profile_custom">Tuỳ chỉnh</string>
@@ -73,7 +73,7 @@
     <string name="module_update">Cập nhật</string>
     <string name="module_downloading">Đang tải xuống module: %s</string>
     <string name="module_start_downloading">Bắt đầu tải xuống: %s</string>
-    <string name="new_version_available">Phiên bản mới %s đã có sẵn, nhấn để cập nhật!</string>
+    <string name="new_version_available">Phiên bản mới %s đã có sẵn, nhấn để cập nhật</string>
     <string name="launch_app">Mở</string>
     <string name="force_stop_app" formatted="false">Buộc dừng</string>
     <string name="restart_app">Khởi động lại</string>
@@ -118,7 +118,7 @@
     <string name="settings_uninstall_temporary_message">Gỡ cài đặt tạm thời SukiSU Ultra, khôi phục lại trạng thái ban đầu sau lần khởi động lại tiếp theo</string>
     <string name="settings_uninstall_permanent_message">Gỡ cài đặt SukiSU Ultra (root và tất cả các module) sạch hoàn toàn, trả về trạng thái ban đầu</string>
     <string name="settings_restore_stock_image_message">Khôi phục lại boot lúc đầu (nếu có bản sao lưu), thường được sử dụng trước OTA; nếu bạn cần gỡ hẳn SukiSU Ultra, sử dụng \"Gỡ cài đặt vĩnh viễn\"</string>
-    <string name="flashing">Đang Flash...</string>
+    <string name="flashing">Đang Flash</string>
     <string name="flash_success">Flash thành công</string>
     <string name="flash_failed">Flash thất bại</string>
     <string name="save_log">Lưu nhật ký</string>
@@ -396,4 +396,13 @@
     <string name="profile_flags">Cờ</string>
     <string name="background_crop_method_title">Chọn 1 phương thức crop</string>
     <string name="background_crop_failed">Cắt ảnh thất bại</string>
+    <string name="enable_adb">Buộc bật adb khi khởi động</string>
+    <string name="settings_soft_reboot_summary">Sử dụng khởi động lại nhanh thay vì khởi động lại toàn bộ khi cài đặt, cập nhật hoặc bật/tắt các mô-đun.</string>
+    <string name="enable_adb_summary">Buộc bật chế độ gỡ lỗi USB và tắt xác thực adb. Không nên bật tùy chọn này trừ khi thực sự cần thiết.</string>
+    <string name="allow_shell">Luôn cấp root cho shell</string>
+    <string name="home_pr_build_warning">Đây là bản build sửa lỗi (PR debug). KHÔNG ĐƯỢC sử dụng bản này trong môi trường production (môi trường vận hành thực tế)!</string>
+    <string name="advanced_options">Tùy chọn nâng cao</string>
+    <string name="sulog_daemon_restart_count">Khởi động lại</string>
+    <string name="settings_soft_reboot">Khởi động lại mềm thay vì khởi động lại toàn bộ hệ thống</string>
+    <string name="allow_shell_summary">Luôn cho phép shell adb gọi lệnh SU. Không bật tùy chọn này trừ khi thực sự cần thiết.</string>
 </resources>

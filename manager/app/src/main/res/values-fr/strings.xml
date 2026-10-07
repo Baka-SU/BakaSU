@@ -32,8 +32,8 @@
     <string name="reboot_edl">Redémarrer en mode EDL</string>
     <string name="about">À propos</string>
     <string name="module_uninstall_confirm">Désinstaller le module %s ?</string>
-    <string name="module_uninstall_success">%s a été désinstallé</string>
-    <string name="module_uninstall_failed">Échec de la désinstallation de : %s</string>
+    <string name="module_uninstall_success">%s désinstallé</string>
+    <string name="module_uninstall_failed">Échec de la désinstallation de : %s</string>
     <string name="module_author">Auteur</string>
     <string name="show_system_apps">Afficher les applications système</string>
     <string name="send_log">Envoi des journaux</string>
@@ -55,7 +55,7 @@
     <string name="profile_umount_modules">Démontage des modules</string>
     <string name="failed_to_update_app_profile">Échec de la modification du profil d\'application de %s</string>
     <string name="settings_umount_modules_default">Démontage des modules par défaut</string>
-    <string name="settings_umount_modules_default_summary">Valeur globale par défaut pour l\'option \"Démontage des modules\" dans les profils d\'application. Lorsque l\'option est activée, les modifications apportées au système par les modules sont supprimées pour les applications qui n\'ont pas de profil défini</string>
+    <string name="settings_umount_modules_default_summary">Valeur globale par défaut pour l\'option \"Démontage des modules\" dans les profils d\'application. Lorsque l\'option est activée, les modifications apportées au système par les modules sont supprimées pour les applications qui n\'ont pas de profil défini.</string>
     <string name="profile_umount_modules_summary">L\'activation de cette option permettra à KernelSU de restaurer tous les fichiers modifiés par les modules pour cette application</string>
     <string name="profile_selinux_domain">Domaine</string>
     <string name="profile_selinux_rules">Règles</string>
@@ -92,7 +92,7 @@
     <string name="direct_install">Installation directe (recommandé)</string>
     <string name="select_file">Sélectionner un fichier d\'image à modifier</string>
     <string name="install_inactive_slot">Installer dans l\'emplacement inactif (après OTA)</string>
-    <string name="install_inactive_slot_warning">Le démarrage de cet appareil sera **FORCÉ** sur l\'emplacement inactif actuel après un redémarrage ! \nN\'utiliser cette option qu\'après l\'application d\'une mise à jour OTA. \nContinuer ?</string>
+    <string name="install_inactive_slot_warning">Le démarrage de cet appareil sera **FORCÉ** sur l\'emplacement inactif actuel après un redémarrage ! \nN\'utiliser cette option qu\'après l\'application d\'une mise à jour OTA. \nContinuer ?</string>
     <string name="install_next">Suivant</string>
     <string name="select_file_tip">Image de la partition %1$s recommandée</string>
     <string name="select_kmi">Sélectionner une KMI</string>
@@ -114,7 +114,7 @@
     <string name="allowlist_backup_success">Sauvegarde de la liste d\'autorisations root réussie</string>
     <string name="allowlist_backup_failed">Échec de la sauvegarde de la liste d\'autorisations root : %1$s</string>
     <string name="allowlist_restore_confirm_title">Confirmer la restauration de la liste d\'autorisations root</string>
-    <string name="allowlist_restore_confirm_message">Cette opération écrasera la liste actuelle des applications autorisées à s\'exécuter en tant que root. Continuer ?</string>
+    <string name="allowlist_restore_confirm_message">Cette opération écrasera la liste actuelle des applications autorisées à s\'exécuter en tant que root. Continuer ?</string>
     <string name="allowlist_restore_success">Restauration de la liste d\'autorisations root réussie</string>
     <string name="allowlist_restore_failed">Échec de la restauration de la liste d\'autorisations root : %1$s</string>
     <string name="backup_allowlist">Sauvegarder la liste d\'autorisations root</string>
@@ -125,8 +125,8 @@
     <string name="home_device_model">Modèle de l\'appareil</string>
     <string name="su_not_allowed">Octroi des privilèges superutilisateur à %s non autorisé</string>
     <string name="settings_sucompat">Commande su classique</string>
-    <string name="settings_sucompat_summary">Permet aux applications ayant l\'autorisation superutilisateur dans leur profil d\'accéder à un shell superutilisateur par la commande /system/bin/su ; effectif uniquement pour les nouveaux processus.</string>
-    <string name="settings_kernel_umount">Démontage du noyau</string>
+    <string name="settings_sucompat_summary">Permet aux applications ayant l\'autorisation superutilisateur dans leur profil d\'accéder à un shell superutilisateur par la commande /system/bin/su ; effectif uniquement pour les nouveaux processus.</string>
+    <string name="settings_kernel_umount">Démontage de modules</string>
     <string name="settings_kernel_umount_summary">Comportement de démontage des modules au niveau du noyau contrôlé par KernelSU dans le profil d\'application</string>
     <string name="simple_mode">Mode simplifié</string>
     <string name="simple_mode_summary">Masque les cartes inutiles de l\'application</string>
@@ -175,7 +175,7 @@
     <string name="dpi_size_custom">Personnalisée</string>
     <string name="dpi_apply_settings">Appliquer la valeur de densité d\'affichage</string>
     <string name="dpi_confirm_title">Modification de la densité d\'affichage</string>
-    <string name="dpi_confirm_message">Passer la densité d\'affichage de l\'application de %1$d ppp à %2$d ppp ?</string>
+    <string name="dpi_confirm_message">Passer la densité d\'affichage de l\'application de %1$d ppp à %2$d ppp ?</string>
     <string name="settings_language">Langue de l\'application</string>
     <string name="language_system_default">Identique à la langue du système</string>
     <string name="error_code">code d\'erreur</string>
@@ -215,11 +215,11 @@
     <string name="join_telegram_group">Rejoindre la communauté</string>
     <string name="join_telegram_group_detail">Rejoindre notre canal Telegram</string>
     <string name="open_source_license">Licences open source</string>
-    <string name="open_source_license_settings_description">Affiche la liste des bibliothèques tierces en open source et leurs licences</string>
+    <string name="open_source_license_settings_description">Liste des bibliothèques tierces en open source utilisées et leurs licences</string>
     <string name="visit_home_page">Consulter le site</string>
     <string name="license">Licence : %s</string>
     <string name="no_license_text">Aucun texte de licence disponible.</string>
-    <string name="metamodule_uninstall_confirm">Désinstaller le module %s ? Cette action affectera tous les modules et certaines fonctionnalités fournies par le métamodule (comme le montage de volumes) ne seront plus disponibles.</string>
+    <string name="metamodule_uninstall_confirm">Désinstaller le module %s ? Cette action affectera tous les modules et certaines fonctionnalités fournies par le métamodule (telles que le montage de modules) ne seront plus disponibles.</string>
     <string name="module_version">Version</string>
     <string name="jailbreak_mode">Mode jailbreak</string>
     <string name="home_jailbreak">Jailbreak</string>
@@ -291,8 +291,8 @@
     <string name="dynamic_palette_style">Style de palette de couleurs</string>
     <string name="dynamic_color_spec">Spécifications colorimétriques</string>
     <string name="horizon_kernel">Installer un noyau AnyKernel3</string>
-    <string name="predictive_back_settings">Animation du bouton Retour</string>
-    <string name="predictive_back_animation">Style d\'animation de transition</string>
+    <string name="predictive_back_settings">Animation de l\'utilisation du bouton Retour</string>
+    <string name="predictive_back_animation">Style de l\'animation de transition</string>
     <string name="predictive_back_exit_direction">Orientation de la transition</string>
     <string name="predictive_back_animation_none">Aucun</string>
     <string name="predictive_back_animation_aosp">AOSP</string>
@@ -365,7 +365,7 @@
     <string name="home_short_info">Superutilisateur : %1$d, Modules : %2$d</string>
     <string name="home_kernel_version">Version du pilote de noyau</string>
     <string name="search_no_any_match">Aucun contenu trouvé</string>
-    <string name="beta_version_available">Nouvelle version bêta %1$d disponible, cliquer ici pour l\'installer</string>
+    <string name="beta_version_available">Nouvelle version bêta %1$d disponible, appuyer ici pour l\'installer</string>
     <string name="beta_update_check_failed">Échec de recherche de version bêta. Faire glisser votre doigt vers le bas pour actualiser et essayer à nouveau.</string>
     <string name="manager_update_stable">Mise à jour de version stable</string>
     <string name="manager_update_beta">Mise à jour de version bêta</string>
@@ -421,10 +421,10 @@
     <string name="dynamic_manager_clear_config_summary">Désactive et supprime la configuration du gestionnaire dynamique</string>
     <string name="dynamic_manager_fixed_manager_summary">%1$s\ngéré par %2$s</string>
     <string name="dynamic_manager_grant_confirm_title">Confirmer l\'autorisation ?</string>
-    <string name="dynamic_manager_grant_confirm_message">L\'application sélectionnée deviendra le gestionnaire dynamique. Si un gestionnaire dynamique est déjà configuré, il sera immédiatement invalidé.\n\nCette action va lui octroyer le niveau d\'autorisation le plus élevé pour cet appareil. Si vous ne comprenez pas ce que cela signifie, annulez.</string>
+    <string name="dynamic_manager_grant_confirm_message">L\'application sélectionnée deviendra le gestionnaire dynamique. Si un gestionnaire dynamique est déjà configuré, il sera immédiatement invalidé.\n\nCette action va octroyer à ce gestionnaire le niveau de permissions le plus élevé pour cet appareil. En cas de doute ou d\'incompréhension sur ce que cela signifie, annuler l\'opération.</string>
     <string name="dynamic_manager_clear_confirm_title">Effacement de la configuration du gestionnaire dynamique</string>
     <string name="dynamic_manager_clear_confirm_message">Effacer la configuration du gestionnaire dynamique ?</string>
-    <string name="manage_managers">Gestionnaires dynamiques</string>
+    <string name="manage_managers">Gestionnaires disponibles</string>
     <string name="umount_path_manager">Gestion des chemins de démontage</string>
     <string name="umount_path_manager_summary">Gère les chemins de démontage du noyau</string>
     <string name="no_any_umount_path">Aucun chemin de démontage existant</string>
@@ -439,9 +439,9 @@
     <string name="operation_failed">Échec de l\'opération</string>
     <string name="changes_take_effect_immediately">Les modifications prendront effet immédiatement.</string>
     <string name="group_contains_apps">Contient %d applications</string>
-    <string name="meta_module_disabled">non monté car le métamodule est désactivé</string>
-    <string name="meta_module_removed">non monté car le métamodule est en cours de désinstallation</string>
-    <string name="no_meta_module_installed">non monté car le métamodule n\'est pas installé</string>
+    <string name="meta_module_disabled">Au moins un module non monté car le métamodule est désactivé</string>
+    <string name="meta_module_removed">Au moins un module non monté car le métamodule est en cours de désinstallation</string>
+    <string name="no_meta_module_installed">Au moins un module non monté car le métamodule n\'est pas installé</string>
     <string name="sus_maps_description_title">Masque le fichier réel mappé en mémoire de divers mappings dans /proc/self/</string>
     <string name="sus_maps_description_text">Masque les chemins réels des fichiers associés aux mappages mémoire dans /proc/self/[maps|smaps|smaps_rollup|map_files|mem|pagemap]. Remarque : cette fonctionnalité ne permet pas de masquer les mappages mémoire anonymes, ni les hooks d\'interception \"inline\" ou PLT générés par la bibliothèque injectée elle-même</string>
     <string name="sus_maps_warning">Avertissement important : pour les applications dotées de mécanismes de détection d’injection bien implémentés, cette fonctionnalité peut ne pas contourner efficacement la détection</string>
@@ -480,7 +480,7 @@
     <string name="susfs_standard_not_set">Non défini</string>
     <string name="susfs_entry_manual_add">Ajouter une entrée</string>
     <string name="susfs_entry_no_entries">Aucune entrée</string>
-    <string name="susfs_entry_no_entries_hint">Cliquer sur \"Ajouter une entrée\" pour en ajouter une</string>
+    <string name="susfs_entry_no_entries_hint">Appuyer sur \"Ajouter une entrée\" pour en ajouter une</string>
     <string name="susfs_entry_detail">Détail de l\'entrée</string>
     <string name="susfs_entry_cancel">Annuler</string>
     <string name="susfs_entry_select_subtype">Sous-type d\'entrée</string>
@@ -526,11 +526,11 @@
     <string name="susfs_backup_import_label">Importer</string>
     <string name="susfs_backup_restore_default">Configuration par défaut</string>
     <string name="susfs_backup_restore_default_desc">Supprime la configuration SuSFS actuelle et restaure la configuration par défaut</string>
-    <string name="susfs_redirect_important_notes">Remarques importantes :\n• Les chemins cible et redirigé doivent exister avant l’ajout d’une entrée\n• Les permissions SELinux pour les deux chemins doivent être configurées\n• La redirection affecte uniquement les processus correspondant au schéma d\'UID sélectionné</string>
+    <string name="susfs_redirect_important_notes">Remarques importantes :\n• Les chemins cible et redirigé doivent exister avant l’ajout d’une entrée\n• Les permissions SELinux pour les deux chemins doivent être configurées\n• La redirection affecte uniquement les processus correspondant au schéma d\'UID sélectionné</string>
     <string name="navigation_bar_badge">Badges de la barre de navigation</string>
-    <string name="navigation_bar_badge_summary">Affiche le nombre d\'applications superutilisateur et de modules dans la barre de navigation</string>
-    <string name="home_card_icons">Icônes dans le panneau d\'accueil</string>
-    <string name="home_card_icons_summary">Ajoute des icônes aux cartes du panneau d\'accueil</string>
+    <string name="navigation_bar_badge_summary">Affiche le nombre d\'applications superutilisateur et de modules installés dans la barre de navigation</string>
+    <string name="home_card_icons">Icônes sur l\'écran d\'accueil</string>
+    <string name="home_card_icons_summary">Ajoute des icônes aux cartes d\'informations de l\'écran d\'accueil</string>
     <string name="sort_name">Par nom</string>
     <string name="sort_install_time">Par date d\'installation</string>
     <string name="sort_update_time">Par date de mise à jour</string>
@@ -560,4 +560,9 @@
     <string name="settings_pager_gesture_native">Par défaut</string>
     <string name="settings_pager_gesture_cross_axis">Transversal</string>
     <string name="settings_pager_gesture_ios_like">Comme sur iOS</string>
+    <string name="about_app_icon"><![CDATA[TOUS DROITS RÉSERVÉS pour les icônes dont la propriété intellectuelle appartient à %1$s]]></string>
+    <string name="both_kernel_and_module_files">Les fichiers zip en entrée contiennent à la fois anykernel3 et les modules</string>
+    <string name="more_than_one_kernel_file">Plus d\'un fichier anykernel3 trouvé parmi les fichiers en entrée</string>
+    <string name="module_shortcut_copy_scheme">Copier le protocole d\'URL</string>
+    <string name="module_shortcut_scheme_copied">Protocole d\'URL copié</string>
 </resources>
