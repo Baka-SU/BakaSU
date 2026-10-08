@@ -1,6 +1,8 @@
 package org.bakasu.bakasu.data.theme
 
 import android.app.Application
+import android.app.WallpaperManager
+import android.os.Build
 import android.util.TypedValue
 import com.kieronquinn.monetcompat.core.MonetCompat
 import com.kieronquinn.monetcompat.interfaces.MonetColorsChangedListener
@@ -12,11 +14,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.bakasu.bakasu.data.AppSettingsRepository
 
 class MonetCompatColorSource(
     private val application: Application,
-    private val settings: AppSettingsRepository,
 ) {
     private val fallbackColor = TypedValue().let {
         application.theme.resolveAttribute(android.R.attr.colorPrimary, it, true)
@@ -28,14 +28,18 @@ class MonetCompatColorSource(
     private var monet: MonetCompat? = null
 
     fun initialize() {
-        // Settings are preloaded before this call. No wallpaper IPC is needed for startup.
-        mutableSeedColor.value = settings.getInt("wallpaper_seed_color_cache", fallbackColor)
+        mutableSeedColor.value = systemWallpaperSeedColor() ?: fallbackColor
     }
 
     fun seedColor(): Int = colors.value
 
     suspend fun refresh() = refreshMutex.withLock {
         try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val color = withContext(Dispatchers.IO) { systemWallpaperSeedColor() }
+                publish(color ?: fallbackColor)
+                return@withLock
+            }
             val instance = withContext(Dispatchers.Main) {
                 monet ?: run {
                     MonetCompat.useSystemColorsOnAndroid12 = false
@@ -68,10 +72,17 @@ class MonetCompatColorSource(
         }
     }
 
+    private fun systemWallpaperSeedColor(): Int? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+        return runCatching {
+            WallpaperManager.getInstance(application)
+                .getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+                ?.primaryColor
+                ?.toArgb()
+        }.getOrNull()
+    }
+
     private fun publish(color: Int) {
         mutableSeedColor.value = color
-        if (settings.getInt("wallpaper_seed_color_cache", fallbackColor) != color) {
-            settings.putInt("wallpaper_seed_color_cache", color)
-        }
     }
 }
