@@ -316,7 +316,7 @@ private fun CompactSearchBar(
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     interactionSource: MutableInteractionSource? = null,
-    contentAlpha: () -> Float = { 1f },
+    hintAlpha: () -> Float = { 1f },
     shape: Shape = inputFieldShape,
     requestFocus: Boolean = false,
     onFocusRequestHandled: () -> Unit = {},
@@ -421,27 +421,15 @@ private fun CompactSearchBar(
         decorator = TextFieldDefaults.decorator(
             state = textFieldState,
             placeholder = placeholder?.let { hint ->
-                { Box(Modifier.graphicsLayer { alpha = contentAlpha() }) { hint() } }
+                { Box(Modifier.graphicsLayer { alpha = hintAlpha() }) { hint() } }
             },
             leadingIcon =
                 leadingIcon?.let { leading ->
-                    {
-                        Box(
-                            Modifier
-                                .offset(x = 4.dp)
-                                .graphicsLayer { alpha = contentAlpha() }
-                        ) { leading() }
-                    }
+                    { Box(Modifier.offset(x = 4.dp)) { leading() } }
                 },
             trailingIcon =
                 trailingIcon?.let { trailing ->
-                    {
-                        Box(
-                            Modifier
-                                .offset(x = (-4).dp)
-                                .graphicsLayer { alpha = contentAlpha() }
-                        ) { trailing() }
-                    }
+                    { Box(Modifier.offset(x = (-4).dp)) { trailing() } }
                 },
             colors = colors,
             contentPadding = PaddingValues(),
@@ -504,10 +492,10 @@ fun SearchAppBar(
         val expanded = searchAppBarScrollBehavior?.searchBarExpandedFraction ?: 1f
         expanded * visibleFraction().coerceIn(0f, 1f)
     }
-    // Only the words inside the field cross over - the capsule stays put, as the title pill
-    // does. Swiping between two pages that both have a field should not take the field itself
-    // away and bring it back.
-    val fieldContentAlpha: () -> Float = { topBarSwipeAlpha(swipeDelta()) }
+    // The hint is the only thing in the field that differs from one page's to the next's, so it
+    // is the only thing that crosses over. The capsule and the icons around it are identical on
+    // both, and fading those would be a blink of something that never changed.
+    val hintAlpha: () -> Float = { topBarSwipeAlpha(swipeDelta()) }
     var requestSearchFocus by remember { mutableStateOf(false) }
     val currentOnSearchTextChange by rememberUpdatedState(onSearchTextChange)
     val resetSearch by rememberUpdatedState {
@@ -627,7 +615,7 @@ fun SearchAppBar(
                     onSearch = {
                         keyboardController?.hide()
                     },
-                    contentAlpha = fieldContentAlpha,
+                    hintAlpha = hintAlpha,
                     placeholder = {
                         Text(
                             text = searchBarPlaceHolderText,
