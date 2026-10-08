@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.ui.component.liquid.lens
@@ -150,11 +151,18 @@ private fun TopBarPill(
 class TopBarPillSize {
     private var animated: Animatable<IntSize, AnimationVector2D>? = null
 
+    /** Size the running animation is headed for; plain field, never read from a measure pass. */
+    private var pending: IntSize? = null
+
     /**
      * The size to lay the pill out at, for content that measured to [target].
      *
      * The first title has nothing to grow out of and sets the starting size; every title after it
      * is animated to.
+     *
+     * Only [Animatable.value] is read here. Reading anything else of the animation's - its target,
+     * or whether it is running - would subscribe this measure pass to state the animation itself
+     * writes, so starting and finishing one would invalidate the layout that started it.
      */
     internal fun sizeFor(
         target: IntSize,
@@ -164,13 +172,20 @@ class TopBarPillSize {
         val animation = animated
             ?: Animatable(target, IntSize.VectorConverter).also { animated = it }
 
-        // The second test restarts an animation that was cut short: the scope belongs to the pill
-        // that launched it, so a handover mid-grow cancels it and would strand the pill part of
-        // the way there.
-        if (animation.targetValue != target ||
-            (!animation.isRunning && animation.value != target)
-        ) {
-            scope.launch { animation.animateTo(target, spec) }
+        if (pending != target) {
+            pending = target
+            scope.launch {
+                try {
+                    animation.animateTo(target, spec)
+                } catch (cancellation: CancellationException) {
+                    // a handover mid-grow cancels this scope along with the pill that owns it, so
+                    // let the next pill pick the same target up from wherever this was stranded.
+                    // A finished animation keeps its target, or every later measure would start
+                    // the same one over again.
+                    if (pending == target) pending = null
+                    throw cancellation
+                }
+            }
         }
         return animation.value
     }
