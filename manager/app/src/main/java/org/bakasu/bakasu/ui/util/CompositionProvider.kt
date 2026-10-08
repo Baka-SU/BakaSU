@@ -7,6 +7,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.layout.LayoutCoordinates
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
 import org.bakasu.bakasu.ui.overscroll.StretchOverscrollCompensationState
+import org.bakasu.bakasu.ui.screen.BottomBarDestination
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 
 val LocalSnackbarHost = compositionLocalOf<SnackbarHostState> {
@@ -19,6 +20,15 @@ val LocalBlurState = compositionLocalOf<LayerBackdrop?> { null }
 val LocalPagerState = compositionLocalOf<PagerState> { error("No pager state") }
 val LocalPortraitState = compositionLocalOf<Boolean> { error("No portrait state") }
 val LocalPagerPage = staticCompositionLocalOf<Int?> { null }
+
+/**
+ * How far the pager has been dragged away from the page owning the shared top bar: 0 at rest,
+ * +/-0.5 at the handover. Read as a lambda so draw code can sample it per frame.
+ */
+val LocalTopBarSwipeDelta = compositionLocalOf<() -> Float> { { 0f } }
+
+/** The pager's destinations, so a page can tell what it is being swiped towards. */
+val LocalPagerPages = compositionLocalOf<List<BottomBarDestination>> { emptyList() }
 val LocalHandlePageChange = compositionLocalOf<(Int) -> Unit> { error("No handle page change") }
 val LocalSelectedPage = compositionLocalOf<Int> { error("No selected page") }
 

@@ -17,10 +17,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -93,6 +97,8 @@ import org.bakasu.bakasu.domain.model.ManagerUpdateInfo
 import org.bakasu.bakasu.domain.usecase.EnqueueManagerUpdateUseCase
 import org.bakasu.bakasu.magica.MagicaService
 import org.bakasu.bakasu.ui.component.KsuIsValid
+import org.bakasu.bakasu.ui.component.LocalTopBarSlot
+import org.bakasu.bakasu.ui.component.ProvideTopBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.TopBarIconPill
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
@@ -111,7 +117,9 @@ import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
+import org.bakasu.bakasu.ui.util.LocalPagerPage
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
+import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.downloader.downloadManagerUpdate
@@ -159,17 +167,20 @@ fun HomePage(
     val loadingDialog = rememberLoadingDialog()
     val scope = rememberCoroutineScope()
 
-    Scaffold(
-        topBar = {
+    val topBarHeight = LocalTopBarSlot.current?.height ?: 0.dp
+
+    ProvideTopBar(active = LocalPagerPage.current == LocalSelectedPage.current) {
             TopBar(
                 uiState = uiState,
                 onReboot = { viewModel.dispatch(HomeUiAction.Reboot(it)) },
                 scrollBehavior = scrollBehavior,
             )
-        },
+    }
+
+    Scaffold(
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        contentWindowInsets = adaptiveScaffoldWindowInsets(includeBottom = false),
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
         snackbarHost = {
             SwipeableSnackbarHost(
                 modifier = Modifier.padding(bottom = bottomPadding),
@@ -184,7 +195,7 @@ fun HomePage(
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(scrollState)
                 .padding(
-                    top = innerPadding.calculateTopPadding() + 2.dp,
+                    top = topBarHeight + 2.dp,
                     start = ScreenEdgePadding,
                     end = ScreenEdgePadding
                 ),

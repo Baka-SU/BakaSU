@@ -75,6 +75,7 @@ import org.bakasu.bakasu.domain.model.SulogFile
 import org.bakasu.bakasu.domain.model.toSulogDisplayName
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.WarningCard
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
@@ -168,58 +169,60 @@ private fun SulogScreenContent(
 
     Scaffold(
         topBar = {
-            SearchAppBar(
-                title = stringResource(R.string.settings_sulog),
-                searchText = localSearchText,
-                onSearchTextChange = {
-                    actions.onSearchTextChange(it)
-                    scope.launch { searchListState.scrollToItem(0) }
-                },
-                onBackClick = actions.onBack,
-                dropdownContent = {
-                    TopBarIconPill(onClick = actions.onCleanFile) {
-                        Icon(
-                            imageVector = Icons.TwoTone.DeleteSweep,
-                            contentDescription = stringResource(R.string.sulog_clean_title),
-                        )
-                    }
-                    TopBarIconPill(onClick = { showFilterMenu = true }) {
-                        Icon(
-                            imageVector = Icons.TwoTone.FilterList,
-                            contentDescription = stringResource(R.string.sulog_filter_title),
-                        )
+            TopBarScrim {
+                SearchAppBar(
+                    title = stringResource(R.string.settings_sulog),
+                    searchText = localSearchText,
+                    onSearchTextChange = {
+                        actions.onSearchTextChange(it)
+                        scope.launch { searchListState.scrollToItem(0) }
+                    },
+                    onBackClick = actions.onBack,
+                    dropdownContent = {
+                        TopBarIconPill(onClick = actions.onCleanFile) {
+                            Icon(
+                                imageVector = Icons.TwoTone.DeleteSweep,
+                                contentDescription = stringResource(R.string.sulog_clean_title),
+                            )
+                        }
+                        TopBarIconPill(onClick = { showFilterMenu = true }) {
+                            Icon(
+                                imageVector = Icons.TwoTone.FilterList,
+                                contentDescription = stringResource(R.string.sulog_filter_title),
+                            )
 
-                        DropdownMenuPopup(
-                            expanded = showFilterMenu,
-                            onDismissRequest = { showFilterMenu = false },
-                        ) {
-                            DropdownMenuGroup(
-                                shapes = MenuDefaults.groupShapes(),
+                            DropdownMenuPopup(
+                                expanded = showFilterMenu,
+                                onDismissRequest = { showFilterMenu = false },
                             ) {
-                                Spacer(modifier = Modifier.height(2.dp))
-
-                                SulogEventFilter.entries.forEachIndexed { index, filter ->
-                                    SelectableDropdownMenuItem(
-                                        selected = filter in state.selectedFilters,
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                                            actions.onToggleFilter(filter)
-                                        },
-                                        text = { Text(sulogFilterLabel(filter)) },
-                                        shapes = MenuDefaults.itemShape(
-                                            index = index,
-                                            count = SulogEventFilter.entries.size,
-                                        ),
-                                    )
+                                DropdownMenuGroup(
+                                    shapes = MenuDefaults.groupShapes()
+                                ) {
                                     Spacer(modifier = Modifier.height(2.dp))
+
+                                    SulogEventFilter.entries.forEachIndexed { index, filter ->
+                                        SelectableDropdownMenuItem(
+                                            selected = filter in state.selectedFilters,
+                                            onClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                                actions.onToggleFilter(filter)
+                                            },
+                                            text = { Text(sulogFilterLabel(filter)) },
+                                            shapes = MenuDefaults.itemShape(
+                                                index = index,
+                                                count = SulogEventFilter.entries.size
+                                            ),
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                searchBarPlaceHolderText = stringResource(R.string.sulog_search_placeholder),
-            )
+                    },
+                    scrollBehavior = scrollBehavior,
+                    searchBarPlaceHolderText = stringResource(R.string.sulog_search_placeholder)
+                )
+            }
         },
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         containerColor = Color.Transparent,

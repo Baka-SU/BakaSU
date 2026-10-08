@@ -55,6 +55,7 @@ import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.WarningCard
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
@@ -111,23 +112,25 @@ fun UmountManagerScreen() {
     Scaffold(
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         topBar = {
-            TopAppBar(
-                title = {
-                    TopBarTitlePill {
-                        Text(stringResource(R.string.umount_path_manager))
-                    }
-                },
-                navigationIcon = {
-                    val navigator = LocalNavigator.current
-                    AppBackButton(
-                        onClick = {
-                            navigator.pop()
-                        },
-                    )
-                },
-                windowInsets = pillTopAppBarWindowInsets(),
-                scrollBehavior = scrollBehavior,
-                colors = transparentTopAppBarColors())
+            TopBarScrim {
+                TopAppBar(
+                    title = {
+                        TopBarTitlePill {
+                            Text(stringResource(R.string.umount_path_manager))
+                        }
+                    },
+                    navigationIcon = {
+                        val navigator = LocalNavigator.current
+                        AppBackButton(
+                            onClick = {
+                                navigator.pop()
+                            },
+                        )
+                    },
+                    windowInsets = pillTopAppBarWindowInsets(),
+                    scrollBehavior = scrollBehavior,
+                    colors = transparentTopAppBarColors())
+            }
         },
         floatingActionButton = {
             FloatingActionButton(

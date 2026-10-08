@@ -45,6 +45,7 @@ import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
@@ -229,68 +230,70 @@ fun SuSFSConfigScreen() {
 
     Scaffold(
         topBar = {
-            Column(modifier = Modifier.blurEffect()) {
-                TopAppBar(
-                    title = {
-                        TopBarTitlePill {
-                            Text(stringResource(R.string.susfs_config_title))
-                        }
-                    },
-                    scrollBehavior = scrollBehavior,
-                    navigationIcon = {
-                        AppBackButton(
-                            onClick = {
-                                navigator.pop()
-                            },
-                        )
-                    },
-                    colors = transparentTopAppBarColors(),
-                    windowInsets = pillTopAppBarWindowInsets(),
-                )
-
-                PrimaryScrollableTabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    containerColor =
-                        if (themeConfig.isEnableBlur) {
-                            Color.Transparent
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
+            TopBarScrim {
+                Column(modifier = Modifier.blurEffect()) {
+                    TopAppBar(
+                        title = {
+                            TopBarTitlePill {
+                                Text(stringResource(R.string.susfs_config_title))
+                            }
                         },
-                    edgePadding = 0.dp,
-                    minTabWidth = 0.dp,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    subpages.forEachIndexed { index, subpage ->
-                        val tabVisible = !subpage.requirePersist || configEnabled == true
-                        AnimatedVisibility(
-                            visible = tabVisible,
-                            enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
-                            exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
-                        ) {
-                            Tab(
-                                selected = tabVisible && pagerState.currentPage == index,
+                        scrollBehavior = scrollBehavior,
+                        navigationIcon = {
+                            AppBackButton(
                                 onClick = {
-                                    coroutineScope.launch {
-                                        pagerState.animateScrollToPage(index)
-                                    }
-                                },
-                                modifier = Modifier.widthIn(
-                                    min = TabRowDefaults.ScrollableTabRowMinTabWidth,
-                                ),
-                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                text = { Text(subpage.title) },
+                                    navigator.pop()
+                                }
                             )
+                        },
+                        colors = transparentTopAppBarColors(),
+                        windowInsets = pillTopAppBarWindowInsets(),
+                    )
+
+                    PrimaryScrollableTabRow(
+                        selectedTabIndex = selectedTabIndex,
+                        containerColor =
+                            if (themeConfig.isEnableBlur)
+                                Color.Transparent
+                            else
+                                MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
+                        edgePadding = 0.dp,
+                        minTabWidth = 0.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        subpages.forEachIndexed { index, subpage ->
+                            val tabVisible = !subpage.requirePersist || configEnabled == true
+                            AnimatedVisibility(
+                                visible = tabVisible,
+                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
+                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+                            ) {
+                                Tab(
+                                    selected = tabVisible && pagerState.currentPage == index,
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(index)
+                                        }
+                                    },
+                                    modifier = Modifier.widthIn(
+                                        min = TabRowDefaults.ScrollableTabRowMinTabWidth
+                                    ),
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    text = { Text(subpage.title) }
+                                )
+                            }
+                        }
+                    }
+
+                    BackHandler(
+                        enabled = pagerState.currentPage != defaultPage
+                    ) {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(defaultPage)
                         }
                     }
                 }
-
-                BackHandler(
-                    enabled = pagerState.currentPage != defaultPage,
-                ) {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(defaultPage)
-                    }
-                }
+        
             }
         },
         containerColor = Color.Transparent,

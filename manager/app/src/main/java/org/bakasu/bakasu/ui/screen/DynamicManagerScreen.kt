@@ -54,6 +54,7 @@ import org.bakasu.bakasu.ui.component.DialogHandle
 import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
@@ -153,14 +154,17 @@ fun DynamicManagerScreen() {
     Scaffold(
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         topBar = {
-            SearchAppBar(
-                title = stringResource(R.string.dynamic_manager_title),
-                searchText = uiState.search,
-                onSearchTextChange = { viewModel.dispatch(DynamicManagerUiAction.Search(it)) },
-                onBackClick = { navigator.pop() },
-                scrollBehavior = scrollBehavior,
-                searchBarPlaceHolderText = stringResource(R.string.search_apps),
-            )
+            TopBarScrim {
+                SearchAppBar(
+                    title = stringResource(R.string.dynamic_manager_title),
+                    searchText = uiState.search,
+                    onSearchTextChange = { viewModel.dispatch(DynamicManagerUiAction.Search(it)) },
+                    onBackClick = { navigator.pop() },
+                    scrollBehavior = scrollBehavior,
+                    searchBarPlaceHolderText = stringResource(R.string.search_apps),
+                )
+        
+            }
         },
         snackbarHost = { SwipeableSnackbarHost(hostState = snackbarHost) },
         containerColor = Color.Transparent,

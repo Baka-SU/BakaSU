@@ -66,6 +66,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.LkmSelection
 import org.bakasu.bakasu.ui.component.DialogHandle
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
@@ -129,12 +130,14 @@ fun InstallScreen(
     Scaffold(
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         topBar = {
-            TopBar(
-                onBack = { navigator.pop() },
-                scrollBehavior = scrollBehavior,
-                selectedTab = pagerState.currentPage,
-                onTabSelected = { scope.launch { pagerState.animateScrollToPage(it) } },
-            )
+            TopBarScrim {
+                TopBar(
+                    onBack = { navigator.pop() },
+                    scrollBehavior = scrollBehavior,
+                    selectedTab = pagerState.currentPage,
+                    onTabSelected = { scope.launch { pagerState.animateScrollToPage(it) } },
+                )
+            }
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,

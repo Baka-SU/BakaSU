@@ -59,7 +59,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithCache
@@ -72,6 +71,7 @@ import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.layout.layout
@@ -289,10 +289,13 @@ private fun Modifier.textFieldBackground(color: ColorProducer, shape: Shape): Mo
     onDrawBehind { drawOutline(outline, color = color()) }
 }
 
-private fun Modifier.collapseWithTopAppBar(expandedFraction: Float): Modifier = clipToBounds().layout { measurable, constraints ->
-    val placeable = measurable.measure(constraints.copy(minHeight = 0))
-    val fraction = expandedFraction.coerceIn(0f, 1f)
-    val visibleHeight = (placeable.height * fraction).roundToInt()
+// Takes a lambda rather than a value so the fraction is read in the layout phase. Read during
+// composition it would recompose the whole shared top bar on every frame of a swipe.
+private fun Modifier.collapseWithTopAppBar(expandedFraction: () -> Float): Modifier =
+    clipToBounds().layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints.copy(minHeight = 0))
+        val fraction = expandedFraction().coerceIn(0f, 1f)
+        val visibleHeight = (placeable.height * fraction).roundToInt()
 
     layout(placeable.width, visibleHeight) {
         placeable.placeRelative(
@@ -458,6 +461,7 @@ fun SearchAppBar(
     navigationContent: @Composable (() -> Unit)? = null,
     scrollBehavior: TopAppBarScrollBehavior? = null,
     searchBarPlaceHolderText: String,
+    visibleFraction: () -> Float = { 1f },
 ) {
     val textFieldState = rememberTextFieldState(initialText = searchText)
     val focusManager = LocalFocusManager.current
@@ -473,6 +477,16 @@ fun SearchAppBar(
         searchAppBarScrollBehavior?.searchBarExpandedFraction ?: 1f
     val isSearchBarCollapsing = searchBarExpansionFraction < 0.99f
     val isSearchBarCollapsed = searchBarExpansionFraction <= 0.01f
+    // The pager hands the shared top bar over at the halfway point, so fold the field away as the
+    // page is swiped off rather than letting it pop at the handover. Scroll collapse still drives
+    // the search icon on its own, so swiping does not make the icon flash in.
+    //
+    // Deferred: both factors are sampled in the layout and draw phases, so a swipe resizes the
+    // field without recomposing anything.
+    val renderFraction: () -> Float = {
+        val expanded = searchAppBarScrollBehavior?.searchBarExpandedFraction ?: 1f
+        expanded * visibleFraction().coerceIn(0f, 1f)
+    }
     var requestSearchFocus by remember { mutableStateOf(false) }
     val currentOnSearchTextChange by rememberUpdatedState(onSearchTextChange)
     val resetSearch by rememberUpdatedState {
@@ -577,8 +591,8 @@ fun SearchAppBar(
             exit = ExitTransition.None,
             modifier = Modifier
                 .fillMaxWidth()
-                .alpha(searchBarExpansionFraction)
-                .collapseWithTopAppBar(searchBarExpansionFraction),
+                .graphicsLayer { alpha = renderFraction() }
+                .collapseWithTopAppBar(renderFraction),
         ) {
             Column {
                 CompactSearchBar(

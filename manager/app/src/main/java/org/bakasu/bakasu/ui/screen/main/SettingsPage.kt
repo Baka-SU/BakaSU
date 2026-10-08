@@ -15,9 +15,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -83,6 +87,8 @@ import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.usecase.GenerateBugreportUseCase
 import org.bakasu.bakasu.ui.component.ConfirmResult
+import org.bakasu.bakasu.ui.component.LocalTopBarSlot
+import org.bakasu.bakasu.ui.component.ProvideTopBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
@@ -100,6 +106,8 @@ import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
+import org.bakasu.bakasu.ui.util.LocalPagerPage
+import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
@@ -133,10 +141,13 @@ fun SettingsPage(bottomPadding: Dp) {
         settingsViewModel.dispatch(SettingsUiAction.LoadFeatureSettings)
     }
 
-    Scaffold(
-        topBar = {
+    val topBarHeight = LocalTopBarSlot.current?.height ?: 0.dp
+
+    ProvideTopBar(active = LocalPagerPage.current == LocalSelectedPage.current) {
             TopBar(scrollBehavior = scrollBehavior)
-        },
+    }
+
+    Scaffold(
         snackbarHost = {
             SwipeableSnackbarHost(
                 modifier = Modifier.padding(bottom = bottomPadding),
@@ -145,7 +156,7 @@ fun SettingsPage(bottomPadding: Dp) {
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        contentWindowInsets = adaptiveScaffoldWindowInsets(includeBottom = false),
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
     ) { innerPadding ->
         val loadingDialog = rememberLoadingDialog()
         var showBottomsheet by remember { mutableStateOf(false) }
@@ -174,7 +185,7 @@ fun SettingsPage(bottomPadding: Dp) {
                     .nestedScroll(scrollBehavior.nestedScrollConnection)
                     .blurSource(),
             contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding() + 5.dp,
+                top = topBarHeight + 5.dp,
                 start = 0.dp,
                 end = 0.dp,
                 bottom = innerPadding.calculateBottomPadding() + bottomPadding + 15.dp,

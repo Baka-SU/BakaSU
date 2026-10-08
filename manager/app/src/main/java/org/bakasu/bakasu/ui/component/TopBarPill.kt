@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -15,20 +17,33 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
+import kotlin.math.pow
+import kotlin.math.roundToInt
 import org.bakasu.bakasu.ui.component.liquid.lens
 import org.bakasu.bakasu.ui.component.liquid.vibrancy
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.isInDarkTheme
 import org.bakasu.bakasu.ui.util.LocalBlurState
+import org.bakasu.bakasu.ui.util.LocalTopBarSwipeDelta
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
@@ -112,14 +127,31 @@ private fun TopBarPill(
     )
 }
 
-/** Wraps a top app bar title in a [TopBarPill]. */
+/**
+ * Wraps a top app bar title in a [TopBarPill].
+ *
+ * The pill itself stays put while swiping between pages - only the words inside travel, clipped
+ * to the pill - and the pill resizes between one title and the next rather than cutting.
+ */
 @Composable
 fun TopBarTitlePill(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    val swipeDelta = LocalTopBarSwipeDelta.current
+    val shiftPx = with(LocalDensity.current) { TopBarSwipeShift.toPx() }
+
     TopBarPill(modifier) {
-        Box(modifier = Modifier.padding(horizontal = PillTextPadding, vertical = 6.dp)) {
+        Box(
+            modifier = Modifier
+                .clip(CircleShape)
+                .padding(horizontal = PillTextPadding, vertical = 6.dp)
+                .graphicsLayer {
+                    val delta = swipeDelta()
+                    translationX = -delta * shiftPx
+                    alpha = swipeAlpha(delta)
+                }
+        ) {
             content()
         }
     }
@@ -133,8 +165,17 @@ fun TopBarIconPill(
     enabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val swipeDelta = LocalTopBarSwipeDelta.current
+    val shiftPx = with(LocalDensity.current) { TopBarSwipeShift.toPx() }
+
     TopBarPill(
-        modifier = modifier.padding(horizontal = PillHorizontalPadding),
+        modifier = modifier
+            .padding(horizontal = PillHorizontalPadding)
+            .graphicsLayer {
+                val delta = swipeDelta()
+                translationX = -delta * shiftPx
+                alpha = swipeAlpha(delta)
+            },
         shadowRadius = 4.dp
     ) {
         IconButton(
@@ -171,3 +212,121 @@ fun pillTopAppBarWindowInsets(
         WindowInsets(left = TopBarIconEdgeInset)
     }
 )
+
+/** Steps used to approximate the eased fade; enough that the ramp reads as smooth. */
+private const val TopBarScrimSteps = 12
+
+/** How far below the bar the scrim keeps fading, so the ramp has room to end invisibly. */
+private val TopBarScrimOverflow = 72.dp
+
+/**
+ * Height of the title row the scrim covers, below the status bar.
+ *
+ * Fixed rather than taken from the bar: the search pages' bars are taller, so a scrim measured
+ * from its content jumps for a frame at the hand-over and reads as a flash. It also keeps the
+ * scrim identical on every page.
+ */
+private val TopBarScrimRow = 64.dp
+
+/**
+ * Tint laid over the blur inside the scrim.
+ *
+ * blurEffect's own tint follows the card transparency setting, so on a custom background it can
+ * be far too weak to stop text reading through. This is applied on top of the blur and inside the
+ * same mask, so it fades out with it.
+ */
+private const val TopBarScrimTint = 0.55f
+
+/**
+ * Smoothstep alphas for the scrim ramp, computed once for the process.
+ *
+ * Smoothstep is flat at the top, so the scrim holds its full value up at the status bar and then
+ * eases away with no edge where the falloff begins. Raising it to a power below one lifts the
+ * middle of the curve, keeping the blur strong for more of its run.
+ */
+private val TopBarScrimAlphas = FloatArray(TopBarScrimSteps + 1) { step ->
+    val t = step / TopBarScrimSteps.toFloat()
+    (1f - t * t * (3f - 2f * t)).pow(0.7f)
+}
+
+/** How far bar content travels while swiping between pages. */
+private val TopBarSwipeShift = 40.dp
+
+/**
+ * Opacity for bar content at a given swipe [delta].
+ *
+ * Linear would leave the pill visibly empty either side of the handover, where only one page
+ * publishes a bar and there is nothing to cross-fade with. Squaring the ramp keeps content
+ * legible for most of the gesture and collapses the blank moment to the handover itself.
+ */
+private fun swipeAlpha(delta: Float): Float {
+    val t = (1f - abs(delta) * 2f).coerceIn(0f, 1f)
+    return t * (2f - t)
+}
+
+/**
+ * Draws the status bar scrim behind a top app bar.
+ *
+ * Top app bars paint nothing themselves, so content scrolls up behind the system clock and
+ * icons. This puts a blurred scrim back — solid across the status bar, then fading to nothing
+ * by the bottom of the bar, so it dissolves into the content instead of ending on a hard line.
+ *
+ * The scrim is a sibling drawn before [content] rather than a modifier on the bar itself: the
+ * gradient erases pixels with [BlendMode.DstIn], which would eat the pills too if they shared
+ * its layer.
+ */
+@Composable
+fun TopBarScrim(content: @Composable () -> Unit) {
+    val density = LocalDensity.current
+    val statusBarPx = with(density) {
+        WindowInsets.statusBars.asPaddingValues().calculateTopPadding().toPx()
+    }
+    val scrimPx = with(density) {
+        (statusBarPx + (TopBarScrimRow + TopBarScrimOverflow).toPx()).roundToInt()
+    }
+    val tint = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = TopBarScrimTint)
+
+    Box {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                // draw a fixed height while still reporting the bar's, so the tail has room to
+                // reach zero and the scrim never resizes when the bar behind it changes
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(
+                        constraints.copy(minHeight = scrimPx, maxHeight = scrimPx)
+                    )
+                    layout(placeable.width, constraints.maxHeight) { placeable.place(0, 0) }
+                }
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                // drawWithCache, not drawWithContent: the ramp only depends on the bar height,
+                // so the stops and the brush are built once per size instead of every frame.
+                .drawWithCache {
+                    // Hold full strength across the status bar, then ease away over the rest of
+                    // the scrim. Smoothstep leaves the plateau with zero slope, so the join is
+                    // smooth and there is no line where the falloff starts.
+                    val solidStop = (statusBarPx / size.height).coerceIn(0f, 0.9f)
+                    val stops = Array(TopBarScrimAlphas.size + 2) { index ->
+                        when (index) {
+                            0 -> 0f to Color.Black
+                            TopBarScrimAlphas.size + 1 -> 1f to Color.Transparent
+                            else -> {
+                                val step = index - 1
+                                val t = step / TopBarScrimSteps.toFloat()
+                                solidStop + (1f - solidStop) * t to
+                                        Color.Black.copy(alpha = TopBarScrimAlphas[step])
+                            }
+                        }
+                    }
+                    val brush = Brush.verticalGradient(colorStops = stops)
+                    onDrawWithContent {
+                        drawContent()
+                        drawRect(color = tint)
+                        drawRect(brush = brush, blendMode = BlendMode.DstIn)
+                    }
+                }
+                .blurEffect()
+        )
+        content()
+    }
+}

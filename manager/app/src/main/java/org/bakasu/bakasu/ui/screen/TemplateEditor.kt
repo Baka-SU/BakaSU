@@ -50,6 +50,7 @@ import org.bakasu.bakasu.toRawFlags
 import org.bakasu.bakasu.toRootProfileFlags
 import org.bakasu.bakasu.ui.component.NetworkRefreshContent
 import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.profile.rootProfileConfig
@@ -109,36 +110,38 @@ fun TemplateEditorScreen(
 
     Scaffold(
         topBar = {
-            val author =
-                if (template.author.isNotEmpty()) "@${template.author}" else ""
-            val readOnlyHint = if (readOnly) {
-                " - ${stringResource(id = R.string.app_profile_template_readonly)}"
-            } else {
-                ""
-            }
-            val titleSummary = "${template.id}$author$readOnlyHint"
-
-            TopBar(
-                title = if (isCreation) {
-                    stringResource(R.string.app_profile_template_create)
-                } else if (readOnly) {
-                    stringResource(R.string.app_profile_template_view)
+            TopBarScrim {
+                val author =
+                    if (template.author.isNotEmpty()) "@${template.author}" else ""
+                val readOnlyHint = if (readOnly) {
+                    " - ${stringResource(id = R.string.app_profile_template_readonly)}"
                 } else {
-                    stringResource(R.string.app_profile_template_edit)
-                },
-                readOnly = readOnly,
-                summary = titleSummary,
-                onBack = dropUnlessResumed {
-                    if (readOnly) navigator.pop() else navigator.setResult("template_edit", true)
-                },
-                onDelete = {
-                    viewModel.dispatch(TemplateEditorUiAction.Delete)
-                },
-                onSave = {
-                    viewModel.dispatch(TemplateEditorUiAction.Save)
-                },
-                scrollBehavior = scrollBehavior,
-            )
+                    ""
+                }
+                val titleSummary = "${template.id}$author$readOnlyHint"
+
+                TopBar(
+                    title = if (isCreation) {
+                        stringResource(R.string.app_profile_template_create)
+                    } else if (readOnly) {
+                        stringResource(R.string.app_profile_template_view)
+                    } else {
+                        stringResource(R.string.app_profile_template_edit)
+                    },
+                    readOnly = readOnly,
+                    summary = titleSummary,
+                    onBack = dropUnlessResumed {
+                        if (readOnly) navigator.pop() else navigator.setResult("template_edit", true)
+                    },
+                    onDelete = {
+                        viewModel.dispatch(TemplateEditorUiAction.Delete)
+                    },
+                    onSave = {
+                        viewModel.dispatch(TemplateEditorUiAction.Save)
+                    },
+                    scrollBehavior = scrollBehavior
+                )
+            }
         },
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         containerColor = Color.Transparent,

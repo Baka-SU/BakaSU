@@ -50,6 +50,7 @@ import androidx.core.content.ContextCompat
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.WarningCard
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
@@ -79,23 +80,25 @@ fun AboutScreen() {
     Scaffold(
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         topBar = {
-            TopAppBar(
-                windowInsets = pillTopAppBarWindowInsets(),
-                title = {
-                    TopBarTitlePill {
-                        Text(text = stringResource(id = R.string.about))
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                navigationIcon = {
-                    AppBackButton(
-                        onClick = {
-                            navigator.pop()
-                        },
-                    )
-                },
-                colors = transparentTopAppBarColors(),
-            )
+            TopBarScrim {
+                TopAppBar(
+                    windowInsets = pillTopAppBarWindowInsets(),
+                    title = {
+                        TopBarTitlePill {
+                            Text(text = stringResource(id = R.string.about))
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                    navigationIcon = {
+                        AppBackButton(
+                            onClick = {
+                                navigator.pop()
+                            },
+                        )
+                    },
+                    colors = transparentTopAppBarColors(),
+                )
+            }
         },
         contentColor = MaterialTheme.colorScheme.onSurface,
         containerColor = Color.Transparent,

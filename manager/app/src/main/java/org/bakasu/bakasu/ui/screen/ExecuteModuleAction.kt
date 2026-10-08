@@ -40,6 +40,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.component.KeyEventBlocker
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
@@ -107,16 +108,19 @@ fun ExecuteModuleActionScreen(moduleId: String, fromShortcut: Boolean) {
 
     Scaffold(
         topBar = {
-            TopBar(
-                isActionRunning = moduleActionState.running,
-                onBack = {
-                    navigator.pop()
-                },
-                onSave = {
-                    viewModel.dispatch(ExecuteModuleActionUiAction.SaveLog)
-                },
-                scrollBehavior = scrollBehavior,
-            )
+            TopBarScrim {
+                TopBar(
+                    isActionRunning = moduleActionState.running,
+                    onBack = {
+                        navigator.pop()
+                    },
+                    onSave = {
+                        viewModel.dispatch(ExecuteModuleActionUiAction.SaveLog)
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+        
+            }
         },
         floatingActionButton = {
             if (!moduleActionState.running) {

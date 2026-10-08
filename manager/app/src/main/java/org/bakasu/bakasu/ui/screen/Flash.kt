@@ -93,6 +93,7 @@ import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
 import org.bakasu.bakasu.ui.component.KeyEventBlocker
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
@@ -446,24 +447,26 @@ fun FlashScreen(flashIt: FlashIt) {
     Scaffold(
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         topBar = {
-            TopBar(
-                flashUiState.flashingStatus,
-                currentStatus,
-                onBack = onBack,
-                onSave = {
-                    scope.launch {
-                        val format = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.getDefault())
-                        val date = format.format(Date())
-                        val file = File(
-                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                            "KernelSU_install_log_$date.log",
-                        )
-                        file.writeText(logContent.toString())
-                        snackBarHost.showReplacingSnackbar(logSavedString.format(file.absolutePath))
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
+            TopBarScrim {
+                TopBar(
+                    flashUiState.flashingStatus,
+                    currentStatus,
+                    onBack = onBack,
+                    onSave = {
+                        scope.launch {
+                            val format = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.getDefault())
+                            val date = format.format(Date())
+                            val file = File(
+                                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                                "KernelSU_install_log_$date.log",
+                            )
+                            file.writeText(logContent.toString())
+                            snackBarHost.showReplacingSnackbar(logSavedString.format(file.absolutePath))
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+            }
         },
         floatingActionButton = {
             if (showFloatAction) {

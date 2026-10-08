@@ -66,6 +66,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.ui.component.NetworkRefreshContent
 import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
@@ -158,29 +159,32 @@ fun AppProfileTemplateScreen() {
 
     Scaffold(
         topBar = {
-            TopBar(
-                onBack = dropUnlessResumed { navigator.pop() },
-                onSync = {
-                    viewModel.dispatch(TemplateUiAction.Refresh(synchronize = true))
-                },
-                onImport = {
-                    val clipboardText =
-                        clipboardManager?.primaryClip?.getItemAt(0)?.text?.toString()
-                    if (clipboardText.isNullOrEmpty()) {
-                        Toast.makeText(
-                            context,
-                            appProfileTemplateImportEmpty,
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    } else {
-                        viewModel.dispatch(TemplateUiAction.Import(clipboardText))
-                    }
-                },
-                onExport = {
-                    viewModel.dispatch(TemplateUiAction.Export)
-                },
-                scrollBehavior = scrollBehavior,
-            )
+            TopBarScrim {
+                TopBar(
+                    onBack = dropUnlessResumed { navigator.pop() },
+                    onSync = {
+                        viewModel.dispatch(TemplateUiAction.Refresh(synchronize = true))
+                    },
+                    onImport = {
+                        val clipboardText =
+                            clipboardManager?.primaryClip?.getItemAt(0)?.text?.toString()
+                        if (clipboardText.isNullOrEmpty()) {
+                            Toast.makeText(
+                                context,
+                                appProfileTemplateImportEmpty,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        } else {
+                            viewModel.dispatch(TemplateUiAction.Import(clipboardText))
+                        }
+                    },
+                    onExport = {
+                        viewModel.dispatch(TemplateUiAction.Export)
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+        
+            }
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(

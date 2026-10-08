@@ -86,6 +86,7 @@ import org.bakasu.bakasu.ui.component.GithubMarkdown
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
@@ -159,70 +160,72 @@ private fun OnlineModuleDetailContent(module: CatalogModule) {
 
     Scaffold(
         topBar = {
-            Column(
-                modifier = Modifier.blurEffect(),
-            ) {
-                TopAppBar(
-                    title = {
-                        TopBarTitlePill {
-                            Text(module.moduleName)
-                        }
-                    },
-                    scrollBehavior = scrollBehavior,
-                    navigationIcon = {
-                        AppBackButton(
-                            onClick = {
-                                navigator.pop()
-                            },
-                        )
-                    },
-                    actions = {
-                        TopBarIconPill(
-                            onClick = {
-                                uriHandler.openUri("https://modules.kernelsu.org/module/${module.moduleId}")
-                            },
-                        ) {
-                            Icon(
-                                imageVector = Icons.TwoTone.OpenInBrowser,
-                                contentDescription = stringResource(R.string.open_module_home_page),
+            TopBarScrim {
+                Column(
+                    modifier = Modifier.blurEffect()
+                ) {
+                    TopAppBar(
+                        title = {
+                            TopBarTitlePill {
+                                Text(module.moduleName)
+                            }
+                        },
+                        scrollBehavior = scrollBehavior,
+                        navigationIcon = {
+                            AppBackButton(
+                                onClick = {
+                                    navigator.pop()
+                                }
+                            )
+                        },
+                        actions = {
+                            TopBarIconPill(
+                                onClick = {
+                                    uriHandler.openUri("https://modules.kernelsu.org/module/${module.moduleId}")
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.TwoTone.OpenInBrowser,
+                                    contentDescription = stringResource(R.string.open_module_home_page),
+                                )
+                            }
+                        },
+                        colors = transparentTopAppBarColors(),
+                        windowInsets = pillTopAppBarWindowInsets(),
+                    )
+
+                    PrimaryTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        containerColor =
+                            if (themeConfig.isEnableBlur)
+                                Color.Transparent
+                            else
+                                MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        tabTitles.forEachIndexed { index, title ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(index)
+                                    }
+                                },
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                text = { Text(title) }
                             )
                         }
-                    },
-                    colors = transparentTopAppBarColors(),
-                    windowInsets = pillTopAppBarWindowInsets(),
-                )
+                    }
 
-                PrimaryTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    containerColor =
-                        if (themeConfig.isEnableBlur) {
-                            Color.Transparent
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                        },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    tabTitles.forEachIndexed { index, title ->
-                        Tab(
-                            selected = pagerState.currentPage == index,
-                            onClick = {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(index)
-                                }
-                            },
-                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            text = { Text(title) },
-                        )
+                    BackHandler(
+                        pagerState.currentPage != 0
+                    ) {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(0)
+                        }
                     }
                 }
-
-                BackHandler(
-                    pagerState.currentPage != 0,
-                ) {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                }
+        
             }
         },
         containerColor = Color.Transparent,

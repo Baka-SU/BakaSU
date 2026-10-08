@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,10 +32,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlin.math.abs
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.ui.activity.component.NavigationBar
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
+import org.bakasu.bakasu.ui.component.LocalTopBarSlot
+import org.bakasu.bakasu.ui.component.TopBarScrim
+import org.bakasu.bakasu.ui.component.TopBarSlot
 import org.bakasu.bakasu.ui.rememberMaterial3BlurBackdrop
 import org.bakasu.bakasu.ui.screen.BottomBarDestination
 import org.bakasu.bakasu.ui.theme.ThemeConfig
@@ -42,10 +47,12 @@ import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalBlurState
 import org.bakasu.bakasu.ui.util.LocalHandlePageChange
 import org.bakasu.bakasu.ui.util.LocalPagerPage
+import org.bakasu.bakasu.ui.util.LocalPagerPages
 import org.bakasu.bakasu.ui.util.LocalPagerState
 import org.bakasu.bakasu.ui.util.LocalPortraitState
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
+import org.bakasu.bakasu.ui.util.LocalTopBarSwipeDelta
 import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -75,6 +82,9 @@ fun MainScreen(
     var animating by remember { mutableStateOf(false) }
     var animateJob by remember { mutableStateOf<Job?>(null) }
     var lastRequestedPage by remember { mutableIntStateOf(pagerState.currentPage) }
+    // How many pages the current nav-bar jump spans, so the top bar transition can be played
+    // over the whole journey instead of only the last half page of it.
+    var navDistance by remember { mutableFloatStateOf(0f) }
 
     val pagerMode = PagerInterceptionMode.entries.getOrElse(pagerInterceptionMode) {
         PagerInterceptionMode.Native
@@ -99,6 +109,7 @@ fun MainScreen(
                 animating = true
                 userScrollEnabled = false
                 lastRequestedPage = page
+                navDistance = abs(page - pagerState.currentPage).toFloat()
                 animateJob = coroutineScope.launch {
                     try {
                         // A held pager gesture owns the scroll mutation at UserInput
@@ -111,6 +122,7 @@ fun MainScreen(
                             userScrollEnabled = true
                             animateJob = null
                             lastRequestedPage = pagerState.currentPage
+                            navDistance = 0f
                         }
                     }
                 }
@@ -128,10 +140,25 @@ fun MainScreen(
         handlePageChange(0)
     }
 
+    // One bar for the whole pager: a per-page bar would translate on swipe and carry its own
+    // blur backdrop, leaving a seam between two scrims mid-drag.
+    val topBarSlot = remember { TopBarSlot() }
+    val density = LocalDensity.current
+
     CompositionLocalProvider(
         LocalPagerState provides pagerState,
         LocalHandlePageChange provides handlePageChange,
         LocalSelectedPage provides uiSelectedPage,
+        LocalPagerPages provides pages,
+        LocalTopBarSwipeDelta provides {
+            val raw = pagerState.currentPage + pagerState.currentPageOffsetFraction - uiSelectedPage
+            // A drag never exceeds half a page, so it maps straight through. A nav-bar tap
+            // switches the page immediately and then scrolls, which would start the bar beyond
+            // the fade range; scale it by the jump so the transition plays across the animation.
+            val distance = navDistance
+            if (distance > 0f) raw / distance * 0.5f else raw
+        },
+        LocalTopBarSlot provides topBarSlot
     ) {
         val content = @Composable { paddingBottom: Dp ->
             HorizontalPagerWithInteraction(
@@ -179,8 +206,9 @@ fun MainScreen(
 
         if (LocalPortraitState.current) {
             Scaffold(
-                // The child pages own their top-bar insets. The outer scaffold only reserves the
-                // measured bottom navigation bar height for the pager content.
+                // The outer scaffold reserves the measured bottom navigation bar height for the
+                // pager content; the shared top bar is drawn over it rather than reserving space,
+                // so pages keep scrolling underneath.
                 contentWindowInsets = WindowInsets(),
                 modifier = Modifier.fillMaxSize(),
                 bottomBar = {
@@ -191,10 +219,21 @@ fun MainScreen(
                 },
                 containerColor = Color.Transparent,
             ) { innerPadding ->
-                Box(
-                    modifier = Modifier.blurSource(),
-                ) {
-                    content(innerPadding.calculateBottomPadding())
+                Box(Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier.blurSource()
+                    ) {
+                        content(innerPadding.calculateBottomPadding())
+                    }
+                    Box(
+                        modifier = Modifier.onSizeChanged {
+                            topBarSlot.height = with(density) { it.height.toDp() }
+                        }
+                    ) {
+                        TopBarScrim {
+                            topBarSlot.content?.invoke()
+                        }
+                    }
                 }
             }
         } else {

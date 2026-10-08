@@ -51,6 +51,7 @@ import com.mikepenz.aboutlibraries.util.withJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.WarningCard
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
@@ -92,22 +93,25 @@ fun OpenSourceLicenseScreen() {
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
         topBar = {
-            TopAppBar(
-                windowInsets = pillTopAppBarWindowInsets(),
-                title = {
-                    TopBarTitlePill {
-                        Text(text = stringResource(id = R.string.open_source_license))
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                navigationIcon = {
-                    AppBackButton(
-                        onClick = { navigator.pop() },
-                        icon = Icons.AutoMirrored.TwoTone.ArrowBack
-                    )
-                },
-                colors = transparentTopAppBarColors(),
-            )
+            TopBarScrim {
+                TopAppBar(
+                    windowInsets = pillTopAppBarWindowInsets(),
+                    title = {
+                        TopBarTitlePill {
+                            Text(text = stringResource(id = R.string.open_source_license))
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                    navigationIcon = {
+                        AppBackButton(
+                            onClick = { navigator.pop() },
+                            icon = Icons.AutoMirrored.TwoTone.ArrowBack
+                        )
+                    },
+                    colors = transparentTopAppBarColors(),
+                )
+        
+            }
         },
     ) { paddingValues ->
         LazyColumn(

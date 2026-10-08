@@ -7,13 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -43,6 +46,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,13 +65,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.AllowlistOperationResult
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.ui.component.ConfirmResult
+import org.bakasu.bakasu.ui.component.LocalTopBarSlot
 import org.bakasu.bakasu.ui.component.PackageIcon
+import org.bakasu.bakasu.ui.component.ProvideTopBar
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.TopBarIconEdgeInset
@@ -81,8 +88,11 @@ import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.screen.LabelText
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalPagerPage
+import org.bakasu.bakasu.ui.util.LocalPagerPages
 import org.bakasu.bakasu.ui.util.LocalPagerState
+import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
+import org.bakasu.bakasu.ui.util.LocalTopBarSwipeDelta
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
 import org.bakasu.bakasu.ui.viewmodel.SortType
@@ -188,13 +198,37 @@ fun SuperUserPage(bottomPadding: Dp) {
         if (isPageVisible) viewModel.dispatch(SuperUserUiAction.LoadInitialData)
     }
 
-    Scaffold(
-        topBar = {
+    val topBarHeight = LocalTopBarSlot.current?.height ?: 0.dp
+
+    // Fold the field away only when heading towards a page that has none - between the
+    // two search pages it stays put. Shares the top bar's delta so a nav-bar tap folds
+    // it across the whole jump rather than popping at the end.
+    val pageIndex = LocalPagerPage.current ?: 0
+    val pagerPages = LocalPagerPages.current
+    val swipeDelta = LocalTopBarSwipeDelta.current
+    // Held as state and sampled by the bar, never read here: reading it in this composition
+    // would recompose the page, and with it the whole shared top bar, on every swipe frame.
+    val pageVisibleFraction = remember(pageIndex, pagerPages, swipeDelta) {
+        derivedStateOf {
+            val delta = swipeDelta()
+            val towards = pageIndex + if (delta > 0f) 1 else -1
+            if (delta == 0f || pagerPages.getOrNull(towards)?.hasSearchBar == true) 1f
+            else (1f - abs(delta) * 2f).coerceIn(0f, 1f)
+        }
+    }
+
+    ProvideTopBar(active = LocalPagerPage.current == LocalSelectedPage.current) {
             SearchAppBar(
                 title = stringResource(R.string.superuser),
                 searchText = uiState.search,
                 onSearchTextChange = { viewModel.dispatch(SuperUserUiAction.Search(it)) },
                 dropdownContent = {
+                    TopBarIconPill(onClick = { navigator.push(Route.Sulog) }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.TwoTone.Article,
+                            contentDescription = stringResource(R.string.sulog)
+                        )
+                    }
                     TopBarIconPill(onClick = { showDropdown = true }) {
                         Icon(
                             imageVector = Icons.TwoTone.MoreVert,
@@ -215,21 +249,13 @@ fun SuperUserPage(bottomPadding: Dp) {
                         )
                     }
                 },
-                navigationContent = {
-                    TopBarIconPill(
-                        modifier = Modifier.padding(start = TopBarIconEdgeInset),
-                        onClick = { navigator.push(Route.Sulog) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.TwoTone.Article,
-                            contentDescription = stringResource(R.string.sulog),
-                        )
-                    }
-                },
                 scrollBehavior = scrollBehavior,
                 searchBarPlaceHolderText = stringResource(R.string.search_apps),
+                    visibleFraction = { pageVisibleFraction.value },
             )
-        },
+    }
+
+    Scaffold(
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
         snackbarHost = {
@@ -238,10 +264,10 @@ fun SuperUserPage(bottomPadding: Dp) {
                 hostState = snackBarHostState,
             )
         },
-        contentWindowInsets = adaptiveScaffoldWindowInsets(includeBottom = false),
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
     ) { innerPadding ->
         SuperUserContent(
-            innerPadding = innerPadding,
+            topBarHeight = topBarHeight,
             viewModel = viewModel,
             uiState = uiState,
             listState = listState,
@@ -286,7 +312,7 @@ private fun createAllowlistBackupFileName(): String {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SuperUserContent(
-    innerPadding: PaddingValues,
+    topBarHeight: Dp,
     viewModel: SuperUserViewModel,
     uiState: SuperUserUiState,
     listState: androidx.compose.foundation.lazy.LazyListState,
@@ -344,7 +370,7 @@ private fun SuperUserContent(
         indicator = {
             PullToRefreshDefaults.LoadingIndicator(
                 modifier = Modifier
-                    .padding(top = innerPadding.calculateTopPadding())
+                    .padding(top = topBarHeight)
                     .align(Alignment.TopCenter),
                 state = pullRefreshState,
                 isRefreshing = uiState.isRefreshing,
@@ -358,7 +384,7 @@ private fun SuperUserContent(
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
         ) {
             item {
-                Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
+                Spacer(modifier = Modifier.height(topBarHeight))
             }
             lazySegmentColumn(
                 items = uiState.appGroupList,
@@ -374,7 +400,7 @@ private fun SuperUserContent(
             }
 
             item {
-                Spacer(modifier = Modifier.height(bottomPadding + innerPadding.calculateBottomPadding() + 15.dp))
+                Spacer(modifier = Modifier.height(bottomPadding + 15.dp))
             }
         }
     }

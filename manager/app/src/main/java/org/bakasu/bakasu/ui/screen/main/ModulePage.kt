@@ -28,11 +28,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -86,6 +90,7 @@ import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -116,6 +121,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyant.capsule.ContinuousRoundedRectangle
+import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -132,6 +138,8 @@ import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.TakeModuleUriPermissionUseCase
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.InstallConfirmationDialog
+import org.bakasu.bakasu.ui.component.LocalTopBarSlot
+import org.bakasu.bakasu.ui.component.ProvideTopBar
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.TopBarIconEdgeInset
@@ -155,8 +163,12 @@ import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
+import org.bakasu.bakasu.ui.util.LocalPagerPage
+import org.bakasu.bakasu.ui.util.LocalPagerPages
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
+import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
+import org.bakasu.bakasu.ui.util.LocalTopBarSwipeDelta
 import org.bakasu.bakasu.ui.util.Shortcut
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.downloader.download
@@ -313,8 +325,26 @@ fun ModulePage(bottomPadding: Dp) {
         TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     )
 
-    Scaffold(
-        topBar = {
+    val topBarHeight = LocalTopBarSlot.current?.height ?: 0.dp
+
+    // Fold the field away only when heading towards a page that has none - between the
+    // two search pages it stays put. Shares the top bar's delta so a nav-bar tap folds
+    // it across the whole jump rather than popping at the end.
+    val pageIndex = LocalPagerPage.current ?: 0
+    val pagerPages = LocalPagerPages.current
+    val swipeDelta = LocalTopBarSwipeDelta.current
+    // Held as state and sampled by the bar, never read here: reading it in this composition
+    // would recompose the page, and with it the whole shared top bar, on every swipe frame.
+    val pageVisibleFraction = remember(pageIndex, pagerPages, swipeDelta) {
+        derivedStateOf {
+            val delta = swipeDelta()
+            val towards = pageIndex + if (delta > 0f) 1 else -1
+            if (delta == 0f || pagerPages.getOrNull(towards)?.hasSearchBar == true) 1f
+            else (1f - abs(delta) * 2f).coerceIn(0f, 1f)
+        }
+    }
+
+    ProvideTopBar(active = LocalPagerPage.current == LocalSelectedPage.current) {
             SearchAppBar(
                 title = stringResource(R.string.module),
                 searchText = uiState.search,
@@ -322,6 +352,12 @@ fun ModulePage(bottomPadding: Dp) {
                     viewModel.dispatch(ModuleUiAction.Search(query))
                 },
                 dropdownContent = {
+                    TopBarIconPill(onClick = { navigator.push(Route.ModuleRepo) }) {
+                        Icon(
+                            imageVector = Icons.TwoTone.Cloud,
+                            contentDescription = stringResource(id = R.string.module_repo),
+                        )
+                    }
                     TopBarIconPill(
                         onClick = { showDropdown = true },
                     ) {
@@ -338,21 +374,13 @@ fun ModulePage(bottomPadding: Dp) {
                         )
                     }
                 },
-                navigationContent = {
-                    TopBarIconPill(
-                        modifier = Modifier.padding(start = TopBarIconEdgeInset),
-                        onClick = { navigator.push(Route.ModuleRepo) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.TwoTone.Cloud,
-                            contentDescription = stringResource(id = R.string.module_repo),
-                        )
-                    }
-                },
                 scrollBehavior = scrollBehavior,
                 searchBarPlaceHolderText = stringResource(R.string.search_modules),
+                    visibleFraction = { pageVisibleFraction.value },
             )
-        },
+    }
+
+    Scaffold(
         floatingActionButton = {
             if (hideInstallButton) return@Scaffold
 
@@ -378,7 +406,7 @@ fun ModulePage(bottomPadding: Dp) {
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        contentWindowInsets = adaptiveScaffoldWindowInsets(includeBottom = false),
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
         snackbarHost = {
             SwipeableSnackbarHost(
                 hostState = snackBarHost,
@@ -486,7 +514,7 @@ fun ModulePage(bottomPadding: Dp) {
                     context = context,
                     snackBarHost = snackBarHost,
                     bottomPadding = bottomPadding + innerPadding.calculateBottomPadding(),
-                    topPadding = innerPadding.calculateTopPadding(),
+                    topPadding = topBarHeight,
                 )
             }
         }

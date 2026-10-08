@@ -78,6 +78,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.component.KeyPointSlider
 import org.bakasu.bakasu.ui.component.TopBarIconEdgeInset
 import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.transparentTopAppBarColors
@@ -257,47 +258,49 @@ private fun BackgroundCropScreen(
     Scaffold(
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         topBar = {
-            TopAppBar(
-                title = {
-                    TopBarTitlePill {
-                        Text(stringResource(R.string.background_crop_title))
-                    }
-                },
-                navigationIcon = {
-                    CropTooltipIconButton(
-                        modifier = Modifier.padding(start = TopBarIconEdgeInset),
-                        tooltip = stringResource(R.string.cancel),
-                        enabled = !isCropping,
-                        onClick = onCancel,
-                    ) {
-                        Icon(
-                            Icons.TwoTone.Close,
-                            contentDescription = stringResource(R.string.cancel),
-                        )
-                    }
-                },
-                actions = {
-                    CropTooltipIconButton(
-                        tooltip = stringResource(R.string.background_crop_reset),
-                        onClick = {
-                            cropView = null
-                            isLoading = true
-                            loadFailed = false
-                            rotationAngle = 0f
-                            cropViewReloadToken++
-                        },
-                        enabled = !isLoading && !isCropping && !loadFailed,
-                    ) {
-                        Icon(
-                            Icons.TwoTone.RestartAlt,
-                            contentDescription = stringResource(R.string.background_crop_reset),
-                        )
-                    }
-                },
-                colors = transparentTopAppBarColors(),
-                windowInsets = pillTopAppBarWindowInsets(),
-                scrollBehavior = scrollBehavior
-            )
+            TopBarScrim {
+                TopAppBar(
+                    title = {
+                        TopBarTitlePill {
+                            Text(stringResource(R.string.background_crop_title))
+                        }
+                    },
+                    navigationIcon = {
+                        CropTooltipIconButton(
+                            modifier = Modifier.padding(start = TopBarIconEdgeInset),
+                            tooltip = stringResource(R.string.cancel),
+                            enabled = !isCropping,
+                            onClick = onCancel,
+                        ) {
+                            Icon(
+                                Icons.TwoTone.Close,
+                                contentDescription = stringResource(R.string.cancel),
+                            )
+                        }
+                    },
+                    actions = {
+                        CropTooltipIconButton(
+                            tooltip = stringResource(R.string.background_crop_reset),
+                            onClick = {
+                                cropView = null
+                                isLoading = true
+                                loadFailed = false
+                                rotationAngle = 0f
+                                cropViewReloadToken++
+                            },
+                            enabled = !isLoading && !isCropping && !loadFailed,
+                        ) {
+                            Icon(
+                                Icons.TwoTone.RestartAlt,
+                                contentDescription = stringResource(R.string.background_crop_reset),
+                            )
+                        }
+                    },
+                    colors = transparentTopAppBarColors(),
+                    windowInsets = pillTopAppBarWindowInsets(),
+                    scrollBehavior = scrollBehavior
+                )
+            }
         },
         bottomBar = {
             Surface(

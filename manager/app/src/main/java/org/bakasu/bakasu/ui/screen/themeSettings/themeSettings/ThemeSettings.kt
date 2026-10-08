@@ -96,6 +96,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.availablePaletteStyles
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.KeyPointSlider
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
@@ -299,25 +300,27 @@ fun ThemeSettingsScreen(
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = {
-                    TopBarTitlePill {
-                        Text(
-                            text = stringResource(R.string.theme_settings)
+            TopBarScrim {
+                TopAppBar(
+                    title = {
+                        TopBarTitlePill {
+                            Text(
+                                text = stringResource(R.string.theme_settings)
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        AppBackButton(
+                            onClick = {
+                                navigator.pop()
+                            },
                         )
-                    }
-                },
-                navigationIcon = {
-                    AppBackButton(
-                        onClick = {
-                            navigator.pop()
-                        },
-                    )
-                },
-                colors = transparentTopAppBarColors(),
-                windowInsets = pillTopAppBarWindowInsets(),
-                scrollBehavior = scrollBehavior
-            )
+                    },
+                    colors = transparentTopAppBarColors(),
+                    windowInsets = pillTopAppBarWindowInsets(),
+                    scrollBehavior = scrollBehavior
+                )
+            }
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,

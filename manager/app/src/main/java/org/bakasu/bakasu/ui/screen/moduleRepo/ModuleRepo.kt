@@ -97,6 +97,7 @@ import org.bakasu.bakasu.ui.component.NetworkRefreshContent
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
@@ -167,35 +168,38 @@ fun ModuleRepoScreen() {
 
     Scaffold(
         topBar = {
-            SearchAppBar(
-                title = stringResource(R.string.module_repo),
-                searchText = uiState.search,
-                onSearchTextChange = { query ->
-                    viewModel.dispatch(ModuleRepoUiAction.Search(query))
-                },
-                dropdownContent = {
-                    TopBarIconPill(
-                        onClick = { showDropdown = true },
-                    ) {
-                        Icon(
-                            imageVector = Icons.TwoTone.MoreVert,
-                            contentDescription = stringResource(id = R.string.settings),
-                        )
+            TopBarScrim {
+                SearchAppBar(
+                    title = stringResource(R.string.module_repo),
+                    searchText = uiState.search,
+                    onSearchTextChange = { query ->
+                        viewModel.dispatch(ModuleRepoUiAction.Search(query))
+                    },
+                    dropdownContent = {
+                        TopBarIconPill(
+                            onClick = { showDropdown = true },
+                        ) {
+                            Icon(
+                                imageVector = Icons.TwoTone.MoreVert,
+                                contentDescription = stringResource(id = R.string.settings),
+                            )
 
-                        ModuleRepoDropdown(
-                            expanded = showDropdown,
-                            onDismissRequest = { showDropdown = false },
-                            viewModel = viewModel,
-                            uiState = uiState,
-                        )
-                    }
-                },
-                onBackClick = {
-                    navigator.pop()
-                },
-                scrollBehavior = scrollBehavior,
-                searchBarPlaceHolderText = stringResource(R.string.search_modules),
-            )
+                            ModuleRepoDropdown(
+                                expanded = showDropdown,
+                                onDismissRequest = { showDropdown = false },
+                                viewModel = viewModel,
+                                uiState = uiState,
+                            )
+                        }
+                    },
+                    onBackClick = {
+                        navigator.pop()
+                    },
+                    scrollBehavior = scrollBehavior,
+                    searchBarPlaceHolderText = stringResource(R.string.search_modules),
+                )
+        
+            }
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,

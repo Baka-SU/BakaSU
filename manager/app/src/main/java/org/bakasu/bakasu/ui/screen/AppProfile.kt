@@ -65,6 +65,7 @@ import org.bakasu.bakasu.domain.model.InstalledApp
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.profile.AppProfileConfig
@@ -154,23 +155,25 @@ fun AppProfileScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    TopBarTitlePill {
-                        Text(
-                            text = appGroup.mainApp.label,
+            TopBarScrim {
+                TopAppBar(
+                    title = {
+                        TopBarTitlePill {
+                            Text(
+                                text = appGroup.mainApp.label,
+                            )
+                        }
+                    },
+                    colors = transparentTopAppBarColors(),
+                    navigationIcon = {
+                        AppBackButton(
+                            onClick = dropUnlessResumed { navigator.pop() }
                         )
-                    }
-                },
-                colors = transparentTopAppBarColors(),
-                navigationIcon = {
-                    AppBackButton(
-                        onClick = dropUnlessResumed { navigator.pop() },
-                    )
-                },
-                windowInsets = pillTopAppBarWindowInsets(),
-                scrollBehavior = scrollBehavior,
-            )
+                    },
+                    windowInsets = pillTopAppBarWindowInsets(),
+                    scrollBehavior = scrollBehavior,
+                )
+            }
         },
         snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) },
         containerColor = Color.Transparent,
