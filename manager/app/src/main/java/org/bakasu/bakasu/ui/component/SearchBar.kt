@@ -316,6 +316,7 @@ private fun CompactSearchBar(
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     interactionSource: MutableInteractionSource? = null,
+    contentAlpha: () -> Float = { 1f },
     shape: Shape = inputFieldShape,
     requestFocus: Boolean = false,
     onFocusRequestHandled: () -> Unit = {},
@@ -419,14 +420,28 @@ private fun CompactSearchBar(
         lineLimits = TextFieldLineLimits.SingleLine,
         decorator = TextFieldDefaults.decorator(
             state = textFieldState,
-            placeholder = placeholder,
+            placeholder = placeholder?.let { hint ->
+                { Box(Modifier.graphicsLayer { alpha = contentAlpha() }) { hint() } }
+            },
             leadingIcon =
                 leadingIcon?.let { leading ->
-                    { Box(Modifier.offset(x = 4.dp)) { leading() } }
+                    {
+                        Box(
+                            Modifier
+                                .offset(x = 4.dp)
+                                .graphicsLayer { alpha = contentAlpha() }
+                        ) { leading() }
+                    }
                 },
             trailingIcon =
                 trailingIcon?.let { trailing ->
-                    { Box(Modifier.offset(x = (-4).dp)) { trailing() } }
+                    {
+                        Box(
+                            Modifier
+                                .offset(x = (-4).dp)
+                                .graphicsLayer { alpha = contentAlpha() }
+                        ) { trailing() }
+                    }
                 },
             colors = colors,
             contentPadding = PaddingValues(),
@@ -489,10 +504,10 @@ fun SearchAppBar(
         val expanded = searchAppBarScrollBehavior?.searchBarExpandedFraction ?: 1f
         expanded * visibleFraction().coerceIn(0f, 1f)
     }
-    // Between two pages that both carry a field there is nothing to fold, so the field would
-    // otherwise cut straight from one page's to the next's while the pills around it cross-fade.
-    // Fading it on the same curve carries it over with them.
-    val fieldAlpha: () -> Float = { collapseFraction() * topBarSwipeAlpha(swipeDelta()) }
+    // Only the words inside the field cross over - the capsule stays put, as the title pill
+    // does. Swiping between two pages that both have a field should not take the field itself
+    // away and bring it back.
+    val fieldContentAlpha: () -> Float = { topBarSwipeAlpha(swipeDelta()) }
     var requestSearchFocus by remember { mutableStateOf(false) }
     val currentOnSearchTextChange by rememberUpdatedState(onSearchTextChange)
     val resetSearch by rememberUpdatedState {
@@ -597,7 +612,7 @@ fun SearchAppBar(
             exit = ExitTransition.None,
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer { alpha = fieldAlpha() }
+                .graphicsLayer { alpha = collapseFraction() }
                 .collapseWithTopAppBar(collapseFraction),
         ) {
             Column {
@@ -612,6 +627,7 @@ fun SearchAppBar(
                     onSearch = {
                         keyboardController?.hide()
                     },
+                    contentAlpha = fieldContentAlpha,
                     placeholder = {
                         Text(
                             text = searchBarPlaceHolderText,
