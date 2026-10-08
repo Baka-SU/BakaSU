@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.data.theme
 
 import android.app.Application
-import android.app.WallpaperManager
 import android.os.Build
 import android.util.TypedValue
 import com.kieronquinn.monetcompat.core.MonetCompat
@@ -28,18 +27,14 @@ class MonetCompatColorSource(
     private var monet: MonetCompat? = null
 
     fun initialize() {
-        mutableSeedColor.value = systemWallpaperSeedColor() ?: fallbackColor
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return
     }
 
     fun seedColor(): Int = colors.value
 
     suspend fun refresh() = refreshMutex.withLock {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return@withLock
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val color = withContext(Dispatchers.IO) { systemWallpaperSeedColor() }
-                publish(color ?: fallbackColor)
-                return@withLock
-            }
             val instance = withContext(Dispatchers.Main) {
                 monet ?: run {
                     MonetCompat.useSystemColorsOnAndroid12 = false
@@ -70,16 +65,6 @@ class MonetCompatColorSource(
         } catch (_: Exception) {
             // Keep the last successful color when wallpaper access fails temporarily.
         }
-    }
-
-    private fun systemWallpaperSeedColor(): Int? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
-        return runCatching {
-            WallpaperManager.getInstance(application)
-                .getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
-                ?.primaryColor
-                ?.toArgb()
-        }.getOrNull()
     }
 
     private fun publish(color: Int) {

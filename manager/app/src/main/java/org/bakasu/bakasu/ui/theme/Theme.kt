@@ -62,6 +62,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -424,6 +425,7 @@ private fun ThemeInitializer(
 
 @Composable
 private fun MonetCompatInitializer(themeConfig: ThemeConfig, themeRepository: ThemeRepository) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return
     val source = koinInject<MonetCompatColorSource>()
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -1849,7 +1851,12 @@ private fun BackgroundInitializer(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    val dynamicColorFromSystem = themeConfig.monetCompatSeedColor
+    val dynamicColorFromSystem =
+        if (Build.VERSION.SDK_INT >= 31) {
+            colorResource(id = android.R.color.system_accent1_500).toArgb()
+        } else {
+            themeConfig.monetCompatSeedColor
+        }
 
     val calcedCachedSeedColor =
         settings.getInt("cached_seed_color", dynamicColorFromSystem)
@@ -1986,6 +1993,10 @@ private fun createColorScheme(
         when {
             dynamicColor && themeConfig.isUseBackgroundSeedColor && renderState.seedColor != 0 -> {
                 renderState.seedColor
+            }
+
+            dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                colorResource(id = android.R.color.system_accent1_500).toArgb()
             }
 
             dynamicColor -> {
