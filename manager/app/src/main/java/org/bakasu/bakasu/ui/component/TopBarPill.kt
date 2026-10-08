@@ -224,7 +224,7 @@ fun TopBarTitlePill(
                 .graphicsLayer {
                     val delta = swipeDelta()
                     translationX = -delta * shiftPx
-                    alpha = swipeAlpha(delta)
+                    alpha = topBarSwipeAlpha(delta)
                 }
         ) {
             content()
@@ -249,7 +249,7 @@ fun TopBarIconPill(
             .graphicsLayer {
                 val delta = swipeDelta()
                 translationX = -delta * shiftPx
-                alpha = swipeAlpha(delta)
+                alpha = topBarSwipeAlpha(delta)
             },
         shadowRadius = 4.dp
     ) {
@@ -328,13 +328,14 @@ private val TopBarScrimAlphas = FloatArray(TopBarScrimSteps + 1) { step ->
 private val TopBarSwipeShift = 40.dp
 
 /**
- * Opacity for bar content at a given swipe [delta].
+ * Opacity for top app bar content at a given swipe [delta], shared by the pills and the search
+ * field so everything in the bar crosses over together.
  *
  * Linear would leave the pill visibly empty either side of the handover, where only one page
  * publishes a bar and there is nothing to cross-fade with. Squaring the ramp keeps content
  * legible for most of the gesture and collapses the blank moment to the handover itself.
  */
-private fun swipeAlpha(delta: Float): Float {
+fun topBarSwipeAlpha(delta: Float): Float {
     val t = (1f - abs(delta) * 2f).coerceIn(0f, 1f)
     return t * (2f - t)
 }

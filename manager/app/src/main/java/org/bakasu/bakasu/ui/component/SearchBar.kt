@@ -96,6 +96,7 @@ import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
 import org.bakasu.bakasu.ui.util.LocalPagerPage
+import org.bakasu.bakasu.ui.util.LocalTopBarSwipeDelta
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.koin.compose.koinInject
 
@@ -473,6 +474,7 @@ fun SearchAppBar(
     val currentIsCurrentPage by rememberUpdatedState(isCurrentPage)
     val isPageActive = isCurrentPage && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
     val searchAppBarScrollBehavior = scrollBehavior as? SearchAppBarScrollBehavior
+    val swipeDelta = LocalTopBarSwipeDelta.current
     val searchBarExpansionFraction =
         searchAppBarScrollBehavior?.searchBarExpandedFraction ?: 1f
     val isSearchBarCollapsing = searchBarExpansionFraction < 0.99f
@@ -483,10 +485,14 @@ fun SearchAppBar(
     //
     // Deferred: both factors are sampled in the layout and draw phases, so a swipe resizes the
     // field without recomposing anything.
-    val renderFraction: () -> Float = {
+    val collapseFraction: () -> Float = {
         val expanded = searchAppBarScrollBehavior?.searchBarExpandedFraction ?: 1f
         expanded * visibleFraction().coerceIn(0f, 1f)
     }
+    // Between two pages that both carry a field there is nothing to fold, so the field would
+    // otherwise cut straight from one page's to the next's while the pills around it cross-fade.
+    // Fading it on the same curve carries it over with them.
+    val fieldAlpha: () -> Float = { collapseFraction() * topBarSwipeAlpha(swipeDelta()) }
     var requestSearchFocus by remember { mutableStateOf(false) }
     val currentOnSearchTextChange by rememberUpdatedState(onSearchTextChange)
     val resetSearch by rememberUpdatedState {
@@ -591,8 +597,8 @@ fun SearchAppBar(
             exit = ExitTransition.None,
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer { alpha = renderFraction() }
-                .collapseWithTopAppBar(renderFraction),
+                .graphicsLayer { alpha = fieldAlpha() }
+                .collapseWithTopAppBar(collapseFraction),
         ) {
             Column {
                 CompactSearchBar(
