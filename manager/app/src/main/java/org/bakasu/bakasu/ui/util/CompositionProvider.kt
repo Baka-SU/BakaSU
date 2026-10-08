@@ -27,6 +27,16 @@ val LocalPagerPage = staticCompositionLocalOf<Int?> { null }
  */
 val LocalTopBarSwipeDelta = compositionLocalOf<() -> Float> { { 0f } }
 
+/**
+ * Page whose top bar the shared slot is showing.
+ *
+ * Not the selected page: a flick settles the selection as soon as its target is known, while the
+ * bar's content is still half way through fading out. This crosses over at the halfway point
+ * instead, where the fade and the search field's fold have both reached zero and the change is
+ * invisible. A navigation tap keeps to the selection, so one transition plays across the jump.
+ */
+val LocalTopBarOwner = compositionLocalOf<Int?> { null }
+
 /** The pager's destinations, so a page can tell what it is being swiped towards. */
 val LocalPagerPages = compositionLocalOf<List<BottomBarDestination>> { emptyList() }
 val LocalHandlePageChange = compositionLocalOf<(Int) -> Unit> { error("No handle page change") }

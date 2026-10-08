@@ -5,10 +5,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.bakasu.bakasu.ui.util.LocalPagerPage
 
@@ -21,9 +23,26 @@ class TopBarSlot {
     var content by mutableStateOf<(@Composable () -> Unit)?>(null)
         internal set
 
-    /** Measured height of the bar, including the status bar it covers. */
+    /** Measured height of the bar on screen, including the status bar it covers. */
     var height by mutableStateOf(0.dp)
         internal set
+
+    private val settledHeights = mutableStateMapOf<Int, Dp>()
+
+    /** Records [value] as [page]'s own bar height. Only called with the pager at rest. */
+    internal fun recordHeight(page: Int?, value: Dp) {
+        if (page != null && value > 0.dp) settledHeights[page] = value
+    }
+
+    /**
+     * Height to lay [page]'s content out below.
+     *
+     * A page keeps to the bar it publishes itself rather than the one currently on screen. Mid
+     * swipe those are not the same bar: the field folds away and then the next page's bar takes
+     * over, and content that followed the live height would be dragged along by both - the
+     * handover landing as a jump, since a flick hands over before the fold has finished.
+     */
+    fun heightFor(page: Int?): Dp = settledHeights[page] ?: height
 
     /**
      * Pager page that published [content].

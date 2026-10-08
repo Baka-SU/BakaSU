@@ -118,6 +118,7 @@ import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalPagerPage
+import org.bakasu.bakasu.ui.util.LocalTopBarOwner
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
@@ -167,9 +168,9 @@ fun HomePage(
     val loadingDialog = rememberLoadingDialog()
     val scope = rememberCoroutineScope()
 
-    val topBarHeight = LocalTopBarSlot.current?.height ?: 0.dp
+    val topBarHeight = LocalTopBarSlot.current?.heightFor(LocalPagerPage.current) ?: 0.dp
 
-    ProvideTopBar(active = LocalPagerPage.current == LocalSelectedPage.current) {
+    ProvideTopBar(active = LocalPagerPage.current == LocalTopBarOwner.current) {
             TopBar(
                 uiState = uiState,
                 onReboot = { viewModel.dispatch(HomeUiAction.Reboot(it)) },

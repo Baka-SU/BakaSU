@@ -15,6 +15,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.ui.activity.component.NavigationBar
@@ -52,6 +54,7 @@ import org.bakasu.bakasu.ui.util.LocalPagerState
 import org.bakasu.bakasu.ui.util.LocalPortraitState
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
+import org.bakasu.bakasu.ui.util.LocalTopBarOwner
 import org.bakasu.bakasu.ui.util.LocalTopBarSwipeDelta
 import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
 import org.koin.compose.koinInject
@@ -60,6 +63,9 @@ import top.yukonga.miuix.kmp.utils.PagerGestureNestedScrollConnection
 import top.yukonga.miuix.kmp.utils.PagerInterceptionMode
 import top.yukonga.miuix.kmp.utils.PagerNavigationSpringSpec
 import top.yukonga.miuix.kmp.utils.pagerGestureOverride
+
+/** Offset below which the pager counts as at rest; it settles on an epsilon, not on zero. */
+private const val SettledOffset = 0.001f
 
 @Composable
 fun MainScreen(
@@ -145,8 +151,36 @@ fun MainScreen(
     val topBarSlot = remember { TopBarSlot() }
     val density = LocalDensity.current
 
+    // Pages lay their content out below their own bar, so take each one's height while the pager
+    // is at rest. Measuring mid swipe would catch the field half folded, or the next page's bar
+    // already in place, and drag the content under it either way.
+    LaunchedEffect(topBarSlot, pagerState) {
+        snapshotFlow {
+            Triple(
+                abs(pagerState.currentPageOffsetFraction) < SettledOffset && !animating,
+                topBarSlot.page,
+                topBarSlot.height,
+            )
+        }.collect { (settled, page, height) ->
+            if (settled) topBarSlot.recordHeight(page, height)
+        }
+    }
+
+    val barOwner by remember(pagerState, pages) {
+        derivedStateOf {
+            if (animating) {
+                uiSelectedPage
+            } else {
+                (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+                    .roundToInt()
+                    .coerceIn(0, pages.lastIndex.coerceAtLeast(0))
+            }
+        }
+    }
+
     CompositionLocalProvider(
         LocalPagerState provides pagerState,
+        LocalTopBarOwner provides barOwner,
         LocalHandlePageChange provides handlePageChange,
         LocalSelectedPage provides uiSelectedPage,
         LocalPagerPages provides pages,

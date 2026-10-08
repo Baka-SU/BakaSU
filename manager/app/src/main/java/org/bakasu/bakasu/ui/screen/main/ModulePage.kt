@@ -164,6 +164,7 @@ import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
 import org.bakasu.bakasu.ui.util.LocalPagerPage
+import org.bakasu.bakasu.ui.util.LocalTopBarOwner
 import org.bakasu.bakasu.ui.util.LocalPagerPages
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
@@ -325,7 +326,7 @@ fun ModulePage(bottomPadding: Dp) {
         TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     )
 
-    val topBarHeight = LocalTopBarSlot.current?.height ?: 0.dp
+    val topBarHeight = LocalTopBarSlot.current?.heightFor(LocalPagerPage.current) ?: 0.dp
 
     // Fold the field away only when heading towards a page that has none - between the
     // two search pages it stays put. Shares the top bar's delta so a nav-bar tap folds
@@ -344,7 +345,7 @@ fun ModulePage(bottomPadding: Dp) {
         }
     }
 
-    ProvideTopBar(active = LocalPagerPage.current == LocalSelectedPage.current) {
+    ProvideTopBar(active = LocalPagerPage.current == LocalTopBarOwner.current) {
             SearchAppBar(
                 title = stringResource(R.string.module),
                 searchText = uiState.search,
