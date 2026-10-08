@@ -11,7 +11,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 
-/** Holds the top bar currently published by a pager page, and how tall the host drew it. */
+/**
+ * Holds the top bar currently published by a pager page, how tall the host drew it, and the
+ * size its title pill is currently drawn at.
+ */
 @Stable
 class TopBarSlot {
     var content by mutableStateOf<(@Composable () -> Unit)?>(null)
@@ -20,6 +23,9 @@ class TopBarSlot {
     /** Measured height of the bar, including the status bar it covers. */
     var height by mutableStateOf(0.dp)
         internal set
+
+    /** The title pill's animated size, kept here so it outlives each bar it is drawn in. */
+    val titlePillSize = TopBarPillSize()
 }
 
 val LocalTopBarSlot = compositionLocalOf<TopBarSlot?> { null }

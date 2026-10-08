@@ -1,5 +1,9 @@
 package org.bakasu.bakasu.ui.component
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector2D
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -10,11 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,11 +37,15 @@ import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.constrain
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.ui.component.liquid.lens
 import org.bakasu.bakasu.ui.component.liquid.vibrancy
 import org.bakasu.bakasu.ui.theme.CardConfig
@@ -128,6 +139,69 @@ private fun TopBarPill(
 }
 
 /**
+ * The title pill's size, animated and owned outside the bar that draws it.
+ *
+ * Each pager page publishes its own bar, so a handover composes a new pill and whatever the old
+ * one remembered goes with it - the pill would simply appear at the next title's width. Holding
+ * the animation out here lets that new pill start from the width the old one left behind and grow
+ * or shrink into its own.
+ */
+@Stable
+class TopBarPillSize {
+    private var animated: Animatable<IntSize, AnimationVector2D>? = null
+
+    /**
+     * The size to lay the pill out at, for content that measured to [target].
+     *
+     * The first title has nothing to grow out of and sets the starting size; every title after it
+     * is animated to.
+     */
+    internal fun sizeFor(
+        target: IntSize,
+        spec: FiniteAnimationSpec<IntSize>,
+        scope: CoroutineScope
+    ): IntSize {
+        val animation = animated
+            ?: Animatable(target, IntSize.VectorConverter).also { animated = it }
+
+        // The second test restarts an animation that was cut short: the scope belongs to the pill
+        // that launched it, so a handover mid-grow cancels it and would strand the pill part of
+        // the way there.
+        if (animation.targetValue != target ||
+            (!animation.isRunning && animation.value != target)
+        ) {
+            scope.launch { animation.animateTo(target, spec) }
+        }
+        return animation.value
+    }
+}
+
+/**
+ * Lays content out at [pillSize]'s animated size rather than the size it measured to, keeping it
+ * centred while the two differ.
+ *
+ * Without a [pillSize] - anywhere outside the pager's shared bar, where nothing swaps the pill
+ * out mid-flight - the measured size is used as it stands.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun Modifier.animatePillSize(pillSize: TopBarPillSize?): Modifier {
+    if (pillSize == null) return this
+    val spec = MaterialTheme.motionScheme.fastSpatialSpec<IntSize>()
+    val scope = rememberCoroutineScope()
+
+    return layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        val target = IntSize(placeable.width, placeable.height)
+        val size = constraints.constrain(pillSize.sizeFor(target, spec, scope))
+        val direction = layoutDirection
+        layout(size.width, size.height) {
+            placeable.place(Alignment.Center.align(target, size, direction))
+        }
+    }
+}
+
+/**
  * Wraps a top app bar title in a [TopBarPill].
  *
  * The pill itself stays put while swiping between pages - only the words inside travel, clipped
@@ -145,6 +219,7 @@ fun TopBarTitlePill(
         Box(
             modifier = Modifier
                 .clip(CircleShape)
+                .animatePillSize(LocalTopBarSlot.current?.titlePillSize)
                 .padding(horizontal = PillTextPadding, vertical = 6.dp)
                 .graphicsLayer {
                     val delta = swipeDelta()
