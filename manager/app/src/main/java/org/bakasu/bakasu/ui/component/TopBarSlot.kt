@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
+import org.bakasu.bakasu.ui.util.LocalPagerPage
 
 /**
  * Holds the top bar currently published by a pager page, how tall the host drew it, and the
@@ -22,6 +23,15 @@ class TopBarSlot {
 
     /** Measured height of the bar, including the status bar it covers. */
     var height by mutableStateOf(0.dp)
+        internal set
+
+    /**
+     * Pager page that published [content].
+     *
+     * The bar outlives the selected page by a frame or two at a handover, so this - not the
+     * selection - is what a swipe is measured from.
+     */
+    var page by mutableStateOf<Int?>(null)
         internal set
 
     /** The title pill's animated size, kept here so it outlives each bar it is drawn in. */
@@ -42,14 +52,21 @@ val LocalTopBarSlot = compositionLocalOf<TopBarSlot?> { null }
 @Composable
 fun ProvideTopBar(active: Boolean, content: @Composable () -> Unit) {
     val slot = LocalTopBarSlot.current ?: return
+    val page = LocalPagerPage.current
     val latest by rememberUpdatedState(content)
     // stable identity, so publishing does not re-trigger on every recomposition of the page
     val published = remember { @Composable { latest() } }
 
-    DisposableEffect(slot, active, published) {
-        if (active) slot.content = published
+    DisposableEffect(slot, active, published, page) {
+        if (active) {
+            slot.content = published
+            slot.page = page
+        }
         onDispose {
-            if (slot.content === published) slot.content = null
+            if (slot.content === published) {
+                slot.content = null
+                slot.page = null
+            }
         }
     }
 }

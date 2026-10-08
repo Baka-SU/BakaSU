@@ -151,7 +151,13 @@ fun MainScreen(
         LocalSelectedPage provides uiSelectedPage,
         LocalPagerPages provides pages,
         LocalTopBarSwipeDelta provides {
-            val raw = pagerState.currentPage + pagerState.currentPageOffsetFraction - uiSelectedPage
+            // Measured from the page that published the bar on screen rather than the selected
+            // one. The two part company for the frames between the pager passing the halfway
+            // point and the handover, and measuring from the selection there flips the delta's
+            // sign - which reads as a swipe back towards the page the bar belongs to, snapping a
+            // folded search field open for a frame.
+            val owner = topBarSlot.page ?: uiSelectedPage
+            val raw = pagerState.currentPage + pagerState.currentPageOffsetFraction - owner
             // A drag never exceeds half a page, so it maps straight through. A nav-bar tap
             // switches the page immediately and then scrolls, which would start the bar beyond
             // the fade range; scale it by the jump so the transition plays across the animation.
