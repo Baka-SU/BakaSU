@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -91,13 +92,19 @@ fun MainScreen(
     // How many pages the current nav-bar jump spans, so the top bar transition can be played
     // over the whole journey instead of only the last half page of it.
     var navDistance by remember { mutableFloatStateOf(0f) }
+    // The page that jump set off from; the bar belongs to it until the half way point.
+    var navFromPage by remember { mutableIntStateOf(0) }
 
     val pagerMode = PagerInterceptionMode.entries.getOrElse(pagerInterceptionMode) {
         PagerInterceptionMode.Native
     }
     val interceptPagerGestures = pagerMode == PagerInterceptionMode.CrossAxisInterceptor
 
-    val handlePageChange: (Int) -> Unit = remember(pagerState, coroutineScope, pages) {
+    // A tap has no gesture behind it, so it crosses the whole page on its own: it travels on
+    // the theme's spatial spec rather than the spec a fling settles on, which is tuned for the
+    // last fraction of a page and lands a tap in about a tenth of a second.
+    val navSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val handlePageChange: (Int) -> Unit = remember(pagerState, coroutineScope, pages, navSpec) {
         { page ->
             if (page !in pages.indices) return@remember
             uiSelectedPage = page
@@ -115,13 +122,14 @@ fun MainScreen(
                 animating = true
                 userScrollEnabled = false
                 lastRequestedPage = page
+                navFromPage = pagerState.currentPage
                 navDistance = abs(page - pagerState.currentPage).toFloat()
                 animateJob = coroutineScope.launch {
                     try {
                         // A held pager gesture owns the scroll mutation at UserInput
                         // priority. Stop it explicitly so a navigation tap always wins.
                         pagerState.scroll(MutatePriority.PreventUserInput) { }
-                        pagerState.animateScrollToPage(page)
+                        pagerState.animateScrollToPage(page = page, animationSpec = navSpec)
                     } finally {
                         if (animateJob === this) {
                             animating = false
@@ -129,6 +137,7 @@ fun MainScreen(
                             animateJob = null
                             lastRequestedPage = pagerState.currentPage
                             navDistance = 0f
+                            navFromPage = pagerState.currentPage
                         }
                     }
                 }
@@ -168,12 +177,15 @@ fun MainScreen(
 
     val barOwner by remember(pagerState, pages) {
         derivedStateOf {
-            if (animating) {
-                uiSelectedPage
+            val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
+            val distance = navDistance
+            if (animating && distance > 0f) {
+                // A tap used to hand the bar over at the tap itself, so the page being left lost
+                // its bar at once and only the arriving half of the cross-fade ever played. Hand
+                // over where a drag does - half way - and both halves play.
+                if (abs(position - navFromPage) / distance < 0.5f) navFromPage else uiSelectedPage
             } else {
-                (pagerState.currentPage + pagerState.currentPageOffsetFraction)
-                    .roundToInt()
-                    .coerceIn(0, pages.lastIndex.coerceAtLeast(0))
+                position.roundToInt().coerceIn(0, pages.lastIndex.coerceAtLeast(0))
             }
         }
     }
@@ -193,10 +205,10 @@ fun MainScreen(
             val owner = topBarSlot.page ?: uiSelectedPage
             val raw = pagerState.currentPage + pagerState.currentPageOffsetFraction - owner
             // A drag never exceeds half a page, so it maps straight through. A nav-bar tap
-            // switches the page immediately and then scrolls, which would start the bar beyond
-            // the fade range; scale it by the jump so the transition plays across the animation.
+            // can span several, so scale by the jump: that puts the half way point at 0.5, where
+            // the fade reaches zero and the bar changes hands, for either kind of move.
             val distance = navDistance
-            if (distance > 0f) raw / distance * 0.5f else raw
+            if (distance > 0f) raw / distance else raw
         },
         LocalTopBarSlot provides topBarSlot
     ) {
