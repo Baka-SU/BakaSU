@@ -53,6 +53,16 @@ class TopBarSlot {
     var page by mutableStateOf<Int?>(null)
         internal set
 
+    private val fieldExpansion = mutableStateMapOf<Int, Float>()
+
+    /** Records how far [page]'s search field is open, for the bar on the other side of a swipe. */
+    internal fun recordFieldExpansion(page: Int?, value: Float) {
+        if (page != null) fieldExpansion[page] = value
+    }
+
+    /** How far [page]'s field is open, or null for a page that has never published one. */
+    fun fieldExpansionFor(page: Int?): Float? = page?.let { fieldExpansion[it] }
+
     /** The title pill's animated size, kept here so it outlives each bar it is drawn in. */
     val titlePillSize = TopBarPillSize()
 }

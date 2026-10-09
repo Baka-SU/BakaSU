@@ -46,7 +46,6 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,7 +64,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.math.abs
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
@@ -81,6 +79,7 @@ import org.bakasu.bakasu.ui.component.TopBarIconEdgeInset
 import org.bakasu.bakasu.ui.component.TopBarIconPill
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
+import org.bakasu.bakasu.ui.component.rememberSearchFieldVisibleFraction
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
 import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
@@ -89,11 +88,9 @@ import org.bakasu.bakasu.ui.screen.LabelText
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalPagerPage
 import org.bakasu.bakasu.ui.util.LocalTopBarOwner
-import org.bakasu.bakasu.ui.util.LocalPagerPages
 import org.bakasu.bakasu.ui.util.LocalPagerState
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
-import org.bakasu.bakasu.ui.util.LocalTopBarSwipeDelta
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
 import org.bakasu.bakasu.ui.viewmodel.SortType
@@ -201,22 +198,9 @@ fun SuperUserPage(bottomPadding: Dp) {
 
     val topBarHeight = LocalTopBarSlot.current?.heightFor(LocalPagerPage.current) ?: 0.dp
 
-    // Fold the field away only when heading towards a page that has none - between the
-    // two search pages it stays put. Shares the top bar's delta so a nav-bar tap folds
-    // it across the whole jump rather than popping at the end.
-    val pageIndex = LocalPagerPage.current ?: 0
-    val pagerPages = LocalPagerPages.current
-    val swipeDelta = LocalTopBarSwipeDelta.current
-    // Held as state and sampled by the bar, never read here: reading it in this composition
-    // would recompose the page, and with it the whole shared top bar, on every swipe frame.
-    val pageVisibleFraction = remember(pageIndex, pagerPages, swipeDelta) {
-        derivedStateOf {
-            val delta = swipeDelta()
-            val towards = pageIndex + if (delta > 0f) 1 else -1
-            if (delta == 0f || pagerPages.getOrNull(towards)?.hasSearchBar == true) 1f
-            else (1f - abs(delta) * 2f).coerceIn(0f, 1f)
-        }
-    }
+    // Carries the field from the height it has here to the height it has on the page being
+    // swiped towards, so it runs up when that page's list is already scrolled.
+    val fieldVisibleFraction = rememberSearchFieldVisibleFraction(scrollBehavior)
 
     ProvideTopBar(active = LocalPagerPage.current == LocalTopBarOwner.current) {
             SearchAppBar(
@@ -252,7 +236,7 @@ fun SuperUserPage(bottomPadding: Dp) {
                 },
                 scrollBehavior = scrollBehavior,
                 searchBarPlaceHolderText = stringResource(R.string.search_apps),
-                    visibleFraction = { pageVisibleFraction.value },
+                    visibleFraction = fieldVisibleFraction,
                     contentScrolled = {
                         listState.firstVisibleItemIndex > 0 ||
                             listState.firstVisibleItemScrollOffset > 0

@@ -48,6 +48,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -58,6 +59,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
@@ -81,11 +83,13 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
 import kotlin.math.roundToInt
+import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -96,6 +100,7 @@ import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
 import org.bakasu.bakasu.ui.util.LocalPagerPage
+import org.bakasu.bakasu.ui.util.LocalPagerPages
 import org.bakasu.bakasu.ui.util.LocalTopBarSwipeDelta
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.koin.compose.koinInject
@@ -463,6 +468,54 @@ private fun CompactSearchBar(
             outputTransformation = null,
         ),
     )
+}
+
+/**
+ * How much of this page's search field to show while the pager is between pages.
+ *
+ * The field travels from the height it has on this page to the height it has on the page being
+ * swiped towards, reaching it at the half way point where the bar changes hands. A page with no
+ * field counts as zero, so leaving for one folds the field away as before; two pages that are
+ * both at the top of their lists count as equal, so nothing moves between them; and arriving at a
+ * list that is already scrolled runs the field up over the first half of the swipe instead of
+ * having it gone the moment the bar is handed over.
+ *
+ * Returned as a lambda and published through the slot rather than read here: reading either side
+ * in composition would recompose the page, and with it the shared bar, on every frame of a swipe.
+ */
+@Composable
+fun rememberSearchFieldVisibleFraction(
+    scrollBehavior: SearchAppBarScrollBehavior,
+): () -> Float {
+    val slot = LocalTopBarSlot.current
+    val pageIndex = LocalPagerPage.current
+    val pagerPages = LocalPagerPages.current
+    val swipeDelta = LocalTopBarSwipeDelta.current
+
+    LaunchedEffect(slot, scrollBehavior, pageIndex) {
+        snapshotFlow { scrollBehavior.searchBarExpandedFraction }
+            .collect { slot?.recordFieldExpansion(pageIndex, it) }
+    }
+
+    val fraction = remember(slot, scrollBehavior, pageIndex, pagerPages, swipeDelta) {
+        derivedStateOf {
+            val delta = swipeDelta()
+            if (delta == 0f) return@derivedStateOf 1f
+            val mine = scrollBehavior.searchBarExpandedFraction
+            if (mine <= 0f) return@derivedStateOf 1f
+
+            val towards = (pageIndex ?: 0) + if (delta > 0f) 1 else -1
+            val theirs = if (pagerPages.getOrNull(towards)?.hasSearchBar == true) {
+                slot?.fieldExpansionFor(towards) ?: 1f
+            } else {
+                0f
+            }
+
+            val travelled = (abs(delta) * 2f).coerceIn(0f, 1f)
+            (lerp(mine, theirs, travelled) / mine).coerceIn(0f, 1f)
+        }
+    }
+    return { fraction.value }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
