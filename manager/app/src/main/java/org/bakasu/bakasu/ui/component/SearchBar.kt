@@ -466,6 +466,7 @@ fun SearchAppBar(
     scrollBehavior: TopAppBarScrollBehavior? = null,
     searchBarPlaceHolderText: String,
     visibleFraction: () -> Float = { 1f },
+    contentScrolled: () -> Boolean = { false },
 ) {
     val textFieldState = rememberTextFieldState(initialText = searchText)
     val focusManager = LocalFocusManager.current
@@ -510,10 +511,12 @@ fun SearchAppBar(
         currentOnSearchTextChange(textFieldState.text.toString())
     }
 
-    LaunchedEffect(isPageActive) {
-        if (!isPageActive && scrollBehavior?.state?.collapsedFraction?.toDouble() == 1.0) {
-            searchAppBarScrollBehavior?.collapseSearchBar()
-        }
+    // A collapsing field belongs to the top of its list, so a page left part way down should
+    // not get it back on arrival. The check this replaces asked the top app bar for its collapsed
+    // fraction, which told the truth while the bar collapsed on scroll but is always zero now
+    // that the pill bars are pinned - so the field came back expanded over a scrolled list.
+    LaunchedEffect(searchAppBarScrollBehavior) {
+        if (contentScrolled()) searchAppBarScrollBehavior?.collapseSearchBar()
     }
 
     LaunchedEffect(isSearchBarCollapsing, isPageActive) {

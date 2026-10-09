@@ -253,6 +253,10 @@ fun SuperUserPage(bottomPadding: Dp) {
                 scrollBehavior = scrollBehavior,
                 searchBarPlaceHolderText = stringResource(R.string.search_apps),
                     visibleFraction = { pageVisibleFraction.value },
+                    contentScrolled = {
+                        listState.firstVisibleItemIndex > 0 ||
+                            listState.firstVisibleItemScrollOffset > 0
+                    },
             )
     }
 

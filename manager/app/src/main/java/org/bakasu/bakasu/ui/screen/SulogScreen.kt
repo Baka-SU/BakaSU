@@ -220,7 +220,11 @@ private fun SulogScreenContent(
                         }
                     },
                     scrollBehavior = scrollBehavior,
-                    searchBarPlaceHolderText = stringResource(R.string.sulog_search_placeholder)
+                    searchBarPlaceHolderText = stringResource(R.string.sulog_search_placeholder),
+                    contentScrolled = {
+                        val list = if (state.searchText.isEmpty()) listState else searchListState
+                        list.firstVisibleItemIndex > 0 || list.firstVisibleItemScrollOffset > 0
+                    },
                 )
             }
         },

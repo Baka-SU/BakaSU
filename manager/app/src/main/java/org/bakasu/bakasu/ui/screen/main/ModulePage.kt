@@ -378,6 +378,10 @@ fun ModulePage(bottomPadding: Dp) {
                 scrollBehavior = scrollBehavior,
                 searchBarPlaceHolderText = stringResource(R.string.search_modules),
                     visibleFraction = { pageVisibleFraction.value },
+                    contentScrolled = {
+                        listState.firstVisibleItemIndex > 0 ||
+                            listState.firstVisibleItemScrollOffset > 0
+                    },
             )
     }
 
