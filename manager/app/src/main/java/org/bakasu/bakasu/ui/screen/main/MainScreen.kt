@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
@@ -308,6 +310,23 @@ fun MainScreen(
 
                     Box(Modifier.weight(1f)) {
                         content(0.dp)
+                    }
+                }
+
+                // The shared bar is drawn here as well as in the portrait branch: the pages
+                // publish it either way, and without a host for it landscape had no top bar at
+                // all and left every page padding itself for a stale height.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .padding(start = with(density) { navWidth.toDp() })
+                        .onSizeChanged {
+                            topBarSlot.height = with(density) { it.height.toDp() }
+                        },
+                ) {
+                    TopBarScrim {
+                        topBarSlot.content?.invoke()
                     }
                 }
 
