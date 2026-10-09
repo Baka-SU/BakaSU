@@ -27,7 +27,6 @@ class MonetCompatColorSource(
     private var monet: MonetCompat? = null
 
     fun initialize() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return
     }
 
     fun seedColor(): Int = colors.value
