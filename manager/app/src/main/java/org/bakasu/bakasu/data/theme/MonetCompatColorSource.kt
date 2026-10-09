@@ -26,9 +26,6 @@ class MonetCompatColorSource(
     private val refreshMutex = Mutex()
     private var monet: MonetCompat? = null
 
-    fun initialize() {
-    }
-
     fun seedColor(): Int = colors.value
 
     suspend fun refresh() = refreshMutex.withLock {
