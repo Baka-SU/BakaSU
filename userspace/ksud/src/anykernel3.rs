@@ -269,7 +269,7 @@ mod android {
             let entry = archive
                 .by_index(index)
                 .with_context(|| format!("failed to inspect ZIP entry {index}"))?;
-            names.push((index, entry.name().to_owned()));
+            names.push((index, entry.name()?.to_owned()));
         }
         let index = select_update_binary(names.iter().map(|(index, name)| (*index, name)))?;
 
