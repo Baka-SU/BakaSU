@@ -132,8 +132,14 @@ class ThemeConfig(
     var backgroundImageLoaded by mutableStateOf(false)
     var isThemeChanging by mutableStateOf(false)
     var isHighContrastMode by mutableStateOf(false)
-    var isEnableBlur by mutableStateOf(false)
-    var isEnableBlurExp by mutableStateOf(false)
+    private val _isEnableBlur = mutableStateOf(false)
+    var isEnableBlur: Boolean
+        get() = _isEnableBlur.value && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        set(value) { _isEnableBlur.value = value }
+    private val _isEnableBlurExp = mutableStateOf(false)
+    var isEnableBlurExp: Boolean
+        get() = _isEnableBlurExp.value && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        set(value) { _isEnableBlurExp.value = value }
     var isUseBackgroundSeedColor by mutableStateOf(false)
     var bottomBarStyle by mutableStateOf(BottomBarStyle.MATERIAL3_EXPRESSIVE)
 
@@ -468,7 +474,7 @@ private fun BackgroundLayer(
     val hasBackgroundBitmap = renderState.imageBitmap != null
     val hasBlurBitmap = renderState.blurImageBitmap != null
     val needsFallbackFrames = hasBackgroundBitmap &&
-        (!themeConfig.isEnableBlur || Build.VERSION.SDK_INT < Build.VERSION_CODES.S)
+        (!themeConfig.isEnableBlur || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
     val needsBlurFrames =
         (themeConfig.isEnableBlurExp && hasBlurBitmap) ||
             (themeConfig.isEnableBlur && hasBackgroundBitmap)
@@ -526,7 +532,7 @@ private const val BACKGROUND_BLUR_RADIUS = 45f
  */
 @Composable
 fun Modifier.blurSource(): Modifier {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return this
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return this
 
     return LocalBlurState.current?.let {
         this.then(Modifier.layerBackdrop(it))
@@ -551,7 +557,7 @@ fun Modifier.blurEffect(
 ): Modifier {
     val themeConfig = koinInject<ThemeConfig>()
     val cardConfig = koinInject<CardConfig>()
-    if (!themeConfig.isEnableBlur || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+    if (!themeConfig.isEnableBlur || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return renderBackgroundFallback(
             compensateHorizontalOverscroll = compensateHorizontalOverscroll,
             compensateVerticalOverscroll = compensateVerticalOverscroll,
@@ -1863,7 +1869,7 @@ private fun BackgroundInitializer(
 
     LaunchedEffect(themeConfig.isEnableBlurExp, renderState.blurViewportSize) {
         if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             themeConfig.isEnableBlurExp &&
             renderState.blurViewportSize.width > 0 &&
             renderState.blurViewportSize.height > 0
@@ -1902,7 +1908,7 @@ private fun BackgroundInitializer(
             themeConfig.isThemeChanging = false
 
             if (
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 themeConfig.isEnableBlurExp &&
                 renderState.blurViewportSize.width > 0 &&
                 renderState.blurViewportSize.height > 0
