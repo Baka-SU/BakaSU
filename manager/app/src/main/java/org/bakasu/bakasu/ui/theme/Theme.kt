@@ -860,6 +860,17 @@ fun Modifier.renderBackgroundBlur(
                     color = tintColor,
                     blendMode = BlendMode.SrcOver,
                 )
+            } else {
+                // Neither the blurred background nor this node's place in it is known on the
+                // frame it first draws, and without the tint the surface is simply missing for
+                // that frame - which reads as a flash when something is composed mid transition,
+                // as the search field is each time the shared top bar changes hands. Blurring
+                // barely moves the average brightness, so the tint on its own stands in closely
+                // until the backdrop arrives.
+                drawRect(
+                    color = tintColor,
+                    blendMode = BlendMode.SrcOver,
+                )
             }
 
             drawContent()
