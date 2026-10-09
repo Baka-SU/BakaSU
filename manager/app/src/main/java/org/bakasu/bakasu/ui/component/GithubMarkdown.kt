@@ -43,6 +43,7 @@ import org.bakasu.bakasu.ui.activity.util.ensureVisibleByMix
 import org.bakasu.bakasu.ui.activity.util.relativeLuminance
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.isInDarkTheme
+import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.HtmlRenderer
 import org.koin.compose.koinInject
@@ -78,7 +79,13 @@ fun GithubMarkdown(
 
     val cssHref = "https://appassets.androidplatform.net/assets/github-markdown.css"
     val rendered = remember(content, renderMarkdown) {
-        if (renderMarkdown) HtmlRenderer.builder().escapeHtml(false).build().render(Parser.builder().build().parse(content)) else content
+        if (renderMarkdown) {
+            val extensions = listOf(TablesExtension.create())
+            val parser = Parser.builder().extensions(extensions).build()
+            HtmlRenderer.builder().extensions(extensions).escapeHtml(false).build().render(parser.parse(content))
+        } else {
+            content
+        }
     }
     val contentPolicy = if (renderMarkdown) {
         """<meta http-equiv="Content-Security-Policy" content="script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; img-src https: data:" />"""
