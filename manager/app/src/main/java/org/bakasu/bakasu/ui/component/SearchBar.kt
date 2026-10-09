@@ -138,9 +138,20 @@ class SearchAppBarScrollBehavior internal constructor(
 
     fun reset() {
         searchBarHeightOffset = 0f
+        endGesture()
+    }
+
+    /** Forgets a gesture in flight without changing how far the field is open. */
+    fun endGesture() {
         lastSearchBarScrollDelta = 0f
         isUserScrollInProgress = false
         ignoreCurrentScroll = false
+    }
+
+    /** Runs the field up out of the way, the way scrolling would, instead of cutting it. */
+    suspend fun animateCollapse() {
+        endGesture()
+        animateSearchBarTo(-searchBarHeight)
     }
 
     private fun consumeSearchBarScroll(delta: Float): Float {
@@ -516,7 +527,7 @@ fun SearchAppBar(
     // fraction, which told the truth while the bar collapsed on scroll but is always zero now
     // that the pill bars are pinned - so the field came back expanded over a scrolled list.
     LaunchedEffect(searchAppBarScrollBehavior) {
-        if (contentScrolled()) searchAppBarScrollBehavior?.collapseSearchBar()
+        if (contentScrolled()) searchAppBarScrollBehavior?.animateCollapse()
     }
 
     LaunchedEffect(isSearchBarCollapsing, isPageActive) {
@@ -535,7 +546,9 @@ fun SearchAppBar(
 
     DisposableEffect(isPageActive, searchAppBarScrollBehavior) {
         onDispose {
-            if (isPageActive) searchAppBarScrollBehavior?.reset()
+            // Only the gesture is forgotten. Reopening the field here is what left a page that
+            // had been scrolled showing it again on the way back in.
+            if (isPageActive) searchAppBarScrollBehavior?.endGesture()
         }
     }
 
