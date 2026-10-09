@@ -256,6 +256,7 @@ dependencies {
     implementation(libs.org.lsposed.hiddenapibypass)
 
     implementation(libs.markdown)
+    implementation(libs.markwon.tables)
     implementation(libs.androidx.webkit)
 
     implementation(libs.lsposed.cxx)

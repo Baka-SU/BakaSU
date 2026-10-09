@@ -4,7 +4,6 @@ import android.graphics.text.LineBreaker
 import android.os.Build
 import android.os.Parcelable
 import android.text.Layout
-import android.text.method.LinkMovementMethod
 import android.util.Log
 import android.view.ViewGroup
 import android.widget.TextView
@@ -42,6 +41,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.noties.markwon.Markwon
+import io.noties.markwon.ext.tables.TableAwareMovementMethod
+import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.utils.NoCopySpannableFactory
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CancellableContinuation
@@ -474,7 +475,7 @@ internal fun MarkdownContent(content: String) {
         AndroidView(
             factory = { context ->
                 TextView(context).apply {
-                    movementMethod = LinkMovementMethod.getInstance()
+                    movementMethod = TableAwareMovementMethod.create()
                     setSpannableFactory(NoCopySpannableFactory.getInstance())
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         breakStrategy = LineBreaker.BREAK_STRATEGY_SIMPLE
@@ -487,7 +488,10 @@ internal fun MarkdownContent(content: String) {
                 }
             },
             update = {
-                Markwon.create(it.context).setMarkdown(it, content)
+                Markwon.builder(it.context)
+                    .usePlugin(TablePlugin.create(it.context))
+                    .build()
+                    .setMarkdown(it, content)
                 it.setTextColor(contentColor.toArgb())
             },
         )
