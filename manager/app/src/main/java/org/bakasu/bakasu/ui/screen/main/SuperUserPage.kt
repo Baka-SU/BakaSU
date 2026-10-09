@@ -256,6 +256,7 @@ fun SuperUserPage(bottomPadding: Dp) {
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
     ) { innerPadding ->
         SuperUserContent(
+            modifier = Modifier.padding(innerPadding),
             topBarHeight = topBarHeight,
             viewModel = viewModel,
             uiState = uiState,
@@ -301,6 +302,7 @@ private fun createAllowlistBackupFileName(): String {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SuperUserContent(
+    modifier: Modifier = Modifier,
     topBarHeight: Dp,
     viewModel: SuperUserViewModel,
     uiState: SuperUserUiState,
@@ -313,7 +315,7 @@ private fun SuperUserContent(
 
     if (uiState.appGroupList.isEmpty()) {
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .blurSource(),
             contentAlignment = Alignment.Center,
@@ -353,7 +355,7 @@ private fun SuperUserContent(
         state = pullRefreshState,
         onRefresh = { viewModel.dispatch(SuperUserUiAction.Refresh) },
         isRefreshing = uiState.isRefreshing,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .blurSource(),
         indicator = {

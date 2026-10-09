@@ -195,6 +195,9 @@ fun HomePage(
                 .blurSource()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(scrollState)
+                // the scaffold's own padding carries the horizontal safe-drawing insets, so the
+                // gutter is measured from the display's safe area rather than its edge
+                .padding(innerPadding)
                 .padding(
                     top = topBarHeight + 2.dp,
                     start = ScreenEdgePadding,
