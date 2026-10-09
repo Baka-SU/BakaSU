@@ -101,6 +101,7 @@ import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
 import org.bakasu.bakasu.ui.util.LocalPagerPage
 import org.bakasu.bakasu.ui.util.LocalPagerPages
+import org.bakasu.bakasu.ui.util.LocalPagerState
 import org.bakasu.bakasu.ui.util.LocalTopBarSwipeDelta
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.koin.compose.koinInject
@@ -490,28 +491,36 @@ fun rememberSearchFieldVisibleFraction(
     val slot = LocalTopBarSlot.current
     val pageIndex = LocalPagerPage.current
     val pagerPages = LocalPagerPages.current
-    val swipeDelta = LocalTopBarSwipeDelta.current
+    val pagerState = LocalPagerState.current
 
     LaunchedEffect(slot, scrollBehavior, pageIndex) {
         snapshotFlow { scrollBehavior.searchBarExpandedFraction }
             .collect { slot?.recordFieldExpansion(pageIndex, it) }
     }
 
-    val fraction = remember(slot, scrollBehavior, pageIndex, pagerPages, swipeDelta) {
+    val fraction = remember(slot, scrollBehavior, pageIndex, pagerPages, pagerState) {
         derivedStateOf {
-            val delta = swipeDelta()
-            if (delta == 0f) return@derivedStateOf 1f
             val mine = scrollBehavior.searchBarExpandedFraction
             if (mine <= 0f) return@derivedStateOf 1f
 
-            val towards = (pageIndex ?: 0) + if (delta > 0f) 1 else -1
+            // Measured from this page's own distance from the pager, never from the shared
+            // delta: that one is measured from whichever page owns the bar, and around a
+            // handover the owner and the pager's current page disagree for a frame or two.
+            // The delta's sign flips there, which pointed this at the page on the other side -
+            // one with no field at all - and folded the field away for those frames, leaving
+            // the arriving page to draw it again at full height.
+            val home = pageIndex ?: 0
+            val distance = pagerState.currentPage + pagerState.currentPageOffsetFraction - home
+            if (distance == 0f) return@derivedStateOf 1f
+
+            val towards = home + if (distance > 0f) 1 else -1
             val theirs = if (pagerPages.getOrNull(towards)?.hasSearchBar == true) {
-                slot?.fieldExpansionFor(towards) ?: 1f
+                slot?.fieldExpansionFor(towards) ?: mine
             } else {
                 0f
             }
 
-            val travelled = (abs(delta) * 2f).coerceIn(0f, 1f)
+            val travelled = (abs(distance) * 2f).coerceIn(0f, 1f)
             (lerp(mine, theirs, travelled) / mine).coerceIn(0f, 1f)
         }
     }
