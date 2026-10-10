@@ -14,3 +14,7 @@ ifeq ($(shell grep -q "ksu_install_su_fd" $(srctree)/fs/exec.c; echo $$?),0)
 $(info -- $(REPO_NAME)/compat: ksu_install_su_fd direct call found)
 ccflags-y += -DKSU_COMPAT_HAS_SUSFS_INSTALL_SU_FD_DIRECT_CALL
 endif
+
+$(info -- $(REPO_NAME): susfs has NOT update with latest KernelSU source)
+$(info -- $(REPO_NAME): Please wait simonpunk update)
+$(error Please wait susfs update.)
