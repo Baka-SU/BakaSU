@@ -343,8 +343,8 @@ int __nocfi ksu_handle_selinux_setprocattr(const char *name, void *value, size_t
 int __nocfi ksu_handle_selinux_setprocattr(struct task_struct *p, char *name, void *value, size_t size)
 #endif
 {
-    int error;
-    u32 mysid, sid, tmp;
+    int error, perm_error;
+    u32 mysid, sid;
     char *str = value;
     if (likely(ksu_get_uid_t(current_uid()) < 10000)) {
         goto call_orig;
@@ -353,19 +353,6 @@ int __nocfi ksu_handle_selinux_setprocattr(struct task_struct *p, char *name, vo
     if (strcmp(name, "current")) {
         goto call_orig;
     }
-    mysid = current_sid();
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
-    error = avc_has_perm(mysid, mysid, SECCLASS_PROCESS, PROCESS__SETCURRENT, NULL);
-#elif defined(KSU_COMPAT_USE_SELINUX_STATE)
-    error = avc_has_perm(&selinux_state, mysid, mysid, SECCLASS_PROCESS, PROCESS__SETCURRENT, NULL);
-#else
-    error = avc_has_perm(mysid, mysid, SECCLASS_PROCESS, PROCESS__SETCURRENT, NULL);
-#endif
-    if (error) {
-        return error;
-    }
-
     if (size && str[0] && str[0] != '\n') {
         if (str[size - 1] == '\n') {
             str[size - 1] = 0;
@@ -379,16 +366,15 @@ int __nocfi ksu_handle_selinux_setprocattr(struct task_struct *p, char *name, vo
         error = ksu_security_context_to_sid(str, size, &sid, GFP_KERNEL);
 #endif
         if (error) {
-            return error;
-        } else {
-            // sync to global sidtab
+            mysid = current_sid();
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
-            security_context_to_sid(str, size, &tmp, GFP_KERNEL);
+            perm_error = avc_has_perm(mysid, mysid, SECCLASS_PROCESS, PROCESS__SETCURRENT, NULL);
 #elif defined(KSU_COMPAT_USE_SELINUX_STATE)
-            security_context_to_sid(&selinux_state, str, size, &tmp, GFP_KERNEL);
+            perm_error = avc_has_perm(&selinux_state, mysid, mysid, SECCLASS_PROCESS, PROCESS__SETCURRENT, NULL);
 #else
-            ksu_security_context_to_sid(str, size, &tmp, GFP_KERNEL);
+            perm_error = avc_has_perm(mysid, mysid, SECCLASS_PROCESS, PROCESS__SETCURRENT, NULL);
 #endif
+            return perm_error ?: error;
         }
     }
 
