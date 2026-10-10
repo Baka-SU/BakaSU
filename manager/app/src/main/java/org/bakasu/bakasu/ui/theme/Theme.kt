@@ -41,6 +41,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -56,6 +57,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -70,6 +74,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.zIndex
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
@@ -186,6 +191,8 @@ class BackgroundRenderState {
     var blurImageBitmap: ImageBitmap? by mutableStateOf(null)
     var blurViewportSize by mutableStateOf(IntSize(0, 0))
     var blurFrameTick by mutableIntStateOf(0)
+    var scrollActive by mutableStateOf(false)
+    var pagerScrollActive by mutableStateOf(false)
     var seedColor by mutableIntStateOf(0)
 }
 
@@ -382,7 +389,31 @@ fun KernelSUTheme(
             motionScheme = MotionScheme.expressive(),
             typography = generateTypography(themeConfig),
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
+            val backgroundMotionConnection = remember(backgroundRenderState) {
+                object : NestedScrollConnection {
+                    override fun onPostScroll(
+                        consumed: Offset,
+                        available: Offset,
+                        source: NestedScrollSource,
+                    ): Offset {
+                        backgroundRenderState.scrollActive = true
+                        return Offset.Zero
+                    }
+
+                    override suspend fun onPostFling(
+                        consumed: Velocity,
+                        available: Velocity,
+                    ): Velocity {
+                        backgroundRenderState.scrollActive = false
+                        return Velocity.Zero
+                    }
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(backgroundMotionConnection),
+            ) {
                 BackgroundLayer(themeConfig, settings, backgroundRenderState)
                 content()
             }
@@ -475,23 +506,27 @@ private fun BackgroundLayer(
         }
     }
 
-    val hasBackgroundBitmap = renderState.imageBitmap != null
-    val hasBlurBitmap = renderState.blurImageBitmap != null
-    val needsFallbackFrames = hasBackgroundBitmap &&
-        (!themeConfig.isEnableBlur || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
-    val needsBlurFrames =
-        (themeConfig.isEnableBlurExp && hasBlurBitmap) ||
-            (themeConfig.isEnableBlur && hasBackgroundBitmap)
-
-    LaunchedEffect(needsFallbackFrames, needsBlurFrames) {
-        if (!needsFallbackFrames && !needsBlurFrames) return@LaunchedEffect
-
-        while (true) {
-            withFrameNanos { }
-            renderState.blurFrameTick = if (renderState.blurFrameTick == Int.MAX_VALUE) {
-                0
-            } else {
-                renderState.blurFrameTick + 1
+    // Translucent surfaces must re-sample/re-map the background only while content is actually
+    // moving: nested-scroll drags/flings (scrollActive) and horizontal pager swipes, which
+    // translate layers without re-recording backdrop nodes (pagerScrollActive). At rest the loop
+    // is suspended and no frame is produced, so hwui stays idle. The tick must never be bumped
+    // from a draw callback, which would self-sustain through consumers inside the source subtree.
+    LaunchedEffect(Unit) {
+        snapshotFlow {
+            renderState.imageBitmap != null &&
+                (renderState.scrollActive || renderState.pagerScrollActive)
+        }.collect { active ->
+            if (!active) return@collect
+            while (
+                renderState.imageBitmap != null &&
+                (renderState.scrollActive || renderState.pagerScrollActive)
+            ) {
+                withFrameNanos { }
+                renderState.blurFrameTick = if (renderState.blurFrameTick == Int.MAX_VALUE) {
+                    0
+                } else {
+                    renderState.blurFrameTick + 1
+                }
             }
         }
     }
@@ -597,6 +632,7 @@ fun Modifier.blurEffect(
                     shape = { RectangleShape },
                     effects = {
                         renderState.blurFrameTick
+                        stretchOverscrollState?.version
 
                         textureBlurEffect(
                             blurRadiusX = 25f,
@@ -668,6 +704,7 @@ private fun Modifier.renderBackgroundFallback(
         }
         .drawWithContent {
             renderState.blurFrameTick
+            stretchOverscrollState?.version
 
             val boundsInBackground = coordinates?.boundsInBackgroundNow(backgroundAnchor)
                 ?: coordinates?.localBoundsInWindowNow()
@@ -833,6 +870,7 @@ fun Modifier.renderBackgroundBlur(
         }
         .drawWithContent {
             renderState.blurFrameTick
+            stretchOverscrollState?.version
 
             val currentBitmap = renderState.blurImageBitmap
             val currentBoundsInBackground = coordinates?.boundsInBackgroundNow(backgroundBlurAnchor)
