@@ -154,7 +154,7 @@ import org.bakasu.bakasu.ui.component.ZipFileDetector
 import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
-import org.bakasu.bakasu.ui.util.module.Shortcut
+import org.bakasu.bakasu.ui.util.Shortcut
 import org.bakasu.bakasu.ui.viewmodel.AppProfileViewModel
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerViewModel
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel

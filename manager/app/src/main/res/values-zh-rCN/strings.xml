@@ -252,6 +252,10 @@
     <string name="choose_theme_color">选择主题色</string>
     <string name="horizon_kernel">刷写 AnyKernel3 压缩包</string>
     <string name="horizon_kernel_summary">刷入 Anykernel3 内核</string>
+    <string name="both_kernel_and_module_files">输入的 zip 文件同时含有 AnyKernel3 压缩包和模块</string>
+    <string name="more_than_one_kernel_file">输入的文件中有多于 1 个的 AnyKernel3 压缩包</string>
+    <string name="module_shortcut_copy_scheme">复制 URL Scheme</string>
+    <string name="module_shortcut_scheme_copied">已复制 URL Scheme</string>
     <string name="root_required">需要 root 权限</string>
     <string name="failed_reboot">重启失败</string>
     <string name="custom_settings">个性化设置</string>
@@ -409,6 +413,7 @@
     <string name="network_offline">您处于离线状态</string>
     <string name="network_retry">重试</string>
     <string name="please_check_network">请检查网络连接情况，然后稍后重试</string>
+    <string name="internal_server_error">内部服务器错误</string>
     <string name="confirm_install_module_title">要安装模块 %s 吗?</string>
     <string name="assets_multiple_select_dialog_title">请选择你想安装的附件</string>
     <string name="assets_multiple_select_dialog_content_description">大小: %1$s, 下载数: %2$s</string>

@@ -19,6 +19,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -50,10 +51,8 @@ import androidx.compose.material.icons.twotone.Delete
 import androidx.compose.material.icons.twotone.Download
 import androidx.compose.material.icons.twotone.Extension
 import androidx.compose.material.icons.twotone.MoreVert
-import androidx.compose.material.icons.twotone.Photo
 import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.Refresh
-import androidx.compose.material.icons.twotone.Restore
 import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -63,7 +62,6 @@ import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -72,7 +70,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarDuration
@@ -81,7 +78,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -119,7 +115,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyant.capsule.ContinuousRoundedRectangle
 import kotlinx.coroutines.Dispatchers
@@ -127,6 +122,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.MetaModuleStatus
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
@@ -159,9 +155,9 @@ import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
+import org.bakasu.bakasu.ui.util.Shortcut
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.downloader.download
-import org.bakasu.bakasu.ui.util.module.Shortcut
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
 import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiAction
@@ -172,7 +168,7 @@ import org.bakasu.bakasu.ui.webui.WebUIActivity
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
-private enum class ShortcutType {
+enum class ShortcutType {
     Action,
     WebUI,
 }
@@ -457,7 +453,7 @@ fun ModulePage(bottomPadding: Dp) {
                     onUpdateModule = {
                         navigator.push(Route.Flash.moduleUpdate(it.toString()))
                     },
-                    onClickModule = { id, name, hasWebUi ->
+                    onClickModule = { id, hasWebUi ->
                         val currentTime = System.currentTimeMillis()
                         if (currentTime - lastClickTime < 600) {
                             Log.d("ModuleScreen", "Click too fast, ignoring")
@@ -469,9 +465,13 @@ fun ModulePage(bottomPadding: Dp) {
                             try {
                                 context.startActivity(
                                     Intent(context, WebUIActivity::class.java)
-                                        .setData("kernelsu://webui/$id".toUri())
-                                        .putExtra("id", id)
-                                        .putExtra("name", name),
+                                        .setData(
+                                            Uri.Builder()
+                                                .scheme("kernelsu")
+                                                .authority("webui")
+                                                .appendQueryParameter("id", id)
+                                                .build(),
+                                        ),
                                 )
                             } catch (e: Exception) {
                                 Log.e("ModuleScreen", "Error launching WebUI: ${e.message}", e)
@@ -585,13 +585,14 @@ private fun ModuleList(
     modifier: Modifier = Modifier,
     boxModifier: Modifier = Modifier,
     onUpdateModule: (Uri) -> Unit,
-    onClickModule: (id: String, name: String, hasWebUi: Boolean) -> Unit,
+    onClickModule: (id: String, hasWebUi: Boolean) -> Unit,
     context: Context,
     snackBarHost: SnackbarHostState,
     bottomPadding: Dp,
     topPadding: Dp,
 ) {
     val shortcut = koinInject<Shortcut>()
+    val settings = koinInject<SettingsPlatformRepository>()
     var showMetaModuleWarning by rememberSaveable { mutableStateOf(true) }
     val fetchRemoteText = koinInject<FetchRemoteTextUseCase>()
     val enqueueDownload = koinInject<EnqueueDownloadUseCase>()
@@ -679,7 +680,6 @@ private fun ModuleList(
     var defaultWebUiShortcutIconUri by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedShortcutType by rememberSaveable { mutableStateOf<ShortcutType?>(null) }
     val showShortcutDialog = remember { mutableStateOf(false) }
-    val showShortcutTypeRow = remember { mutableStateOf(false) }
 
     fun openShortcutDialogForType(type: ShortcutType) {
         selectedShortcutType = type
@@ -710,6 +710,7 @@ private fun ModuleList(
         name: String,
         iconUri: String?,
         type: ShortcutType,
+        intentToken: String,
     ) {
         when (type) {
             ShortcutType.Action -> {
@@ -718,6 +719,7 @@ private fun ModuleList(
                     moduleId = moduleId,
                     name = name,
                     iconUri = iconUri,
+                    intentToken = intentToken,
                 )
             }
 
@@ -727,6 +729,7 @@ private fun ModuleList(
                     moduleId = moduleId,
                     name = name,
                     iconUri = iconUri,
+                    intentToken = intentToken,
                 )
             }
         }
@@ -848,7 +851,7 @@ private fun ModuleList(
         viewModel.dispatch(ModuleUiAction.SetRemoved(module.dirId, isUninstall))
     }
 
-    fun onModuleAddShortcut(module: InstalledModule) {
+    fun onModuleAddShortcut(module: InstalledModule, shortcutType: ShortcutType) {
         shortcutModuleId = module.id
         textFieldState.edit {
             replace(0, length, module.name)
@@ -861,15 +864,7 @@ private fun ModuleList(
         defaultWebUiShortcutIconUri = module.webUiIconPath
             ?.takeIf { it.isNotBlank() }
             ?.let { "su:$it" }
-        if (module.hasActionScript && module.hasWebUi) {
-            selectedShortcutType = null
-            showShortcutTypeRow.value = true
-            openShortcutDialogForType(ShortcutType.Action)
-        } else if (module.hasActionScript) {
-            openShortcutDialogForType(ShortcutType.Action)
-        } else if (module.hasWebUi) {
-            openShortcutDialogForType(ShortcutType.WebUI)
-        }
+        openShortcutDialogForType(shortcutType)
     }
 
     PullToRefreshBox(
@@ -969,10 +964,10 @@ private fun ModuleList(
                         }
                     },
                     onClick = {
-                        onClickModule(it.dirId, it.name, it.hasWebUi)
+                        onClickModule(it.dirId, it.hasWebUi)
                     },
-                    onModuleAddShortcut = {
-                        onModuleAddShortcut(it)
+                    onModuleAddShortcut = { module, type ->
+                        onModuleAddShortcut(module, type)
                     },
                     showMoreModuleInfo = uiState.showMoreModuleInfo,
                 )
@@ -994,7 +989,6 @@ private fun ModuleList(
             ),
             onDismissRequest = {
                 showShortcutDialog.value = false
-                showShortcutTypeRow.value = false
             },
         ) {
             var error by remember { mutableStateOf("") }
@@ -1009,35 +1003,6 @@ private fun ModuleList(
                     modifier = Modifier
                         .padding(horizontal = 24.dp),
                 )
-                if (showShortcutTypeRow.value) {
-                    PrimaryTabRow(
-                        selectedTabIndex = selectedShortcutType?.ordinal ?: 0,
-                        containerColor = Color.Transparent,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Tab(
-                            selected = selectedShortcutType == ShortcutType.Action,
-                            onClick = {
-                                selectedShortcutType = ShortcutType.Action
-                                shortcutIconUri = defaultActionShortcutIconUri
-                                defaultShortcutIconUri = defaultActionShortcutIconUri
-                            },
-                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            text = { Text("Action") },
-                        )
-
-                        Tab(
-                            selected = selectedShortcutType == ShortcutType.WebUI,
-                            onClick = {
-                                selectedShortcutType = ShortcutType.WebUI
-                                shortcutIconUri = defaultWebUiShortcutIconUri
-                                defaultShortcutIconUri = defaultWebUiShortcutIconUri
-                            },
-                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            text = { Text("WebUI") },
-                        )
-                    }
-                }
 
                 Box(
                     contentAlignment = Alignment.Center,
@@ -1070,7 +1035,7 @@ private fun ModuleList(
                     if (shortcutIconUri == defaultShortcutIconUri) {
                         item {
                             SettingsBaseWidget(
-                                icon = Icons.TwoTone.Photo,
+                                iconPlaceholder = false,
                                 isOnBackground = false,
                                 title = stringResource(id = R.string.module_shortcut_icon_pick),
                                 onClick = {
@@ -1088,7 +1053,7 @@ private fun ModuleList(
                     } else {
                         item {
                             SettingsBaseWidget(
-                                icon = Icons.TwoTone.Restore,
+                                iconPlaceholder = false,
                                 isOnBackground = false,
                                 title = stringResource(id = R.string.restore),
                                 onClick = {
@@ -1127,7 +1092,7 @@ private fun ModuleList(
                     if (hasExistingShortcut) {
                         item {
                             SettingsJumpPageWidget(
-                                icon = Icons.TwoTone.Delete,
+                                iconPlaceholder = false,
                                 renderBackgroundBlur = false,
                                 title = stringResource(id = R.string.module_shortcut_delete),
                                 onClick = {
@@ -1140,6 +1105,28 @@ private fun ModuleList(
                                 },
                             )
                         }
+                    }
+
+                    item {
+                        val settings = koinInject<SettingsPlatformRepository>()
+                        val moduleShortcutSchemeCopied = stringResource(R.string.module_shortcut_scheme_copied)
+
+                        SettingsJumpPageWidget(
+                            iconPlaceholder = false,
+                            renderBackgroundBlur = false,
+                            title = stringResource(R.string.module_shortcut_copy_scheme),
+                            onClick = {
+                                val currentModuleId = shortcutModuleId
+                                val type = selectedShortcutType
+                                if (currentModuleId.isNullOrBlank() || type == null) {
+                                    return@SettingsJumpPageWidget
+                                }
+                                val url = shortcut.buildShortcutUri(currentModuleId, type, settings.intentToken).toString()
+                                val clipboard = context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("KernelSU deep link", url))
+                                Toast.makeText(context, moduleShortcutSchemeCopied, Toast.LENGTH_SHORT).show()
+                            },
+                        )
                     }
                 }
                 Row(
@@ -1167,6 +1154,7 @@ private fun ModuleList(
                                     name = textFieldState.text.toString(),
                                     iconUri = shortcutIconUri,
                                     type = type,
+                                    intentToken = settings.intentToken,
                                 )
                             }
                             showShortcutDialog.value = false
@@ -1201,7 +1189,7 @@ fun ModuleItem(
     onCheckChanged: suspend (Boolean) -> Boolean,
     onUpdate: (InstalledModule) -> Unit,
     onClick: (InstalledModule) -> Unit,
-    onModuleAddShortcut: (InstalledModule) -> Unit,
+    onModuleAddShortcut: (InstalledModule, ShortcutType) -> Unit,
     showMoreModuleInfo: Boolean,
 ) {
     val themeConfig: ThemeConfig = koinInject()
@@ -1244,9 +1232,6 @@ fun ModuleItem(
                 .run {
                     if (module.hasActionScript || module.hasWebUi) {
                         combinedClickable(
-                            onLongClick = {
-                                onModuleAddShortcut(module)
-                            },
                             onClick = {
                                 if (module.hasWebUi) {
                                     onClick(module)
@@ -1424,22 +1409,36 @@ fun ModuleItem(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (module.hasActionScript) {
-                    FilledTonalButton(
-                        modifier = Modifier.defaultMinSize(minWidth = 52.dp, minHeight = 32.dp),
-                        enabled = !module.remove && isEnabled,
-                        onClick = {
-                            navigator.push(Route.ExecuteModuleAction(module.dirId))
-                            viewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
+                    Surface(
+                        modifier = Modifier
+                            .padding(vertical = 5.dp)
+                            .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
+                            .clip(ButtonDefaults.filledTonalShape)
+                            .combinedClickable(
+                                onClick = {
+                                    navigator.push(Route.ExecuteModuleAction(module.dirId, false))
+                                    viewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
+                                },
+                                onLongClick = {
+                                    onModuleAddShortcut(module, ShortcutType.Action)
+                                },
+                            ),
+                        color =
+                            if (!module.remove && isEnabled) {
+                                ButtonDefaults.filledTonalButtonColors().containerColor
+                            } else {
+                                ButtonDefaults.filledTonalButtonColors().disabledContainerColor
+                            },
+                        contentColor = if (!module.remove && isEnabled) {
+                            ButtonDefaults.filledTonalButtonColors().contentColor
+                        } else {
+                            ButtonDefaults.filledTonalButtonColors().disabledContentColor
                         },
-                        contentPadding = PaddingValues(
-                            start = 12.dp,
-                            top = 7.dp,
-                            end = 12.dp,
-                            bottom = 7.dp,
-                        ),
                     ) {
                         Icon(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .padding(12.dp, 7.dp, 12.dp, 7.dp),
                             imageVector = Icons.TwoTone.PlayArrow,
                             contentDescription = null,
                         )
@@ -1447,20 +1446,33 @@ fun ModuleItem(
                 }
 
                 if (module.hasWebUi) {
-                    FilledTonalButton(
-                        modifier = Modifier.defaultMinSize(minWidth = 52.dp, minHeight = 32.dp),
-                        enabled = !module.remove && isEnabled,
-                        onClick = { onClick(module) },
-                        interactionSource = interactionSource,
-                        contentPadding = PaddingValues(
-                            start = 12.dp,
-                            top = 7.dp,
-                            end = 12.dp,
-                            bottom = 7.dp,
-                        ),
+                    Surface(
+                        modifier = Modifier
+                            .padding(vertical = 5.dp)
+                            .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
+                            .clip(ButtonDefaults.filledTonalShape)
+                            .combinedClickable(
+                                onClick = { onClick(module) },
+                                onLongClick = {
+                                    onModuleAddShortcut(module, ShortcutType.WebUI)
+                                },
+                            ),
+                        color =
+                            if (!module.remove && isEnabled) {
+                                ButtonDefaults.filledTonalButtonColors().containerColor
+                            } else {
+                                ButtonDefaults.filledTonalButtonColors().disabledContainerColor
+                            },
+                        contentColor = if (!module.remove && isEnabled) {
+                            ButtonDefaults.filledTonalButtonColors().contentColor
+                        } else {
+                            ButtonDefaults.filledTonalButtonColors().disabledContentColor
+                        },
                     ) {
                         Icon(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .padding(12.dp, 7.dp, 12.dp, 7.dp),
                             imageVector = Icons.AutoMirrored.TwoTone.Wysiwyg,
                             contentDescription = null,
                         )
@@ -1470,39 +1482,61 @@ fun ModuleItem(
                 Spacer(modifier = Modifier.weight(1f, true))
 
                 if (updateUrl.isNotEmpty()) {
-                    Button(
-                        modifier = Modifier.defaultMinSize(minWidth = 52.dp, minHeight = 32.dp),
-                        enabled = !module.remove,
-                        onClick = { onUpdate(module) },
-                        shape = ButtonDefaults.textShape,
-                        contentPadding = PaddingValues(
-                            start = 12.dp,
-                            top = 7.dp,
-                            end = 12.dp,
-                            bottom = 7.dp,
-                        ),
+                    Surface(
+                        modifier = Modifier
+                            .padding(vertical = 5.dp)
+                            .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
+                            .clip(ButtonDefaults.filledTonalShape)
+                            .clickable {
+                                onUpdate(module)
+                            },
+                        color =
+                            if (!module.remove) {
+                                ButtonDefaults.filledTonalButtonColors().containerColor
+                            } else {
+                                ButtonDefaults.filledTonalButtonColors().disabledContainerColor
+                            },
+                        contentColor = if (!module.remove) {
+                            ButtonDefaults.filledTonalButtonColors().contentColor
+                        } else {
+                            ButtonDefaults.filledTonalButtonColors().disabledContentColor
+                        },
                     ) {
                         Icon(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .padding(12.dp, 7.dp, 12.dp, 7.dp),
                             imageVector = Icons.TwoTone.Download,
                             contentDescription = null,
                         )
                     }
                 }
 
-                FilledTonalButton(
-                    modifier = Modifier.defaultMinSize(minWidth = 52.dp, minHeight = 32.dp),
-                    onClick = { onUninstallClicked(module) },
-                    contentPadding = PaddingValues(
-                        start = 12.dp,
-                        top = 9.dp,
-                        end = 12.dp,
-                        bottom = 7.dp,
-                    ),
+                Surface(
+                    modifier = Modifier
+                        .padding(vertical = 5.dp)
+                        .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
+                        .clip(ButtonDefaults.filledTonalShape)
+                        .clickable {
+                            onUninstallClicked(module)
+                        },
+                    color =
+                        if (!module.remove) {
+                            ButtonDefaults.filledTonalButtonColors().containerColor
+                        } else {
+                            ButtonDefaults.filledTonalButtonColors().disabledContainerColor
+                        },
+                    contentColor = if (!module.remove) {
+                        ButtonDefaults.filledTonalButtonColors().contentColor
+                    } else {
+                        ButtonDefaults.filledTonalButtonColors().disabledContentColor
+                    },
                 ) {
                     if (!module.remove) {
                         Icon(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .padding(12.dp, 7.dp, 12.dp, 7.dp),
                             imageVector = Icons.TwoTone.Delete,
                             contentDescription = null,
                         )
@@ -1510,7 +1544,8 @@ fun ModuleItem(
                         Icon(
                             modifier = Modifier
                                 .size(20.dp)
-                                .rotate(180f),
+                                .rotate(180f)
+                                .padding(12.dp, 7.dp, 12.dp, 7.dp),
                             imageVector = Icons.TwoTone.Refresh,
                             contentDescription = null,
                         )
@@ -1552,7 +1587,7 @@ private fun ModuleItemPreview() {
         { true },
         {},
         {},
-        {},
+        { _, _ -> },
         false,
     )
 }

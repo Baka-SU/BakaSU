@@ -20,7 +20,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -273,6 +275,17 @@ private fun ColorSlider(
     valueRange: ClosedFloatingPointRange<Float>,
     onValueChange: (Float) -> Unit,
 ) {
+    val sliderState = rememberSliderState(
+        value = value,
+        steps = 0,
+        trackRange = valueRange,
+    )
+    LaunchedEffect(value) {
+        if (sliderState.value != value) {
+            sliderState.value = value
+        }
+    }
+
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = label,
@@ -280,9 +293,8 @@ private fun ColorSlider(
             modifier = Modifier.padding(end = 12.dp),
         )
         Slider(
-            value = value,
+            state = sliderState,
             onValueChange = onValueChange,
-            valueRange = valueRange,
             modifier = Modifier.weight(1f),
         )
         Box(

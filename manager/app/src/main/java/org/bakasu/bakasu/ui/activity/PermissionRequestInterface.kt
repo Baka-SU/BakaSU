@@ -1,7 +1,5 @@
 package org.bakasu.bakasu.ui.activity
 
-import androidx.activity.compose.ManagedActivityResultLauncher
-
 /**
  * @author AlexLiuDev233
  */
@@ -12,7 +10,7 @@ interface PermissionRequestInterface {
      * @param permission the permission should be request
      * @param callback   callback when request is finished, true = success, false = failed
      * @param requestDescription when android require provide description, what description should provide to user?
-     * @see ManagedActivityResultLauncher
+     * @see androidx.activity.compose.ManagedActivityResultLauncher
      */
     fun requestPermission(
         permission: String,
@@ -26,7 +24,7 @@ interface PermissionRequestInterface {
      * @param permissions the permissions should be request
      * @param callback   callback when request is finished, true = success, false = failed
      * @param requestDescription when android require provide description, what description should provide to user?
-     * @see ManagedActivityResultLauncher
+     * @see androidx.activity.compose.ManagedActivityResultLauncher
      */
     fun requestPermissions(
         permissions: Array<String>,

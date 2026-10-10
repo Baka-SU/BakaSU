@@ -51,6 +51,7 @@ data class SuperUserUiState(
 )
 
 sealed interface SuperUserUiAction {
+    data object LoadInitialData : SuperUserUiAction
     data object Refresh : SuperUserUiAction
     data class BackupAllowlist(val uri: String) : SuperUserUiAction
     data class RestoreAllowlist(val uri: String) : SuperUserUiAction
@@ -138,6 +139,8 @@ class SuperUserViewModel(
 
     fun dispatch(action: SuperUserUiAction) {
         when (action) {
+            SuperUserUiAction.LoadInitialData -> if (refreshJob == null) refresh()
+
             SuperUserUiAction.Refresh -> refresh()
 
             is SuperUserUiAction.BackupAllowlist -> viewModelScope.launch {

@@ -227,7 +227,7 @@ fun SettingsBaseWidget(
 
     val shapes = ListItemDefaults.shapes(
         shape = baseShape,
-        pressedShape = RoundedCornerShape(16.dp),
+        pressedShape = if (themeConfig.isEnableBlurExp) baseShape else RoundedCornerShape(16.dp),
         selectedShape = baseShape,
         focusedShape = baseShape,
         hoveredShape = baseShape,

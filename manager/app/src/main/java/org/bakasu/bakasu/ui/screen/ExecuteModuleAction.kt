@@ -29,7 +29,6 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -63,7 +62,7 @@ import org.koin.core.parameter.parametersOf
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable
-fun ExecuteModuleActionScreen(moduleId: String) {
+fun ExecuteModuleActionScreen(moduleId: String, fromShortcut: Boolean) {
     val viewModel = koinViewModel<ExecuteModuleActionViewModel>(
         parameters = { parametersOf(moduleId) },
     )
@@ -81,11 +80,6 @@ fun ExecuteModuleActionScreen(moduleId: String) {
 
     BackHandler(enabled = moduleActionState.running) {
         // Disable back button if action is running
-    }
-
-    val fromShortcut = remember(activity) {
-        val intent = activity?.intent
-        intent?.getStringExtra("shortcut_type") == "module_action"
     }
 
     LaunchedEffect(viewModel, fromShortcut) {

@@ -2,7 +2,6 @@ package org.bakasu.bakasu.ui
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -14,22 +13,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.StartupState
 import org.bakasu.bakasu.domain.usecase.ApplyLanguageUseCase
 import org.bakasu.bakasu.domain.usecase.EnsureManagerInstalledUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveStartupStateUseCase
-import org.bakasu.bakasu.ui.activity.util.ThemeChangeContentObserver
 import org.bakasu.bakasu.ui.activity.util.ThemeUtils
-import org.bakasu.bakasu.ui.component.ZipFileInfo
 import org.bakasu.bakasu.ui.theme.KernelSUTheme
 import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
 import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
@@ -38,13 +32,10 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
-import org.bakasu.bakasu.ui.viewmodel.SuperUserUiAction
-import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
-    private val superUserViewModel: SuperUserViewModel by viewModel()
     private val homeViewModel: HomeViewModel by viewModel()
     private val moduleViewModel: ModuleViewModel by viewModel()
     private val settingsViewModel: SettingsViewModel by viewModel()
@@ -54,17 +45,13 @@ class MainActivity : ComponentActivity() {
     private val applyLanguage: ApplyLanguageUseCase by inject()
     private val startupState by lazy { observeStartupState() }
 
-    private var showConfirmationDialog by mutableStateOf(false)
-    private var pendingZipFiles by mutableStateOf<List<ZipFileInfo>>(emptyList())
-
-    private lateinit var themeChangeObserver: ThemeChangeContentObserver
     private var isInitialized = false
 
     override fun attachBaseContext(newBase: Context?) {
         super.attachBaseContext(newBase?.let(applyLanguage::invoke))
     }
 
-    private val intentState = MutableStateFlow(0)
+    private val intentChannel = Channel<Intent>(capacity = Channel.BUFFERED)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
@@ -82,9 +69,14 @@ class MainActivity : ComponentActivity() {
             splashScreen.setKeepOnScreenCondition {
                 when (startupState.value) {
                     StartupState.Loading -> true
-                    StartupState.Ready -> false
+                    StartupState.Ready -> !homeViewModel.uiState.value.isInitialDataLoaded
                     is StartupState.Failed -> false
                 }
+            }
+
+            // Keep the home state active even when an incoming intent opens another screen.
+            lifecycleScope.launch {
+                homeViewModel.uiState.first { it.isInitialDataLoaded }
             }
 
             lifecycleScope.launch { ensureManagerInstalled() }
@@ -110,63 +102,17 @@ class MainActivity : ComponentActivity() {
 
             // Initialize app state once.
             if (!isInitialized) {
-                initializeViewModels()
                 initializeData()
                 isInitialized = true
             }
 
-            // Check if launched with a ZIP file
-            val zipUri: ArrayList<Uri>? = when (intent?.action) {
-                Intent.ACTION_SEND -> {
-                    val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableExtra(Intent.EXTRA_STREAM)
-                    }
-                    uri?.let { arrayListOf(it) }
-                }
-
-                Intent.ACTION_SEND_MULTIPLE -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
-                    }
-                }
-
-                else -> when {
-                    intent?.data != null -> arrayListOf(intent.data!!)
-
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
-                        intent.getParcelableArrayListExtra("uris", Uri::class.java)
-                    }
-
-                    else -> {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableArrayListExtra("uris")
-                    }
-                }
-            }
+            if (savedInstanceState == null) intent?.let { intentChannel.trySend(it) }
 
             setContent {
                 KernelSUTheme {
                     when (val state = startupState.collectAsStateWithLifecycle().value) {
                         is StartupState.Failed -> StartupFailureContent(state.message)
-
-                        else -> {
-                            val intentId by intentState.collectAsState()
-                            NavContainer(
-                                zipUri = zipUri,
-                                intentId = intentId,
-                                settingsViewModel = settingsViewModel,
-                                showConfirmationDialog = showConfirmationDialog,
-                                pendingZipFiles = pendingZipFiles,
-                                onShowConfirmationDialogChange = { showConfirmationDialog = it },
-                                onPendingZipFilesChange = { pendingZipFiles = it },
-                            )
-                        }
+                        else -> NavContainer(settingsViewModel, intentChannel)
                     }
                 }
             }
@@ -178,33 +124,26 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        // Increment intentState to trigger LaunchedEffect re-execution
-        intentState.value += 1
-    }
-
-    private fun initializeViewModels() {
-        // Register theme change observer.
-        themeChangeObserver = themeUtils.registerThemeChangeObserver(this)
+        intentChannel.trySend(intent)
     }
 
     private fun initializeData() {
         lifecycleScope.launch {
             try {
                 homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
-                superUserViewModel.dispatch(SuperUserUiAction.Refresh)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
 
         // Initialize theme settings.
-        themeUtils.initializeThemeSettings(this, settingsViewModel)
+        themeUtils.initializeThemeSettings(settingsViewModel)
     }
 
     override fun onResume() {
         try {
             super.onResume()
-            themeUtils.onActivityResume(this)
+            themeUtils.onActivityResume()
             synchronizeUiSettings()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -222,15 +161,6 @@ class MainActivity : ComponentActivity() {
         try {
             super.onPause()
             themeUtils.onActivityPause()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    override fun onDestroy() {
-        try {
-            themeUtils.unregisterThemeChangeObserver(this, themeChangeObserver)
-            super.onDestroy()
         } catch (e: Exception) {
             e.printStackTrace()
         }
