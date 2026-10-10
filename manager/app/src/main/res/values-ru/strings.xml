@@ -565,4 +565,5 @@
     <string name="more_than_one_kernel_file">Входные файлы содержат более одного файла AnyKernel3</string>
     <string name="module_shortcut_copy_scheme">Копировать URL-схему</string>
     <string name="module_shortcut_scheme_copied">URL-схема скопирована</string>
+    <string name="internal_server_error">Ошибка сервера</string>
 </resources>
