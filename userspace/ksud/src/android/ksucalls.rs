@@ -280,16 +280,29 @@ pub fn set_sepolicy(payload: *const u8, payload_len: u64) -> Result<i32> {
     ksuctl(uapi::KSU_IOCTL_SET_SEPOLICY_RUST, &raw mut ioctl_cmd)
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct FeatureState {
+    pub value: u64,
+    pub supported: bool,
+    /// Forced by boot config (ksu_config), the kernel refuses to change it
+    pub forced: bool,
+}
+
 /// Get feature value and support status from kernel
-/// Returns (value, supported)
-pub fn get_feature(feature_id: u32) -> Result<(u64, bool)> {
+pub fn get_feature(feature_id: u32) -> Result<FeatureState> {
     let mut cmd = uapi::ksu_get_feature_cmd {
         feature_id,
         value: 0,
         supported: 0,
     };
-    ksuctl(uapi::KSU_IOCTL_GET_FEATURE_RUST, &raw mut cmd)?;
-    Ok((cmd.value, cmd.supported != 0))
+    ksuctl(uapi::KSU_IOCTL_GET_FEATURE, &raw mut cmd)?;
+    let flags = u32::from(cmd.supported);
+    Ok(FeatureState {
+        value: cmd.value,
+        // older kernels report 1 for supported, matching the flag
+        supported: flags & uapi::KSU_FEATURE_FLAG_SUPPORTED != 0,
+        forced: flags & uapi::KSU_FEATURE_FLAG_FORCED != 0,
+    })
 }
 
 /// Set feature value in kernel

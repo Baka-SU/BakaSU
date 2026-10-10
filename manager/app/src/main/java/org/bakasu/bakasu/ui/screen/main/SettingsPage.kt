@@ -208,6 +208,7 @@ fun SettingsPage(bottomPadding: Dp) {
                                 val suSummary = when (uiState.suStatus) {
                                     "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
                                     "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                    "forced" -> stringResource(id = R.string.feature_status_forced_summary)
                                     else -> stringResource(id = R.string.settings_sucompat_summary)
                                 }
                                 SettingsChooseWidget(
@@ -231,6 +232,7 @@ fun SettingsPage(bottomPadding: Dp) {
                                 val umountSummary = when (uiState.kernelUmountStatus) {
                                     "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
                                     "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                    "forced" -> stringResource(id = R.string.feature_status_forced_summary)
                                     else -> stringResource(id = R.string.settings_kernel_umount_summary)
                                 }
                                 SettingsSwitchWidget(
@@ -267,12 +269,11 @@ fun SettingsPage(bottomPadding: Dp) {
                                 )
                             }
 
-                            item(
-                                visible = Build.VERSION.SDK_INT > Build.VERSION_CODES.Q,
-                            ) {
+                            item {
                                 val adbRootSummary = when (uiState.adbRootStatus) {
                                     "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
                                     "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                    "forced" -> stringResource(id = R.string.feature_status_forced_summary)
                                     else -> stringResource(id = R.string.settings_adb_root_summary)
                                 }
 
@@ -314,6 +315,7 @@ fun SettingsPage(bottomPadding: Dp) {
                                 val sulogSummary = when (uiState.sulogStatus) {
                                     "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
                                     "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                    "forced" -> stringResource(id = R.string.feature_status_forced_summary)
                                     else -> stringResource(id = R.string.settings_sulog_summary)
                                 }
                                 SettingsSwitchWidget(
@@ -332,6 +334,7 @@ fun SettingsPage(bottomPadding: Dp) {
                                 val selinuxHideSummary = when (uiState.selinuxHideStatus) {
                                     "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
                                     "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                    "forced" -> stringResource(id = R.string.feature_status_forced_summary)
                                     else -> stringResource(id = R.string.settings_selinux_hide_summary)
                                 }
                                 SettingsSwitchWidget(

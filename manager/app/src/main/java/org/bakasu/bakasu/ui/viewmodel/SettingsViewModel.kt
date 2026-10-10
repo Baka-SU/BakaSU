@@ -187,15 +187,20 @@ class SettingsViewModel(
         viewModelScope.launch {
             val features = getKernelFeatureSettings()
             val platform = getPlatformFeatureStatus()
-            val suCompatMode = platform.suCompatPersistValue?.let { value ->
-                if (value == 0L) {
-                    2
-                } else if (!features.suEnabled) {
-                    1
-                } else {
-                    0
-                }
-            } ?: if (!features.suEnabled) 1 else 0
+            // A forced feature value overrides the persisted configuration.
+            val suCompatMode = if (platform.suStatus == "forced") {
+                if (features.suEnabled) 0 else 2
+            } else {
+                platform.suCompatPersistValue?.let { value ->
+                    if (value == 0L) {
+                        2
+                    } else if (!features.suEnabled) {
+                        1
+                    } else {
+                        0
+                    }
+                } ?: if (!features.suEnabled) 1 else 0
+            }
             mutableState.update {
                 it.copy(
                     suCompatMode = suCompatMode,
@@ -203,9 +208,17 @@ class SettingsViewModel(
                     kernelUmountStatus = platform.kernelUmountStatus,
                     isKernelUmountEnabled = features.kernelUmountEnabled,
                     adbRootStatus = platform.adbRootStatus,
-                    isAdbRootEnabled = platform.adbRootEnabled,
+                    isAdbRootEnabled = if (platform.adbRootStatus == "forced") {
+                        platform.adbRootValue == 1L
+                    } else {
+                        platform.adbRootEnabled
+                    },
                     sulogStatus = platform.sulogStatus,
-                    isSuLogEnabled = features.suLogEnabled,
+                    isSuLogEnabled = if (platform.sulogStatus == "forced") {
+                        platform.sulogValue == 1L
+                    } else {
+                        features.suLogEnabled
+                    },
                     selinuxHideStatus = platform.selinuxHideStatus,
                     isSelinuxHideEnabled = features.selinuxHideEnabled,
                     defaultUmountModules = features.defaultUmountModules,

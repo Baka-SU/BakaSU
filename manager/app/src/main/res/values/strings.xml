@@ -239,6 +239,7 @@
     <string name="settings_sulog">SU Log</string>
     <string name="settings_sulog_summary">Record root-related events into KernelSU sulog files.</string>
     <string name="feature_status_managed_summary">This feature is managed by a module</string>
+    <string name="feature_status_forced_summary">This feature is forced by boot configuration and cannot be changed</string>
     <string name="settings_mode_default">Default</string>
     <string name="theme_settings">Theme settings</string>
     <string name="settings_custom_monospace_font">Use built-in monospace font</string>

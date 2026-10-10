@@ -240,9 +240,15 @@ class SettingsPlatformRepository(
             adbRootEnabled = runCatching {
                 ksuCliRepository.getFeaturePersistValue("adb_root") == 1L
             }.getOrDefault(false),
+            adbRootValue = runCatching {
+                ksuCliRepository.getFeatureValue("adb_root")
+            }.getOrNull(),
             sulogStatus = runCatching {
                 ksuCliRepository.getFeatureStatus("sulog")
             }.getOrDefault(""),
+            sulogValue = runCatching {
+                ksuCliRepository.getFeatureValue("sulog")
+            }.getOrNull(),
             selinuxHideStatus = runCatching {
                 ksuCliRepository.getFeatureStatus("selinux_hide")
             }.getOrDefault(""),

@@ -5,7 +5,7 @@ use log::{error, info, warn};
 
 use crate::{
     android::{
-        dynamic_manager, ksucalls,
+        dynamic_manager, feature, ksucalls,
         module::{self, ScriptWait, handle_updated_modules, metamodule, prune_modules},
         restorecon,
         utils::{self, is_safe_mode},
@@ -93,6 +93,8 @@ pub fn on_post_fs_data() -> Result<()> {
     if let Err(e) = crate::android::profile::apply_sepolies() {
         warn!("apply root profile sepolicy failed: {e}");
     }
+
+    feature::init_forced_features();
 
     // load feature config
     if is_safe_mode() {

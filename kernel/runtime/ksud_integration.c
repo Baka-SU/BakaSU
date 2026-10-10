@@ -42,6 +42,7 @@
 #include "ksud.h"
 #include "ksud_boot.h"
 #include "compat/kernel_compat.h"
+#include "policy/feature.h"
 #include "selinux/selinux.h"
 #include "manager/throne_tracker.h"
 #ifdef CONFIG_KSU_TRACEPOINT_HOOK
@@ -278,6 +279,8 @@ void ksu_handle_execveat_ksud(const char *filename, struct user_arg_ptr *argv, s
             apply_kernelsu_rules();
             cache_sid();
             setup_ksu_cred();
+            // after apply_kernelsu_rules, so that selinux_hide has its sepolicy backup
+            ksu_feature_apply_forced();
             init_second_stage_executed = true;
         }
     } else if (unlikely(!memcmp(filename, old_system_init, sizeof(old_system_init) - 1) && argv)) {

@@ -496,4 +496,19 @@ static inline struct file *ksu_filp_open_nonotify(const char *path, int flags)
 #define symtab_insert(s, name, datum) hashtab_insert((s)->table, name, datum)
 #endif
 
+// Add in 3.16, https://github.com/torvalds/linux/commit/11d200e95f3e84c1102e4cc9863a3614fd41f3ad
+/**
+ * strchrnul - Find and return a character in a string, or end of string
+ * @s: The string to be searched
+ * @c: The character to search for
+ *
+ * Returns pointer to first occurrence of 'c' in s. If c is not found, then
+ * return a pointer to the null byte at the end of s.
+ */
+__weak char *strchrnul(const char *s, int c)
+{
+    while (*s && *s != (char)c)
+        s++;
+    return (char *)s;
+}
 #endif

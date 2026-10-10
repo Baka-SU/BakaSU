@@ -181,10 +181,15 @@ class KsuCliRepository(context: Context) {
         out.firstOrNull()?.trim().orEmpty()
     }
 
-    suspend fun getFeaturePersistValue(feature: String): Long? = withContext(Dispatchers.IO) {
+    suspend fun getFeaturePersistValue(feature: String): Long? = readFeatureValue("--config $feature")
+
+    // Current value in kernel
+    suspend fun getFeatureValue(feature: String): Long? = readFeatureValue(feature)
+
+    private suspend fun readFeatureValue(args: String): Long? = withContext(Dispatchers.IO) {
         val shell = getRootShell()
         val out = shell.newJob()
-            .add("${getKsuDaemonPath()} feature get --config $feature")
+            .add("${getKsuDaemonPath()} feature get $args")
             .to(ArrayList<String>(), null)
             .exec().out
         val valueLine =

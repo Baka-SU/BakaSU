@@ -113,6 +113,7 @@ pub fn run(package_name: &String, kmi: Option<String>, allow_shell: bool) -> Res
     }
 
     // 7. Initialize features
+    crate::android::feature::init_forced_features();
     if let Err(e) = crate::android::feature::init_features() {
         warn!("init features failed: {e}");
     }

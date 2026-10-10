@@ -533,6 +533,12 @@ private fun SulogWarningCardPreview() {
             ),
             actions = actions,
         )
+        SulogStatusSection(
+            state = SulogScreenState(
+                sulogStatus = "forced",
+            ),
+            actions = actions,
+        )
     }
 }
 
@@ -566,6 +572,12 @@ private fun SulogWarningCardTranslationPreview() {
             state = SulogScreenState(
                 sulogStatus = "supported",
                 isSulogEnabled = false,
+            ),
+            actions = actions,
+        )
+        SulogStatusSection(
+            state = SulogScreenState(
+                sulogStatus = "forced",
             ),
             actions = actions,
         )
@@ -652,6 +664,11 @@ private fun SulogStatusSection(
 
             "managed" -> {
                 WarningCard(message = stringResource(R.string.feature_status_managed_summary))
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            "forced" -> {
+                WarningCard(message = stringResource(R.string.feature_status_forced_summary))
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
