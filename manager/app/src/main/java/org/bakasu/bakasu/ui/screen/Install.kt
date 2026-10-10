@@ -13,8 +13,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,7 +30,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
@@ -40,6 +37,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
@@ -52,7 +50,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,12 +61,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.LkmSelection
 import org.bakasu.bakasu.ui.component.DialogHandle
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
+import org.bakasu.bakasu.ui.component.TopBarScrim
+import org.bakasu.bakasu.ui.component.TopBarTitlePill
+import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
@@ -77,6 +76,7 @@ import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
 import org.bakasu.bakasu.ui.component.settings.SettingsChooseDialog
 import org.bakasu.bakasu.ui.component.settings.SettingsChooseWidget
+import org.bakasu.bakasu.ui.component.transparentTopAppBarColors
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.rememberMaterial3BlurBackdrop
@@ -125,23 +125,19 @@ fun InstallScreen(
     }
 
     val scrollBehavior =
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-
-    LaunchedEffect(scrollBehavior) {
-        snapshotFlow { scrollBehavior.state.heightOffsetLimit }
-            .first { it < 0f }
-        scrollBehavior.state.heightOffset = scrollBehavior.state.heightOffsetLimit
-    }
+        TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         topBar = {
-            TopBar(
-                onBack = { navigator.pop() },
-                scrollBehavior = scrollBehavior,
-                selectedTab = pagerState.currentPage,
-                onTabSelected = { scope.launch { pagerState.animateScrollToPage(it) } },
-            )
+            TopBarScrim {
+                TopBar(
+                    onBack = { navigator.pop() },
+                    scrollBehavior = scrollBehavior,
+                    selectedTab = pagerState.currentPage,
+                    onTabSelected = { scope.launch { pagerState.animateScrollToPage(it) } },
+                )
+            }
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -808,20 +804,19 @@ private fun TopBar(
     onTabSelected: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.blurEffect()) {
-        LargeFlexibleTopAppBar(
+        TopAppBar(
             title = {
-                Text(stringResource(R.string.install))
+                TopBarTitlePill {
+                    Text(stringResource(R.string.install))
+                }
             },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent,
-                scrolledContainerColor = Color.Transparent,
-            ),
+            colors = transparentTopAppBarColors(),
             navigationIcon = {
                 AppBackButton(
                     onClick = onBack,
                 )
             },
-            windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
+            windowInsets = pillTopAppBarWindowInsets(),
             scrollBehavior = scrollBehavior,
         )
 

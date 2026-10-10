@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,16 +21,15 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -54,10 +51,14 @@ import com.mikepenz.aboutlibraries.util.withJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.component.TopBarScrim
+import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.WarningCard
+import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
 import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
+import org.bakasu.bakasu.ui.component.transparentTopAppBarColors
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.screen.LabelText
 import org.bakasu.bakasu.ui.theme.CardConfig
@@ -70,19 +71,9 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun OpenSourceLicenseScreen() {
-    val themeConfig: ThemeConfig = koinInject()
-    val cardConfig: CardConfig = koinInject()
     val navigator = LocalNavigator.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
-        rememberTopAppBarState(
-            initialHeightOffset = -154f,
-            initialHeightOffsetLimit = -154f, // from debugger
-        ),
-    )
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
-    LaunchedEffect(Unit) {
-        scrollBehavior.state.heightOffset = scrollBehavior.state.heightOffsetLimit
-    }
 
     // from https://github.com/mikepenz/AboutLibraries#setup
     val context = LocalContext.current
@@ -102,36 +93,25 @@ fun OpenSourceLicenseScreen() {
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
         topBar = {
-            LargeFlexibleTopAppBar(
-                modifier = Modifier.blurEffect(),
-                windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
-                title = { Text(text = stringResource(id = R.string.open_source_license)) },
-                scrollBehavior = scrollBehavior,
-                navigationIcon = {
-                    AppBackButton(
-                        onClick = { navigator.pop() },
-                        icon = Icons.AutoMirrored.TwoTone.ArrowBack,
-                        modifier = Modifier.size(36.dp),
-                        containerColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                            alpha = 0.1f,
-                        ),
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor =
-                        if (themeConfig.isEnableBlur) {
-                            Color.Transparent
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                        },
-                    scrolledContainerColor =
-                        if (themeConfig.isEnableBlur) {
-                            Color.Transparent
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                        },
-                ),
-            )
+            TopBarScrim {
+                TopAppBar(
+                    windowInsets = pillTopAppBarWindowInsets(),
+                    title = {
+                        TopBarTitlePill {
+                            Text(text = stringResource(id = R.string.open_source_license))
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                    navigationIcon = {
+                        AppBackButton(
+                            onClick = { navigator.pop() },
+                            icon = Icons.AutoMirrored.TwoTone.ArrowBack
+                        )
+                    },
+                    colors = transparentTopAppBarColors(),
+                )
+        
+            }
         },
     ) { paddingValues ->
         LazyColumn(

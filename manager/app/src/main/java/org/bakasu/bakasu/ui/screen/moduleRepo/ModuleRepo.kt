@@ -41,7 +41,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.RadioButton
@@ -97,6 +96,8 @@ import org.bakasu.bakasu.ui.component.DialogHandle
 import org.bakasu.bakasu.ui.component.NetworkRefreshContent
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
@@ -105,6 +106,7 @@ import org.bakasu.bakasu.ui.navigation.Navigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.screen.LabelText
 import org.bakasu.bakasu.ui.theme.CardConfig
+import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
@@ -138,7 +140,7 @@ fun ModuleRepoScreen() {
     val snackBarHost = LocalSnackbarHost.current
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState),
+        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     )
     val currentModuleForChooseDialog = remember { mutableStateOf<CatalogModule?>(null) }
     val chooseDialog = rememberCustomDialog({ dismiss ->
@@ -155,7 +157,7 @@ fun ModuleRepoScreen() {
     val refreshModules = { viewModel.dispatch(ModuleRepoUiAction.Refresh) }
 
     LaunchedEffect(Unit) {
-        scrollBehavior.state.heightOffset = scrollBehavior.state.heightOffsetLimit
+
     }
 
     ActivityResumeEffect {
@@ -166,35 +168,38 @@ fun ModuleRepoScreen() {
 
     Scaffold(
         topBar = {
-            SearchAppBar(
-                title = stringResource(R.string.module_repo),
-                searchText = uiState.search,
-                onSearchTextChange = { query ->
-                    viewModel.dispatch(ModuleRepoUiAction.Search(query))
-                },
-                dropdownContent = {
-                    IconButton(
-                        onClick = { showDropdown = true },
-                    ) {
-                        Icon(
-                            imageVector = Icons.TwoTone.MoreVert,
-                            contentDescription = stringResource(id = R.string.settings),
-                        )
+            TopBarScrim {
+                SearchAppBar(
+                    title = stringResource(R.string.module_repo),
+                    searchText = uiState.search,
+                    onSearchTextChange = { query ->
+                        viewModel.dispatch(ModuleRepoUiAction.Search(query))
+                    },
+                    dropdownContent = {
+                        TopBarIconPill(
+                            onClick = { showDropdown = true },
+                        ) {
+                            Icon(
+                                imageVector = Icons.TwoTone.MoreVert,
+                                contentDescription = stringResource(id = R.string.settings),
+                            )
 
-                        ModuleRepoDropdown(
-                            expanded = showDropdown,
-                            onDismissRequest = { showDropdown = false },
-                            viewModel = viewModel,
-                            uiState = uiState,
-                        )
-                    }
-                },
-                onBackClick = {
-                    navigator.pop()
-                },
-                scrollBehavior = scrollBehavior,
-                searchBarPlaceHolderText = stringResource(R.string.search_modules),
-            )
+                            ModuleRepoDropdown(
+                                expanded = showDropdown,
+                                onDismissRequest = { showDropdown = false },
+                                viewModel = viewModel,
+                                uiState = uiState,
+                            )
+                        }
+                    },
+                    onBackClick = {
+                        navigator.pop()
+                    },
+                    scrollBehavior = scrollBehavior,
+                    searchBarPlaceHolderText = stringResource(R.string.search_modules),
+                )
+        
+            }
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -312,10 +317,10 @@ fun ModuleRepoScreen() {
                     modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                     contentPadding = remember {
                         PaddingValues(
-                            start = 16.dp,
+                            start = ScreenEdgePadding,
                             top = 0.dp,
-                            end = 16.dp,
-                            bottom = 0.dp,
+                            end = ScreenEdgePadding,
+                            bottom = 0.dp
                         )
                     },
                 ) {
@@ -403,8 +408,8 @@ fun OnlineModuleItem(
     ) {
         Column(
             modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .padding(top = 12.dp),
+                .padding(horizontal = ScreenEdgePadding)
+                .padding(top = 12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

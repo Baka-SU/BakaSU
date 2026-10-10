@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,13 +20,13 @@ import androidx.compose.material.icons.twotone.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -52,14 +50,19 @@ import androidx.core.content.ContextCompat
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.component.TopBarScrim
+import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.WarningCard
+import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.component.settings.SettingsJumpPageWidget
+import org.bakasu.bakasu.ui.component.transparentTopAppBarColors
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Navigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.theme.CardConfig
+import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
@@ -70,46 +73,32 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AboutScreen() {
-    val themeConfig: ThemeConfig = koinInject()
     val cardConfig: CardConfig = koinInject()
     val navigator = LocalNavigator.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
-        rememberTopAppBarState(
-            initialHeightOffset = -154f,
-            initialHeightOffsetLimit = -154f, // from debugger
-        ),
-    )
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         topBar = {
-            LargeFlexibleTopAppBar(
-                modifier = Modifier.blurEffect(),
-                windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
-                title = { Text(text = stringResource(id = R.string.about)) },
-                scrollBehavior = scrollBehavior,
-                navigationIcon = {
-                    AppBackButton(
-                        onClick = {
-                            navigator.pop()
-                        },
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor =
-                        if (themeConfig.isEnableBlur) {
-                            Color.Transparent
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                        },
-                    scrolledContainerColor =
-                        if (themeConfig.isEnableBlur) {
-                            Color.Transparent
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                        },
-                ),
-            )
+            TopBarScrim {
+                TopAppBar(
+                    windowInsets = pillTopAppBarWindowInsets(),
+                    title = {
+                        TopBarTitlePill {
+                            Text(text = stringResource(id = R.string.about))
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                    navigationIcon = {
+                        AppBackButton(
+                            onClick = {
+                                navigator.pop()
+                            },
+                        )
+                    },
+                    colors = transparentTopAppBarColors(),
+                )
+            }
         },
         contentColor = MaterialTheme.colorScheme.onSurface,
         containerColor = Color.Transparent,
@@ -129,8 +118,8 @@ fun AboutScreen() {
             item {
                 Box(
                     modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 8.dp, bottom = 12.dp),
+                        .padding(horizontal = ScreenEdgePadding)
+                        .padding(top = 8.dp, bottom = 12.dp)
                 ) {
                     StatusCard()
                 }
@@ -139,7 +128,7 @@ fun AboutScreen() {
             item {
                 WarningCard(
                     modifier = Modifier
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = ScreenEdgePadding)
                         .padding(top = 8.dp, bottom = 12.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(
                         alpha = cardConfig.cardAlpha,

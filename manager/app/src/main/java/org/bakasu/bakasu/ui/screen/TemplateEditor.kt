@@ -3,8 +3,6 @@ package org.bakasu.bakasu.ui.screen
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,10 +15,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
@@ -52,10 +49,15 @@ import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.toRawFlags
 import org.bakasu.bakasu.toRootProfileFlags
 import org.bakasu.bakasu.ui.component.NetworkRefreshContent
+import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
+import org.bakasu.bakasu.ui.component.TopBarTitlePill
+import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.profile.rootProfileConfig
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.component.settings.SettingsTextFieldWidget
+import org.bakasu.bakasu.ui.component.transparentTopAppBarColors
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
@@ -88,11 +90,8 @@ fun TemplateEditorScreen(
     val saveTemplateFailed = stringResource(id = R.string.app_profile_template_save_failed)
 
     val scrollBehavior =
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+        TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
-    LaunchedEffect(Unit) {
-        scrollBehavior.state.heightOffset = scrollBehavior.state.heightOffsetLimit
-    }
     LaunchedEffect(viewModel) {
         viewModel.events.collectLatest { event ->
             when (event) {
@@ -111,36 +110,38 @@ fun TemplateEditorScreen(
 
     Scaffold(
         topBar = {
-            val author =
-                if (template.author.isNotEmpty()) "@${template.author}" else ""
-            val readOnlyHint = if (readOnly) {
-                " - ${stringResource(id = R.string.app_profile_template_readonly)}"
-            } else {
-                ""
-            }
-            val titleSummary = "${template.id}$author$readOnlyHint"
-
-            TopBar(
-                title = if (isCreation) {
-                    stringResource(R.string.app_profile_template_create)
-                } else if (readOnly) {
-                    stringResource(R.string.app_profile_template_view)
+            TopBarScrim {
+                val author =
+                    if (template.author.isNotEmpty()) "@${template.author}" else ""
+                val readOnlyHint = if (readOnly) {
+                    " - ${stringResource(id = R.string.app_profile_template_readonly)}"
                 } else {
-                    stringResource(R.string.app_profile_template_edit)
-                },
-                readOnly = readOnly,
-                summary = titleSummary,
-                onBack = dropUnlessResumed {
-                    if (readOnly) navigator.pop() else navigator.setResult("template_edit", true)
-                },
-                onDelete = {
-                    viewModel.dispatch(TemplateEditorUiAction.Delete)
-                },
-                onSave = {
-                    viewModel.dispatch(TemplateEditorUiAction.Save)
-                },
-                scrollBehavior = scrollBehavior,
-            )
+                    ""
+                }
+                val titleSummary = "${template.id}$author$readOnlyHint"
+
+                TopBar(
+                    title = if (isCreation) {
+                        stringResource(R.string.app_profile_template_create)
+                    } else if (readOnly) {
+                        stringResource(R.string.app_profile_template_view)
+                    } else {
+                        stringResource(R.string.app_profile_template_edit)
+                    },
+                    readOnly = readOnly,
+                    summary = titleSummary,
+                    onBack = dropUnlessResumed {
+                        if (readOnly) navigator.pop() else navigator.setResult("template_edit", true)
+                    },
+                    onDelete = {
+                        viewModel.dispatch(TemplateEditorUiAction.Delete)
+                    },
+                    onSave = {
+                        viewModel.dispatch(TemplateEditorUiAction.Save)
+                    },
+                    scrollBehavior = scrollBehavior
+                )
+            }
         },
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         containerColor = Color.Transparent,
@@ -297,21 +298,20 @@ private fun TopBar(
     onSave: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
-    LargeFlexibleTopAppBar(
-        modifier = Modifier.blurEffect(),
+    TopAppBar(
         title = {
-            Text(
-                text = title,
-            )
+            TopBarTitlePill {
+                Text(
+                    text = title
+                )
+            }
         },
-        subtitle = if (summary.isNotEmpty()) {
-            {
+        subtitle = {
+            if (summary.isNotEmpty()) {
                 Text(
                     text = summary,
                 )
             }
-        } else {
-            null
         },
         navigationIcon = {
             AppBackButton(
@@ -320,27 +320,24 @@ private fun TopBar(
         },
         actions = {
             if (readOnly) {
-                return@LargeFlexibleTopAppBar
+                return@TopAppBar
             }
-            IconButton(onClick = onDelete) {
+            TopBarIconPill(onClick = onDelete) {
                 Icon(
                     Icons.TwoTone.DeleteForever,
                     contentDescription = stringResource(id = R.string.app_profile_template_delete),
                 )
             }
-            IconButton(onClick = onSave) {
+            TopBarIconPill(onClick = onSave) {
                 Icon(
                     imageVector = Icons.TwoTone.Save,
                     contentDescription = stringResource(id = R.string.app_profile_template_save),
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors().copy(
-            containerColor = Color.Transparent,
-            scrolledContainerColor = Color.Transparent,
-        ),
-        windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
-        scrollBehavior = scrollBehavior,
+        colors = transparentTopAppBarColors(),
+        windowInsets = pillTopAppBarWindowInsets(),
+        scrollBehavior = scrollBehavior
     )
 }
 

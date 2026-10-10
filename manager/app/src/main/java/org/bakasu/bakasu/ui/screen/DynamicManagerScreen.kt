@@ -54,6 +54,7 @@ import org.bakasu.bakasu.ui.component.DialogHandle
 import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
@@ -81,7 +82,7 @@ fun DynamicManagerScreen() {
     val viewModel = koinViewModel<DynamicManagerViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState()),
+        TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     )
     val pullToRefreshState = rememberPullToRefreshState()
     val snackbarHost = LocalSnackbarHost.current
@@ -133,7 +134,6 @@ fun DynamicManagerScreen() {
     }
 
     LaunchedEffect(Unit) {
-        scrollBehavior.state.heightOffset = scrollBehavior.state.heightOffsetLimit
         viewModel.events.collectLatest { event ->
             when (event) {
                 is DynamicManagerUiEvent.OperationCompleted -> {
@@ -154,14 +154,17 @@ fun DynamicManagerScreen() {
     Scaffold(
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         topBar = {
-            SearchAppBar(
-                title = stringResource(R.string.dynamic_manager_title),
-                searchText = uiState.search,
-                onSearchTextChange = { viewModel.dispatch(DynamicManagerUiAction.Search(it)) },
-                onBackClick = { navigator.pop() },
-                scrollBehavior = scrollBehavior,
-                searchBarPlaceHolderText = stringResource(R.string.search_apps),
-            )
+            TopBarScrim {
+                SearchAppBar(
+                    title = stringResource(R.string.dynamic_manager_title),
+                    searchText = uiState.search,
+                    onSearchTextChange = { viewModel.dispatch(DynamicManagerUiAction.Search(it)) },
+                    onBackClick = { navigator.pop() },
+                    scrollBehavior = scrollBehavior,
+                    searchBarPlaceHolderText = stringResource(R.string.search_apps),
+                )
+        
+            }
         },
         snackbarHost = { SwipeableSnackbarHost(hostState = snackbarHost) },
         containerColor = Color.Transparent,
