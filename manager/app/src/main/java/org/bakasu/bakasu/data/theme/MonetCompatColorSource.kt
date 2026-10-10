@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.data.theme
 
 import android.app.Application
+import android.os.Build
 import android.util.TypedValue
 import com.kieronquinn.monetcompat.core.MonetCompat
 import com.kieronquinn.monetcompat.interfaces.MonetColorsChangedListener
@@ -12,11 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.bakasu.bakasu.data.AppSettingsRepository
 
 class MonetCompatColorSource(
     private val application: Application,
-    private val settings: AppSettingsRepository,
 ) {
     private val fallbackColor = TypedValue().let {
         application.theme.resolveAttribute(android.R.attr.colorPrimary, it, true)
@@ -27,14 +26,10 @@ class MonetCompatColorSource(
     private val refreshMutex = Mutex()
     private var monet: MonetCompat? = null
 
-    fun initialize() {
-        // Settings are preloaded before this call. No wallpaper IPC is needed for startup.
-        mutableSeedColor.value = settings.getInt("wallpaper_seed_color_cache", fallbackColor)
-    }
-
     fun seedColor(): Int = colors.value
 
     suspend fun refresh() = refreshMutex.withLock {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return@withLock
         try {
             val instance = withContext(Dispatchers.Main) {
                 monet ?: run {
@@ -70,8 +65,5 @@ class MonetCompatColorSource(
 
     private fun publish(color: Int) {
         mutableSeedColor.value = color
-        if (settings.getInt("wallpaper_seed_color_cache", fallbackColor) != color) {
-            settings.putInt("wallpaper_seed_color_cache", color)
-        }
     }
 }

@@ -37,6 +37,7 @@ import org.bakasu.bakasu.ui.activity.component.NavigationBar
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
 import org.bakasu.bakasu.ui.rememberMaterial3BlurBackdrop
 import org.bakasu.bakasu.ui.screen.BottomBarDestination
+import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalBlurState
@@ -71,6 +72,12 @@ fun MainScreen(
         initialPage = uiSelectedPage,
         pageCount = { pages.size },
     )
+    val backgroundRenderState = LocalBackgroundRenderState.current
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.isScrollInProgress }.collect {
+            backgroundRenderState.pagerScrollActive = it
+        }
+    }
     var userScrollEnabled by remember { mutableStateOf(true) }
     var animating by remember { mutableStateOf(false) }
     var animateJob by remember { mutableStateOf<Job?>(null) }
