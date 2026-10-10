@@ -135,11 +135,15 @@ class ThemeConfig(
     private val _isEnableBlur = mutableStateOf(false)
     var isEnableBlur: Boolean
         get() = _isEnableBlur.value && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-        set(value) { _isEnableBlur.value = value }
+        set(value) {
+            _isEnableBlur.value = value
+        }
     private val _isEnableBlurExp = mutableStateOf(false)
     var isEnableBlurExp: Boolean
         get() = _isEnableBlurExp.value && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-        set(value) { _isEnableBlurExp.value = value }
+        set(value) {
+            _isEnableBlurExp.value = value
+        }
     var isUseBackgroundSeedColor by mutableStateOf(false)
     var bottomBarStyle by mutableStateOf(BottomBarStyle.MATERIAL3_EXPRESSIVE)
 
