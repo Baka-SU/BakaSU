@@ -32,6 +32,7 @@ fun download(
     onDownloaded: (Uri) -> Unit = {},
     onDownloading: () -> Unit = {},
     onProgress: (Int) -> Unit = {},
+    canEnqueue: () -> Boolean = { true },
 ) {
     fun startDownloadFile(
         url: String,
@@ -40,6 +41,7 @@ fun download(
         onDownloading: () -> Unit,
         onProgress: (Int) -> Unit,
     ) {
+        if (!canEnqueue()) return
         onDownloading()
 
         val downloadId = enqueueDownload(url, fileName)

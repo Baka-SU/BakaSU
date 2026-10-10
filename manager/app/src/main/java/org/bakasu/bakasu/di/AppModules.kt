@@ -27,6 +27,7 @@ import org.bakasu.bakasu.data.module.ModuleActionRepository
 import org.bakasu.bakasu.data.module.ModuleCatalogRepository
 import org.bakasu.bakasu.data.module.ModulePreferencesRepository
 import org.bakasu.bakasu.data.module.ModuleRepository
+import org.bakasu.bakasu.data.module.RepositorySourceStore
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.data.network.WebResourceRepository
@@ -54,6 +55,7 @@ import org.bakasu.bakasu.data.theme.ThemeRepository
 import org.bakasu.bakasu.data.update.ManagerUpdateRepository
 import org.bakasu.bakasu.data.webui.WebUiRepository
 import org.bakasu.bakasu.domain.text.TextTransliterator
+import org.bakasu.bakasu.domain.usecase.AddModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.AddUmountPathUseCase
 import org.bakasu.bakasu.domain.usecase.ApplyLanguageUseCase
 import org.bakasu.bakasu.domain.usecase.BackupAllowlistUseCase
@@ -65,6 +67,7 @@ import org.bakasu.bakasu.domain.usecase.ClearDynamicManagerUseCase
 import org.bakasu.bakasu.domain.usecase.ConfigureSuLogUseCase
 import org.bakasu.bakasu.domain.usecase.ControlAppUseCase
 import org.bakasu.bakasu.domain.usecase.DeleteProfileTemplateUseCase
+import org.bakasu.bakasu.domain.usecase.DiscoverModuleRepositoriesUseCase
 import org.bakasu.bakasu.domain.usecase.EnableSulogUseCase
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.EnqueueManagerUpdateUseCase
@@ -86,6 +89,7 @@ import org.bakasu.bakasu.domain.usecase.GetInstallEnvironmentUseCase
 import org.bakasu.bakasu.domain.usecase.GetKernelFeatureSettingsUseCase
 import org.bakasu.bakasu.domain.usecase.GetKernelStatusUseCase
 import org.bakasu.bakasu.domain.usecase.GetManagerRuntimeInfoUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleReadmeUseCase
 import org.bakasu.bakasu.domain.usecase.GetPlatformFeatureStatusUseCase
 import org.bakasu.bakasu.domain.usecase.GetProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
@@ -107,11 +111,11 @@ import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDynamicManagerStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveInstalledModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveKernelFlashUseCase
-import org.bakasu.bakasu.domain.usecase.ObserveModuleCatalogOfflineUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveModuleCatalogRefreshingUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplateOfflineUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplateRefreshingUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplatesUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveStartupStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveSulogStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveSuperUserStateUseCase
@@ -124,8 +128,10 @@ import org.bakasu.bakasu.domain.usecase.RefreshProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshSulogUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshSuperUsersUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshUmountPathsUseCase
+import org.bakasu.bakasu.domain.usecase.RemoveModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.RemovePreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveUmountPathUseCase
+import org.bakasu.bakasu.domain.usecase.RenameModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.SaveModuleActionLogUseCase
 import org.bakasu.bakasu.domain.usecase.SaveProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.SelectDynamicManagerUseCase
@@ -166,6 +172,7 @@ import org.bakasu.bakasu.ui.viewmodel.MainIntentViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
+import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.SulogViewModel
@@ -264,6 +271,7 @@ val repositoryModule = module {
     singleOf(::BugreportRepository)
     singleOf(::UmountRepository)
     singleOf(::ModuleCatalogRepository)
+    singleOf(::RepositorySourceStore)
     singleOf(::ModuleRepository)
     singleOf(::ModulePreferencesRepository)
     singleOf(::ModuleActionRepository)
@@ -337,9 +345,14 @@ val useCaseModule = module {
     factoryOf(::GetSuperUserAppGroupUseCase)
     factoryOf(::ObserveCatalogModulesUseCase)
     factoryOf(::ObserveModuleCatalogRefreshingUseCase)
-    factoryOf(::ObserveModuleCatalogOfflineUseCase)
     factoryOf(::RefreshModuleCatalogUseCase)
     factoryOf(::GetCatalogModuleUseCase)
+    factoryOf(::GetModuleReadmeUseCase)
+    factoryOf(::ObserveRepositorySourcesUseCase)
+    factoryOf(::DiscoverModuleRepositoriesUseCase)
+    factoryOf(::AddModuleRepositoryUseCase)
+    factoryOf(::RenameModuleRepositoryUseCase)
+    factoryOf(::RemoveModuleRepositoryUseCase)
     factoryOf(::ObserveProfileTemplatesUseCase)
     factoryOf(::ObserveProfileTemplateRefreshingUseCase)
     factoryOf(::ObserveProfileTemplateOfflineUseCase)
@@ -414,8 +427,9 @@ val viewModelModule = module {
     viewModelOf(::ModuleViewModel)
     viewModelOf(::SuperUserViewModel)
     viewModelOf(::SuSFSViewModel)
-    viewModelOf(::ModuleRepoViewModel)
-    viewModel { parameters -> ModuleDetailViewModel(parameters[0], get()) }
+    viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
+    viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get()) }
+    viewModelOf(::RepositorySourcesViewModel)
     viewModelOf(::TemplateViewModel)
     viewModel { parameters ->
         TemplateEditorViewModel(

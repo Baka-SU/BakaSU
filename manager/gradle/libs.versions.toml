@@ -104,6 +104,7 @@ miuix-nav = { group = "top.yukonga.miuix.kmp", name = "miuix-nav", version.ref =
 miuix-blur = { group = "top.yukonga.miuix.kmp", name = "miuix-blur-android", version.ref = "miuix" }
 
 markdown = { group = "io.noties.markwon", name = "core", version.ref = "markdown" }
+markwon-tables = { group = "io.noties.markwon", name = "ext-tables", version.ref = "markdown" }
 
 lsposed-cxx = { module = "org.lsposed.libcxx:libcxx", version.ref = "ndk" }
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
