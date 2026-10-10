@@ -565,4 +565,5 @@
     <string name="both_kernel_and_module_files">Вхідні zip-архіви містять як anykernel3, так і модулі</string>
     <string name="module_shortcut_copy_scheme">Скопіювати схему URL</string>
     <string name="module_shortcut_scheme_copied">Схема URL скопійована</string>
+    <string name="internal_server_error">Внутрішня помилка сервера</string>
 </resources>

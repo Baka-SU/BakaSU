@@ -565,4 +565,5 @@
     <string name="more_than_one_kernel_file">Plus d\'un fichier anykernel3 trouvé parmi les fichiers en entrée</string>
     <string name="module_shortcut_copy_scheme">Copier le protocole d\'URL</string>
     <string name="module_shortcut_scheme_copied">Protocole d\'URL copié</string>
+    <string name="internal_server_error">Erreur interne du serveur</string>
 </resources>
