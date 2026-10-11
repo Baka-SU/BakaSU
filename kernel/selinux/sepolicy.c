@@ -78,12 +78,7 @@ static bool add_typeattribute(struct policydb *db, const char *type, const char 
 #define ksu_hashtab_for_each(htab, cur) ksu_hash_for_each(htab->htable, htab->size, cur)
 #endif
 
-// symtab_search is introduced on 5.9.0:
-// https://elixir.bootlin.com/linux/v5.9-rc1/source/security/selinux/ss/symtab.h
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) && !defined(KSU_COMPAT_HAS_SYMTAB_SEARCH)
-#define symtab_search(s, name) hashtab_search((s)->table, name)
-#define symtab_insert(s, name, datum) hashtab_insert((s)->table, name, datum)
-#endif
+// symtab_search / symtab_insert move to kernel_compat.h
 
 #define avtab_for_each(avtab, cur) ksu_hash_for_each(avtab.htable, avtab.nslot, cur)
 
