@@ -87,6 +87,8 @@
     <string name="settings_soft_reboot">使用软重启代替重启</string>
     <string name="settings_soft_reboot_summary">安装、更新或开关模块时使用软重启代替完整重启</string>
     <string name="settings_adb_root_summary">以 root 权限运行 adbd 守护进程</string>
+    <string name="settings_shell_su_adb_only">限制 Shell 仅可通过 ADB 获取 Root</string>
+    <string name="settings_shell_su_adb_only_summary">启用对 Shell 的额外检查：仅由 adbd 或 KernelSU Root 进程启动的 shell 进程可获取 Root</string>
     <string name="settings_selinux_hide">隐藏 SELinux 修改</string>
     <string name="settings_selinux_hide_summary">阻止应用检测 SELinux 修改</string>
     <string name="settings_selinux_hide_reboot_required">重启生效</string>

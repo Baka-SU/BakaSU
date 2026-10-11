@@ -158,6 +158,7 @@ import org.bakasu.bakasu.domain.usecase.SetManualDynamicManagerUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleRemovedUseCase
 import org.bakasu.bakasu.domain.usecase.SetSelinuxHideEnabledUseCase
+import org.bakasu.bakasu.domain.usecase.SetShellSuAdbOnlyEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetStringPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.SetStringSetPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.SetSuEnabledUseCase
@@ -343,6 +344,7 @@ val useCaseModule = module {
     factoryOf(::GetKernelFeatureSettingsUseCase)
     factoryOf(::SetSuEnabledUseCase)
     factoryOf(::SetKernelUmountEnabledUseCase)
+    factoryOf(::SetShellSuAdbOnlyEnabledUseCase)
     factoryOf(::ConfigureSuLogUseCase)
     factoryOf(::SetSelinuxHideEnabledUseCase)
     factoryOf(::SetDefaultUmountModulesUseCase)

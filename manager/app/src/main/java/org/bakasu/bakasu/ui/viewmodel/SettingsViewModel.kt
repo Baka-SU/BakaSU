@@ -26,6 +26,7 @@ import org.bakasu.bakasu.domain.usecase.LoadSettingsPlatformUseCase
 import org.bakasu.bakasu.domain.usecase.SetDefaultUmountModulesUseCase
 import org.bakasu.bakasu.domain.usecase.SetKernelUmountEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetSelinuxHideEnabledUseCase
+import org.bakasu.bakasu.domain.usecase.SetShellSuAdbOnlyEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetSuEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.UpdateAppearanceUseCase
 import org.bakasu.bakasu.domain.usecase.UpdatePlatformSettingUseCase
@@ -94,6 +95,8 @@ data class SettingsUiState(
     val autoJailbreakEnabled: Boolean = false,
     val adbRootStatus: String = "",
     val isAdbRootEnabled: Boolean = false,
+    val shellSuAdbOnlyStatus: String = "",
+    val isShellSuAdbOnlyEnabled: Boolean = false,
     val sulogStatus: String = "",
     val isSuLogEnabled: Boolean = false,
     val selinuxHideStatus: String = "",
@@ -139,6 +142,7 @@ sealed interface SettingsUiAction {
     data class SetAutoJailbreak(val enabled: Boolean) : SettingsUiAction
     data class SetSelinuxHide(val enabled: Boolean) : SettingsUiAction
     data class SetAdbRoot(val enabled: Boolean) : SettingsUiAction
+    data class SetShellSuAdbOnly(val enabled: Boolean) : SettingsUiAction
     data class SetSuLog(val enabled: Boolean) : SettingsUiAction
     data class SetDefaultUmountModules(val enabled: Boolean) : SettingsUiAction
     data class SetUseSoftReboot(val enabled: Boolean) : SettingsUiAction
@@ -160,6 +164,7 @@ class SettingsViewModel(
     private val getKernelFeatureSettings: GetKernelFeatureSettingsUseCase,
     private val setSuEnabled: SetSuEnabledUseCase,
     private val setKernelUmountEnabled: SetKernelUmountEnabledUseCase,
+    private val setShellSuAdbOnlyEnabled: SetShellSuAdbOnlyEnabledUseCase,
     private val setSuLogEnabled: ConfigureSuLogUseCase,
     private val setSelinuxHideEnabled: SetSelinuxHideEnabledUseCase,
     private val setDefaultUmountModules: SetDefaultUmountModulesUseCase,
@@ -212,6 +217,12 @@ class SettingsViewModel(
                         platform.adbRootValue == 1L
                     } else {
                         platform.adbRootEnabled
+                    },
+                    shellSuAdbOnlyStatus = platform.shellSuAdbOnlyStatus,
+                    isShellSuAdbOnlyEnabled = if (platform.shellSuAdbOnlyStatus == "forced") {
+                        platform.shellSuAdbOnlyValue == 1L
+                    } else {
+                        platform.shellSuAdbOnlyPersistValue == 1L
                     },
                     sulogStatus = platform.sulogStatus,
                     isSuLogEnabled = if (platform.sulogStatus == "forced") {
@@ -394,6 +405,14 @@ class SettingsViewModel(
         updatePlatformAsync(PlatformSetting.AdbRoot(checked))
     }
 
+    fun handleShellSuAdbOnlyChange(checked: Boolean) {
+        viewModelScope.launch {
+            if (setShellSuAdbOnlyEnabled(checked)) {
+                mutableState.update { it.copy(isShellSuAdbOnlyEnabled = checked) }
+            }
+        }
+    }
+
     fun handleSuLogChange(checked: Boolean) {
         viewModelScope.launch {
             if (setSuLogEnabled(checked)) mutableState.update { it.copy(isSuLogEnabled = checked) }
@@ -495,6 +514,8 @@ class SettingsViewModel(
             is SettingsUiAction.SetSelinuxHide -> handleSelinuxHideChange(action.enabled)
 
             is SettingsUiAction.SetAdbRoot -> handleAdbRootChange(action.enabled)
+
+            is SettingsUiAction.SetShellSuAdbOnly -> handleShellSuAdbOnlyChange(action.enabled)
 
             is SettingsUiAction.SetSuLog -> handleSuLogChange(action.enabled)
 

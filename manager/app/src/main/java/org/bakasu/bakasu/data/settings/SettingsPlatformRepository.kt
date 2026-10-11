@@ -243,6 +243,15 @@ class SettingsPlatformRepository(
             adbRootValue = runCatching {
                 ksuCliRepository.getFeatureValue("adb_root")
             }.getOrNull(),
+            shellSuAdbOnlyStatus = runCatching {
+                ksuCliRepository.getFeatureStatus("shell_su_adb_only")
+            }.getOrDefault(""),
+            shellSuAdbOnlyPersistValue = runCatching {
+                ksuCliRepository.getFeaturePersistValue("shell_su_adb_only")
+            }.getOrNull(),
+            shellSuAdbOnlyValue = runCatching {
+                ksuCliRepository.getFeatureValue("shell_su_adb_only")
+            }.getOrNull(),
             sulogStatus = runCatching {
                 ksuCliRepository.getFeatureStatus("sulog")
             }.getOrDefault(""),

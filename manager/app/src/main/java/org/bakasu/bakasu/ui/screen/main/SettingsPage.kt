@@ -47,6 +47,7 @@ import androidx.compose.material.icons.twotone.Security
 import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.material.icons.twotone.Share
 import androidx.compose.material.icons.twotone.Update
+import androidx.compose.material.icons.twotone.VerifiedUser
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -289,6 +290,25 @@ fun SettingsPage(bottomPadding: Dp) {
                                                 enabled,
                                             ),
                                         )
+                                    },
+                                )
+                            }
+
+                            item {
+                                val shellSuAdbOnlySummary = when (uiState.shellSuAdbOnlyStatus) {
+                                    "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
+                                    "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                    "forced" -> stringResource(id = R.string.feature_status_forced_summary)
+                                    else -> stringResource(id = R.string.settings_shell_su_adb_only_summary)
+                                }
+                                SettingsSwitchWidget(
+                                    icon = Icons.TwoTone.VerifiedUser,
+                                    title = stringResource(id = R.string.settings_shell_su_adb_only),
+                                    description = shellSuAdbOnlySummary,
+                                    enabled = uiState.shellSuAdbOnlyStatus == "supported",
+                                    checked = uiState.isShellSuAdbOnlyEnabled,
+                                    onCheckedChange = { enabled ->
+                                        settingsViewModel.dispatch(SettingsUiAction.SetShellSuAdbOnly(enabled))
                                     },
                                 )
                             }

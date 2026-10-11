@@ -88,6 +88,8 @@
     <string name="settings_soft_reboot_summary">Use soft restart instead of a full reboot when installing, updating, or toggling modules.</string>
     <string name="settings_adb_root" translatable="false">ADB Root</string>
     <string name="settings_adb_root_summary">Run adbd daemon with root privileges</string>
+    <string name="settings_shell_su_adb_only">Restrict shell root to ADB</string>
+    <string name="settings_shell_su_adb_only_summary">Enable additional checks for shells: Only shell processes initiated by adbd or a KernelSU root process can obtain root access</string>
     <string name="settings_selinux_hide">Hide SELinux modification</string>
     <string name="settings_selinux_hide_summary">Prevent applications from detecting SELinux modifications</string>
     <string name="settings_selinux_hide_reboot_required">Reboot to take effect</string>

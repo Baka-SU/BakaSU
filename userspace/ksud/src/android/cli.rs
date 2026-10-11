@@ -467,7 +467,7 @@ enum Profile {
 enum Feature {
     /// Get feature value and support status
     Get {
-        /// Feature ID or name (su_compat, kernel_umount, sulog, adb_root, selinux_hide)
+        /// Feature ID or name (su_compat, kernel_umount, sulog, adb_root, selinux_hide, shell_su_adb_only)
         id: String,
         /// Read from config file
         #[arg(long, default_value_t = false)]
@@ -487,7 +487,7 @@ enum Feature {
 
     /// Check feature status (supported/unsupported/managed/forced)
     Check {
-        /// Feature ID or name (su_compat, kernel_umount, sulog, adb_root, selinux_hide)
+        /// Feature ID or name (su_compat, kernel_umount, sulog, adb_root, selinux_hide, shell_su_adb_only)
         id: String,
     },
 
