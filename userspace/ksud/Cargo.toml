@@ -77,3 +77,5 @@ codegen-units = 1
 [build-dependencies]
 bindgen = "0.73.2"
 cc = "1"
+# force bindgen's `syn >=2, <4` onto 3.x to match prettyplease 0.3 (rust-bindgen#3448)
+syn = "3"
