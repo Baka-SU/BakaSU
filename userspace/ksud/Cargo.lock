@@ -179,7 +179,7 @@ dependencies = [
  "regex",
  "rustc-hash",
  "shlex",
- "syn 2.0.119",
+ "syn 3.0.6",
 ]
 
 [[package]]
@@ -1000,6 +1000,7 @@ dependencies = [
  "serde_json",
  "sha1",
  "sha256",
+ "syn 3.0.6",
  "tempfile",
  "which",
  "zip 8.6.0",
