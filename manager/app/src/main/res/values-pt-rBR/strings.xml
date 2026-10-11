@@ -559,4 +559,5 @@
     <string name="require_manager_version">Atualização do gerenciador necessária</string>
     <string name="require_kernel_version">Atualização do kernel necessária. Toque para instalar.</string>
     <string name="require_kernel_version_gki">Atualização do kernel necessária</string>
+    <string name="internal_server_error">Erro do Servidor Interno</string>
 </resources>
