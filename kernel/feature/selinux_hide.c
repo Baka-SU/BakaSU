@@ -1267,11 +1267,6 @@ static int ksu_security_context_to_sid(struct policydb *orig_policydb, struct si
                                   &context, &orig_context, def_sid, &orig_rc);
     if (!rc) {
 #ifdef KSU_COMPAT_HAS_CONTEXT_ADD_HASH
-        // The sidtab is indexed by context->hash on these trees and only
-        // context_struct_to_sid() fills that field in. Inserting a context
-        // that still carries a zero hash puts it in the wrong bucket, which
-        // makes sidtab_context_to_sid() miss the entry the native path
-        // already created and hand out a second SID for the same context.
         rc = context_add_hash(policydb, &context);
 #endif
         if (!rc)
