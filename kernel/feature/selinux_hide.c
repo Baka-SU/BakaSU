@@ -1266,15 +1266,29 @@ static int ksu_security_context_to_sid(struct policydb *orig_policydb, struct si
     rc = string_to_context_struct(policydb, orig_policydb, sidtab, orig_sidtab, scontext2, scontext3, scontext_len,
                                   &context, &orig_context, def_sid, &orig_rc);
     if (!rc) {
-        rc = sidtab_context_to_sid(sidtab, &context, sid);
+#ifdef KSU_COMPAT_HAS_CONTEXT_ADD_HASH
+        // The sidtab is indexed by context->hash on these trees and only
+        // context_struct_to_sid() fills that field in. Inserting a context
+        // that still carries a zero hash puts it in the wrong bucket, which
+        // makes sidtab_context_to_sid() miss the entry the native path
+        // already created and hand out a second SID for the same context.
+        rc = context_add_hash(policydb, &context);
+#endif
+        if (!rc)
+            rc = sidtab_context_to_sid(sidtab, &context, sid);
         // rc should not be frozen
         context_destroy(&context);
         // removed: if (rc == -ESTALE)
         if (!orig_rc) {
-            // sync to global sidtab
-            orig_rc = sidtab_context_to_sid(orig_sidtab, &orig_context, &orig_sid);
-            if (orig_sid_p)
-                *orig_sid_p = orig_sid;
+#ifdef KSU_COMPAT_HAS_CONTEXT_ADD_HASH
+            orig_rc = context_add_hash(orig_policydb, &orig_context);
+#endif
+            if (!orig_rc) {
+                // sync to global sidtab
+                orig_rc = sidtab_context_to_sid(orig_sidtab, &orig_context, &orig_sid);
+                if (orig_sid_p)
+                    *orig_sid_p = orig_sid;
+            }
             context_destroy(&orig_context);
         }
     }

@@ -216,6 +216,14 @@ $(info -- $(REPO_NAME)/compat: found sidtab as reference)
 ccflags-y += -DKSU_COMPAT_SIDTAB_AS_REFERENCE
 endif
 
+# Some trees keep the 5.6-era sidtab, which is indexed by context->hash and
+# relies on context_add_hash() to fill it in. 5.10+ computes the hash inside
+# sidtab_context_to_sid() and has no context->hash at all.
+ifeq ($(shell grep -q "^int context_add_hash" $(srctree)/security/selinux/ss/services.c 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found hash indexed sidtab)
+ccflags-y += -DKSU_COMPAT_HAS_CONTEXT_ADD_HASH
+endif
+
 ifeq ($(shell grep -q "hlist_head" $(srctree)/include/linux/lsm_hooks.h 2>/dev/null; echo $$?),0)
 $(info -- $(REPO_NAME)/compat: found hlist in security_hook_list)
 ccflags-y += -DKSU_COMPAT_HLIST_FOR_SECURITY_HOOK_LIST
