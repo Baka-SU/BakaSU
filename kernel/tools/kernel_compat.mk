@@ -331,3 +331,10 @@ ifeq ($(shell grep -q -F "rc = mls_context_to_sid(pol, oldc, p, ctx, sidtabp, de
 $(info -- $(REPO_NAME)/compat: stricter mls_context_to_sid found)
 ccflags-y += -DKSU_COMPAT_HAS_STRICTER_MLS_CONTEXT_TO_SID
 endif
+
+# Google's backport
+# https://android-review.googlesource.com/q/Iead2a1d90731ae24fefec2a40af5ffdc457ac916
+ifeq ($(shell grep -q "^int context_add_hash" $(srctree)/security/selinux/ss/services.c 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found hash indexed sidtab)
+ccflags-y += -DKSU_COMPAT_HAS_CONTEXT_ADD_HASH
+endif
