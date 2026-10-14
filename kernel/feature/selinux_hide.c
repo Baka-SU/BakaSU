@@ -2110,7 +2110,7 @@ static void __nocfi type_attribute_bounds_av(struct policydb *policydb, struct c
 }
 
 void security_compute_av_user_with_policy(struct selinux_policy *policy, u32 ssid, u32 tsid, u16 tclass,
-                                                  struct av_decision *avd)
+                                          struct av_decision *avd)
 {
     struct policydb *policydb;
     struct sidtab *sidtab;
