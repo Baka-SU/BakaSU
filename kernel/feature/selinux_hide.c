@@ -2061,9 +2061,6 @@ static void avd_init(struct selinux_policy *policy, struct av_decision *avd)
     avd->flags = 0;
 }
 
-static void context_struct_compute_av(struct policydb *policydb, struct context *scontext, struct context *tcontext,
-                                      u16 tclass, struct av_decision *avd, struct extended_perms *xperms);
-
 /*
  * security_boundary_permission - drops violated permissions
  * on boundary constraint.
@@ -2098,7 +2095,7 @@ static void __nocfi type_attribute_bounds_av(struct policydb *policydb, struct c
         tcontextp = &lo_tcontext;
     }
 
-    context_struct_compute_av(policydb, &lo_scontext, tcontextp, tclass, &lo_avd, NULL);
+    security_dump_masked_av_fn(policydb, &lo_scontext, tcontextp, tclass, &lo_avd, NULL);
 
     masked = ~lo_avd.allowed & avd->allowed;
 
@@ -2109,288 +2106,10 @@ static void __nocfi type_attribute_bounds_av(struct policydb *policydb, struct c
     avd->allowed &= ~masked;
 
     /* audit masked permissions */
-    if (security_dump_masked_av_fn)
-        security_dump_masked_av_fn(policydb, scontext, tcontext, tclass, masked, "bounds");
+    security_dump_masked_av_fn(policydb, scontext, tcontext, tclass, masked, "bounds");
 }
 
-/*
- * Return the boolean value of a constraint expression
- * when it is applied to the specified source and target
- * security contexts.
- *
- * xcontext is a special beast...  It is used by the validatetrans rules
- * only.  For these rules, scontext is the context before the transition,
- * tcontext is the context after the transition, and xcontext is the context
- * of the process performing the transition.  All other callers of
- * constraint_expr_eval should pass in NULL for xcontext.
- */
-static int constraint_expr_eval(struct policydb *policydb, struct context *scontext, struct context *tcontext,
-                                struct context *xcontext, struct constraint_expr *cexpr)
-{
-    u32 val1, val2;
-    struct context *c;
-    struct role_datum *r1, *r2;
-    struct mls_level *l1, *l2;
-    struct constraint_expr *e;
-    int s[CEXPR_MAXDEPTH];
-    int sp = -1;
-
-    for (e = cexpr; e; e = e->next) {
-        switch (e->expr_type) {
-        case CEXPR_NOT:
-            BUG_ON(sp < 0);
-            s[sp] = !s[sp];
-            break;
-        case CEXPR_AND:
-            BUG_ON(sp < 1);
-            sp--;
-            s[sp] &= s[sp + 1];
-            break;
-        case CEXPR_OR:
-            BUG_ON(sp < 1);
-            sp--;
-            s[sp] |= s[sp + 1];
-            break;
-        case CEXPR_ATTR:
-            if (sp == (CEXPR_MAXDEPTH - 1))
-                return 0;
-            switch (e->attr) {
-            case CEXPR_USER:
-                val1 = scontext->user;
-                val2 = tcontext->user;
-                break;
-            case CEXPR_TYPE:
-                val1 = scontext->type;
-                val2 = tcontext->type;
-                break;
-            case CEXPR_ROLE:
-                val1 = scontext->role;
-                val2 = tcontext->role;
-                r1 = policydb->role_val_to_struct[val1 - 1];
-                r2 = policydb->role_val_to_struct[val2 - 1];
-                switch (e->op) {
-                case CEXPR_DOM:
-                    s[++sp] = ebitmap_get_bit(&r1->dominates, val2 - 1);
-                    continue;
-                case CEXPR_DOMBY:
-                    s[++sp] = ebitmap_get_bit(&r2->dominates, val1 - 1);
-                    continue;
-                case CEXPR_INCOMP:
-                    s[++sp] =
-                        (!ebitmap_get_bit(&r1->dominates, val2 - 1) && !ebitmap_get_bit(&r2->dominates, val1 - 1));
-                    continue;
-                default:
-                    break;
-                }
-                break;
-            case CEXPR_L1L2:
-                l1 = &(scontext->range.level[0]);
-                l2 = &(tcontext->range.level[0]);
-                goto mls_ops;
-            case CEXPR_L1H2:
-                l1 = &(scontext->range.level[0]);
-                l2 = &(tcontext->range.level[1]);
-                goto mls_ops;
-            case CEXPR_H1L2:
-                l1 = &(scontext->range.level[1]);
-                l2 = &(tcontext->range.level[0]);
-                goto mls_ops;
-            case CEXPR_H1H2:
-                l1 = &(scontext->range.level[1]);
-                l2 = &(tcontext->range.level[1]);
-                goto mls_ops;
-            case CEXPR_L1H1:
-                l1 = &(scontext->range.level[0]);
-                l2 = &(scontext->range.level[1]);
-                goto mls_ops;
-            case CEXPR_L2H2:
-                l1 = &(tcontext->range.level[0]);
-                l2 = &(tcontext->range.level[1]);
-                goto mls_ops;
-            mls_ops:
-                switch (e->op) {
-                case CEXPR_EQ:
-                    s[++sp] = mls_level_eq(l1, l2);
-                    continue;
-                case CEXPR_NEQ:
-                    s[++sp] = !mls_level_eq(l1, l2);
-                    continue;
-                case CEXPR_DOM:
-                    s[++sp] = mls_level_dom(l1, l2);
-                    continue;
-                case CEXPR_DOMBY:
-                    s[++sp] = mls_level_dom(l2, l1);
-                    continue;
-                case CEXPR_INCOMP:
-                    s[++sp] = mls_level_incomp(l2, l1);
-                    continue;
-                default:
-                    BUG();
-                    return 0;
-                }
-                break;
-            default:
-                BUG();
-                return 0;
-            }
-
-            switch (e->op) {
-            case CEXPR_EQ:
-                s[++sp] = (val1 == val2);
-                break;
-            case CEXPR_NEQ:
-                s[++sp] = (val1 != val2);
-                break;
-            default:
-                BUG();
-                return 0;
-            }
-            break;
-        case CEXPR_NAMES:
-            if (sp == (CEXPR_MAXDEPTH - 1))
-                return 0;
-            c = scontext;
-            if (e->attr & CEXPR_TARGET)
-                c = tcontext;
-            else if (e->attr & CEXPR_XTARGET) {
-                c = xcontext;
-                if (!c) {
-                    BUG();
-                    return 0;
-                }
-            }
-            if (e->attr & CEXPR_USER)
-                val1 = c->user;
-            else if (e->attr & CEXPR_ROLE)
-                val1 = c->role;
-            else if (e->attr & CEXPR_TYPE)
-                val1 = c->type;
-            else {
-                BUG();
-                return 0;
-            }
-
-            switch (e->op) {
-            case CEXPR_EQ:
-                s[++sp] = ebitmap_get_bit(&e->names, val1 - 1);
-                break;
-            case CEXPR_NEQ:
-                s[++sp] = !ebitmap_get_bit(&e->names, val1 - 1);
-                break;
-            default:
-                BUG();
-                return 0;
-            }
-            break;
-        default:
-            BUG();
-            return 0;
-        }
-    }
-
-    BUG_ON(sp != 0);
-    return s[0];
-}
-
-/*
- * Compute access vectors and extended permissions based on a context
- * structure pair for the permissions in a particular class.
- */
-static void context_struct_compute_av(struct policydb *policydb, struct context *scontext, struct context *tcontext,
-                                      u16 tclass, struct av_decision *avd, struct extended_perms *xperms)
-{
-    struct constraint_node *constraint;
-    struct role_allow *ra;
-    struct avtab_key avkey;
-    struct avtab_node *node;
-    struct class_datum *tclass_datum;
-    struct ebitmap *sattr, *tattr;
-    struct ebitmap_node *snode, *tnode;
-    unsigned int i, j;
-
-    avd->allowed = 0;
-    avd->auditallow = 0;
-    avd->auditdeny = 0xffffffff;
-    if (xperms) {
-        memset(&xperms->drivers, 0, sizeof(xperms->drivers));
-        xperms->len = 0;
-    }
-
-    if (unlikely(!tclass || tclass > policydb->p_classes.nprim)) {
-        pr_warn_ratelimited("SELinux:  Invalid class %u\n", tclass);
-        return;
-    }
-
-    tclass_datum = policydb->class_val_to_struct[tclass - 1];
-
-    /*
-     * If a specific type enforcement rule was defined for
-     * this permission check, then use it.
-     */
-    avkey.target_class = tclass;
-    avkey.specified = AVTAB_AV | AVTAB_XPERMS;
-    sattr = &policydb->type_attr_map_array[scontext->type - 1];
-    tattr = &policydb->type_attr_map_array[tcontext->type - 1];
-    ebitmap_for_each_positive_bit(sattr, snode, i)
-    {
-        ebitmap_for_each_positive_bit(tattr, tnode, j)
-        {
-            avkey.source_type = i + 1;
-            avkey.target_type = j + 1;
-            for (node = avtab_search_node(&policydb->te_avtab, &avkey); node;
-                 node = avtab_search_node_next(node, avkey.specified)) {
-                if (node->key.specified == AVTAB_ALLOWED)
-                    avd->allowed |= node->datum.u.data;
-                else if (node->key.specified == AVTAB_AUDITALLOW)
-                    avd->auditallow |= node->datum.u.data;
-                else if (node->key.specified == AVTAB_AUDITDENY)
-                    avd->auditdeny &= node->datum.u.data;
-                else if (xperms && (node->key.specified & AVTAB_XPERMS))
-                    services_compute_xperms_drivers(xperms, node);
-            }
-
-            /* Check conditional av table for additional permissions */
-            cond_compute_av(&policydb->te_cond_avtab, &avkey, avd, xperms);
-        }
-    }
-
-    /*
-     * Remove any permissions prohibited by a constraint (this includes
-     * the MLS policy).
-     */
-    constraint = tclass_datum->constraints;
-    while (constraint) {
-        if ((constraint->permissions & (avd->allowed)) &&
-            !constraint_expr_eval(policydb, scontext, tcontext, NULL, constraint->expr)) {
-            avd->allowed &= ~(constraint->permissions);
-        }
-        constraint = constraint->next;
-    }
-
-    /*
-     * If checking process transition permission and the
-     * role is changing, then check the (current_role, new_role)
-     * pair.
-     */
-    if (tclass == policydb->process_class && (avd->allowed & policydb->process_trans_perms) &&
-        scontext->role != tcontext->role) {
-        for (ra = policydb->role_allow; ra; ra = ra->next) {
-            if (scontext->role == ra->role && tcontext->role == ra->new_role)
-                break;
-        }
-        if (!ra)
-            avd->allowed &= ~policydb->process_trans_perms;
-    }
-
-    /*
-     * If the given source and target types have boundary
-     * constraint, lazy checks have to mask any violated
-     * permission and notice it to userspace via audit.
-     */
-    type_attribute_bounds_av(policydb, scontext, tcontext, tclass, avd);
-}
-
-void __nocfi security_compute_av_user_with_policy(struct selinux_policy *policy, u32 ssid, u32 tsid, u16 tclass,
+void security_compute_av_user_with_policy(struct selinux_policy *policy, u32 ssid, u32 tsid, u16 tclass,
                                                   struct av_decision *avd)
 {
     struct policydb *policydb;
@@ -2426,11 +2145,7 @@ void __nocfi security_compute_av_user_with_policy(struct selinux_policy *policy,
         goto out;
     }
 
-    if (context_struct_compute_av_fn) {
-        context_struct_compute_av_fn(policydb, scontext, tcontext, tclass, avd, NULL);
-    } else {
-        context_struct_compute_av(policydb, scontext, tcontext, tclass, avd, NULL);
-    }
+    context_struct_compute_av_fn(policydb, scontext, tcontext, tclass, avd, NULL);
 out:
     return;
 allow:
