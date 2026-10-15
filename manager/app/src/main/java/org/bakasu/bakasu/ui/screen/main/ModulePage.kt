@@ -133,6 +133,7 @@ import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleNameUseCase
 import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
 import org.bakasu.bakasu.domain.usecase.TakeModuleUriPermissionUseCase
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.InstallConfirmationDialog
@@ -189,6 +190,7 @@ fun ModulePage(bottomPadding: Dp) {
     val takeModuleUriPermission = koinInject<TakeModuleUriPermissionUseCase>()
     val extractModuleName = koinInject<ExtractModuleNameUseCase>()
     val zipFileDetector = koinInject<ZipFileDetector>()
+    val peekScript = koinInject<PeekOneshotScriptUseCase>()
     val navigator = LocalNavigator.current
     val context = LocalContext.current
     val viewModel = koinViewModel<ModuleViewModel>()
@@ -262,6 +264,12 @@ fun ModulePage(bottomPadding: Dp) {
                     snackBarHost.showReplacingSnackbar("Unable to access selected module files")
                     return@launch
                 }
+                selectedModules.singleOrNull()?.let { uri ->
+                    peekScript(uri.toString())?.let { manifest ->
+                        navigator.push(Route.ScriptRun(uri.toString(), offerInstall = true, displayName = manifest.name))
+                        return@launch
+                    }
+                }
                 selectedModules.forEach { it ->
                     val info =
                         withContext(Dispatchers.IO) { zipFileDetector.parseModuleInfo(context, it) }
@@ -281,6 +289,11 @@ fun ModulePage(bottomPadding: Dp) {
                     }
 
                     takeModuleUriPermission(uriString)
+
+                    peekScript(uriString)?.let { manifest ->
+                        navigator.push(Route.ScriptRun(uriString, offerInstall = true, displayName = manifest.name))
+                        return@launch
+                    }
 
                     val info = withContext(Dispatchers.IO) {
                         zipFileDetector.parseModuleInfo(

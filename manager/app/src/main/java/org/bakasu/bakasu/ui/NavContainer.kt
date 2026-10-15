@@ -60,6 +60,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.usecase.ExtractModuleIdUseCase
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
 import org.bakasu.bakasu.ui.animation.predictiveback.installerNavTransition
@@ -77,6 +79,7 @@ import org.bakasu.bakasu.ui.screen.ExecuteModuleActionScreen
 import org.bakasu.bakasu.ui.screen.FlashIt
 import org.bakasu.bakasu.ui.screen.FlashScreen
 import org.bakasu.bakasu.ui.screen.InstallScreen
+import org.bakasu.bakasu.ui.screen.ScriptRunScreen
 import org.bakasu.bakasu.ui.screen.SulogScreen
 import org.bakasu.bakasu.ui.screen.TemplateEditorScreen
 import org.bakasu.bakasu.ui.screen.UmountManagerScreen
@@ -142,13 +145,15 @@ fun NavContainer(
 
     val backStack = rememberNavBackStack<Route>(Route.Main)
     val navigator = remember(backStack) { Navigator(backStack) }
-    val installRepositoryModule: (Uri, () -> Boolean) -> Unit = { uri, canInstall ->
+    val installRepositoryModule: (Uri, CatalogModule, ModuleReleaseAsset, () -> Boolean) -> Unit = { uri, module, asset, canInstall ->
         activity.lifecycleScope.launch(Dispatchers.IO) {
             if (!canInstall()) return@launch
-            val moduleId = runCatching { extractModuleId(uri.toString()) }.getOrNull()
+            val moduleId = if (module.isScript) module.moduleId else runCatching { extractModuleId(uri.toString()) }.getOrNull()
             withContext(Dispatchers.Main) {
                 if (!canInstall()) return@withContext
-                if (!moduleId.isNullOrBlank()) {
+                if (module.isScript && asset.expected != null) {
+                    navigator.push(Route.ScriptRun(uri.toString(), module.moduleId, asset.expected.size, asset.expected.sha256, displayName = module.moduleName))
+                } else if (!moduleId.isNullOrBlank() && !module.isScript) {
                     navigator.push(Route.Flash.modules(listOf(uri.toString())))
                 } else {
                     Toast.makeText(context, R.string.repo_error_module_archive, Toast.LENGTH_LONG).show()
@@ -466,6 +471,17 @@ fun NavContainer(
                     useBlur = useBlur,
                 ) {
                     FlashScreen(key.toFlashIt())
+                }
+            }
+            entry<Route.ScriptRun>(swipeDismiss = NavSwipeDirection.None) { key ->
+                ManagerNavEntry(
+                    interceptPredictiveBack = interceptPredictiveBack,
+                    onBack = onBack,
+                    themeConfig = themeConfig,
+                    backgroundRenderState = backgroundRenderState,
+                    useBlur = useBlur,
+                ) {
+                    ScriptRunScreen(key)
                 }
             }
             entry<Route.ExecuteModuleAction>(swipeDismiss = swipeBackDirection) { key ->

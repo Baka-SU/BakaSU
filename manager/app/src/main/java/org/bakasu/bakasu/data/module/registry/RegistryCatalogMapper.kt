@@ -18,6 +18,7 @@ object RegistryCatalogMapper {
             authorList = authors,
             summary = item.summary.trim(),
             metamodule = item.metamodule,
+            isScript = item.kind == RegistryKind.SCRIPT,
             stargazerCount = item.stars ?: 0,
             updatedAt = item.updatedAt,
             createdAt = "",
@@ -47,7 +48,7 @@ object RegistryCatalogMapper {
         val detail = load.detail
         val item = ApiModuleSummary(
             id = detail.id, name = detail.name, summary = detail.summary, authors = detail.authors,
-            tags = detail.tags, metamodule = detail.metamodule, icon = detail.icon, stable = detail.stable,
+            tags = detail.tags, metamodule = detail.metamodule, kind = detail.kind, icon = detail.icon, stable = detail.stable,
             stars = detail.stars, starsRepository = detail.starsRepository, detail = detail.detail, updatedAt = detail.updatedAt,
         )
         val summary = summary(item, load.catalog, source)

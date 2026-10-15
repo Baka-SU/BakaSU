@@ -113,6 +113,7 @@ class RegistryParser(private val json: Json = DEFAULT_JSON) {
         )
         requireBuildId(detail.buildId)
         if (!isValidModuleId(detail.id)) throw RegistryFormatException("Invalid module id: ${detail.id}")
+        if (!RegistryKind.isSupported(detail.kind, detail.metamodule)) throw RegistryFormatException("Unsupported kind: ${detail.kind}")
         if (detail.stable.versionCode < 1) throw RegistryFormatException("Invalid stable versionCode")
         if (detail.source.host != "github") throw RegistryFormatException("Unsupported source host: ${detail.source.host}")
         val fullName = detail.source.fullName
@@ -157,6 +158,7 @@ class RegistryParser(private val json: Json = DEFAULT_JSON) {
     }
 
     private fun validateSummary(s: ApiModuleSummary): ApiModuleSummary? {
+        if (!RegistryKind.isSupported(s.kind, s.metamodule)) return null
         if (!isValidModuleId(s.id)) return null
         if (!RegistryUrls.isValidApiPath(s.detail)) return null
         if (s.stable.versionCode < 1) return null

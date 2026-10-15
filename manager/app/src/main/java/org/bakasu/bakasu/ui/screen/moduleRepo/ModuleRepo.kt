@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Add
 import androidx.compose.material.icons.twotone.Download
 import androidx.compose.material.icons.twotone.MoreVert
+import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.Star
 import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.material3.AlertDialog
@@ -455,8 +456,8 @@ fun OnlineModuleItem(
     quickInstallLoading: Boolean = false,
     quickInstallEnabled: Boolean = true,
 ) {
-    val installed = module.installed || installedVersionCode != null
-    val updatable = installedVersionCode != null && module.latestVersionCode > installedVersionCode
+    val installed = !module.isScript && (module.installed || installedVersionCode != null)
+    val updatable = !module.isScript && installedVersionCode != null && module.latestVersionCode > installedVersionCode
     val metadataColor = MaterialTheme.colorScheme.onSurfaceVariant
     val locale = LocalConfiguration.current.locales[0]
     CatalogCard(onClick = onOpen) {
@@ -515,13 +516,16 @@ fun OnlineModuleItem(
                 maxLines = 4,
             )
         }
-        if (module.metamodule || installed) {
+        if (module.isScript || module.metamodule || installed) {
             FlowRow(
                 modifier = Modifier.padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 itemVerticalAlignment = Alignment.CenterVertically,
             ) {
+                if (module.isScript) {
+                    LabelText(label = stringResource(R.string.module_repo_script_badge), containerColor = MaterialTheme.colorScheme.tertiary)
+                }
                 if (module.metamodule) {
                     LabelText(
                         label = stringResource(R.string.module_meta_label),
@@ -604,13 +608,13 @@ private fun QuickInstallButton(module: CatalogModule, loading: Boolean, enabled:
     val description = if (downloading) {
         stringResource(R.string.repo_download_progress, download?.fileName.orEmpty(), progress)
     } else {
-        stringResource(R.string.repo_install_latest)
+        stringResource(if (module.isScript) R.string.script_run else R.string.repo_install_latest)
     }
     IconButton(onClick = onClick, enabled = enabled && !loading && !downloading, modifier = Modifier.size(48.dp).semantics { contentDescription = description }) {
         when {
             loading -> CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
             downloading -> CircularProgressIndicator(progress = { progress / 100f }, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-            else -> Icon(Icons.TwoTone.Download, contentDescription = null, modifier = Modifier.size(24.dp))
+            else -> Icon(if (module.isScript) Icons.TwoTone.PlayArrow else Icons.TwoTone.Download, contentDescription = null, modifier = Modifier.size(24.dp))
         }
     }
 }

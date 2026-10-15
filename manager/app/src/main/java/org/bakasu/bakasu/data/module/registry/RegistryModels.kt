@@ -12,6 +12,13 @@ import kotlinx.serialization.Serializable
 
 const val REGISTRY_API_SCHEMA_VERSION = 1
 
+object RegistryKind {
+    const val MODULE = "module"
+    const val SCRIPT = "script"
+
+    fun isSupported(kind: String, metamodule: Boolean): Boolean = kind == MODULE || (kind == SCRIPT && !metamodule)
+}
+
 @Serializable
 data class ApiIndex(
     val schemaVersion: Int,
@@ -44,6 +51,7 @@ data class ApiModuleSummary(
     val authors: List<ApiAuthor> = emptyList(),
     val tags: List<String> = emptyList(),
     val metamodule: Boolean = false,
+    val kind: String = RegistryKind.MODULE,
     /** Content-hashed icon, "assets/{hash}.{ext}". */
     val icon: String? = null,
     val stable: ApiVersionRef,
@@ -119,6 +127,7 @@ data class ApiModuleDetail(
     val authors: List<ApiAuthor> = emptyList(),
     val tags: List<String> = emptyList(),
     val metamodule: Boolean = false,
+    val kind: String = RegistryKind.MODULE,
     val icon: String? = null,
     val stable: ApiVersionRef,
     val stars: Int? = null,

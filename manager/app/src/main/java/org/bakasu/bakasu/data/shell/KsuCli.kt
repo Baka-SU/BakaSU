@@ -14,6 +14,7 @@ import com.topjohnwu.superuser.io.SuFile
 import java.io.File
 import java.io.IOException
 import java.util.Properties
+import java.util.concurrent.Executor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.BuildConfig
@@ -323,6 +324,23 @@ class KsuCliRepository(context: Context) {
         Log.i("KernelSU", "Module runAction result: $result")
 
         return result.isSuccess
+    }
+
+    /** A dedicated shell keeps the script out of the manager's command stream. */
+    fun runOneshotScript(command: String, onStdout: (String) -> Unit, onStderr: (String) -> Unit): Int = withNewRootShell(globalMnt = true) {
+        check(isRoot) { "Root access is unavailable" }
+        val direct = Executor { it.run() }
+        val stdout = object : CallbackList<String?>(direct, null) {
+            override fun onAddElement(s: String?) = onStdout(s.orEmpty())
+        }
+        val stderr = object : CallbackList<String?>(direct, null) {
+            override fun onAddElement(s: String?) = onStderr(s.orEmpty())
+        }
+        newJob().add(command).to(stdout, stderr).exec().code
+    }
+
+    fun removeScriptDirectory(path: String): Boolean = withNewRootShell {
+        isRoot && ShellUtils.fastCmdResult(this, "rm -rf -- ${shellQuote(path)}")
     }
 
     fun restoreBoot(

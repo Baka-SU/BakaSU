@@ -20,6 +20,7 @@ import org.bakasu.bakasu.Natives
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.download.DownloadService
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
+import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
 import org.bakasu.bakasu.ui.component.InstallConfirmationDialog
 import org.bakasu.bakasu.ui.component.ZipFileDetector
 import org.bakasu.bakasu.ui.component.ZipFileInfo
@@ -181,6 +182,7 @@ fun IntentDispatcher(intentChannel: ReceiveChannel<Intent>) {
     var pendingZipFiles by remember { mutableStateOf<List<ZipFileInfo>>(emptyList()) }
     val settings: SettingsPlatformRepository = koinInject()
     val zipFileDetector: ZipFileDetector = koinInject()
+    val peekScript = koinInject<PeekOneshotScriptUseCase>()
 
     InstallConfirmationDialog(
         show = pendingZipFiles.isNotEmpty(),
@@ -206,6 +208,12 @@ fun IntentDispatcher(intentChannel: ReceiveChannel<Intent>) {
 
         when (action) {
             is PendingAction.InstallModules -> {
+                val single = action.zipFileInfos.singleOrNull()
+                val manifest = single?.let { peekScript(it.uri.toString()) }
+                if (single != null && manifest != null) {
+                    navigator.push(Route.ScriptRun(single.uri.toString(), offerInstall = true, displayName = manifest.name))
+                    return@CollectIntentChannel
+                }
                 if (action.requiresConfirmation) {
                     pendingZipFiles = action.zipFileInfos
                 } else {

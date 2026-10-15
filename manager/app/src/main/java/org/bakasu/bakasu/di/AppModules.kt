@@ -41,6 +41,7 @@ import org.bakasu.bakasu.data.packageinfo.RootServiceRepository
 import org.bakasu.bakasu.data.packageinfo.SuperUserRepository
 import org.bakasu.bakasu.data.profile.ProfileRepository
 import org.bakasu.bakasu.data.profile.ProfileTemplateRepository
+import org.bakasu.bakasu.data.script.ScriptRepository
 import org.bakasu.bakasu.data.settings.LocaleHelper
 import org.bakasu.bakasu.data.settings.LocaleRepository
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
@@ -91,6 +92,7 @@ import org.bakasu.bakasu.domain.usecase.GetHomeBasicInfoUseCase
 import org.bakasu.bakasu.domain.usecase.GetInstallEnvironmentUseCase
 import org.bakasu.bakasu.domain.usecase.GetKernelFeatureSettingsUseCase
 import org.bakasu.bakasu.domain.usecase.GetKernelStatusUseCase
+import org.bakasu.bakasu.domain.usecase.GetLastScriptRunUseCase
 import org.bakasu.bakasu.domain.usecase.GetManagerRuntimeInfoUseCase
 import org.bakasu.bakasu.domain.usecase.GetModuleReadmeUseCase
 import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
@@ -128,6 +130,8 @@ import org.bakasu.bakasu.domain.usecase.ObserveStartupStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveSulogStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveSuperUserStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveUmountStateUseCase
+import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
+import org.bakasu.bakasu.domain.usecase.PrepareScriptUseCase
 import org.bakasu.bakasu.domain.usecase.RebootUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshDynamicManagerUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshInstalledModulesUseCase
@@ -136,11 +140,13 @@ import org.bakasu.bakasu.domain.usecase.RefreshProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshSulogUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshSuperUsersUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshUmountPathsUseCase
+import org.bakasu.bakasu.domain.usecase.ReleaseScriptUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.RemovePreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveUmountPathUseCase
 import org.bakasu.bakasu.domain.usecase.RenameModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.ResolveModuleUpdateUseCase
+import org.bakasu.bakasu.domain.usecase.RunScriptUseCase
 import org.bakasu.bakasu.domain.usecase.SaveModuleActionLogUseCase
 import org.bakasu.bakasu.domain.usecase.SaveProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.SelectDynamicManagerUseCase
@@ -182,6 +188,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
 import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
+import org.bakasu.bakasu.ui.viewmodel.ScriptRunViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.SulogViewModel
@@ -287,6 +294,7 @@ val repositoryModule = module {
     singleOf(::ModuleRepository)
     singleOf(::ModulePreferencesRepository)
     singleOf(::ModuleActionRepository)
+    single { ScriptRepository(androidApplication(), get(), get(applicationScopeQualifier)) }
     singleOf(::WebResourceRepository)
     singleOf(::WebUiRepository)
     singleOf(::ModuleFileRepository)
@@ -416,6 +424,11 @@ val useCaseModule = module {
     factoryOf(::CalculateInstalledModuleSizeUseCase)
     factoryOf(::UpdateCachedModuleEnabledUseCase)
     factoryOf(::ExecuteModuleActionUseCase)
+    factoryOf(::PeekOneshotScriptUseCase)
+    factoryOf(::PrepareScriptUseCase)
+    factoryOf(::ReleaseScriptUseCase)
+    factoryOf(::RunScriptUseCase)
+    factoryOf(::GetLastScriptRunUseCase)
     factoryOf(::SaveModuleActionLogUseCase)
     factoryOf(::SetModuleEnabledUseCase)
     factoryOf(::SetModuleRemovedUseCase)
@@ -423,6 +436,7 @@ val useCaseModule = module {
 }
 
 val viewModelModule = module {
+    viewModel { parameters -> ScriptRunViewModel(parameters[0], get(), get(), get(), get(), get()) }
     viewModel { parameters ->
         AppProfileViewModel(
             uid = parameters[0],

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.twotone.ExpandLess
 import androidx.compose.material.icons.twotone.ExpandMore
 import androidx.compose.material.icons.twotone.Link
 import androidx.compose.material.icons.twotone.OpenInBrowser
+import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -90,6 +91,7 @@ import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.model.ModuleReleaseDetails
 import org.bakasu.bakasu.domain.model.RepositorySource
+import org.bakasu.bakasu.domain.usecase.GetLastScriptRunUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
 import org.bakasu.bakasu.ui.component.GithubMarkdown
@@ -100,6 +102,7 @@ import org.bakasu.bakasu.ui.component.moduleAssetDetails
 import org.bakasu.bakasu.ui.component.rememberRepositoryInstallDialog
 import org.bakasu.bakasu.ui.component.rememberRepositoryScrollBehavior
 import org.bakasu.bakasu.ui.component.repositoryErrorText
+import org.bakasu.bakasu.ui.component.scriptLastRunText
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
 import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
@@ -338,6 +341,14 @@ fun InfoTab(
         ),
     ) {
         item(key = "status") { DetailNotice(module, state, viewModel) }
+        if (module.isScript) {
+            lazySegmentColumn(listOf(module.moduleId), key = { _, id -> "script-history:$id" }) { _, id ->
+                val history = koinInject<GetLastScriptRunUseCase>()
+                val lastRun = remember(id, history) { history.observe(id) }.collectAsStateWithLifecycle(initialValue = null).value
+                SettingsBaseWidget(title = stringResource(R.string.module_repo_script_badge), description = scriptLastRunText(lastRun), iconPlaceholder = false)
+            }
+            item(key = "script-history-spacing") { Spacer(Modifier.height(8.dp)) }
+        }
         if (module.authorList.isNotEmpty()) {
             lazySegmentColumn(module.authorList, title = authorTitle, key = { index, _ -> "author:$index" }) { _, author ->
                 ModuleInfoLink(author.name, null, author.link)
@@ -590,7 +601,13 @@ private fun ReleaseAsset(module: CatalogModule, release: ModuleRelease, asset: M
     val download by downloadFlow.collectAsStateWithLifecycle(initialValue = observeDownload.current(asset))
     val downloading = download?.status == DownloadStatus.PENDING || download?.status == DownloadStatus.DOWNLOADING
     val progress = (download?.progress ?: 0).coerceIn(0, 100)
-    val downloadDescription = if (downloading) stringResource(R.string.repo_download_progress, asset.name, progress) else stringResource(R.string.repo_download_asset, asset.name)
+    val downloadDescription = if (downloading) {
+        stringResource(R.string.repo_download_progress, asset.name, progress)
+    } else if (module.isScript) {
+        stringResource(R.string.script_run)
+    } else {
+        stringResource(R.string.repo_download_asset, asset.name)
+    }
     val onClick = {
         if (!downloading) {
             viewModel?.resolveAsset(asset)?.let { current ->
@@ -635,9 +652,9 @@ private fun ReleaseAsset(module: CatalogModule, release: ModuleRelease, asset: M
             if (downloading) {
                 CircularProgressIndicator(progress = { progress / 100f }, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
             } else {
-                Icon(Icons.TwoTone.Download, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(if (module.isScript) Icons.TwoTone.PlayArrow else Icons.TwoTone.Download, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.repo_download), style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(if (module.isScript) R.string.script_run else R.string.repo_download), style = MaterialTheme.typography.labelMedium)
             }
         }
     }

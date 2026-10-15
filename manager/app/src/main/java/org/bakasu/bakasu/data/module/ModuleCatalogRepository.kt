@@ -301,7 +301,7 @@ class ModuleCatalogRepository(
     private suspend fun publishModules() = withContext(Dispatchers.IO) {
         mutableModules.value = mutableSources.value.flatMap { source ->
             cachedModules[source.url].orEmpty().map { module ->
-                val installed = runCatching {
+                val installed = !module.isScript && runCatching {
                     SuFile.open("/data/adb/modules/${module.moduleId}/module.prop").exists()
                 }.getOrDefault(false)
                 module.copy(installed = installed, repositoryName = source.displayName)

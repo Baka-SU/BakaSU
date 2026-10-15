@@ -58,6 +58,7 @@ data class CatalogModule(
     val registryMetadata: RegistryModuleMetadata? = null,
     val releaseMetadataUrl: String = "",
     val iconUrl: String? = null,
+    val isScript: Boolean = false,
 ) {
     val catalogId: String get() = "$repositoryUrl#$moduleId"
     val pageUrl: String get() = sourceUrl.ifBlank { repositoryUrl }
