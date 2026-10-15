@@ -2,6 +2,7 @@ pub mod cli;
 mod debug;
 mod dynamic_manager;
 mod feature;
+mod hot_install;
 mod init_event;
 mod ksucalls;
 mod late_load;

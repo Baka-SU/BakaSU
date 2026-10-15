@@ -15,6 +15,7 @@ import java.io.File
 import java.io.IOException
 import java.util.Properties
 import java.util.concurrent.Executor
+import java.util.zip.ZipFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.BuildConfig
@@ -34,6 +35,7 @@ import org.json.JSONObject
 class KsuCliRepository(context: Context) {
     private companion object {
         const val TAG = "KsuCli"
+        val MODULE_ID_REGEX = Regex("^[a-zA-Z][a-zA-Z0-9._-]+$")
     }
 
     private val nativeLibraryDir = context.applicationInfo.nativeLibraryDir
@@ -293,11 +295,28 @@ class KsuCliRepository(context: Context) {
             val result = flashWithIO("${getKsuDaemonPath()} $cmd", onStdout, onStderr)
             Log.i("KernelSU", "install module $uri result: $result")
 
-            onFinish(result.isSuccess, result.code)
+            onFinish(result.isSuccess && moduleNeedsReboot(file), result.code)
             return result.isSuccess
         } finally {
             file.delete()
         }
+    }
+
+    private fun moduleNeedsReboot(zip: File): Boolean {
+        val id = runCatching {
+            ZipFile(zip).use { archive ->
+                val entry = archive.getEntry("module.prop") ?: return@use null
+                archive.getInputStream(entry).bufferedReader().useLines { lines ->
+                    lines.map { it.trim() }.firstOrNull { it.startsWith("id=") }
+                        ?.substringAfter('=')?.trim()
+                }
+            }
+        }.getOrNull()
+        if (id == null || !MODULE_ID_REGEX.matches(id)) return true
+        val dir = shellQuote("/data/adb/modules/$id")
+        return runCatching {
+            !ShellUtils.fastCmdResult(getRootShell(), "[ -d $dir ] && [ ! -e $dir/update ]")
+        }.getOrDefault(true)
     }
 
     fun flashAnyKernel(
