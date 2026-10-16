@@ -638,7 +638,6 @@
     <string name="wear_filter_sort">筛选与排序</string>
     <string name="wear_sort">排序</string>
     <string name="wear_template_offline">无网络连接</string>
-    <string name="wear_log_tail">仅显示最近的日志输出</string>
     <string name="wear_template_offline_local">仅显示本地模板</string>
     <string name="wear_settings_selinux_hide_summary">阻止应用检测</string>
     <string name="wear_palette_tonal_spot">色调点缀</string>
@@ -698,4 +697,13 @@
     <string name="wear_full_log">完整日志</string>
     <string name="wear_save_output">保存输出</string>
     <string name="wear_save_output_summary">将日志保存到文件</string>
+    <string name="wear_kernel_flash">内核刷写</string>
+    <string name="wear_flash_result">刷写结果</string>
+    <string name="wear_flash_status">刷写状态</string>
+    <string name="wear_complete_status">完成状态</string>
+    <string name="wear_failed_status">失败状态</string>
+    <string name="wear_kernel_complete_summary">可保存日志或重启</string>
+    <string name="wear_reboot_apply_kernel">应用内核变更</string>
+    <string name="wear_retry">重试</string>
+    <string name="wear_retry_install_summary">重新选择安装方式</string>
 </resources>

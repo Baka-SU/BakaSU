@@ -6,11 +6,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.ArrowForward
+import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.twotone.AutoFixHigh
+import androidx.compose.material.icons.twotone.CheckCircle
+import androidx.compose.material.icons.twotone.Download
+import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.FileOpen
 import androidx.compose.material.icons.twotone.FileUpload
 import androidx.compose.material.icons.twotone.Memory
-import androidx.compose.material.icons.twotone.PowerSettingsNew
+import androidx.compose.material.icons.twotone.Refresh
+import androidx.compose.material.icons.twotone.Save
 import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,7 +28,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
@@ -36,22 +40,21 @@ import org.bakasu.bakasu.ui.viewmodel.KernelFlashUiAction
 import org.bakasu.bakasu.ui.viewmodel.KernelFlashUiEvent
 import org.bakasu.bakasu.ui.viewmodel.KernelFlashViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
-import org.bakasu.bakasu.ui.wear.component.WearFlashProgress
+import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearFlashStatus
-import org.bakasu.bakasu.ui.wear.component.WearFlashStatusChip
-import org.bakasu.bakasu.ui.wear.component.WearFollowLog
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearLogPage
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
+import org.bakasu.bakasu.ui.wear.component.rememberWearLogSaver
 import org.bakasu.bakasu.ui.wear.component.settings.WearChoicePage
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 import org.bakasu.bakasu.ui.wear.component.wearGroupGap
-import org.bakasu.bakasu.ui.wear.component.wearLogLines
 import org.koin.compose.viewmodel.koinViewModel
 
 /** The phone's LKM install methods: patch a selected image, patch the current slot, or the inactive slot after OTA. */
@@ -368,8 +371,9 @@ internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
 }
 
 /**
- * AnyKernel3 flashing with the phone's KernelFlashViewModel: status, step progress, the log as
- * monospace lines following the newest output, and reboot once complete.
+ * AnyKernel3 flashing with the phone's KernelFlashViewModel: the current step while flashing, then
+ * the result with saving the log and rebooting, or retrying after a failure. The log opens as its
+ * own page.
  */
 @Composable
 internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, onBack: () -> Unit) {
@@ -377,6 +381,7 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
     val state by viewModel.state.collectAsStateWithLifecycle()
     val flash = state.flash
     var error by rememberSaveable { mutableStateOf<String?>(null) }
+    var showLog by rememberSaveable { mutableStateOf(false) }
     // Starting again would restart the flash, so the page starts it once, as the phone does.
     var started by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -399,34 +404,118 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
         flash.isCompleted -> WearFlashStatus.SUCCESS
         else -> WearFlashStatus.RUNNING
     }
-    val listState = rememberTransformingLazyColumnState()
-    WearFollowLog(listState, flash.logs.size, following = status == WearFlashStatus.RUNNING)
-    WearList(onBack = onBack, listState = listState) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.horizon_kernel)) }
+    val logTitle = stringResource(R.string.wear_full_log)
+    val saveLog = rememberWearLogSaver("KernelSU_kernel_flash_log") { state.fullLog }
+
+    if (showLog) {
+        WearLogPage(logTitle, flash.logs, following = status == WearFlashStatus.RUNNING) { showLog = false }
+        return
+    }
+
+    WearList(onBack = onBack) { spec ->
         item {
-            WearFlashStatusChip(
+            WearPageHeader(
                 spec,
-                status,
                 stringResource(
                     when (status) {
-                        WearFlashStatus.RUNNING -> R.string.flashing
-                        WearFlashStatus.SUCCESS -> R.string.horizon_flash_complete
+                        WearFlashStatus.RUNNING -> R.string.wear_kernel_flash
+                        WearFlashStatus.SUCCESS -> R.string.wear_flash_result
                         WearFlashStatus.FAILED -> R.string.flash_failed
                     },
                 ),
-                detail = if (status == WearFlashStatus.FAILED) flash.error else flash.currentStep,
             )
         }
-        if (status == WearFlashStatus.RUNNING) item { WearFlashProgress(spec, flash.progress.takeIf { it > 0f }) }
-        if (status == WearFlashStatus.SUCCESS) {
-            item {
-                WearActionButton(
+        item {
+            WearSectionHeader(
+                spec,
+                stringResource(
+                    when (status) {
+                        WearFlashStatus.RUNNING -> R.string.wear_flash_status
+                        WearFlashStatus.SUCCESS -> R.string.wear_complete_status
+                        WearFlashStatus.FAILED -> R.string.wear_failed_status
+                    },
+                ),
+            )
+        }
+        when (status) {
+            WearFlashStatus.RUNNING -> item {
+                WearChip(
                     spec,
-                    Icons.TwoTone.PowerSettingsNew,
-                    stringResource(R.string.reboot),
-                    { viewModel.dispatch(KernelFlashUiAction.Reboot) },
-                    colors = ButtonDefaults.buttonColors(),
+                    stringResource(R.string.flashing),
+                    secondaryLabel = flash.currentStep.ifBlank { null },
+                    icon = Icons.TwoTone.Download,
+                    onClick = { showLog = true },
                 )
+            }
+
+            WearFlashStatus.SUCCESS -> {
+                item {
+                    WearChip(
+                        spec,
+                        stringResource(R.string.horizon_flash_complete),
+                        secondaryLabel = stringResource(R.string.wear_kernel_complete_summary),
+                        icon = Icons.TwoTone.CheckCircle,
+                    )
+                }
+                item {
+                    WearActionButton(
+                        spec,
+                        Icons.TwoTone.Save,
+                        stringResource(R.string.save_log),
+                        saveLog,
+                        secondaryText = stringResource(R.string.wear_save_log_summary),
+                    )
+                }
+                item {
+                    WearActionButton(
+                        spec,
+                        Icons.TwoTone.Refresh,
+                        stringResource(R.string.wear_reboot_device),
+                        { viewModel.dispatch(KernelFlashUiAction.Reboot) },
+                        secondaryText = stringResource(R.string.wear_reboot_apply_kernel),
+                        colors = ButtonDefaults.buttonColors(),
+                    )
+                }
+            }
+
+            WearFlashStatus.FAILED -> {
+                item {
+                    WearChip(
+                        spec,
+                        stringResource(R.string.flash_failed),
+                        secondaryLabel = flash.error,
+                        icon = Icons.TwoTone.Error,
+                    )
+                }
+                item {
+                    WearActionButton(
+                        spec,
+                        Icons.AutoMirrored.TwoTone.Article,
+                        stringResource(R.string.wear_check_log),
+                        { showLog = true },
+                        secondaryText = stringResource(R.string.wear_check_log_summary),
+                    )
+                }
+                item {
+                    WearActionButton(
+                        spec,
+                        Icons.TwoTone.Save,
+                        stringResource(R.string.save_log),
+                        saveLog,
+                        secondaryText = stringResource(R.string.wear_save_log_summary),
+                    )
+                }
+                // Retrying returns to the install options, where the method and file are chosen again.
+                item {
+                    WearActionButton(
+                        spec,
+                        Icons.TwoTone.Refresh,
+                        stringResource(R.string.wear_retry),
+                        onBack,
+                        secondaryText = stringResource(R.string.wear_retry_install_summary),
+                        colors = ButtonDefaults.buttonColors(),
+                    )
+                }
             }
         }
         error?.let { message ->
@@ -439,10 +528,5 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
                 )
             }
         }
-        // The watch shows only the latest lines; the full log stays in the shared flash state.
-        wearLogLines(spec, flash.logs.takeLast(WEAR_FLASH_LOG_LINES))
-        if (flash.logs.size > WEAR_FLASH_LOG_LINES) item { WearSectionHeader(spec, stringResource(R.string.wear_log_tail)) }
     }
 }
-
-private const val WEAR_FLASH_LOG_LINES = 256
