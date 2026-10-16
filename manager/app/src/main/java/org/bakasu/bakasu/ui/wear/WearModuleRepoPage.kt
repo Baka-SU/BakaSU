@@ -1,5 +1,11 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Cloud
 import androidx.compose.material.icons.twotone.Code
@@ -7,6 +13,7 @@ import androidx.compose.material.icons.twotone.Download
 import androidx.compose.material.icons.twotone.Info
 import androidx.compose.material.icons.twotone.Person
 import androidx.compose.material.icons.twotone.Search
+import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -15,7 +22,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.items
@@ -24,6 +35,7 @@ import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -104,6 +116,43 @@ internal fun WearModuleRepoPage(onBack: () -> Unit, onOpen: (String) -> Unit) {
             WearTextInputPage(stringResource(R.string.search_modules), state.search) {
                 viewModel.dispatch(ModuleRepoUiAction.Search(it.trim()))
                 searching = false
+                // A search before the repository has loaded tries to load it first.
+                if (state.modules.isEmpty() && !state.isRefreshing) retry()
+            }
+        }
+        return
+    }
+    // A search that could not load shows the failure in place of its results; Back clears the search.
+    if (failure != null && state.search.isNotBlank() && state.modules.isEmpty() && !state.isRefreshing) {
+        BackHandler {
+            failure = null
+            viewModel.dispatch(ModuleRepoUiAction.Search(""))
+        }
+        ScreenScaffold {
+            Column(
+                Modifier.fillMaxSize().padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    Icons.TwoTone.Warning,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+                Text(
+                    stringResource(R.string.wear_load_failed),
+                    modifier = Modifier.padding(top = 8.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    failureReason,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
         return

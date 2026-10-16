@@ -751,4 +751,5 @@
     <string name="wear_repo_connect_failed">Couldn\'t connect to the server</string>
     <string name="wear_no_internet">Not connected to the internet</string>
     <string name="wear_repo_unreachable">Can\'t reach the module repository</string>
+    <string name="wear_load_failed">Loading failed</string>
 </resources>

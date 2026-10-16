@@ -724,4 +724,5 @@
     <string name="wear_repo_connect_failed">连接服务器失败</string>
     <string name="wear_no_internet">未连接到互联网</string>
     <string name="wear_repo_unreachable">无法连接到模块仓库</string>
+    <string name="wear_load_failed">加载失败</string>
 </resources>
