@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.twotone.Apps
+import androidx.compose.material.icons.twotone.Backup
 import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Search
 import androidx.compose.runtime.Composable
@@ -56,6 +57,7 @@ internal fun WearSuperUserPage(
     onBack: () -> Unit,
     onSearch: () -> Unit,
     onLogs: () -> Unit,
+    onBackup: () -> Unit,
     onFilter: () -> Unit,
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     backToTop: Boolean = false,
@@ -69,13 +71,14 @@ internal fun WearSuperUserPage(
         snap = true, listState = listState, backToTop = backToTop,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.superuser)) }
-        // Search and SU log as one compact button group, matching the Modules page actions.
+        // Search, SU log and allowlist backup as one compact button group, matching the Modules page actions.
         item {
             WearIconButtonGroup(
                 spec,
                 listOf(
                     WearIconAction(Icons.TwoTone.Search, stringResource(R.string.search_apps), onSearch),
                     WearIconAction(Icons.AutoMirrored.TwoTone.Article, stringResource(R.string.sulog), onLogs),
+                    WearIconAction(Icons.TwoTone.Backup, stringResource(R.string.wear_allowlist_backup), onBackup),
                 ),
             )
         }

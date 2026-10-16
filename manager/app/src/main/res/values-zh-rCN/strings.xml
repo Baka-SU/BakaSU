@@ -708,4 +708,8 @@
     <string name="wear_retry_install_summary">重新选择安装方式</string>
     <string name="wear_file_check">文件核对</string>
     <string name="wear_start_install_module">开始安装模块</string>
+    <string name="wear_allowlist_backup">授权备份</string>
+    <string name="wear_allowlist">授权列表</string>
+    <string name="wear_backup_allowlist_summary">保存当前应用授权</string>
+    <string name="wear_restore_allowlist_summary">从文件导入</string>
 </resources>

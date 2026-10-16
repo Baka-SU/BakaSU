@@ -63,6 +63,9 @@ sealed interface WearRoute : NavKey {
     data object Logs : WearRoute
 
     @Serializable
+    data object AllowlistBackup : WearRoute
+
+    @Serializable
     data object LogOptions : WearRoute
 
     @Serializable

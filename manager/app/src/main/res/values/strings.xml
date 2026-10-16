@@ -735,4 +735,8 @@
     <string name="wear_retry_install_summary">Choose the install method again</string>
     <string name="wear_file_check">File check</string>
     <string name="wear_start_install_module">Start installing the module</string>
+    <string name="wear_allowlist_backup">Allowlist backup</string>
+    <string name="wear_allowlist">Allowlist</string>
+    <string name="wear_backup_allowlist_summary">Save the current app authorizations</string>
+    <string name="wear_restore_allowlist_summary">Import from a file</string>
 </resources>

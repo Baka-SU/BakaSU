@@ -116,7 +116,7 @@ private fun WearRoute.needsRoot() = when (this) {
     is WearRoute.Module, is WearRoute.ModuleAction, is WearRoute.ModuleUpdate, is WearRoute.ModuleInstallConfirm, is WearRoute.ModuleInstall,
     WearRoute.ModuleSort, WearRoute.ModuleSearch, WearRoute.ModuleSearchResults, WearRoute.ModuleRepo, is WearRoute.OnlineModule,
     is WearRoute.App, WearRoute.AppFilter, WearRoute.AppSearch, WearRoute.AppSearchResults,
-    WearRoute.Logs, WearRoute.LogOptions, is WearRoute.LogEntry, WearRoute.LogSearch,
+    WearRoute.Logs, WearRoute.LogOptions, WearRoute.AllowlistBackup, is WearRoute.LogEntry, WearRoute.LogSearch,
     WearRoute.Templates, is WearRoute.TemplateEditor, WearRoute.SuSFS, WearRoute.DynamicManager,
     WearRoute.Umount, WearRoute.Uninstall, WearRoute.Reboot,
     -> true
@@ -480,6 +480,9 @@ fun WearManagerScreen() {
                                     onBack = ::back,
                                 )
                             }
+                            entry<WearRoute.AllowlistBackup> {
+                                WearAllowlistBackupPage(superUserViewModel, ::back)
+                            }
                             entry<WearRoute.Logs> {
                                 // Opening the SU log shows the latest file; returning from its own pages keeps
                                 // the file chosen there.
@@ -806,6 +809,7 @@ private fun WearMainPages(
                                 onBack = { activity?.finish() },
                                 onSearch = onSearchApps,
                                 onLogs = { onOpen(WearRoute.Logs) },
+                                onBackup = { onOpen(WearRoute.AllowlistBackup) },
                                 onFilter = { onOpen(WearRoute.AppFilter) },
                                 listState = appListState,
                                 onAppClick = { uid, packageName -> onOpen(WearRoute.App(uid, packageName)) },
