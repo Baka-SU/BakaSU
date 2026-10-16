@@ -283,8 +283,8 @@ internal fun WearHomeStatusInfoPage(state: HomeDashboardState, onBack: () -> Uni
 }
 
 /**
- * A notice as one line in a standard list button, sized and padded like the other Home rows: its
- * icon and short title; the full text opens in a dialog.
+ * A notice in a standard list button, sized and padded like the other Home rows: its icon and
+ * short title, with a "tap to view" hint as the secondary label; the full text opens in a dialog.
  */
 @Composable
 private fun TransformingLazyColumnItemScope.WearWarningBar(
@@ -306,8 +306,10 @@ private fun TransformingLazyColumnItemScope.WearWarningBar(
         colors = ButtonDefaults.buttonColors(
             containerColor = container ?: MaterialTheme.colorScheme.surfaceContainer,
             contentColor = content,
+            secondaryContentColor = content,
             iconColor = content,
         ),
+        secondaryLabel = { Text(stringResource(R.string.wear_tap_to_view), maxLines = 1, overflow = TextOverflow.Ellipsis) },
         transformation = SurfaceTransformation(spec),
     ) {
         Text(stringResource(warning.title), maxLines = 1, overflow = TextOverflow.Ellipsis)
