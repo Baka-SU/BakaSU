@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Android
 import androidx.compose.material.icons.twotone.Block
@@ -35,8 +34,8 @@ import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
+import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.CompactButton
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
@@ -282,7 +281,10 @@ internal fun WearHomeStatusInfoPage(state: HomeDashboardState, onBack: () -> Uni
     }
 }
 
-/** A notice as one compact line: its icon and short title; the full text opens in a dialog. */
+/**
+ * A notice as one line in a standard list button, sized and padded like the other Home rows: its
+ * icon and short title; the full text opens in a dialog.
+ */
 @Composable
 private fun TransformingLazyColumnItemScope.WearWarningBar(
     spec: TransformationSpec,
@@ -290,7 +292,7 @@ private fun TransformingLazyColumnItemScope.WearWarningBar(
     onClick: () -> Unit,
 ) {
     val (container, content) = wearStatusColors(warning.tone)
-    CompactButton(
+    Button(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
@@ -298,7 +300,6 @@ private fun TransformingLazyColumnItemScope.WearWarningBar(
             Icon(
                 if (warning.tone == WearStatusTone.ERROR) Icons.TwoTone.Error else Icons.TwoTone.Warning,
                 contentDescription = null,
-                modifier = Modifier.size(ButtonDefaults.ExtraSmallIconSize),
             )
         },
         colors = ButtonDefaults.buttonColors(
