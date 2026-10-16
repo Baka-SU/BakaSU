@@ -480,6 +480,8 @@ fun WearManagerScreen() {
                                     onBack = ::back,
                                 )
                             }
+                            entry<WearRoute.HomeVersionInfo> { WearHomeVersionInfoPage(home, ::back) }
+                            entry<WearRoute.HomeStatusInfo> { WearHomeStatusInfoPage(home, ::back) }
                             entry<WearRoute.AllowlistBackup> {
                                 WearAllowlistBackupPage(superUserViewModel, ::back)
                             }
@@ -799,6 +801,8 @@ private fun WearMainPages(
                                 { onOpen(WearRoute.Reboot) },
                                 homeListState,
                                 onInstall = { onOpen(WearRoute.KernelInstall) },
+                                onVersionInfo = { onOpen(WearRoute.HomeVersionInfo) },
+                                onStatusInfo = { onOpen(WearRoute.HomeStatusInfo) },
                                 backToTop = true,
                             )
 

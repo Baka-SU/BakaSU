@@ -715,4 +715,10 @@
     <string name="wear_operation_scope">操作范围</string>
     <string name="wear_confirm_summary">执行当前操作</string>
     <string name="wear_cancel_summary">返回上一级</string>
+    <string name="wear_warning_root">Root 不可用</string>
+    <string name="wear_warning_version_mismatch">版本不匹配</string>
+    <string name="wear_warning_debug">DEBUG 构建</string>
+    <string name="wear_warning_pr_build">PR 构建</string>
+    <string name="wear_warning_apatch">检测到 APatch</string>
+    <string name="wear_warning_unofficial">非官方管理器</string>
 </resources>

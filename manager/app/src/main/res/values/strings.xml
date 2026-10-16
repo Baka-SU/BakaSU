@@ -742,4 +742,10 @@
     <string name="wear_operation_scope">Scope</string>
     <string name="wear_confirm_summary">Run this operation</string>
     <string name="wear_cancel_summary">Go back</string>
+    <string name="wear_warning_root">Root unavailable</string>
+    <string name="wear_warning_version_mismatch">Version mismatch</string>
+    <string name="wear_warning_debug">Debug build</string>
+    <string name="wear_warning_pr_build">PR build</string>
+    <string name="wear_warning_apatch">APatch detected</string>
+    <string name="wear_warning_unofficial">Unofficial manager</string>
 </resources>
