@@ -706,4 +706,17 @@
     <string name="wear_save_path">Save path</string>
     <string name="wear_add_susfs_entry">Add %1$s</string>
     <string name="wear_install_target">Install target</string>
+    <string name="wear_install_module">Install module</string>
+    <string name="wear_install_complete">Installation complete</string>
+    <string name="wear_install_failed">Installation failed</string>
+    <string name="wear_install_status">Installation status</string>
+    <string name="wear_installing_module">Installing module</string>
+    <string name="wear_install_log">Installation log</string>
+    <string name="wear_install_log_summary">Scroll to view the output</string>
+    <string name="wear_result">Result</string>
+    <string name="wear_check_log">Check log</string>
+    <string name="wear_check_log_summary">See why it failed</string>
+    <string name="wear_save_log_summary">For troubleshooting</string>
+    <string name="wear_reboot_device">Reboot device</string>
+    <string name="wear_reboot_apply_module">Apply the new module</string>
 </resources>
