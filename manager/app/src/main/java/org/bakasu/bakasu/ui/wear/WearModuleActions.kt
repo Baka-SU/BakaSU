@@ -1,12 +1,16 @@
 package org.bakasu.bakasu.ui.wear
 
+import android.os.Build
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.twotone.CheckCircle
+import androidx.compose.material.icons.twotone.Download
 import androidx.compose.material.icons.twotone.Error
+import androidx.compose.material.icons.twotone.Folder
 import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.Save
+import androidx.compose.material.icons.twotone.Smartphone
 import androidx.compose.material.icons.twotone.Update
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,25 +21,32 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.ConfirmationDialogDefaults
 import androidx.wear.compose.material3.FailureConfirmationDialog
 import androidx.wear.compose.material3.SuccessConfirmationDialog
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.confirmationDialogCurvedText
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.ui.component.ZipFileDetector
+import org.bakasu.bakasu.ui.component.ZipFileInfo
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiAction
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
@@ -220,4 +231,63 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
         onDismissRequest = { saveFailed = false },
         curvedText = { confirmationDialogCurvedText(failedText, style) },
     )
+}
+
+/**
+ * Confirms installing a module ZIP, as the phone does before flashing: the file and its
+ * `module.prop` details, the target device, then [onConfirm] starts the installation. Missing
+ * `module.prop` fields are left out, and an unreadable one falls back to the file name.
+ */
+@Composable
+internal fun WearModuleInstallConfirmPage(uri: String, onBack: () -> Unit, onConfirm: () -> Unit) {
+    val context = LocalContext.current
+    val zipDetector = koinInject<ZipFileDetector>()
+    var info by remember { mutableStateOf<ZipFileInfo?>(null) }
+    LaunchedEffect(uri) {
+        info = withContext(Dispatchers.IO) { zipDetector.parseModuleInfo(context, uri.toUri()) }
+    }
+    val fileName = uri.toUri().lastPathSegment?.substringAfterLast('/').orEmpty()
+    val module = info
+    WearList(isLoading = module == null, onBack = onBack) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.confirm_installation)) }
+        item { WearSectionHeader(spec, stringResource(R.string.wear_file_check)) }
+        if (module != null) {
+            val version = listOfNotNull(
+                module.version.ifBlank { null },
+                module.versionCode.ifBlank { null }?.let { "($it)" },
+            ).joinToString(" ")
+            item {
+                WearChip(
+                    spec,
+                    module.name.ifBlank { fileName.ifBlank { stringResource(R.string.unknown_module) } },
+                    secondaryLabel = listOfNotNull(
+                        version.ifBlank { null }?.let { stringResource(R.string.wear_labeled_value, stringResource(R.string.module_version), it) },
+                        module.author.ifBlank { null }?.let { stringResource(R.string.wear_labeled_value, stringResource(R.string.module_author), it) },
+                        fileName.ifBlank { null }?.let { stringResource(R.string.wear_labeled_value, stringResource(R.string.wear_file_name), it) },
+                    ).joinToString("\n").ifBlank { null },
+                    icon = Icons.TwoTone.Folder,
+                )
+            }
+            if (module.description.isNotBlank()) item { WearInfoCard(spec) { Text(module.description) } }
+        }
+        item {
+            WearChip(
+                spec,
+                stringResource(R.string.wear_install_target),
+                secondaryLabel = Build.MODEL,
+                icon = Icons.TwoTone.Smartphone,
+            )
+        }
+        item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
+        item {
+            WearActionButton(
+                spec,
+                Icons.TwoTone.Download,
+                stringResource(R.string.confirm_installation),
+                onConfirm,
+                secondaryText = stringResource(R.string.wear_start_install_module),
+                colors = ButtonDefaults.buttonColors(),
+            )
+        }
+    }
 }

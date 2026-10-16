@@ -733,4 +733,6 @@
     <string name="wear_reboot_apply_kernel">Apply the kernel changes</string>
     <string name="wear_retry">Retry</string>
     <string name="wear_retry_install_summary">Choose the install method again</string>
+    <string name="wear_file_check">File check</string>
+    <string name="wear_start_install_module">Start installing the module</string>
 </resources>

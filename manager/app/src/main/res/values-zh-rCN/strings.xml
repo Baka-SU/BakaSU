@@ -706,4 +706,6 @@
     <string name="wear_reboot_apply_kernel">应用内核变更</string>
     <string name="wear_retry">重试</string>
     <string name="wear_retry_install_summary">重新选择安装方式</string>
+    <string name="wear_file_check">文件核对</string>
+    <string name="wear_start_install_module">开始安装模块</string>
 </resources>

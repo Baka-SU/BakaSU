@@ -27,6 +27,9 @@ sealed interface WearRoute : NavKey {
     data class ModuleUpdate(val id: String) : WearRoute
 
     @Serializable
+    data class ModuleInstallConfirm(val uri: String) : WearRoute
+
+    @Serializable
     data class ModuleInstall(val uri: String) : WearRoute
 
     @Serializable

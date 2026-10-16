@@ -27,7 +27,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -62,9 +61,6 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.confirmationDialogCurvedText
 import androidx.wear.compose.material3.openOnPhoneDialogCurvedText
 import androidx.wear.compose.navigation3.rememberSwipeDismissableSceneStrategy
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.network.WearLinkFailure
 import org.bakasu.bakasu.domain.model.FlashOperation
@@ -72,8 +68,6 @@ import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.LkmSelection
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
-import org.bakasu.bakasu.ui.component.ZipFileDetector
-import org.bakasu.bakasu.ui.component.ZipFileInfo
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
 import org.bakasu.bakasu.ui.viewmodel.HomeUiEvent
@@ -109,9 +103,7 @@ import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
-import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.rememberWearRemoteInput
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 private const val HOME = 0
@@ -121,7 +113,7 @@ private const val SETTINGS = 3
 
 /** Destinations that need a full-featured root manager; they close when root goes away. */
 private fun WearRoute.needsRoot() = when (this) {
-    is WearRoute.Module, is WearRoute.ModuleAction, is WearRoute.ModuleUpdate, is WearRoute.ModuleInstall,
+    is WearRoute.Module, is WearRoute.ModuleAction, is WearRoute.ModuleUpdate, is WearRoute.ModuleInstallConfirm, is WearRoute.ModuleInstall,
     WearRoute.ModuleSort, WearRoute.ModuleSearch, WearRoute.ModuleSearchResults, WearRoute.ModuleRepo, is WearRoute.OnlineModule,
     is WearRoute.App, WearRoute.AppFilter, WearRoute.AppSearch, WearRoute.AppSearchResults,
     WearRoute.Logs, WearRoute.LogOptions, is WearRoute.LogEntry, WearRoute.LogSearch,
@@ -223,32 +215,7 @@ fun WearManagerScreen() {
     ) { sulogViewModel.dispatch(SulogUiAction.Search(it.trim())) }
 
     // As on the phone, a selected module ZIP is installed only after the user confirms it.
-    var pendingInstallUri by rememberSaveable { mutableStateOf("") }
-    var pendingInstallInfo by remember { mutableStateOf<ZipFileInfo?>(null) }
-    val pendingInstallName = pendingInstallInfo?.name?.ifBlank { null }
-        ?: pendingInstallUri.toUri().lastPathSegment?.substringAfterLast('/') ?: stringResource(R.string.unknown_module)
-    val installMessage = listOfNotNull(
-        stringResource(R.string.confirm_install_module_title, pendingInstallName),
-        stringResource(R.string.wear_labeled_value, stringResource(R.string.wear_file_name), pendingInstallUri.toUri().lastPathSegment?.substringAfterLast('/').orEmpty()),
-        stringResource(R.string.wear_labeled_value, stringResource(R.string.wear_install_target), Build.MODEL),
-        pendingInstallInfo?.version?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.wear_labeled_value, stringResource(R.string.module_version), it) },
-        pendingInstallInfo?.versionCode?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.wear_labeled_value, stringResource(R.string.wear_version_code), it) },
-        pendingInstallInfo?.author?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.wear_labeled_value, stringResource(R.string.module_author), it) },
-        pendingInstallInfo?.description?.takeIf { it.isNotBlank() },
-    ).joinToString("\n\n")
-    val installDialog = rememberWearConfirmDialog(stringResource(R.string.confirm_installation), installMessage) {
-        open(WearRoute.ModuleInstall(pendingInstallUri))
-    }
-    val installScope = rememberCoroutineScope()
-    val zipDetector = koinInject<ZipFileDetector>()
-    fun confirmModule(uri: String) {
-        pendingInstallUri = uri
-        pendingInstallInfo = null
-        installScope.launch {
-            pendingInstallInfo = withContext(Dispatchers.IO) { zipDetector.parseModuleInfo(context, uri.toUri()) }
-            installDialog.show()
-        }
-    }
+    fun confirmModule(uri: String) = open(WearRoute.ModuleInstallConfirm(uri))
     val selectModuleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) confirmModule(uri.toString())
     }
@@ -442,6 +409,12 @@ fun WearManagerScreen() {
                                 WearModuleUpdatePage(modules.moduleList.firstOrNull { it.id == route.id }, ::back) { uri ->
                                     back()
                                     open(WearRoute.ModuleInstall(uri))
+                                }
+                            }
+                            entry<WearRoute.ModuleInstallConfirm> { route ->
+                                WearModuleInstallConfirmPage(route.uri, ::back) {
+                                    back()
+                                    open(WearRoute.ModuleInstall(route.uri))
                                 }
                             }
                             entry<WearRoute.ModuleInstall> { route ->
