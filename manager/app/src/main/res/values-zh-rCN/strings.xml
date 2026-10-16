@@ -730,4 +730,5 @@
     <string name="wear_author_link_summary">打开作者链接</string>
     <string name="wear_source_summary">打开项目页面</string>
     <string name="wear_download_then_install">下载后确认安装</string>
+    <string name="wear_browser_open_failed">无法打开浏览器</string>
 </resources>

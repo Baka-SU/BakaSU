@@ -881,6 +881,7 @@ private fun WearOpenResultDialogs(
             WearLinkFailure.PHONE_UNAVAILABLE -> R.string.wear_phone_disconnected
             WearLinkFailure.PHONE_APP_MISSING -> R.string.wear_phone_app_missing
             WearLinkFailure.PHONE_FAILED -> R.string.wear_phone_open_failed
+            WearLinkFailure.BROWSER_FAILED -> R.string.wear_browser_open_failed
             else -> fallback
         },
     )

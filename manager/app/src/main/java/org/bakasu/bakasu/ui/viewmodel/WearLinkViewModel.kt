@@ -45,6 +45,10 @@ class WearLinkViewModel(private val repository: WearLinkRepository) : ViewModel(
             try {
                 when (repository.resolve(url, mode)) {
                     WearLinkTarget.WEBVIEW -> mutableEvents.emit(WearLinkEvent.WebView(url))
+
+                    // The repository has already started the browser.
+                    WearLinkTarget.BROWSER -> Unit
+
                     WearLinkTarget.PHONE -> mutableEvents.emit(WearLinkEvent.SentToPhone)
                 }
             } catch (error: CancellationException) {

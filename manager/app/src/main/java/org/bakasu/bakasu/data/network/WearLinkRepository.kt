@@ -24,15 +24,15 @@ import org.bakasu.bakasu.data.webui.WearWebUiSession
 
 private const val TAG = "WearLink"
 
-enum class WearLinkTarget { WEBVIEW, PHONE }
+enum class WearLinkTarget { WEBVIEW, BROWSER, PHONE }
 
 /** Why a link could not be opened, so the UI can show the actual reason and offer a mode switch. */
-enum class WearLinkFailure { UNSUPPORTED_URL, WEBVIEW_UNAVAILABLE, PHONE_UNAVAILABLE, PHONE_APP_MISSING, PHONE_FAILED }
+enum class WearLinkFailure { UNSUPPORTED_URL, WEBVIEW_UNAVAILABLE, BROWSER_FAILED, PHONE_UNAVAILABLE, PHONE_APP_MISSING, PHONE_FAILED }
 class WearLinkException(val reason: WearLinkFailure, cause: Throwable? = null) : Exception(reason.name, cause)
 
 /**
- * Links open in the watch's own WebView or are sent to the phone. Watches may ship without WebView,
- * and handing links to an arbitrary watch browser is not offered.
+ * Links open on the watch or are sent to the phone. On the watch they go to the default browser
+ * when the system has one, otherwise to the app's WebView, which some watches ship without.
  */
 class WearLinkRepository(private val application: Application) {
     // Both the system feature and an installed provider are required; builds that remove WebView
@@ -40,17 +40,39 @@ class WearLinkRepository(private val application: Application) {
     fun hasWebView(): Boolean = application.packageManager.hasSystemFeature(PackageManager.FEATURE_WEBVIEW) &&
         runCatching { WebViewCompat.getCurrentWebViewPackage(application) != null }.getOrDefault(false)
 
+    /** The browser the system opens web links with by default; none when it would ask, or has no browser. */
+    private fun hasDefaultBrowser(uri: Uri): Boolean {
+        val view = Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)
+        val browser = application.packageManager.resolveActivity(view, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo
+            ?: return false
+        return browser.packageName != "android" && browser.packageName != application.packageName
+    }
+
     suspend fun resolve(url: String, mode: String): WearLinkTarget = withContext(Dispatchers.IO) {
         val uri = Uri.parse(url)
         if (uri.scheme !in listOf("https", "http")) throw WearLinkException(WearLinkFailure.UNSUPPORTED_URL)
         val hasWebView = hasWebView()
         val target = when (mode) {
-            "webview" -> if (hasWebView) WearLinkTarget.WEBVIEW else throw WearLinkException(WearLinkFailure.WEBVIEW_UNAVAILABLE)
+            // On the watch: its default browser when set, whether or not WebView exists.
+            "webview" -> if (hasDefaultBrowser(uri)) {
+                WearLinkTarget.BROWSER
+            } else if (hasWebView) {
+                WearLinkTarget.WEBVIEW
+            } else {
+                throw WearLinkException(WearLinkFailure.WEBVIEW_UNAVAILABLE)
+            }
 
             "phone" -> WearLinkTarget.PHONE
 
             // Automatic: the watch WebView when present, otherwise the phone.
             else -> if (hasWebView) WearLinkTarget.WEBVIEW else WearLinkTarget.PHONE
+        }
+        if (target == WearLinkTarget.BROWSER) {
+            runCatching {
+                application.startActivity(
+                    Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }.onFailure { throw WearLinkException(WearLinkFailure.BROWSER_FAILED, it) }
         }
         if (target == WearLinkTarget.PHONE) {
             val helper = RemoteActivityHelper(application, java.util.concurrent.Executor { it.run() })
