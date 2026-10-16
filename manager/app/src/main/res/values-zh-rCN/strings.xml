@@ -722,4 +722,6 @@
     <string name="wear_warning_apatch">检测到 APatch</string>
     <string name="wear_warning_unofficial">非官方管理器</string>
     <string name="wear_file_access_failed">无法访问此位置</string>
+    <string name="wear_storage_permission_title">允许访问存储</string>
+    <string name="wear_storage_permission_message">未获得 Root 时，文件选择器需要所有文件访问权限才能显示内部存储中的文件。</string>
 </resources>

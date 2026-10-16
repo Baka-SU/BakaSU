@@ -1,7 +1,11 @@
 package org.bakasu.bakasu.data.file
 
+import android.Manifest
 import android.app.Application
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Environment
+import androidx.core.content.ContextCompat
 import com.topjohnwu.superuser.io.SuFile
 import com.topjohnwu.superuser.io.SuFileInputStream
 import com.topjohnwu.superuser.io.SuFileOutputStream
@@ -34,6 +38,20 @@ class WearFileRepository(
     private fun fail(resource: Int): Nothing = throw WearFileException(application.getString(resource))
 
     private val stagingDirectory get() = File(application.cacheDir, "wear-picker").apply { mkdirs() }
+
+    /**
+     * Whether browsing shared storage still needs a permission: without root, plain file access
+     * sees only media and the app's own files until all-files access (API 30+) or the read
+     * permission (older releases) is granted.
+     */
+    suspend fun needsStoragePermission(): Boolean = withContext(Dispatchers.IO) {
+        val granted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            ContextCompat.checkSelfPermission(application, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+        !granted && cli.withNewRootShell(true) { !isRoot }
+    }
 
     /** Lists [path] (or a default storage folder) with the files whose MIME type matches [mimeTypes]. */
     suspend fun list(path: String?, mimeTypes: List<String>, directoriesOnly: Boolean): WearDirectory = withContext(Dispatchers.IO) {

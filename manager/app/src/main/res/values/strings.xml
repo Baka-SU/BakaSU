@@ -749,4 +749,6 @@
     <string name="wear_warning_apatch">APatch detected</string>
     <string name="wear_warning_unofficial">Unofficial manager</string>
     <string name="wear_file_access_failed">Cannot access this location</string>
+    <string name="wear_storage_permission_title">Allow storage access</string>
+    <string name="wear_storage_permission_message">Without root, the file picker needs all-files access to show the files in internal storage.</string>
 </resources>

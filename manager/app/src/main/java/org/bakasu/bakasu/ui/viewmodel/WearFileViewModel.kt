@@ -20,12 +20,16 @@ import org.bakasu.bakasu.data.file.WearFileRepository
  * @date 2026/10/1.
  */
 
-/** [error] is a localized message; [failed] without it means an unexpected, generic failure. */
+/**
+ * [error] is a localized message; [failed] without it means an unexpected, generic failure.
+ * [storagePermissionRequired] is set when browsing without root lacks the storage permission.
+ */
 data class WearFileUiState(
     val directory: WearDirectory? = null,
     val loading: Boolean = false,
     val error: String? = null,
     val failed: Boolean = false,
+    val storagePermissionRequired: Boolean = false,
     val name: String = "",
 )
 sealed interface WearFileEvent {
@@ -43,6 +47,8 @@ class WearFileViewModel(private val repository: WearFileRepository) : ViewModel(
         mutableState.update { it.copy(name = name) }
     }
     fun load(path: String?, mimeTypes: List<String>, directoriesOnly: Boolean) = submit {
+        val permissionRequired = repository.needsStoragePermission()
+        mutableState.update { it.copy(storagePermissionRequired = permissionRequired) }
         val directory = repository.list(path, mimeTypes, directoriesOnly)
         mutableState.update { it.copy(directory = directory) }
     }

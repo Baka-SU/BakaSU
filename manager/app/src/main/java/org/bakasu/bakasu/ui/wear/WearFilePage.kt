@@ -1,7 +1,13 @@
 package org.bakasu.bakasu.ui.wear
 
+import android.Manifest
+import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.text.format.Formatter
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -33,13 +39,17 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.ConfirmationDialogDefaults
+import androidx.wear.compose.material3.FailureConfirmationDialog
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.confirmationDialogCurvedText
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.file.matchesMimeType
 import org.bakasu.bakasu.data.file.wearFileMimeType
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
+import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.WearFileEvent
 import org.bakasu.bakasu.ui.viewmodel.WearFileViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
@@ -64,7 +74,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * The built-in picker as a Wear list: the title, the current path as a caption, a low-emphasis
  * entry to the parent folder, then folders and the files matching [mimeTypes] as tonal buttons. In
  * save mode the file name follows and the edge button confirms; otherwise picking a file returns it.
- * [onPicked] receives the file as a content URI. Failed operations open an AlertDialog to retry or cancel.
+ * [onPicked] receives the file as a content URI. Failed operations open an AlertDialog to retry or
+ * cancel, and browsing without root first asks for the storage permission.
  */
 @Composable
 internal fun WearFilePage(
@@ -121,7 +132,71 @@ internal fun WearFilePage(
             dismissButton = { AlertDialogDefaults.DismissButton(onClick = close) },
         )
     }
-    LaunchedEffect(state.failed) { if (state.failed) errorDialog.show() }
+    // Without root, shared storage needs a permission the user grants in the system; the picker asks
+    // once per visit and reloads when the user returns from granting it.
+    var permissionAsked by rememberSaveable { mutableStateOf(false) }
+    var awaitingPermission by rememberSaveable { mutableStateOf(false) }
+    var permissionFailed by remember { mutableStateOf(false) }
+    fun reload() = perform { viewModel.load(state.directory?.path, mimeTypes, saving) }
+    val readPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { reload() }
+    fun requestStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val app = "package:${context.packageName}".toUri()
+            // Not every watch has the all-files access screen, so fall back to the general list and app info.
+            val opened = listOf(
+                Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, app),
+                Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION),
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, app),
+            ).any { runCatching { context.startActivity(it) }.isSuccess }
+            if (opened) awaitingPermission = true else permissionFailed = true
+        } else {
+            readPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+    }
+    ActivityResumeEffect {
+        if (awaitingPermission) {
+            awaitingPermission = false
+            reload()
+        }
+    }
+    val permissionDialog = rememberCustomDialog { dismiss ->
+        val cancel = {
+            dismiss()
+            if (state.failed) errorDialog.show()
+        }
+        AlertDialog(
+            visible = true,
+            onDismissRequest = cancel,
+            icon = { Icon(Icons.TwoTone.Folder, contentDescription = null) },
+            title = { Text(stringResource(R.string.wear_storage_permission_title)) },
+            text = { Text(stringResource(R.string.wear_storage_permission_message)) },
+            confirmButton = {
+                AlertDialogDefaults.ConfirmButton(
+                    onClick = {
+                        dismiss()
+                        requestStoragePermission()
+                    },
+                )
+            },
+            dismissButton = { AlertDialogDefaults.DismissButton(onClick = cancel) },
+        )
+    }
+    // One dialog at a time: the permission request comes first, as granting it may resolve the failure.
+    LaunchedEffect(state.failed, state.storagePermissionRequired) {
+        if (state.storagePermissionRequired && !permissionAsked) {
+            permissionAsked = true
+            permissionDialog.show()
+        } else if (state.failed && !permissionDialog.isShown) {
+            errorDialog.show()
+        }
+    }
+    val failedText = stringResource(R.string.operation_failed)
+    val failedStyle = ConfirmationDialogDefaults.curvedTextStyle
+    FailureConfirmationDialog(
+        visible = permissionFailed,
+        onDismissRequest = { permissionFailed = false },
+        curvedText = { confirmationDialogCurvedText(failedText, failedStyle) },
+    )
     if (editingName) {
         WearSubPage({ editingName = false }) {
             WearTextInputPage(stringResource(R.string.wear_file_name), state.name) {
