@@ -739,4 +739,7 @@
     <string name="wear_allowlist">Allowlist</string>
     <string name="wear_backup_allowlist_summary">Save the current app authorizations</string>
     <string name="wear_restore_allowlist_summary">Import from a file</string>
+    <string name="wear_operation_scope">Scope</string>
+    <string name="wear_confirm_summary">Run this operation</string>
+    <string name="wear_cancel_summary">Go back</string>
 </resources>

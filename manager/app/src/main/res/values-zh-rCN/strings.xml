@@ -712,4 +712,7 @@
     <string name="wear_allowlist">授权列表</string>
     <string name="wear_backup_allowlist_summary">保存当前应用授权</string>
     <string name="wear_restore_allowlist_summary">从文件导入</string>
+    <string name="wear_operation_scope">操作范围</string>
+    <string name="wear_confirm_summary">执行当前操作</string>
+    <string name="wear_cancel_summary">返回上一级</string>
 </resources>
