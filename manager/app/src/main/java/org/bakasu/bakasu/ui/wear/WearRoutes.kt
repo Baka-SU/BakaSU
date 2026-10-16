@@ -152,6 +152,9 @@ sealed interface WearRoute : NavKey {
     data object Licenses : WearRoute
 
     @Serializable
+    data class LicenseDetail(val index: Int) : WearRoute
+
+    @Serializable
     data class Browser(val url: String) : WearRoute
 
     /** A link that could not be opened, with the reason as a string resource. */

@@ -620,7 +620,10 @@ fun WearManagerScreen() {
                                 )
                             }
                             entry<WearRoute.Licenses> {
-                                WearLicensePage(::back) { linkViewModel.open(it, preferences.link) }
+                                WearLicensePage(::back) { open(WearRoute.LicenseDetail(it)) }
+                            }
+                            entry<WearRoute.LicenseDetail> { route ->
+                                WearLicenseDetailPage(route.index, ::back) { linkViewModel.open(it, preferences.link) }
                             }
                             entry<WearRoute.Browser> { route ->
                                 WearBrowserPage(route.url, ::back) {
