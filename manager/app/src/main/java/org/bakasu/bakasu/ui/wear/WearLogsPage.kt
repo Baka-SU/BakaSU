@@ -1,6 +1,9 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.twotone.DeleteSweep
@@ -15,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.itemsIndexed
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
@@ -157,24 +161,26 @@ internal fun WearLogsPage(
                 val tags = (sulogEntrySummaryTags(entry) + listOfNotNull(sulogEntryStatus(entry))).joinToString(" · ")
                 TitleCard(
                     onClick = { onEntry(entry) },
-                    title = { Text(sulogEntryTitle(entry), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    modifier = Modifier.fillMaxWidth().transformedHeight(this, spec),
+                    title = { Text(sulogEntryTitle(entry), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp).transformedHeight(this, spec),
                     transformation = SurfaceTransformation(spec),
                     // The clock time fits the time slot; the full date stays in the content.
-                    time = entry.timestampText?.substringAfter(' ')?.let { { Text(it) } },
+                    time = entry.timestampText?.substringAfter(' ')?.let { { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
                     subtitle = tags.takeIf { it.isNotEmpty() }?.let {
-                        { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, maxLines = 2, overflow = TextOverflow.Ellipsis) }
                     },
                 ) {
-                    sulogEntryDescription(entry)?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    }
-                    entry.timestampText?.let {
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.bodyExtraSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        sulogEntryDescription(entry)?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
+                        entry.timestampText?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodyExtraSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }

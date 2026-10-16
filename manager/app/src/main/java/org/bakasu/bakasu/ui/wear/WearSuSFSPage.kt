@@ -6,7 +6,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.AltRoute
 import androidx.compose.material.icons.twotone.Folder
+import androidx.compose.material.icons.twotone.Info
 import androidx.compose.material.icons.twotone.Map
+import androidx.compose.material.icons.twotone.RestartAlt
 import androidx.compose.material.icons.twotone.Restore
 import androidx.compose.material.icons.twotone.Save
 import androidx.compose.material.icons.twotone.Storage
@@ -38,6 +40,7 @@ import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSBoolean
 import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSConfig
 import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSStatusInfo
+import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -66,7 +69,7 @@ internal typealias WearSuSFSCommand = (SuSFSCommandReply) -> SuSFSUiAction
 
 /** Wear presentation of the phone SUSFS manager, sharing its commands, config and resources. */
 @Composable
-internal fun WearSuSFSPage(onBack: () -> Unit) {
+internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     val viewModel = koinViewModel<SuSFSViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -194,10 +197,80 @@ internal fun WearSuSFSPage(onBack: () -> Unit) {
             if (export) exportLauncher.launch(backupFileName) else importLauncher.launch(arrayOf("application/json"))
         }.onFailure { showConfirmFailure = true }
     }
+    val statusContent: @Composable () -> Unit = {
+        WearList(isLoading = state.isLoading || busy, onBack = { page = "" }) { spec ->
+            item { WearPageHeader(spec, stringResource(R.string.susfs_tab_status)) }
+            message?.let { item { WearInfoCard(spec) { Text(it) } } }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_status_controls)) }
+            item {
+                WearSettingsSwitchWidget(
+                    spec,
+                    stringResource(R.string.susfs_enable_config),
+                    config?.enabled == true,
+                    { enabled -> submit({ SuSFSUiAction.SetEnabled(enabled, it) }) },
+                    enabled = config != null && !busy,
+                    icon = Icons.TwoTone.VisibilityOff,
+                    secondaryLabel = stringResource(R.string.susfs_enable_config_summary),
+                )
+            }
+            if (config?.enabled == false) {
+                item {
+                    WearInfoCard(spec) { Text(stringResource(R.string.susfs_config_disable_warning)) }
+                }
+            }
+            item { WearInfoCard(spec) { WearDetailField(Icons.TwoTone.Info, stringResource(R.string.susfs_status_version), state.statusInfo?.version?.ifBlank { noData } ?: noData) } }
+            item { WearInfoCard(spec) { WearDetailField(Icons.TwoTone.Tune, stringResource(R.string.susfs_status_variant), state.statusInfo?.variant?.ifBlank { noData } ?: noData) } }
+            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_status_enabled_features), { page = "capabilities" }, icon = Icons.TwoTone.Info) }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_backup_restore)) }
+            SegmentedColumn(listOf("export", "import", "reset"), { it }) { action ->
+                when (action) {
+                    "export" -> WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(R.string.susfs_backup_export),
+                        { launchPicker(true) },
+                        icon = Icons.TwoTone.Save,
+                        description = stringResource(R.string.susfs_backup_description),
+                    )
+
+                    "import" -> WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(R.string.susfs_backup_import),
+                        { launchPicker(false) },
+                        icon = Icons.TwoTone.Restore,
+                        description = stringResource(R.string.susfs_restore_description),
+                    )
+
+                    "reset" -> WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(R.string.susfs_backup_restore_default),
+                        restore::show,
+                        icon = Icons.TwoTone.Restore,
+                        description = stringResource(R.string.susfs_backup_restore_default_desc),
+                    )
+                }
+            }
+            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.reboot), onReboot, icon = Icons.TwoTone.RestartAlt) }
+        }
+    }
     val route = page
     if (route.isNotEmpty()) {
-        WearSubPage({ page = if (page in setOf("add", "detail")) "section" else "" }) {
+        WearSubPage({
+            page = if (page in setOf("add", "detail")) {
+                "section"
+            } else if (page == "capabilities") {
+                "status"
+            } else {
+                ""
+            }
+        }) {
             when (route) {
+                "status" -> statusContent()
+
+                "capabilities" -> WearList(onBack = { page = "status" }) { spec ->
+                    item { WearPageHeader(spec, stringResource(R.string.susfs_status_enabled_features)) }
+                    item { WearInfoCard(spec) { Text(state.statusInfo?.enabledFeatures?.ifBlank { noData } ?: noData) } }
+                }
+
                 "section" -> if (config != null && config.enabled) {
                     if (section == WearSuSFSSection.Standard) {
                         WearSuSFSStandardPage(
@@ -248,40 +321,8 @@ internal fun WearSuSFSPage(onBack: () -> Unit) {
     } else {
         WearList(isLoading = state.isLoading || busy, onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.susfs_config_title)) }
-            message?.let { item { WearInfoCard(spec) { Text(it) } } }
-            item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_status_controls)) }
-            item {
-                WearSettingsSwitchWidget(
-                    spec,
-                    stringResource(R.string.susfs_enable_config),
-                    config?.enabled == true,
-                    { enabled -> submit({ SuSFSUiAction.SetEnabled(enabled, it) }) },
-                    enabled = config != null && !busy,
-                    icon = Icons.TwoTone.VisibilityOff,
-                    secondaryLabel = stringResource(R.string.susfs_enable_config_summary),
-                )
-            }
-            if (config?.enabled == false) {
-                item {
-                    WearInfoCard(spec) { Text(stringResource(R.string.susfs_config_disable_warning)) }
-                }
-            }
-            item {
-                WearInfoCard(spec) {
-                    Text(stringResource(R.string.susfs_status_version))
-                    Text(state.statusInfo?.version?.ifBlank { noData } ?: noData)
-                    Text(stringResource(R.string.susfs_status_variant))
-                    Text(state.statusInfo?.variant?.ifBlank { noData } ?: noData)
-                    Text(stringResource(R.string.susfs_status_enabled_features))
-                    Text(state.statusInfo?.enabledFeatures?.ifBlank { noData } ?: noData)
-                }
-            }
-            if (config?.enabled == true) {
-                item {
-                    WearSectionHeader(spec, stringResource(R.string.wear_susfs_features))
-                }
-            }
-            LazySegmentedColumn(if (config?.enabled == true) WearSuSFSSection.entries else emptyList(), { it.name }) { entry ->
+            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_tab_status), { page = "status" }, icon = Icons.TwoTone.Info) }
+            LazySegmentedColumn(WearSuSFSSection.entries, { it.name }) { entry ->
                 WearSettingsJumpPageWidget(
                     spec,
                     stringResource(entry.title),
@@ -290,35 +331,8 @@ internal fun WearSuSFSPage(onBack: () -> Unit) {
                         page = "section"
                     },
                     icon = entry.icon,
+                    enabled = config?.enabled == true,
                 )
-            }
-            item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_backup_restore)) }
-            SegmentedColumn(listOf("export", "import", "reset"), { it }) { action ->
-                when (action) {
-                    "export" -> WearSettingsJumpPageWidget(
-                        spec,
-                        stringResource(R.string.susfs_backup_export),
-                        { launchPicker(true) },
-                        icon = Icons.TwoTone.Save,
-                        description = stringResource(R.string.susfs_backup_description),
-                    )
-
-                    "import" -> WearSettingsJumpPageWidget(
-                        spec,
-                        stringResource(R.string.susfs_backup_import),
-                        { launchPicker(false) },
-                        icon = Icons.TwoTone.Restore,
-                        description = stringResource(R.string.susfs_restore_description),
-                    )
-
-                    "reset" -> WearSettingsJumpPageWidget(
-                        spec,
-                        stringResource(R.string.susfs_backup_restore_default),
-                        restore::show,
-                        icon = Icons.TwoTone.Restore,
-                        description = stringResource(R.string.susfs_backup_restore_default_desc),
-                    )
-                }
             }
         }
     }

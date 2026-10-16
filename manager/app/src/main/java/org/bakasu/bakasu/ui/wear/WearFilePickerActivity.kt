@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.ui.graphics.Color
 import androidx.wear.compose.material3.AppScaffold
@@ -18,7 +17,7 @@ import org.bakasu.bakasu.ui.wear.component.WearTimeText
  * only this app can start it, and [withDocumentPickerFallback] routes an intent here only when no
  * system picker can take it or the Wear picker setting asks for the built-in one.
  */
-class WearFilePickerActivity : ComponentActivity() {
+class WearFilePickerActivity : WearActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val saving = intent.action == Intent.ACTION_CREATE_DOCUMENT

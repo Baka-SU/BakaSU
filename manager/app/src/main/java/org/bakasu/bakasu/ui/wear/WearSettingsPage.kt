@@ -139,6 +139,7 @@ private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
         WearSelection.LinkMode -> Icons.TwoTone.Language
         WearSelection.PickerMode -> Icons.TwoTone.FolderOpen
         WearSelection.SuCompat -> Icons.TwoTone.RemoveModerator
+        WearSelection.BackAnimation, WearSelection.BackDirection, WearSelection.Palette, WearSelection.ColorSpec -> Icons.TwoTone.Settings
     }
 
     else -> Icons.TwoTone.Settings
@@ -173,7 +174,6 @@ internal fun WearSettingsPage(
     } else {
         "#%06X".format(themeConfig.seedColor and 0xFFFFFF)
     }
-    val dpiSummary = stringResource(R.string.wear_ui_scale, state.currentDpi.toFloat() / state.systemDpi.coerceAtLeast(1))
     val shapeSummary = screenShapeLabel(preferences.shape)
     val version = wearAppVersion()
     WearList(onBack = onBack, snap = true, listState = listState, backToTop = backToTop) { spec ->
@@ -186,7 +186,6 @@ internal fun WearSettingsPage(
                     add(WearSettingsCategory.Security)
                     add(WearSettingsCategory.Advanced)
                 }
-                add(WearSettingsCategory.Display)
             }
             LazySegmentedColumn(categories, { it.name }) { entry ->
                 WearSettingsJumpPageWidget(
@@ -194,6 +193,15 @@ internal fun WearSettingsPage(
                     stringResource(settingsCategoryTitle(entry)),
                     { onOpen(WearRoute.Settings(entry)) },
                     icon = settingsCategoryIcon(entry),
+                )
+            }
+            SegmentedColumn(listOf(WearRoute.Color, WearRoute.Dpi), { it.toString() }) { route ->
+                WearSettingsJumpPageWidget(
+                    spec,
+                    stringResource(if (route == WearRoute.Color) R.string.wear_appearance_theme else R.string.wear_display_touch),
+                    { onOpen(route) },
+                    icon = settingsRouteIcon(route),
+                    description = if (route == WearRoute.Color) colorSummary else null,
                 )
             }
             if (status.isFullFeatured && susfsAvailable) {
@@ -234,7 +242,7 @@ internal fun WearSettingsPage(
                     stringResource(if (route == WearRoute.Dpi) R.string.wear_display_scaling else R.string.wear_screen_shape),
                     { onOpen(route) },
                     icon = settingsRouteIcon(route),
-                    description = if (route == WearRoute.Dpi) dpiSummary else shapeSummary,
+                    description = if (route == WearRoute.Dpi) null else shapeSummary,
                 )
             }
             // Android 13+ keeps the app language in the system per-app settings, which Wear does not

@@ -8,6 +8,7 @@ import androidx.compose.material.icons.twotone.Add
 import androidx.compose.material.icons.twotone.Delete
 import androidx.compose.material.icons.twotone.FileOpen
 import androidx.compose.material.icons.twotone.Folder
+import androidx.compose.material.icons.twotone.Save
 import androidx.compose.material.icons.twotone.Security
 import androidx.compose.material.icons.twotone.Storage
 import androidx.compose.material.icons.twotone.Tune
@@ -34,9 +35,11 @@ import org.bakasu.bakasu.domain.model.UidScheme
 import org.bakasu.bakasu.ui.viewmodel.SuSFSUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.SusKstatOperation
+import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
@@ -109,26 +112,7 @@ internal fun WearSuSFSEntriesPage(
     WearList(isLoading = busy, onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(section.title)) }
         message?.let { item { WearInfoCard(spec) { Text(it) } } }
-        if (section == WearSuSFSSection.Redirect) {
-            item {
-                WearInfoCard(spec) {
-                    Text(stringResource(R.string.susfs_redirect_description))
-                    Text(stringResource(R.string.susfs_redirect_uid_schemes_description))
-                    Text(stringResource(R.string.susfs_redirect_important_notes))
-                }
-            }
-        }
-        if (section == WearSuSFSSection.Kstat) {
-            item {
-                WearInfoCard(spec) {
-                    Text(stringResource(R.string.kstat_config_description_add))
-                    Text(stringResource(R.string.kstat_config_description_update))
-                    Text(stringResource(R.string.kstat_config_description_update_full_clone))
-                    Text(stringResource(R.string.kstat_config_description_add_statically))
-                }
-            }
-        }
-        item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_entry_manual_add), onAdd, icon = Icons.TwoTone.Add) }
+        item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_entries)) }
         LazySegmentedColumn(entries.sortedBy { it.first }, { it.first }) { (path, summary) ->
             WearSettingsJumpPageWidget(spec, path, { onSelect(path) }, icon = section.icon, description = summary)
         }
@@ -140,6 +124,8 @@ internal fun WearSuSFSEntriesPage(
                 }
             }
         }
+        item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
+        item { WearActionButton(spec, Icons.TwoTone.Add, stringResource(R.string.susfs_entry_manual_add), onAdd, secondaryText = stringResource(section.title)) }
     }
 }
 
@@ -323,7 +309,7 @@ internal fun WearSuSFSAddPage(
         }
     } else {
         val default = stringResource(R.string.susfs_value_default)
-        WearList(isLoading = busy || readingFile, onBack = onBack, onConfirm = {
+        val saveEntries = {
             val paths = path.lineSequence().map { it.replace("\uFEFF", "").trim() }
                 .filter { it.isNotEmpty() && !it.startsWith("//") && !it.startsWith('#') }.toList()
             val values = staticValues.map { it.toLongOrNull() }
@@ -362,8 +348,30 @@ internal fun WearSuSFSAddPage(
                     },
                 )
             }
-        }) { spec ->
-            item { WearPageHeader(spec, stringResource(R.string.susfs_entry_manual_add)) }
+        }
+        WearList(isLoading = busy || readingFile, onBack = onBack) { spec ->
+            item { WearPageHeader(spec, stringResource(R.string.wear_add_susfs_entry, stringResource(section.title))) }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_path_settings)) }
+            if (section == WearSuSFSSection.Redirect) {
+                item {
+                    WearInfoCard(spec) {
+                        Text(stringResource(R.string.susfs_redirect_description))
+                        Text(stringResource(R.string.susfs_redirect_uid_schemes_description))
+                        Text(stringResource(R.string.susfs_redirect_important_notes))
+                    }
+                }
+            }
+            if (section == WearSuSFSSection.Kstat) {
+                item {
+                    WearInfoCard(spec) {
+                        Text(stringResource(R.string.kstat_config_description_add))
+                        Text(stringResource(R.string.kstat_config_description_update))
+                        Text(stringResource(R.string.kstat_config_description_update_full_clone))
+                        Text(stringResource(R.string.kstat_config_description_add_statically))
+                    }
+                }
+            }
+
             if (invalid || fileError != null || message != null) {
                 item {
                     WearInfoCard(spec) { Text(if (invalid) stringResource(R.string.susfs_operation_failed) else fileError ?: message.orEmpty()) }
@@ -438,6 +446,8 @@ internal fun WearSuSFSAddPage(
                     )
                 }
             }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
+            item { WearActionButton(spec, Icons.TwoTone.Save, stringResource(R.string.wear_save_path), saveEntries, enabled = !busy && !readingFile) }
         }
     }
 }

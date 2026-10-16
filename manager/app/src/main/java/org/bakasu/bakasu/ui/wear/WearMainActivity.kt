@@ -3,7 +3,6 @@ package org.bakasu.bakasu.ui.wear
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -21,7 +20,7 @@ import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 /** The Manager on watches; [org.bakasu.bakasu.ui.MainActivity] hands watch launches over to it. */
-class WearMainActivity : ComponentActivity() {
+class WearMainActivity : WearActivity() {
     private val homeViewModel: HomeViewModel by viewModel()
     private val superUserViewModel: SuperUserViewModel by viewModel()
     private val observeStartupState: ObserveStartupStateUseCase by inject()

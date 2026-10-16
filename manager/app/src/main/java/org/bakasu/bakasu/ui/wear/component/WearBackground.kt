@@ -1,19 +1,27 @@
 package org.bakasu.bakasu.ui.wear.component
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.wear.compose.foundation.SwipeToDismissValue
-import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import androidx.wear.compose.material3.SwipeToDismissBox
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import kotlinx.coroutines.launch
+import org.bakasu.bakasu.ui.component.LocalWearSwipeEnabled
+import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.bakasu.bakasu.ui.theme.extractSeedColor
 import org.koin.compose.koinInject
 
 /**
@@ -30,13 +38,18 @@ import org.koin.compose.koinInject
 @Composable
 fun WearBackground(content: @Composable BoxScope.() -> Unit) {
     val config = koinInject<ThemeConfig>()
+    val renderState = LocalBackgroundRenderState.current
+    val scope = rememberCoroutineScope()
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         config.customBackgroundUri?.let { uri ->
             AsyncImage(
-                model = uri,
+                model = ImageRequest.Builder(LocalContext.current).data(uri).allowHardware(false).build(),
+                onSuccess = { result ->
+                    scope.launch { renderState.seedColor = result.result.drawable.toBitmap().extractSeedColor() }
+                },
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().then(if (config.isEnableBlur && Build.VERSION.SDK_INT >= 31) Modifier.blur(25.dp) else Modifier),
             )
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = config.backgroundDim.coerceIn(0f, 1f))))
         }
@@ -51,12 +64,11 @@ fun WearBackground(content: @Composable BoxScope.() -> Unit) {
  */
 @Composable
 fun WearSwipeToDismissBox(onDismissed: () -> Unit, content: @Composable BoxScope.(isBackground: Boolean) -> Unit) {
-    val state = rememberSwipeToDismissBoxState()
-    LaunchedEffect(state.currentValue) {
-        if (state.currentValue == SwipeToDismissValue.Dismissed) {
-            state.snapTo(SwipeToDismissValue.Default)
-            onDismissed()
-        }
+    // Wear API 36+ delivers predictive back through the platform, just like the Navigation 3
+    // Wear scene strategy. A second touch-driven dismiss box competes with back-to-home.
+    if (Build.VERSION.SDK_INT >= 36 || !LocalWearSwipeEnabled.current) {
+        Box(Modifier.fillMaxSize()) { content(false) }
+    } else {
+        SwipeToDismissBox(onDismissed = onDismissed, backgroundScrimColor = Color.Transparent, content = content)
     }
-    SwipeToDismissBox(state = state, backgroundScrimColor = Color.Transparent, content = content)
 }

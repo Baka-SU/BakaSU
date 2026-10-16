@@ -27,6 +27,7 @@ import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSSlotInfo
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
@@ -183,6 +184,7 @@ internal fun WearSuSFSStandardPage(
         WearList(isLoading = busy, onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.susfs_tab_standard)) }
             message?.let { item { WearInfoCard(spec) { Text(it) } } }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_logging_hiding)) }
             SegmentedColumn(
                 listOf(
                     Triple(R.string.susfs_standard_logging, R.string.susfs_standard_logging_desc, config.logging),
@@ -212,6 +214,7 @@ internal fun WearSuSFSStandardPage(
                     secondaryLabel = stringResource(summary),
                 )
             }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_system_information)) }
             item {
                 WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_standard_uname), {
                     release = config.uname.release

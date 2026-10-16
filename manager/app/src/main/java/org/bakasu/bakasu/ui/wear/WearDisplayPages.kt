@@ -18,6 +18,7 @@ import androidx.compose.material.icons.twotone.Image
 import androidx.compose.material.icons.twotone.Opacity
 import androidx.compose.material.icons.twotone.Palette
 import androidx.compose.material.icons.twotone.Restore
+import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +34,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.FilledTonalButton
@@ -46,9 +48,15 @@ import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import kotlin.math.roundToInt
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
+import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
+import org.bakasu.bakasu.ui.viewmodel.PredictiveBackAnimation
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
+import org.bakasu.bakasu.ui.viewmodel.WearPreferences
+import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -58,8 +66,12 @@ import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSliderCard
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
+import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
+import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * @author Hanhan_awa
@@ -74,8 +86,9 @@ private fun Int.toHex() = "#%06X".format(this and 0xFFFFFF)
  * (image, removal and dimming).
  */
 @Composable
-internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit, onImage: () -> Unit) {
+internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit, onOpen: (WearRoute) -> Unit, onImage: () -> Unit) {
     val config = koinInject<ThemeConfig>()
+    val backgrounds = koinInject<BackgroundManager>()
     val resources = LocalResources.current
     val swatches = remember(resources) {
         resources.obtainTypedArray(R.array.wear_theme_swatches).run {
@@ -112,6 +125,38 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
                         icon = Icons.TwoTone.Palette,
                         secondaryLabel = stringResource(R.string.dynamic_color_summary),
                     )
+                }
+                SegmentedColumn(listOf(WearSelection.Palette, WearSelection.ColorSpec), { it.name }) { selection ->
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(if (selection == WearSelection.Palette) R.string.dynamic_palette_style else R.string.dynamic_color_spec),
+                        { onOpen(WearRoute.Selection(selection)) },
+                        icon = Icons.TwoTone.Palette,
+                        description = if (selection == WearSelection.Palette) paletteLabel(state.dynamicPaletteStyle) else colorSpecLabel(state.dynamicColorSpec),
+                    )
+                }
+                if (android.os.Build.VERSION.SDK_INT >= 31) {
+                    if (state.useDynamicColor) {
+                        item {
+                            WearSettingsSwitchWidget(
+                                spec,
+                                stringResource(R.string.settings_config_use_custom_background_seed_color),
+                                config.isUseBackgroundSeedColor,
+                                backgrounds::saveUseBackgroundSeedColor,
+                                icon = Icons.TwoTone.Image,
+                            )
+                        }
+                    }
+                    item {
+                        WearSettingsSwitchWidget(
+                            spec,
+                            stringResource(R.string.settings_custom_enable_high_contrast),
+                            config.isHighContrastMode,
+                            backgrounds::saveEnableHighContrastMode,
+                            icon = Icons.TwoTone.Settings,
+                            secondaryLabel = stringResource(R.string.settings_custom_enable_high_contrast_summary),
+                        )
+                    }
                 }
                 item { WearSectionHeader(spec, stringResource(R.string.choose_theme_color)) }
                 // Swatches share the row equally so they fill the screen width (margins stretch evenly).
@@ -152,6 +197,17 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
                 }
                 // Dimming only affects the custom background image, so it appears with one.
                 if (state.isCustomBackgroundEnabled) {
+                    if (android.os.Build.VERSION.SDK_INT >= 31) {
+                        item {
+                            WearSettingsSwitchWidget(
+                                spec,
+                                stringResource(R.string.settings_config_enable_blur),
+                                config.isEnableBlur,
+                                backgrounds::saveEnableBlur,
+                                icon = Icons.TwoTone.Image,
+                            )
+                        }
+                    }
                     item {
                         WearActionButton(
                             spec,
@@ -251,12 +307,70 @@ private fun TransformingLazyColumnItemScope.HexColorButton(spec: TransformationS
  * pending value.
  */
 @Composable
-internal fun WearDpiPage(state: SettingsUiState, message: String?, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit) {
+internal fun WearDpiPage(
+    state: SettingsUiState,
+    message: String?,
+    onBack: () -> Unit,
+    onAction: (SettingsUiAction) -> Unit,
+    onOpen: (WearRoute) -> Unit,
+    preferences: WearPreferences,
+    preferenceViewModel: WearPreferencesViewModel,
+    simpleMode: Boolean,
+    onSimpleMode: (Boolean) -> Unit,
+) {
     val systemDpi = state.systemDpi.coerceAtLeast(1)
     val pending = (state.tempDpi.toFloat() / systemDpi).coerceIn(0.75f, 1.5f)
     WearList(onBack = onBack) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.wear_display_scaling)) }
+        item { WearPageHeader(spec, stringResource(R.string.wear_display_touch)) }
         if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
+        SegmentedColumn(
+            listOf(R.string.wear_long_press_haptics, R.string.wear_keep_screen_on, R.string.wear_block_back_key, R.string.wear_disable_swipe_back, R.string.simple_mode),
+            { it },
+        ) { label ->
+            val checked = when (label) {
+                R.string.wear_long_press_haptics -> preferences.longPressHaptics
+                R.string.wear_keep_screen_on -> preferences.keepScreenOn
+                R.string.wear_block_back_key -> preferences.blockBackKey
+                R.string.wear_disable_swipe_back -> !state.enableSwipeDismiss
+                else -> simpleMode
+            }
+            WearSettingsSwitchWidget(
+                spec,
+                stringResource(label),
+                checked,
+                { value ->
+                    when (label) {
+                        R.string.wear_long_press_haptics -> preferenceViewModel.setLongPressHaptics(value)
+                        R.string.wear_keep_screen_on -> preferenceViewModel.setKeepScreenOn(value)
+                        R.string.wear_block_back_key -> preferenceViewModel.setBlockBackKey(value)
+                        R.string.wear_disable_swipe_back -> onAction(SettingsUiAction.SetSwipeDismiss(!value))
+                        else -> onSimpleMode(value)
+                    }
+                },
+                icon = Icons.TwoTone.Settings,
+                secondaryLabel = when (label) {
+                    R.string.wear_block_back_key -> stringResource(R.string.wear_block_back_key_summary)
+                    R.string.wear_disable_swipe_back -> stringResource(R.string.wear_disable_swipe_back_summary)
+                    R.string.simple_mode -> stringResource(R.string.simple_mode_summary)
+                    else -> null
+                },
+            )
+        }
+        item { WearSectionHeader(spec, stringResource(R.string.predictive_back_settings)) }
+        val backOptions = listOfNotNull(
+            WearSelection.BackAnimation,
+            WearSelection.BackDirection.takeIf { state.predictiveBackAnimation == PredictiveBackAnimation.Scale },
+        )
+        LazySegmentedColumn(backOptions, { it.name }) { selection ->
+            WearSettingsJumpPageWidget(
+                spec,
+                stringResource(if (selection == WearSelection.BackAnimation) R.string.predictive_back_animation else R.string.predictive_back_exit_direction),
+                { onOpen(WearRoute.Selection(selection)) },
+                icon = Icons.TwoTone.Settings,
+                description = if (selection == WearSelection.BackAnimation) backAnimationLabel(state.predictiveBackAnimation) else backDirectionLabel(state.predictiveBackExitDirection),
+            )
+        }
+        item { WearSectionHeader(spec, stringResource(R.string.wear_display_screen_layout)) }
         // The scale label and value sit inside the slider card, above its track.
         item {
             WearSliderCard(
@@ -290,6 +404,24 @@ internal fun WearDpiPage(state: SettingsUiState, message: String?, onBack: () ->
                 secondaryText = stringResource(R.string.wear_ui_scale, 1f),
                 colors = ButtonDefaults.filledTonalButtonColors(),
             )
+        }
+        item {
+            WearSettingsJumpPageWidget(
+                spec,
+                stringResource(R.string.wear_screen_shape),
+                { onOpen(WearRoute.Selection(WearSelection.ScreenShape)) },
+                description = screenShapeLabel(preferences.shape),
+            )
+        }
+        if (android.os.Build.VERSION.SDK_INT < 33) {
+            item {
+                WearSettingsJumpPageWidget(
+                    spec,
+                    stringResource(R.string.settings_language),
+                    { onOpen(WearRoute.Selection(WearSelection.Language)) },
+                    description = state.currentAppLocale?.let { it.getDisplayName(it) } ?: stringResource(R.string.language_system_default),
+                )
+            }
         }
     }
 }

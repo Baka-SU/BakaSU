@@ -33,9 +33,11 @@ import org.bakasu.bakasu.ui.viewmodel.UmountManagerScreenViewModel
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerUiAction
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerUiEvent
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
@@ -68,6 +70,8 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
         }
     }
     var input by rememberSaveable { mutableStateOf<DynamicManagerInput?>(null) }
+    var manual by rememberSaveable { mutableStateOf(false) }
+    var choosingApp by rememberSaveable { mutableStateOf(false) }
     var size by rememberSaveable { mutableStateOf("") }
     var hash by rememberSaveable { mutableStateOf("") }
     // A grant waits for its confirmation dialog.
@@ -111,79 +115,112 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
         return
     }
 
-    WearList(isLoading = state.isLoading || state.isSubmitting, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.dynamic_manager_title)) }
-        message?.let { item { WearInfoCard(spec) { Text(it) } } }
-        item {
-            WearInfoCard(spec) {
-                val config = state.config
-                Text(stringResource(R.string.dynamic_manager_current_status))
-                if (config?.isValid == true) {
-                    Text(stringResource(R.string.dynamic_manager_enabled_summary, config.size.toString()))
-                    Text(config.hash)
-                } else {
-                    Text(stringResource(R.string.dynamic_manager_disabled))
-                }
-            }
-        }
-        item {
-            WearActionButton(
-                spec,
-                Icons.TwoTone.Search,
-                stringResource(R.string.search_apps),
-                { input = DynamicManagerInput.Search },
-            )
-        }
-        LazySegmentedColumn(state.apps, { it.packageName }) { app ->
-            WearSettingsSwitchWidget(
-                spec,
-                label = app.label,
-                checked = app.isSelected || !app.isChangeable,
-                onCheckedChange = { checked ->
-                    if (checked) {
-                        pending = DynamicManagerUiAction.SelectApp(app)
-                        grant.show()
-                    }
-                },
-                enabled = app.isChangeable,
-                icon = Icons.TwoTone.Apps,
-            )
-        }
-        item {
-            WearSettingsJumpPageWidget(
-                spec,
-                stringResource(R.string.signature_size),
-                { input = DynamicManagerInput.Size },
-                icon = Icons.TwoTone.FormatSize,
-            )
-        }
-        item {
-            WearSettingsJumpPageWidget(
-                spec,
-                stringResource(R.string.signature_hash),
-                { input = DynamicManagerInput.Hash },
-                icon = Icons.TwoTone.Fingerprint,
-            )
-        }
-        item {
-            WearActionButton(spec, Icons.TwoTone.Settings, stringResource(R.string.dynamic_manager_manual_config), {
-                val length = size.toIntOrNull()
-                when {
-                    length == null || length <= 0 -> message = failed
-
-                    !hash.matches(Regex("[0-9a-fA-F]{64}")) -> message = invalidHash
-
-                    else -> {
-                        pending = DynamicManagerUiAction.SetManual(length, hash)
-                        grant.show()
-                    }
-                }
-            })
-        }
-        item {
-            WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.dynamic_manager_clear_config), clear::show)
+    val navigateBack = {
+        if (manual) {
+            manual = false
+        } else if (choosingApp) {
+            choosingApp = false
+        } else {
+            onBack()
         }
     }
+    val pageContent: @Composable () -> Unit = {
+        WearList(isLoading = state.isLoading || state.isSubmitting, onBack = navigateBack) { spec ->
+            item { WearPageHeader(spec, stringResource(if (manual) R.string.dynamic_manager_manual_config else R.string.dynamic_manager_title)) }
+            message?.let { item { WearInfoCard(spec) { Text(it) } } }
+            if (manual) {
+                item { WearSectionHeader(spec, stringResource(R.string.wear_signature_information)) }
+                item {
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(R.string.signature_size),
+                        { input = DynamicManagerInput.Size },
+                        icon = Icons.TwoTone.FormatSize,
+                        description = size.ifBlank { null },
+                    )
+                }
+                item {
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(R.string.signature_hash),
+                        { input = DynamicManagerInput.Hash },
+                        icon = Icons.TwoTone.Fingerprint,
+                        description = hash.ifBlank { null },
+                    )
+                }
+                item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
+                item {
+                    WearActionButton(spec, Icons.TwoTone.Settings, stringResource(R.string.wear_save_configuration), {
+                        val length = size.toIntOrNull()
+                        when {
+                            length == null || length <= 0 -> message = failed
+
+                            !hash.matches(Regex("[0-9a-fA-F]{64}")) -> message = invalidHash
+
+                            else -> {
+                                pending = DynamicManagerUiAction.SetManual(length, hash)
+                                grant.show()
+                            }
+                        }
+                    })
+                }
+            } else if (choosingApp) {
+                item {
+                    WearActionButton(
+                        spec,
+                        Icons.TwoTone.Search,
+                        stringResource(R.string.search_apps),
+                        { input = DynamicManagerInput.Search },
+                    )
+                }
+                LazySegmentedColumn(state.apps, { it.packageName }) { app ->
+                    WearSettingsSwitchWidget(
+                        spec,
+                        label = app.label,
+                        checked = app.isSelected || !app.isChangeable,
+                        onCheckedChange = { checked ->
+                            if (checked) {
+                                pending = DynamicManagerUiAction.SelectApp(app)
+                                grant.show()
+                            }
+                        },
+                        enabled = app.isChangeable,
+                        icon = Icons.TwoTone.Apps,
+                    )
+                }
+            } else {
+                item { WearSectionHeader(spec, stringResource(R.string.dynamic_manager_current_status)) }
+                item {
+                    WearInfoCard(spec) {
+                        WearDetailField(
+                            Icons.TwoTone.Settings,
+                            stringResource(R.string.wear_manager_status),
+                            state.config?.takeIf { it.isValid }?.let { stringResource(R.string.dynamic_manager_enabled_summary, it.size.toString()) }
+                                ?: stringResource(R.string.dynamic_manager_disabled),
+                        )
+                    }
+                }
+                item {
+                    WearInfoCard(spec) {
+                        WearDetailField(Icons.TwoTone.Fingerprint, stringResource(R.string.signature_hash), state.config?.hash?.ifBlank { null } ?: stringResource(R.string.unknown))
+                    }
+                }
+                item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
+                item {
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(R.string.dynamic_manager_manual_config),
+                        { manual = true },
+                        icon = Icons.TwoTone.Settings,
+                        description = stringResource(R.string.dynamic_manager_manual_config_summary),
+                    )
+                }
+                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_apps), { choosingApp = true }, icon = Icons.TwoTone.Apps) }
+                item { WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.dynamic_manager_clear_config), clear::show) }
+            }
+        }
+    }
+    if (manual || choosingApp) WearSubPage(navigateBack, content = pageContent) else pageContent()
 }
 
 /** A text field of the umount path page, edited on its own input page. */

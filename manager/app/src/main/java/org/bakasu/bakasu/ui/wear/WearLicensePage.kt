@@ -21,6 +21,7 @@ import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearSubPage
 
 /**
  * @author Hanhan_awa
@@ -34,13 +35,11 @@ internal fun WearLicensePage(onBack: () -> Unit, onOpenLink: (String) -> Unit) {
         value = withContext(Dispatchers.IO) { Libs.Builder().withJson(context, R.raw.aboutlibraries).build() }
     }
     var selected by rememberSaveable { mutableIntStateOf(-1) }
-    WearList(isLoading = libraries == null, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.open_source_license)) }
-        libraries?.libraries?.forEachIndexed { index, library ->
-            item(key = "library-$index") {
-                WearActionButton(spec, Icons.TwoTone.Copyright, library.name, { selected = if (selected == index) -1 else index })
-            }
-            if (selected == index) {
+    val library = libraries?.libraries?.getOrNull(selected)
+    if (library != null) {
+        WearSubPage({ selected = -1 }) {
+            WearList(onBack = { selected = -1 }) { spec ->
+                item { WearPageHeader(spec, library.name) }
                 item {
                     WearInfoCard(spec) {
                         Text(library.author)
@@ -64,6 +63,15 @@ internal fun WearLicensePage(onBack: () -> Unit, onOpenLink: (String) -> Unit) {
                         text.chunked(350).forEach { chunk -> item { WearInfoCard(spec) { Text(chunk) } } }
                     }
                 }
+            }
+        }
+        return
+    }
+    WearList(isLoading = libraries == null, onBack = onBack) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.open_source_license)) }
+        libraries?.libraries?.forEachIndexed { index, library ->
+            item(key = "library-$index") {
+                WearActionButton(spec, Icons.TwoTone.Copyright, library.name, { selected = index })
             }
         }
     }

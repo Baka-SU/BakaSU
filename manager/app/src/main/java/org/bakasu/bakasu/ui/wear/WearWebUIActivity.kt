@@ -73,7 +73,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /** A module WebUI on the watch: the phone's WebView setup and `ksu` bridge in a watch surface. */
-class WearWebUIActivity : ComponentActivity() {
+class WearWebUIActivity : WearActivity() {
     private val getPreference: GetStringPreferenceUseCase by inject()
 
     // Standard SAF requests fall back to the app's own picker where the device has no usable one.

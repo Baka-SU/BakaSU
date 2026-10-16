@@ -75,6 +75,7 @@ fun TransformingLazyColumnItemScope.WearSliderCard(
             value,
             onValueChange,
             steps = steps,
+            segmented = true,
             valueRange = valueRange,
             enabled = enabled,
             colors = SliderDefaults.sliderColors(containerColor = Color.Transparent),

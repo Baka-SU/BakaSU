@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="wear_icon_copyright">图标版权声明</string>
+    <string name="wear_appearance_theme">外观主题</string>
+    <string name="wear_display_touch">显示与触控</string>
+    <string name="wear_long_press_haptics">长按触控反馈</string>
+    <string name="wear_keep_screen_on">保持屏幕常亮</string>
+    <string name="wear_block_back_key">屏蔽返回键</string>
+    <string name="wear_block_back_key_summary">忽略手表按键或手势发出的返回键事件，保留系统返回手势。</string>
+    <string name="wear_disable_swipe_back">禁用右滑返回手势</string>
+    <string name="wear_disable_swipe_back_summary">使用系统返回操作代替应用内右滑手势。</string>
     <string name="home">主页</string>
     <string name="learn_more">了解更多</string>
     <string name="home_not_installed">未安装</string>
@@ -627,4 +636,42 @@
     <string name="wear_log_tail">仅显示最近的日志输出</string>
     <string name="wear_template_offline_local">仅显示本地模板</string>
     <string name="wear_settings_selinux_hide_summary">阻止应用检测</string>
+    <string name="wear_palette_tonal_spot">色调点缀</string>
+    <string name="wear_palette_neutral">中性</string>
+    <string name="wear_palette_vibrant">鲜艳</string>
+    <string name="wear_palette_expressive">表现力</string>
+    <string name="wear_palette_rainbow">彩虹</string>
+    <string name="wear_palette_fruit_salad">水果沙拉</string>
+    <string name="wear_palette_monochrome">单色</string>
+    <string name="wear_palette_fidelity">保真</string>
+    <string name="wear_palette_content">内容</string>
+    <string name="wear_color_spec_2021">Spec 2021</string>
+    <string name="wear_color_spec_2025">Spec 2025</string>
+    <string name="wear_module_details">模块详情</string>
+    <string name="wear_module_information">模块信息</string>
+    <string name="wear_module_operations">模块操作</string>
+    <string name="wear_description">描述</string>
+    <string name="wear_meta_badge">META</string>
+    <string name="wear_app_details">应用详情</string>
+    <string name="wear_authorization">授权配置</string>
+    <string name="wear_app_operations">应用操作</string>
+    <string name="wear_operations">操作</string>
+    <string name="wear_manager_status">管理器状态</string>
+    <string name="wear_signature_information">签名信息</string>
+    <string name="wear_module_data">模块资料</string>
+    <string name="wear_authors_source">作者与源码</string>
+    <string name="wear_catalog_empty">暂无匹配的模块</string>
+    <string name="wear_catalog_summary">%1$s · %2$s</string>
+    <string name="wear_install_download">下载并安装</string>
+    <string name="wear_labeled_value">%1$s: %2$s</string>
+    <string name="wear_version_code">版本代码</string>
+    <string name="wear_download_progress">下载中：%1$d%%</string>
+    <string name="wear_susfs_logging_hiding">日志与隐藏</string>
+    <string name="wear_susfs_entries">路径列表</string>
+    <string name="wear_system_information">系统信息</string>
+    <string name="wear_susfs_path_settings">路径设置</string>
+    <string name="wear_save_configuration">保存配置</string>
+    <string name="wear_save_path">保存路径</string>
+    <string name="wear_add_susfs_entry">新增%1$s</string>
+    <string name="wear_install_target">安装目标</string>
 </resources>

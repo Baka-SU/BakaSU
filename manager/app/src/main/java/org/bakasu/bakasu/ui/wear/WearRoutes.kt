@@ -9,7 +9,7 @@ enum class WearSettingsCategory { General, Security, Advanced, Display }
 
 /** The settings that are chosen from a single list of options. */
 @Serializable
-enum class WearSelection { PickerMode, LinkMode, ScreenShape, Language, SuCompat }
+enum class WearSelection { PickerMode, LinkMode, ScreenShape, Language, SuCompat, BackAnimation, BackDirection, Palette, ColorSpec }
 
 /** Navigation destinations of [WearManagerScreen]; [Main] is the pager with the four top-level pages. */
 @Serializable
@@ -31,6 +31,12 @@ sealed interface WearRoute : NavKey {
 
     @Serializable
     data object ModuleSort : WearRoute
+
+    @Serializable
+    data object ModuleRepo : WearRoute
+
+    @Serializable
+    data class OnlineModule(val id: String) : WearRoute
 
     @Serializable
     data object ModuleSearch : WearRoute

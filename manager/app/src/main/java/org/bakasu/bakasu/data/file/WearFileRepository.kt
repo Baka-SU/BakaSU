@@ -39,7 +39,7 @@ class WearFileRepository(
     suspend fun list(path: String?, mimeTypes: List<String>, directoriesOnly: Boolean): WearDirectory = withContext(Dispatchers.IO) {
         cli.withNewRootShell(true) {
             val operationShell = this
-            fun file(path: String) = SuFile(path).apply { shell = operationShell }
+            fun file(path: String): File = if (isRoot) SuFile(path).apply { shell = operationShell } else File(path)
             val directory = path?.let(::file) ?: listOf(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path,
                 Environment.getExternalStorageDirectory().path,
@@ -67,7 +67,11 @@ class WearFileRepository(
     suspend fun newFile(directory: String, name: String): String = withContext(Dispatchers.IO) {
         if (name.isBlank() || name == "." || name == ".." || '/' in name || '\\' in name) fail(R.string.operation_failed)
         cli.withNewRootShell(true) {
-            val target = SuFile(File(directory, name).path).apply { shell = this@withNewRootShell }
+            val target = if (isRoot) {
+                SuFile(File(directory, name).path).apply { shell = this@withNewRootShell }
+            } else {
+                File(directory, name)
+            }
             if (target.exists()) fail(R.string.wear_file_exists)
             target.path
         }
@@ -77,10 +81,11 @@ class WearFileRepository(
     suspend fun stage(path: String): File = withContext(Dispatchers.IO) {
         cli.withNewRootShell(true) {
             val operationShell = this
-            val source = SuFile(path).apply { shell = operationShell }
+            val source = if (isRoot) SuFile(path).apply { shell = operationShell } else File(path)
             if (!source.isFile || !source.canRead()) fail(R.string.wear_module_file_unreadable)
             val target = File(stagingDirectory, source.name)
-            SuFileInputStream.open(source).use { input -> target.outputStream().use { input.copyTo(it) } }
+            val stream = if (source is SuFile) SuFileInputStream.open(source) else source.inputStream()
+            stream.use { input -> target.outputStream().use { input.copyTo(it) } }
             target
         }
     }
@@ -91,8 +96,12 @@ class WearFileRepository(
     suspend fun commit(staged: File, path: String) = withContext(Dispatchers.IO) {
         try {
             cli.withNewRootShell(true) {
-                val target = SuFile(path).apply { shell = this@withNewRootShell }
-                staged.inputStream().use { input -> SuFileOutputStream.open(target).use { input.copyTo(it) } }
+                val target = if (isRoot) {
+                    SuFileOutputStream.open(SuFile(path).apply { shell = this@withNewRootShell })
+                } else {
+                    File(path).outputStream()
+                }
+                staged.inputStream().use { input -> target.use { input.copyTo(it) } }
             }
         } finally {
             staged.delete()

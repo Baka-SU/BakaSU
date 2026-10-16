@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="wear_icon_copyright">Icon copyright</string>
+    <string name="wear_appearance_theme">Appearance and theme</string>
+    <string name="wear_display_touch">Display and touch</string>
+    <string name="wear_long_press_haptics">Long press feedback</string>
+    <string name="wear_keep_screen_on">Keep screen on</string>
+    <string name="wear_block_back_key">Block Back key</string>
+    <string name="wear_block_back_key_summary">Ignore Back key events sent by watch buttons or gestures. System back gestures remain available.</string>
+    <string name="wear_disable_swipe_back">Disable swipe back</string>
+    <string name="wear_disable_swipe_back_summary">Use system back instead of the app swipe gesture.</string>
+    <string name="wear_icon_author" translatable="false">OukaroMF</string>
     <string name="home">Home</string>
     <string name="learn_more">Learn more</string>
     <string name="home_not_installed">Not installed</string>
@@ -653,4 +663,42 @@
     <string name="susfs_kstat_field_ctime_nsec" translatable="false">ctime_nsec</string>
     <string name="susfs_kstat_field_blocks" translatable="false">blocks</string>
     <string name="susfs_kstat_field_blksize" translatable="false">blksize</string>
+    <string name="wear_palette_tonal_spot">Tonal Spot</string>
+    <string name="wear_palette_neutral">Neutral</string>
+    <string name="wear_palette_vibrant">Vibrant</string>
+    <string name="wear_palette_expressive">Expressive</string>
+    <string name="wear_palette_rainbow">Rainbow</string>
+    <string name="wear_palette_fruit_salad">Fruit Salad</string>
+    <string name="wear_palette_monochrome">Monochrome</string>
+    <string name="wear_palette_fidelity">Fidelity</string>
+    <string name="wear_palette_content">Content</string>
+    <string name="wear_color_spec_2021">Spec 2021</string>
+    <string name="wear_color_spec_2025">Spec 2025</string>
+    <string name="wear_module_details">Module details</string>
+    <string name="wear_module_information">Module information</string>
+    <string name="wear_module_operations">Module actions</string>
+    <string name="wear_description">Description</string>
+    <string name="wear_meta_badge">META</string>
+    <string name="wear_app_details">App details</string>
+    <string name="wear_authorization">Authorization</string>
+    <string name="wear_app_operations">App actions</string>
+    <string name="wear_operations">Actions</string>
+    <string name="wear_manager_status">Manager status</string>
+    <string name="wear_signature_information">Signature information</string>
+    <string name="wear_module_data">Module resources</string>
+    <string name="wear_authors_source">Authors and source</string>
+    <string name="wear_catalog_empty">No matching modules</string>
+    <string name="wear_catalog_summary">%1$s · %2$s</string>
+    <string name="wear_install_download">Download and install</string>
+    <string name="wear_labeled_value">%1$s: %2$s</string>
+    <string name="wear_version_code">Version code</string>
+    <string name="wear_download_progress">Downloading: %1$d%%</string>
+    <string name="wear_susfs_logging_hiding">Logging and hiding</string>
+    <string name="wear_susfs_entries">Configured paths</string>
+    <string name="wear_system_information">System information</string>
+    <string name="wear_susfs_path_settings">Path settings</string>
+    <string name="wear_save_configuration">Save configuration</string>
+    <string name="wear_save_path">Save path</string>
+    <string name="wear_add_susfs_entry">Add %1$s</string>
+    <string name="wear_install_target">Install target</string>
 </resources>

@@ -13,8 +13,13 @@ import androidx.compose.material.icons.twotone.Translate
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamiccolor.ColorSpec
 import java.util.Locale
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.availablePaletteStyles
+import org.bakasu.bakasu.ui.viewmodel.PredictiveBackAnimation
+import org.bakasu.bakasu.ui.viewmodel.PredictiveBackExitDirection
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
@@ -37,6 +42,34 @@ internal fun WearSelectionPage(
     onAction: (SettingsUiAction) -> Unit,
 ) {
     when (selection) {
+        WearSelection.Palette -> WearChoicePage(
+            stringResource(R.string.dynamic_palette_style),
+            state.dynamicColorSpec.availablePaletteStyles().map { it.name to paletteLabel(it) },
+            state.dynamicPaletteStyle.name,
+            onBack,
+        ) { onAction(SettingsUiAction.SetDynamicPaletteStyle(PaletteStyle.valueOf(it))) }
+
+        WearSelection.ColorSpec -> WearChoicePage(
+            stringResource(R.string.dynamic_color_spec),
+            ColorSpec.SpecVersion.entries.map { it.name to colorSpecLabel(it) },
+            state.dynamicColorSpec.name,
+            onBack,
+        ) { onAction(SettingsUiAction.SetDynamicColorSpec(ColorSpec.SpecVersion.valueOf(it))) }
+
+        WearSelection.BackAnimation -> WearChoicePage(
+            stringResource(R.string.predictive_back_animation),
+            PredictiveBackAnimation.entries.map { it.value to backAnimationLabel(it) },
+            state.predictiveBackAnimation.value,
+            onBack,
+        ) { onAction(SettingsUiAction.SetPredictiveBackAnimation(PredictiveBackAnimation.fromValueOrDefault(it))) }
+
+        WearSelection.BackDirection -> WearChoicePage(
+            stringResource(R.string.predictive_back_exit_direction),
+            PredictiveBackExitDirection.entries.map { it.value to backDirectionLabel(it) },
+            state.predictiveBackExitDirection.value,
+            onBack,
+        ) { onAction(SettingsUiAction.SetPredictiveBackExitDirection(PredictiveBackExitDirection.fromValueOrDefault(it))) }
+
         WearSelection.PickerMode -> WearChoicePage(
             stringResource(R.string.wear_picker_mode),
             PickerModes.map { it to pickerModeLabel(it) },
@@ -117,7 +150,29 @@ private fun selectionIcon(selection: WearSelection, value: String): ImageVector 
     }
 
     WearSelection.PickerMode -> if (value == "auto") Icons.TwoTone.AutoAwesome else Icons.TwoTone.FolderOpen
+
+    WearSelection.BackAnimation, WearSelection.BackDirection, WearSelection.Palette, WearSelection.ColorSpec -> Icons.TwoTone.AutoAwesome
 }
+
+@Composable
+internal fun backAnimationLabel(animation: PredictiveBackAnimation) = stringResource(
+    when (animation) {
+        PredictiveBackAnimation.None -> R.string.predictive_back_animation_none
+        PredictiveBackAnimation.AOSP -> R.string.predictive_back_animation_aosp
+        PredictiveBackAnimation.MIUIX -> R.string.predictive_back_animation_miuix
+        PredictiveBackAnimation.Scale -> R.string.predictive_back_animation_scale
+        PredictiveBackAnimation.KernelSUClassic -> R.string.predictive_back_animation_ksu_classic
+    },
+)
+
+@Composable
+internal fun backDirectionLabel(direction: PredictiveBackExitDirection) = stringResource(
+    when (direction) {
+        PredictiveBackExitDirection.FOLLOW_GESTURE -> R.string.predictive_back_exit_direction_follow_gesture
+        PredictiveBackExitDirection.ALWAYS_RIGHT -> R.string.predictive_back_exit_direction_always_right
+        PredictiveBackExitDirection.ALWAYS_LEFT -> R.string.predictive_back_exit_direction_always_left
+    },
+)
 
 /** The `language` or `language_COUNTRY` form stored in `app_locale` and parsed by LocaleHelper, as on the phone. */
 private fun Locale.settingTag() = if (country.isEmpty()) language else "${language}_$country"
@@ -160,5 +215,28 @@ internal fun suCompatModeLabel(mode: Int) = stringResource(
         1 -> R.string.settings_mode_disable_until_reboot
         2 -> R.string.settings_mode_disable_always
         else -> R.string.settings_mode_default
+    },
+)
+
+@Composable
+internal fun paletteLabel(style: PaletteStyle) = stringResource(
+    when (style) {
+        PaletteStyle.TonalSpot -> R.string.wear_palette_tonal_spot
+        PaletteStyle.Neutral -> R.string.wear_palette_neutral
+        PaletteStyle.Vibrant -> R.string.wear_palette_vibrant
+        PaletteStyle.Expressive -> R.string.wear_palette_expressive
+        PaletteStyle.Rainbow -> R.string.wear_palette_rainbow
+        PaletteStyle.FruitSalad -> R.string.wear_palette_fruit_salad
+        PaletteStyle.Monochrome -> R.string.wear_palette_monochrome
+        PaletteStyle.Fidelity -> R.string.wear_palette_fidelity
+        PaletteStyle.Content -> R.string.wear_palette_content
+    },
+)
+
+@Composable
+internal fun colorSpecLabel(spec: ColorSpec.SpecVersion) = stringResource(
+    when (spec) {
+        ColorSpec.SpecVersion.SPEC_2021 -> R.string.wear_color_spec_2021
+        ColorSpec.SpecVersion.SPEC_2025 -> R.string.wear_color_spec_2025
     },
 )

@@ -1,18 +1,30 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.content.res.Configuration
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Error
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.material3.AppScaffold
@@ -20,11 +32,13 @@ import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.MotionScheme
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.dynamicColorScheme
 import com.materialkolor.ktx.toColor
 import com.materialkolor.ktx.toHct
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.component.LocalWearSwipeEnabled
+import org.bakasu.bakasu.ui.theme.BackgroundRenderState
 import org.bakasu.bakasu.ui.theme.CardConfig
+import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
@@ -45,11 +59,25 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun WearManagerTheme(content: @Composable () -> Unit) {
-    val context = LocalContext.current
     val config = koinInject<ThemeConfig>()
     val viewModel = koinViewModel<SettingsViewModel>()
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
     val preferences by koinViewModel<WearPreferencesViewModel>().state.collectAsStateWithLifecycle()
+    val view = LocalView.current
+    DisposableEffect(view, preferences.keepScreenOn) {
+        view.keepScreenOn = preferences.keepScreenOn
+        onDispose { view.keepScreenOn = false }
+    }
+    val systemHaptics = LocalHapticFeedback.current
+    val haptics = remember(systemHaptics, preferences.longPressHaptics) {
+        object : HapticFeedback {
+            override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
+                if (preferences.longPressHaptics || hapticFeedbackType != HapticFeedbackType.LongPress) {
+                    systemHaptics.performHapticFeedback(hapticFeedbackType)
+                }
+            }
+        }
+    }
     // A chosen screen shape replaces the device's round flag, which Wear Compose layouts follow.
     val systemConfiguration = LocalConfiguration.current
     val configuration = remember(systemConfiguration, preferences.shape) {
@@ -70,9 +98,17 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             Density(settings.dpi / 160f, systemDensity.fontScale)
         }
     }
-    val generated = remember(config.seedColor, config.dynamicPaletteStyle, config.dynamicColorSpec) {
+    val backgroundState = remember { BackgroundRenderState() }
+    LaunchedEffect(config.customBackgroundUri) { backgroundState.seedColor = 0 }
+    val seed = when {
+        config.useDynamicColor && config.isUseBackgroundSeedColor && backgroundState.seedColor != 0 -> backgroundState.seedColor
+        config.useDynamicColor && Build.VERSION.SDK_INT >= 31 -> colorResource(android.R.color.system_accent1_500).toArgb()
+        config.useDynamicColor -> config.monetCompatSeedColor
+        else -> config.seedColor
+    }
+    val generated = remember(seed, config.dynamicPaletteStyle, config.dynamicColorSpec) {
         com.materialkolor.dynamicColorScheme(
-            seedColor = Color(config.seedColor),
+            seedColor = Color(seed),
             isDark = true,
             style = config.dynamicPaletteStyle,
             specVersion = config.dynamicColorSpec,
@@ -84,30 +120,26 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
     // keeps its pairing and contrast.
     // Remembered, so settings updates such as dragging the DPI slider do not rebuild the scheme and
     // recompose every themed component.
-    val colors = remember(config.useDynamicColor, generated, context) {
-        val scheme = if (config.useDynamicColor) {
-            dynamicColorScheme(context) ?: ColorScheme()
-        } else {
-            ColorScheme(
-                primary = generated.primaryFixed, primaryDim = generated.primaryFixedDim,
-                primaryContainer = generated.primaryContainer, onPrimary = generated.onPrimaryFixed,
-                onPrimaryContainer = generated.onPrimaryContainer,
-                secondary = generated.secondaryFixed, secondaryDim = generated.secondaryFixedDim,
-                secondaryContainer = generated.secondaryContainer, onSecondary = generated.onSecondaryFixed,
-                onSecondaryContainer = generated.onSecondaryContainer,
-                tertiary = generated.tertiaryFixed, tertiaryDim = generated.tertiaryFixedDim,
-                tertiaryContainer = generated.tertiaryContainer, onTertiary = generated.onTertiaryFixed,
-                onTertiaryContainer = generated.onTertiaryContainer,
-                surfaceContainerLow = generated.surfaceContainerLow, surfaceContainer = generated.surfaceContainer,
-                surfaceContainerHigh = generated.surfaceContainerHigh,
-                onSurface = generated.onSurface, onSurfaceVariant = generated.onSurfaceVariant,
-                outline = generated.outline, outlineVariant = generated.outlineVariant,
-                background = Color.Black, onBackground = generated.onBackground,
-                error = generated.error, errorDim = generated.errorContainer.toHct().withTone(68.0).toColor(),
-                errorContainer = generated.errorContainer, onError = generated.onError,
-                onErrorContainer = generated.onErrorContainer,
-            )
-        }
+    val colors = remember(generated) {
+        val scheme = ColorScheme(
+            primary = generated.primaryFixed, primaryDim = generated.primaryFixedDim,
+            primaryContainer = generated.primaryContainer, onPrimary = generated.onPrimaryFixed,
+            onPrimaryContainer = generated.onPrimaryContainer,
+            secondary = generated.secondaryFixed, secondaryDim = generated.secondaryFixedDim,
+            secondaryContainer = generated.secondaryContainer, onSecondary = generated.onSecondaryFixed,
+            onSecondaryContainer = generated.onSecondaryContainer,
+            tertiary = generated.tertiaryFixed, tertiaryDim = generated.tertiaryFixedDim,
+            tertiaryContainer = generated.tertiaryContainer, onTertiary = generated.onTertiaryFixed,
+            onTertiaryContainer = generated.onTertiaryContainer,
+            surfaceContainerLow = generated.surfaceContainerLow, surfaceContainer = generated.surfaceContainer,
+            surfaceContainerHigh = generated.surfaceContainerHigh,
+            onSurface = generated.onSurface, onSurfaceVariant = generated.onSurfaceVariant,
+            outline = generated.outline, outlineVariant = generated.outlineVariant,
+            background = Color.Black, onBackground = generated.onBackground,
+            error = generated.error, errorDim = generated.errorContainer.toHct().withTone(68.0).toColor(),
+            errorContainer = generated.errorContainer, onError = generated.onError,
+            onErrorContainer = generated.onErrorContainer,
+        )
         // Wear screens keep a pure black background whichever scheme is used. The navigation host
         // makes this role transparent so its backdrop image is not covered by the scene's
         // swipe-dismiss box, and restores it per entry; see WearManager.pageBaseDecorator.
@@ -136,8 +168,14 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             )
         }
     }
-    CompositionLocalProvider(LocalDensity provides density, LocalConfiguration provides configuration) {
-        MaterialTheme(colorScheme = themedColors, motionScheme = MotionScheme.expressive()) {
+    CompositionLocalProvider(
+        LocalDensity provides density,
+        LocalConfiguration provides configuration,
+        LocalWearSwipeEnabled provides settings.enableSwipeDismiss,
+        LocalHapticFeedback provides haptics,
+        LocalBackgroundRenderState provides backgroundState,
+    ) {
+        MaterialTheme(colorScheme = themedColors, typography = wearTypography(config.isHighContrastMode), motionScheme = MotionScheme.expressive()) {
             // The selected image and dim layer belong to the shared page background.
             WearBackground { content() }
         }
@@ -156,4 +194,31 @@ fun WearStartupStatus(error: String? = null) {
             }
         }
     }
+}
+
+@Composable
+private fun wearTypography(highContrast: Boolean): androidx.wear.compose.material3.Typography {
+    val original = MaterialTheme.typography
+    if (!highContrast) return original
+    fun TextStyle.withContrast() = copy(shadow = Shadow(Color.Black.copy(alpha = 0.7f), Offset(1.5f, 1.5f), 0f))
+    return original.copy(
+        displayLarge = original.displayLarge.withContrast(),
+        displayMedium = original.displayMedium.withContrast(),
+        displaySmall = original.displaySmall.withContrast(),
+        titleLarge = original.titleLarge.withContrast(),
+        titleMedium = original.titleMedium.withContrast(),
+        titleSmall = original.titleSmall.withContrast(),
+        labelLarge = original.labelLarge.withContrast(),
+        labelMedium = original.labelMedium.withContrast(),
+        labelSmall = original.labelSmall.withContrast(),
+        bodyLarge = original.bodyLarge.withContrast(),
+        bodyMedium = original.bodyMedium.withContrast(),
+        bodySmall = original.bodySmall.withContrast(),
+        bodyExtraSmall = original.bodyExtraSmall.withContrast(),
+        numeralExtraLarge = original.numeralExtraLarge.withContrast(),
+        numeralLarge = original.numeralLarge.withContrast(),
+        numeralMedium = original.numeralMedium.withContrast(),
+        numeralSmall = original.numeralSmall.withContrast(),
+        numeralExtraSmall = original.numeralExtraSmall.withContrast(),
+    )
 }

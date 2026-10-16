@@ -1,11 +1,16 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.content.Intent
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -22,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,8 +45,8 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import androidx.navigationevent.NavigationEvent
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.AnimatedPage
 import androidx.wear.compose.material3.AppScaffold
@@ -56,12 +62,18 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.confirmationDialogCurvedText
 import androidx.wear.compose.material3.openOnPhoneDialogCurvedText
 import androidx.wear.compose.navigation3.rememberSwipeDismissableSceneStrategy
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.network.WearLinkFailure
 import org.bakasu.bakasu.domain.model.FlashOperation
 import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.LkmSelection
+import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
+import org.bakasu.bakasu.ui.component.ZipFileDetector
+import org.bakasu.bakasu.ui.component.ZipFileInfo
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
 import org.bakasu.bakasu.ui.viewmodel.HomeUiEvent
@@ -70,6 +82,8 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
+import org.bakasu.bakasu.ui.viewmodel.PredictiveBackAnimation
+import org.bakasu.bakasu.ui.viewmodel.PredictiveBackExitDirection
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
@@ -97,6 +111,7 @@ import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.rememberWearRemoteInput
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 private const val HOME = 0
@@ -107,7 +122,7 @@ private const val SETTINGS = 3
 /** Destinations that need a full-featured root manager; they close when root goes away. */
 private fun WearRoute.needsRoot() = when (this) {
     is WearRoute.Module, is WearRoute.ModuleAction, is WearRoute.ModuleUpdate, is WearRoute.ModuleInstall,
-    WearRoute.ModuleSort, WearRoute.ModuleSearch, WearRoute.ModuleSearchResults,
+    WearRoute.ModuleSort, WearRoute.ModuleSearch, WearRoute.ModuleSearchResults, WearRoute.ModuleRepo, is WearRoute.OnlineModule,
     is WearRoute.App, WearRoute.AppFilter, WearRoute.AppSearch, WearRoute.AppSearchResults,
     WearRoute.Logs, WearRoute.LogOptions, is WearRoute.LogEntry, WearRoute.LogSearch,
     WearRoute.Templates, is WearRoute.TemplateEditor, WearRoute.SuSFS, WearRoute.DynamicManager,
@@ -209,20 +224,33 @@ fun WearManagerScreen() {
 
     // As on the phone, a selected module ZIP is installed only after the user confirms it.
     var pendingInstallUri by rememberSaveable { mutableStateOf("") }
-    val pendingInstallName = pendingInstallUri.toUri().lastPathSegment?.substringAfterLast('/') ?: pendingInstallUri
-    val installDialog = rememberWearConfirmDialog(
-        stringResource(R.string.confirm_installation),
+    var pendingInstallInfo by remember { mutableStateOf<ZipFileInfo?>(null) }
+    val pendingInstallName = pendingInstallInfo?.name?.ifBlank { null }
+        ?: pendingInstallUri.toUri().lastPathSegment?.substringAfterLast('/') ?: stringResource(R.string.unknown_module)
+    val installMessage = listOfNotNull(
         stringResource(R.string.confirm_install_module_title, pendingInstallName),
-    ) {
+        stringResource(R.string.wear_labeled_value, stringResource(R.string.wear_file_name), pendingInstallUri.toUri().lastPathSegment?.substringAfterLast('/').orEmpty()),
+        stringResource(R.string.wear_labeled_value, stringResource(R.string.wear_install_target), Build.MODEL),
+        pendingInstallInfo?.version?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.wear_labeled_value, stringResource(R.string.module_version), it) },
+        pendingInstallInfo?.versionCode?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.wear_labeled_value, stringResource(R.string.wear_version_code), it) },
+        pendingInstallInfo?.author?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.wear_labeled_value, stringResource(R.string.module_author), it) },
+        pendingInstallInfo?.description?.takeIf { it.isNotBlank() },
+    ).joinToString("\n\n")
+    val installDialog = rememberWearConfirmDialog(stringResource(R.string.confirm_installation), installMessage) {
         open(WearRoute.ModuleInstall(pendingInstallUri))
     }
-    // Plain SAF requests; on watches without a usable DocumentsUI the activity routes them to the
-    // built-in picker (see withDocumentPickerFallback).
-    val selectModuleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            pendingInstallUri = uri.toString()
+    val installScope = rememberCoroutineScope()
+    val zipDetector = koinInject<ZipFileDetector>()
+    fun confirmModule(uri: String) {
+        pendingInstallUri = uri
+        pendingInstallInfo = null
+        installScope.launch {
+            pendingInstallInfo = withContext(Dispatchers.IO) { zipDetector.parseModuleInfo(context, uri.toUri()) }
             installDialog.show()
         }
+    }
+    val selectModuleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) confirmModule(uri.toString())
     }
     val selectImageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) settingsViewModel.dispatch(SettingsUiAction.SetCustomBackground(uri.toString()))
@@ -352,13 +380,14 @@ fun WearManagerScreen() {
                 NavDisplay(
                     backStack = backStack,
                     onBack = { back() },
-                    sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy()),
+                    sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss)),
                     entryDecorators = listOf(
                         rememberSaveableStateHolderNavEntryDecorator(),
                         rememberViewModelStoreNavEntryDecorator(),
                         PageBaseDecorator,
                     ),
                     entryProvider = withPageTransitions(
+                        settings,
                         entryProvider {
                             entry<WearRoute.Main> {
                                 WearMainPages(
@@ -421,6 +450,12 @@ fun WearManagerScreen() {
                                     moduleViewModel.dispatch(ModuleUiAction.Refresh())
                                     homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
                                 }
+                            }
+                            entry<WearRoute.ModuleRepo> {
+                                WearModuleRepoPage(::back) { open(WearRoute.OnlineModule(it)) }
+                            }
+                            entry<WearRoute.OnlineModule> { route ->
+                                WearOnlineModulePage(route.id, ::back, { linkViewModel.open(it, preferences.link) }, ::confirmModule)
                             }
                             entry<WearRoute.ModuleSort> {
                                 WearModulePanel(modules, ::back, moduleViewModel::dispatch)
@@ -539,13 +574,15 @@ fun WearManagerScreen() {
                                 )
                             }
                             entry<WearRoute.Color> {
-                                WearColorPage(settings, settingsMessage, ::back, dispatchSettings) {
+                                WearColorPage(settings, settingsMessage, ::back, dispatchSettings, ::open) {
                                     runCatching { selectImageLauncher.launch(arrayOf("image/*")) }
                                         .onFailure { settingsError = operationFailedText }
                                 }
                             }
                             entry<WearRoute.Dpi> {
-                                WearDpiPage(settings, settingsMessage, ::back, dispatchSettings)
+                                WearDpiPage(settings, settingsMessage, ::back, dispatchSettings, ::open, preferences, preferenceViewModel, home.isSimpleMode) {
+                                    homeViewModel.dispatch(HomeUiAction.SetSimpleMode(it))
+                                }
                             }
                             entry<WearRoute.Templates> {
                                 WearTemplatePage(::back) { id, readOnly, creation ->
@@ -556,7 +593,7 @@ fun WearManagerScreen() {
                                 WearTemplateEditor(route.id, route.readOnly, route.creation, ::back)
                             }
                             entry<WearRoute.SuSFS> {
-                                WearSuSFSPage(::back)
+                                WearSuSFSPage(::back) { open(WearRoute.Reboot) }
                             }
                             entry<WearRoute.DynamicManager> {
                                 WearDynamicManagerPage(::back)
@@ -675,9 +712,38 @@ private val WearPageTransitions: Map<String, Any> = NavDisplay.transitionSpec {
  * content key are carried over unchanged, leaving the entry's saveable state and ViewModel scopes
  * as they were.
  */
-private fun <T : Any> withPageTransitions(provider: (T) -> NavEntry<T>): (T) -> NavEntry<T> = { key ->
+private fun <T : Any> withPageTransitions(settings: SettingsUiState, provider: (T) -> NavEntry<T>): (T) -> NavEntry<T> = { key ->
     val entry = provider(key)
-    NavEntry(key, entry.contentKey, entry.metadata + WearPageTransitions) { entry.Content() }
+    val backTransitions = NavDisplay.popTransitionSpec { wearBackTransition(settings.predictiveBackAnimation, 1) } +
+        NavDisplay.predictivePopTransitionSpec { edge ->
+            val sign = when (settings.predictiveBackExitDirection) {
+                PredictiveBackExitDirection.ALWAYS_RIGHT -> 1
+                PredictiveBackExitDirection.ALWAYS_LEFT -> -1
+                PredictiveBackExitDirection.FOLLOW_GESTURE -> if (edge == NavigationEvent.EDGE_RIGHT) -1 else 1
+            }
+            wearBackTransition(settings.predictiveBackAnimation, sign)
+        }
+    NavEntry(key, entry.contentKey, entry.metadata + WearPageTransitions + backTransitions) { entry.Content() }
+}
+
+/** Navigation 3 seeks these transforms for platform predictive back, including cancellation. */
+private fun wearBackTransition(animation: PredictiveBackAnimation, sign: Int): ContentTransform = when (animation) {
+    PredictiveBackAnimation.None -> EnterTransition.None togetherWith ExitTransition.None
+
+    PredictiveBackAnimation.MIUIX ->
+        slideInHorizontally(spring(0.8f, 300f)) { -it / 3 } togetherWith slideOutHorizontally(spring(0.8f, 300f)) { it }
+
+    PredictiveBackAnimation.Scale ->
+        (scaleIn(tween(200), initialScale = 0.85f) + fadeIn(tween(200))) togetherWith
+            (scaleOut(tween(200), targetScale = 0.85f) + slideOutHorizontally(tween(200)) { sign * it })
+
+    PredictiveBackAnimation.AOSP ->
+        (slideInHorizontally(tween(450)) { -it / 4 } + scaleIn(tween(450), initialScale = 0.9f)) togetherWith
+            (slideOutHorizontally(tween(450)) { it / 4 } + fadeOut(tween(200)))
+
+    PredictiveBackAnimation.KernelSUClassic ->
+        (slideInHorizontally(tween(300)) { -it / 2 } + fadeIn(tween(300))) togetherWith
+            (slideOutHorizontally(tween(300)) { it } + fadeOut(tween(300)))
 }
 
 /**
@@ -742,7 +808,7 @@ private fun WearMainPages(
                 pagerState = pagerState,
                 pageIndicator = { WearHorizontalPageIndicator(pagerState) },
             ) {
-                HorizontalPager(
+                HorizontalPagerWithInteraction(
                     modifier = Modifier.fillMaxSize(),
                     state = pagerState,
                     flingBehavior = PagerScaffoldDefaults.snapWithSpringFlingBehavior(pagerState),
@@ -782,6 +848,7 @@ private fun WearMainPages(
                                 listState = moduleListState,
                                 onModuleClick = { onOpen(WearRoute.Module(it)) },
                                 onInstallClick = onInstallModule,
+                                onRepo = { onOpen(WearRoute.ModuleRepo) },
                                 onWebUi = onWebUi,
                                 onExecute = { onOpen(WearRoute.ModuleAction(it.id)) },
                             )

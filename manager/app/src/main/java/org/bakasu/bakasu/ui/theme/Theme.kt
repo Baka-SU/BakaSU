@@ -1603,7 +1603,7 @@ private fun ContentDrawScope.drawStretchCompensatedBitmap(
 
 private fun Offset.isUsable(): Boolean = x.isFinite() && y.isFinite()
 
-private suspend fun Bitmap.extractSeedColor(
+internal suspend fun Bitmap.extractSeedColor(
     maxColors: Int = 128,
     fallbackColorArgb: Int = -12417548,
 ): Int = withContext(Dispatchers.IO) {

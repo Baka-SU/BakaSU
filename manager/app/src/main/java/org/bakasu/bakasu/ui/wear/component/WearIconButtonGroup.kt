@@ -21,7 +21,9 @@ import androidx.wear.compose.material3.lazy.transformedHeight
  */
 
 /** One icon action of a [WearIconButtonGroup]; [label] is its accessibility description. */
-data class WearIconAction(val icon: ImageVector, val label: String, val onClick: () -> Unit)
+data class WearIconAction(val icon: ImageVector, val label: String, val onClick: () -> Unit, val enabled: Boolean) {
+    constructor(icon: ImageVector, label: String, onClick: () -> Unit) : this(icon, label, onClick, true)
+}
 
 @Composable
 fun TransformingLazyColumnItemScope.WearIconButtonGroup(
@@ -37,6 +39,7 @@ fun TransformingLazyColumnItemScope.WearIconButtonGroup(
             val interactionSource = remember { MutableInteractionSource() }
             FilledTonalIconButton(
                 onClick = action.onClick,
+                enabled = action.enabled,
                 modifier = Modifier.animateWidth(interactionSource),
                 interactionSource = interactionSource,
             ) { Icon(action.icon, contentDescription = action.label) }

@@ -21,12 +21,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.Natives.KernelPatchImplementation
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
+import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
@@ -52,6 +54,15 @@ internal fun WearHomePage(
     val status = state.systemStatus
     val info = state.systemInfo
     // The first load shows the branded loading screen in WearManagerScreen instead of this list.
+    val seccomp = stringResource(
+        when (info.seccompStatus) {
+            -1 -> R.string.seccomp_status_not_supported
+            0 -> R.string.seccomp_status_disabled
+            1 -> R.string.seccomp_status_strict
+            2 -> R.string.seccomp_status_filter
+            else -> R.string.seccomp_status_unknown
+        },
+    )
     WearList(
         onBack = onBack,
         onOpenPanel = onRebootPanel.takeIf { status.isRootAvailable },
@@ -159,35 +170,47 @@ internal fun WearHomePage(
                     add(Triple(Icons.TwoTone.Settings, R.string.home_susfs_version, info.susfsVersion))
                 }
             }
-            fields.forEach { (icon, label, value) ->
+            if (state.isSimpleMode) {
                 item {
-                    WearChip(spec, stringResource(label), secondaryLabel = value.ifBlank { unknown }, icon = icon)
+                    WearInfoCard(spec) {
+                        fields.forEach { (_, label, value) ->
+                            Text(stringResource(label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                            Text(value.ifBlank { unknown }, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            } else {
+                fields.forEach { (icon, label, value) ->
+                    item { WearChip(spec, stringResource(label), secondaryLabel = value.ifBlank { unknown }, icon = icon) }
                 }
             }
             item { WearSectionHeader(spec, stringResource(R.string.home_status_info)) }
-            item {
-                WearChip(
-                    spec,
-                    stringResource(R.string.home_selinux_status),
-                    secondaryLabel = info.selinuxStatus.ifBlank { unknown },
-                    icon = Icons.TwoTone.Security,
-                )
-            }
-            item {
-                WearChip(
-                    spec,
-                    stringResource(R.string.home_seccomp_status),
-                    secondaryLabel = stringResource(
-                        when (info.seccompStatus) {
-                            -1 -> R.string.seccomp_status_not_supported
-                            0 -> R.string.seccomp_status_disabled
-                            1 -> R.string.seccomp_status_strict
-                            2 -> R.string.seccomp_status_filter
-                            else -> R.string.seccomp_status_unknown
-                        },
-                    ),
-                    icon = Icons.TwoTone.FilterList,
-                )
+            if (state.isSimpleMode) {
+                item {
+                    WearInfoCard(spec) {
+                        Text(stringResource(R.string.home_selinux_status), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(info.selinuxStatus.ifBlank { unknown }, style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.home_seccomp_status), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(seccomp, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            } else {
+                item {
+                    WearChip(
+                        spec,
+                        stringResource(R.string.home_selinux_status),
+                        secondaryLabel = info.selinuxStatus.ifBlank { unknown },
+                        icon = Icons.TwoTone.Security,
+                    )
+                }
+                item {
+                    WearChip(
+                        spec,
+                        stringResource(R.string.home_seccomp_status),
+                        secondaryLabel = seccomp,
+                        icon = Icons.TwoTone.FilterList,
+                    )
+                }
             }
             if (!state.isSimpleMode && info.managersList != null) {
                 item {

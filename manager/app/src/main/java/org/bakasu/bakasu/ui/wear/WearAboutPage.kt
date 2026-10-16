@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear
 
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,13 +15,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material3.AlertDialog
+import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.component.PackageIcon
+import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -33,13 +38,21 @@ import org.bakasu.bakasu.ui.wear.component.wearGroupGap
  */
 
 /**
- * Title, app identity (icon, name, version), then the project, community and license entries with
- * the phone's descriptions, and the sticker attribution as a footnote; the edge button returns.
+ * App identity, icon attribution and the project, community and license destinations.
  */
 @Composable
 internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, onLicenses: () -> Unit) {
     val context = LocalContext.current
     val projectUrl = stringResource(R.string.wear_project_url)
+    val copyright = rememberCustomDialog { dismiss ->
+        AlertDialog(
+            visible = true,
+            onDismissRequest = dismiss,
+            title = { Text(stringResource(R.string.wear_icon_copyright)) },
+            text = { Text(stringResource(R.string.about_app_icon, stringResource(R.string.wear_icon_author))) },
+            edgeButton = { AlertDialogDefaults.EdgeButton(onClick = dismiss) },
+        )
+    }
     WearList(onBack = onBack, snap = true) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.about)) }
         item {
@@ -49,22 +62,49 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    PackageIcon(context.packageName, null, Modifier.size(52.dp))
+                    PackageIcon(context.packageName, null, Modifier.size(80.dp))
+                }
+            }
+        }
+        item {
+            WearScaledItem(spec) {
+                Column(
+                    Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
                     Text(
                         stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.W700,
                         textAlign = TextAlign.Center,
                     )
                     Text(
                         wearAppVersion(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        Build.MODEL,
+                        modifier = Modifier.padding(top = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         textAlign = TextAlign.Center,
                     )
                 }
             }
         }
         wearGroupGap("identity-gap")
+        item {
+            WearChip(
+                spec,
+                stringResource(R.string.wear_icon_copyright),
+                icon = Icons.TwoTone.Copyright,
+                onClick = copyright::show,
+            )
+        }
         item {
             WearChip(
                 spec,

@@ -11,13 +11,23 @@ import org.bakasu.bakasu.domain.usecase.SetStringPreferenceUseCase
  * @author Hanhan_awa
  * @date 2026/10/1.
  */
-data class WearPreferences(val picker: String = "auto", val link: String = "auto", val shape: String = "auto")
+data class WearPreferences(
+    val picker: String = "auto",
+    val link: String = "auto",
+    val shape: String = "auto",
+    val longPressHaptics: Boolean = true,
+    val keepScreenOn: Boolean = false,
+    val blockBackKey: Boolean = false,
+)
 class WearPreferencesViewModel(getPreference: GetStringPreferenceUseCase, private val setPreference: SetStringPreferenceUseCase) : ViewModel() {
     private val mutableState = MutableStateFlow(
         WearPreferences(
             getPreference("wear_file_picker", "auto").orEmpty(),
             getPreference("wear_link_mode", "auto").orEmpty().let { if (it in LinkModes) it else "auto" },
             getPreference("wear_screen_shape", "auto").orEmpty(),
+            getPreference("wear_long_press_haptics", "true").toBoolean(),
+            getPreference("wear_keep_screen_on", "false").toBoolean(),
+            getPreference("wear_block_back_key", "false").toBoolean(),
         ),
     )
     val state = mutableState.asStateFlow()
@@ -32,6 +42,18 @@ class WearPreferencesViewModel(getPreference: GetStringPreferenceUseCase, privat
     fun setShape(shape: String) {
         setPreference("wear_screen_shape", shape)
         mutableState.update { it.copy(shape = shape) }
+    }
+    fun setLongPressHaptics(enabled: Boolean) {
+        setPreference("wear_long_press_haptics", enabled.toString())
+        mutableState.update { it.copy(longPressHaptics = enabled) }
+    }
+    fun setKeepScreenOn(enabled: Boolean) {
+        setPreference("wear_keep_screen_on", enabled.toString())
+        mutableState.update { it.copy(keepScreenOn = enabled) }
+    }
+    fun setBlockBackKey(enabled: Boolean) {
+        setPreference("wear_block_back_key", enabled.toString())
+        mutableState.update { it.copy(blockBackKey = enabled) }
     }
 }
 
