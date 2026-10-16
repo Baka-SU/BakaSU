@@ -201,7 +201,6 @@ internal fun WearSettingsPage(
                     stringResource(if (route == WearRoute.Color) R.string.wear_appearance_theme else R.string.wear_display_touch),
                     { onOpen(route) },
                     icon = settingsRouteIcon(route),
-                    description = if (route == WearRoute.Color) colorSummary else null,
                 )
             }
             if (status.isFullFeatured && susfsAvailable) {
