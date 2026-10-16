@@ -175,6 +175,7 @@ class ModuleCatalogRepository(
                     downloadUrl = zip.optString("url"),
                     size = zip.optLong("size"),
                     downloadCount = 0,
+                    sha256 = zip.optString("sha256"),
                 ),
             ),
         )

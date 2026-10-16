@@ -152,6 +152,7 @@ import org.bakasu.bakasu.domain.usecase.UpdateAppearanceUseCase
 import org.bakasu.bakasu.domain.usecase.UpdateCachedModuleEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.UpdatePlatformSettingUseCase
 import org.bakasu.bakasu.domain.usecase.ValidateSepolicyUseCase
+import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
 import org.bakasu.bakasu.ui.activity.util.ThemeUtils
 import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.CardConfig
@@ -387,6 +388,7 @@ val useCaseModule = module {
     factoryOf(::TakeModuleUriPermissionUseCase)
     factoryOf(::ExtractModuleNameUseCase)
     factoryOf(::ExtractModuleIdUseCase)
+    factoryOf(::VerifyModuleDownloadUseCase)
     factoryOf(::ObserveInstalledModulesUseCase)
     factoryOf(::RefreshInstalledModulesUseCase)
     factoryOf(::CalculateInstalledModuleSizeUseCase)

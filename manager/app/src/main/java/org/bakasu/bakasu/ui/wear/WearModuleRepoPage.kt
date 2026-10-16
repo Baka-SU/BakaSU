@@ -53,6 +53,7 @@ import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
@@ -201,20 +202,35 @@ internal fun WearOnlineModulePage(moduleId: String, onBack: () -> Unit, onLink: 
     var page by rememberSaveable { mutableStateOf("") }
     val enqueue = koinInject<EnqueueDownloadUseCase>()
     val observe = koinInject<ObserveDownloadUseCase>()
+    val verify = koinInject<VerifyModuleDownloadUseCase>()
     val scope = rememberCoroutineScope()
     var progress by remember { mutableStateOf<Int?>(null) }
     var failed by remember { mutableStateOf(false) }
+    var verifyFailed by remember { mutableStateOf(false) }
+
+    // A repository ZIP installs only when it matches the size and SHA-256 the repository published.
     fun download(asset: ModuleReleaseAsset) {
         if (progress != null) return
         progress = 0
         failed = false
+        verifyFailed = false
         scope.launch {
             runCatching {
                 val id = enqueue(asset.downloadUrl, asset.name)
                 observe(id).filterNotNull().onEach { progress = it.progress }
                     .first { it.status == DownloadStatus.COMPLETED || it.status == DownloadStatus.FAILED }
             }.onSuccess { result ->
-                result.resultUri?.let(onInstall) ?: run { failed = true }
+                val uri = result.resultUri
+                when {
+                    uri == null -> failed = true
+
+                    verify(uri, asset.size, asset.sha256) -> onInstall(uri)
+
+                    else -> {
+                        verifyFailed = true
+                        failed = true
+                    }
+                }
             }.onFailure { failed = true }
             progress = null
         }
@@ -329,7 +345,7 @@ internal fun WearOnlineModulePage(moduleId: String, onBack: () -> Unit, onLink: 
         }
     }
     if (page.isNotEmpty()) WearSubPage(close, content) else content()
-    val downloadFailed = stringResource(R.string.operation_failed)
+    val downloadFailed = stringResource(if (verifyFailed) R.string.wear_download_verify_failed else R.string.operation_failed)
     val downloadStyle = ConfirmationDialogDefaults.curvedTextStyle
     FailureConfirmationDialog(
         visible = failed,
