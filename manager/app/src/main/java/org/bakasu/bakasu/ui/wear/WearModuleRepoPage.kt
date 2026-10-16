@@ -19,7 +19,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.items
+import androidx.wear.compose.material3.AlertDialog
+import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import kotlinx.coroutines.flow.filterNotNull
@@ -31,6 +34,7 @@ import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
@@ -57,10 +61,43 @@ internal fun WearModuleRepoPage(onBack: () -> Unit, onOpen: (String) -> Unit) {
     val viewModel = koinViewModel<ModuleRepoViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     var searching by rememberSaveable { mutableStateOf(false) }
-    var failed by remember { mutableStateOf(false) }
+    // Opening the repository loads its index, which also checks that the watch can reach it over
+    // any network: the paired phone, the watch Wi-Fi or its mobile data.
+    var failure by remember { mutableStateOf<ModuleRepoUiEvent?>(null) }
     LaunchedEffect(viewModel) {
         viewModel.dispatch(ModuleRepoUiAction.Refresh)
-        viewModel.events.collect { failed = it is ModuleRepoUiEvent.Error }
+        viewModel.events.collect { failure = it }
+    }
+    fun retry() {
+        failure = null
+        viewModel.dispatch(ModuleRepoUiAction.Refresh)
+    }
+    val failureReason = stringResource(if (failure is ModuleRepoUiEvent.Offline) R.string.wear_no_internet else R.string.wear_repo_unreachable)
+    // Without a list there is nothing to show, so the failure asks to retry or leave.
+    val connectDialog = rememberCustomDialog { dismiss ->
+        val leave = {
+            dismiss()
+            onBack()
+        }
+        AlertDialog(
+            visible = true,
+            onDismissRequest = leave,
+            icon = { Icon(Icons.TwoTone.Info, contentDescription = null) },
+            title = { Text(stringResource(R.string.wear_repo_connect_failed)) },
+            text = { Text(failureReason, color = MaterialTheme.colorScheme.error) },
+            confirmButton = {
+                AlertDialogDefaults.ConfirmButton(
+                    onClick = {
+                        dismiss()
+                        retry()
+                    },
+                )
+            },
+            dismissButton = { AlertDialogDefaults.DismissButton(onClick = leave) },
+        )
+    }
+    LaunchedEffect(failure) {
+        if (failure != null && state.modules.isEmpty() && state.search.isBlank()) connectDialog.show()
     }
     if (searching) {
         WearSubPage({ searching = false }) {
@@ -74,17 +111,14 @@ internal fun WearModuleRepoPage(onBack: () -> Unit, onOpen: (String) -> Unit) {
     WearList(
         isLoading = state.isRefreshing && state.modules.isEmpty(),
         isRefreshing = state.isRefreshing,
-        onRefresh = {
-            failed = false
-            viewModel.dispatch(ModuleRepoUiAction.Refresh)
-        },
+        onRefresh = ::retry,
         onBack = onBack,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
         item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_modules), { searching = true }, icon = Icons.TwoTone.Search, description = state.search.ifBlank { null }) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_star_first), state.sortStargazerCountFirst, { viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it)) }) }
-        if (state.offline || failed) item { WearInfoCard(spec) { Text(stringResource(if (state.offline) R.string.network_offline else R.string.operation_failed)) } }
-        if (state.modules.isEmpty() && !state.isRefreshing) item { WearInfoCard(spec) { Text(stringResource(R.string.wear_catalog_empty)) } }
+        if (failure != null && state.modules.isNotEmpty()) item { WearInfoCard(spec) { Text(failureReason) } }
+        if (state.modules.isEmpty() && !state.isRefreshing && failure == null) item { WearInfoCard(spec) { Text(stringResource(R.string.wear_catalog_empty)) } }
         LazySegmentedColumn(state.modules, { it.moduleId }) { module ->
             WearSettingsJumpPageWidget(
                 spec,

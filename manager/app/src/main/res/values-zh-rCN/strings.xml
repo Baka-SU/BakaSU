@@ -721,4 +721,7 @@
     <string name="wear_storage_permission_message">未获得 Root 时，文件选择器需要所有文件访问权限才能显示内部存储中的文件。</string>
     <string name="wear_link_open_failed">无法打开链接</string>
     <string name="wear_tap_to_view">点击查看</string>
+    <string name="wear_repo_connect_failed">连接服务器失败</string>
+    <string name="wear_no_internet">未连接到互联网</string>
+    <string name="wear_repo_unreachable">无法连接到模块仓库</string>
 </resources>

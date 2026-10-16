@@ -748,4 +748,7 @@
     <string name="wear_storage_permission_message">Without root, the file picker needs all-files access to show the files in internal storage.</string>
     <string name="wear_link_open_failed">Couldn\'t open link</string>
     <string name="wear_tap_to_view">Tap to view</string>
+    <string name="wear_repo_connect_failed">Couldn\'t connect to the server</string>
+    <string name="wear_no_internet">Not connected to the internet</string>
+    <string name="wear_repo_unreachable">Can\'t reach the module repository</string>
 </resources>
