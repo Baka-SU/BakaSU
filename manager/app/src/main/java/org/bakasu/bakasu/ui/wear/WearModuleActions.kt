@@ -40,13 +40,13 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.data.file.ZipFileDetector
+import org.bakasu.bakasu.data.file.ZipFileInfo
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
-import org.bakasu.bakasu.ui.component.ZipFileDetector
-import org.bakasu.bakasu.ui.component.ZipFileInfo
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiAction
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel

@@ -49,21 +49,3 @@ fun HorizontalPagerWithInteraction(
         pageContent = pageContent,
     )
 }
-
-/** Wear keeps the library's edge gesture arbitration and active-page handling. */
-@Composable
-fun HorizontalPagerWithInteraction(
-    state: androidx.wear.compose.foundation.pager.PagerState,
-    modifier: Modifier = Modifier,
-    key: ((Int) -> Any)? = null,
-    flingBehavior: TargetedFlingBehavior = androidx.wear.compose.foundation.pager.PagerDefaults.snapFlingBehavior(state),
-    pageContent: @Composable androidx.wear.compose.foundation.pager.PagerScope.(Int) -> Unit,
-) {
-    androidx.wear.compose.foundation.pager.HorizontalPager(
-        state = state,
-        modifier = modifier,
-        key = key,
-        flingBehavior = flingBehavior,
-        content = pageContent,
-    )
-}

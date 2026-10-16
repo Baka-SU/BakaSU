@@ -18,7 +18,6 @@ import androidx.wear.compose.material3.SwipeToDismissBox
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.launch
-import org.bakasu.bakasu.ui.component.LocalWearSwipeEnabled
 import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.extractSeedColor

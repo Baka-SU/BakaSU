@@ -1,4 +1,4 @@
-package org.bakasu.bakasu.ui.component
+package org.bakasu.bakasu.ui.wear.component
 
 import androidx.compose.runtime.compositionLocalOf
 

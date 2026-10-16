@@ -19,6 +19,7 @@ import org.bakasu.bakasu.data.count.CountRepository
 import org.bakasu.bakasu.data.download.DownloadRepository
 import org.bakasu.bakasu.data.file.ModuleFileRepository
 import org.bakasu.bakasu.data.file.WearFileRepository
+import org.bakasu.bakasu.data.file.ZipFileDetector
 import org.bakasu.bakasu.data.flash.FlashRepository
 import org.bakasu.bakasu.data.kernel.KernelRepository
 import org.bakasu.bakasu.data.kernel.UmountRepository
@@ -152,7 +153,6 @@ import org.bakasu.bakasu.domain.usecase.UpdateCachedModuleEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.UpdatePlatformSettingUseCase
 import org.bakasu.bakasu.domain.usecase.ValidateSepolicyUseCase
 import org.bakasu.bakasu.ui.activity.util.ThemeUtils
-import org.bakasu.bakasu.ui.component.ZipFileDetector
 import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig

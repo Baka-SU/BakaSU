@@ -77,7 +77,8 @@ its UI and a few Wear-only data sources are separate.
 
 * `KernelSUApplication` starts Koin and runs `InitializeApplicationUseCase` for both form factors.
 * `ui/MainActivity.kt` checks `PackageManager.FEATURE_WATCH` and hands watches over to
-  `ui/wear/WearMainActivity.kt`. Do not add further watch branches to phone activities.
+  `ui/wear/WearMainActivity.kt` by component name, so phone code imports nothing from `ui.wear`.
+  Do not add further watch branches to phone activities.
 * `WearMainActivity` applies the language, initializes the manager, refreshes the home and app
   lists, and shows loading, error or `WearManagerScreen` according to `StartupState`.
 * `WearActivity` is the shared base of the Wear activities; it only intercepts `KEYCODE_BACK` when
@@ -103,8 +104,10 @@ its UI and a few Wear-only data sources are separate.
 
 * Pages live in `ui/wear/`; Wear components live in `ui/wear/component/`, with the Wear settings
   adapters in `ui/wear/component/settings/`. Phone and Wear UI must not use each other's components;
-  the `WearPhoneComponentBoundary` lint check warns when they do.
-* `WearManager.kt` owns one `AppScaffold`, the four-page main pager and a Navigation 3 `NavDisplay`;
+  the `WearPhoneComponentBoundary` lint check warns when they do. Only the dialog API
+  (`rememberCustomDialog`, `DialogHandle`) and `PackageIcon` are shared; non-UI helpers such as the
+  `module.prop` parser `ZipFileDetector` live in `data/`.
+* `WearManager.kt` owns one `AppScaffold`, the four-page main `WearHorizontalPager` and a Navigation 3 `NavDisplay`;
   `WearRoutes.kt` declares the serializable destinations. Open and close pages through the
   `open`/`back` helpers and add a `WearRoute` for every new page instead of in-page string stacks.
 * Lists use `WearList` (`ScreenScaffold` + `TransformingLazyColumn`), which applies the round-screen
@@ -242,9 +245,9 @@ instead.
   surfaces.
 * Extend the nearest existing pattern before creating a new abstraction.
 * Avoid duplicating existing widgets, shapes, or resource-access patterns.
-* Use `org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction` for every pager. Do not
-  call
-  `HorizontalPager` directly from screens; pager gesture arbitration belongs in this component.
+* Use `org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction` for every phone pager and
+  `org.bakasu.bakasu.ui.wear.component.WearHorizontalPager` for every Wear pager. Do not call
+  `HorizontalPager` directly from screens; pager gesture arbitration belongs in these components.
 
 ---
 
@@ -283,7 +286,7 @@ Before completing a UI or settings task, verify:
 * Standard settings rows use the relevant `SettingsBaseWidget` wrapper instead of a hand-built
   equivalent.
 * Dynamic corner-shape animation uses `AnimatedShape.kt` when applicable.
-* Every pager is rendered through `HorizontalPagerWithInteraction`.
+* Every pager is rendered through `HorizontalPagerWithInteraction` (phone) or `WearHorizontalPager` (Wear).
 * No user-visible string is hardcoded.
 * Compose strings use `stringResource` whenever possible.
 * Verify formatting with `./gradlew spotlessCheck` and ensure it passes before reporting completion.

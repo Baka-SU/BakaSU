@@ -33,7 +33,6 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
-import org.bakasu.bakasu.ui.wear.WearMainActivity
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -59,7 +58,8 @@ open class MainActivity : ComponentActivity() {
         // Watches use their own activity; the launcher entries and alias stay shared with the phone.
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) {
             super.onCreate(savedInstanceState)
-            startActivity(Intent(intent).setClass(this, WearMainActivity::class.java))
+            // By name, so the phone side keeps no compile-time dependency on the Wear UI.
+            startActivity(Intent(intent).setClassName(this, "org.bakasu.bakasu.ui.wear.WearMainActivity"))
             finish()
             return
         }

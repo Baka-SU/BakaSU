@@ -35,13 +35,13 @@ import androidx.wear.compose.material3.Text
 import com.materialkolor.ktx.toColor
 import com.materialkolor.ktx.toHct
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.ui.component.LocalWearSwipeEnabled
 import org.bakasu.bakasu.ui.theme.BackgroundRenderState
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
+import org.bakasu.bakasu.ui.wear.component.LocalWearSwipeEnabled
 import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen

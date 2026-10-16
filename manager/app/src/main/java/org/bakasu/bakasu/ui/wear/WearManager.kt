@@ -68,7 +68,6 @@ import org.bakasu.bakasu.domain.model.FlashOperation
 import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.LkmSelection
-import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
 import org.bakasu.bakasu.ui.viewmodel.HomeUiEvent
@@ -96,6 +95,7 @@ import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPageIndicator
+import org.bakasu.bakasu.ui.wear.component.WearHorizontalPager
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
@@ -780,7 +780,7 @@ private fun WearMainPages(
                 pagerState = pagerState,
                 pageIndicator = { WearHorizontalPageIndicator(pagerState) },
             ) {
-                HorizontalPagerWithInteraction(
+                WearHorizontalPager(
                     modifier = Modifier.fillMaxSize(),
                     state = pagerState,
                     flingBehavior = PagerScaffoldDefaults.snapWithSpringFlingBehavior(pagerState),
