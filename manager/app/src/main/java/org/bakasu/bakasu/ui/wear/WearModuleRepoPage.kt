@@ -4,15 +4,18 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.twotone.Cloud
 import androidx.compose.material.icons.twotone.Code
 import androidx.compose.material.icons.twotone.Download
 import androidx.compose.material.icons.twotone.Info
 import androidx.compose.material.icons.twotone.Person
 import androidx.compose.material.icons.twotone.Search
+import androidx.compose.material.icons.twotone.Tag
 import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,10 +36,14 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.ConfirmationDialogDefaults
+import androidx.wear.compose.material3.FailureConfirmationDialog
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.confirmationDialogCurvedText
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
@@ -57,6 +64,7 @@ import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
@@ -157,6 +165,12 @@ internal fun WearModuleRepoPage(onBack: () -> Unit, onOpen: (String) -> Unit) {
         }
         return
     }
+    val failureStyle = ConfirmationDialogDefaults.curvedTextStyle
+    FailureConfirmationDialog(
+        visible = failure != null && state.modules.isNotEmpty(),
+        onDismissRequest = { failure = null },
+        curvedText = { confirmationDialogCurvedText(failureReason, failureStyle) },
+    )
     WearList(
         isLoading = state.isRefreshing && state.modules.isEmpty(),
         isRefreshing = state.isRefreshing,
@@ -166,7 +180,6 @@ internal fun WearModuleRepoPage(onBack: () -> Unit, onOpen: (String) -> Unit) {
         item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
         item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_modules), { searching = true }, icon = Icons.TwoTone.Search, description = state.search.ifBlank { null }) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_star_first), state.sortStargazerCountFirst, { viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it)) }) }
-        if (failure != null && state.modules.isNotEmpty()) item { WearInfoCard(spec) { Text(failureReason) } }
         if (state.modules.isEmpty() && !state.isRefreshing && failure == null) item { WearInfoCard(spec) { Text(stringResource(R.string.wear_catalog_empty)) } }
         LazySegmentedColumn(state.modules, { it.moduleId }) { module ->
             WearSettingsJumpPageWidget(
@@ -211,13 +224,26 @@ internal fun WearOnlineModulePage(moduleId: String, onBack: () -> Unit, onLink: 
         WearList(isLoading = state.loading, onBack = close) { spec ->
             item { WearPageHeader(spec, module?.moduleName ?: stringResource(R.string.module_repo)) }
             if (state.error != null) item { WearActionButton(spec, Icons.TwoTone.Cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
-            if (failed) item { WearInfoCard(spec) { Text(stringResource(R.string.operation_failed)) } }
-            progress?.let { percent -> item { WearInfoCard(spec) { Text(stringResource(R.string.wear_download_progress, percent)) } } }
+            progress?.let { percent ->
+                item {
+                    WearScaledItem(spec) {
+                        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(progress = { percent / 100f }, modifier = Modifier.size(32.dp))
+                            Text(stringResource(R.string.wear_download_progress, percent), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            }
             if (module != null) {
                 when (page) {
                     "readme" -> {
                         val text = HtmlCompat.fromHtml(module.readme, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
-                        text.chunked(600).forEach { chunk -> item { WearInfoCard(spec) { Text(chunk, style = MaterialTheme.typography.bodySmall) } } }
+                        // The whole README reads as one card, like a license text.
+                        item {
+                            WearInfoCard(spec) {
+                                Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
 
                     "releases", "install" -> {
@@ -238,7 +264,7 @@ internal fun WearOnlineModulePage(moduleId: String, onBack: () -> Unit, onLink: 
                                     asset.name,
                                     { download(asset) },
                                     enabled = progress == null,
-                                    secondaryText = stringResource(R.string.assert_support_content, formatFileSize(asset.size), asset.downloadCount),
+                                    secondaryText = formatFileSize(asset.size),
                                 )
                             }
                         }
@@ -255,20 +281,59 @@ internal fun WearOnlineModulePage(moduleId: String, onBack: () -> Unit, onLink: 
 
                     else -> {
                         item { WearSectionHeader(spec, stringResource(R.string.wear_module_data)) }
-                        SegmentedColumn(listOf("readme" to R.string.readme, "releases" to R.string.release, "info" to R.string.info), { it.first }) { (target, label) ->
-                            WearSettingsJumpPageWidget(spec, stringResource(label), { page = target }, icon = Icons.TwoTone.Info)
+                        val sections = listOf(
+                            Triple("readme", R.string.readme, R.string.wear_readme_summary) to Icons.AutoMirrored.TwoTone.Article,
+                            Triple("releases", R.string.release, R.string.wear_release_summary) to Icons.TwoTone.Tag,
+                            Triple("info", R.string.info, R.string.wear_info_summary) to Icons.TwoTone.Info,
+                        )
+                        SegmentedColumn(sections, { it.first.first }) { (section, icon) ->
+                            val (target, label, summary) = section
+                            WearSettingsJumpPageWidget(spec, stringResource(label), { page = target }, icon = icon, description = stringResource(summary))
                         }
                         item { WearSectionHeader(spec, stringResource(R.string.wear_authors_source)) }
                         LazySegmentedColumn(module.authorList.filter { it.link.isNotBlank() }, { it.link }) { author ->
-                            WearSettingsJumpPageWidget(spec, author.name, { onLink(author.link) }, icon = Icons.TwoTone.Person)
+                            WearSettingsJumpPageWidget(
+                                spec,
+                                author.name,
+                                { onLink(author.link) },
+                                icon = Icons.TwoTone.Person,
+                                description = stringResource(R.string.wear_author_link_summary),
+                            )
                         }
-                        if (module.sourceUrl.isNotBlank()) item { WearSettingsJumpPageWidget(spec, stringResource(R.string.source_code), { onLink(module.sourceUrl) }, icon = Icons.TwoTone.Code) }
+                        if (module.sourceUrl.isNotBlank()) {
+                            item {
+                                WearSettingsJumpPageWidget(
+                                    spec,
+                                    stringResource(R.string.source_code),
+                                    { onLink(module.sourceUrl) },
+                                    icon = Icons.TwoTone.Code,
+                                    description = stringResource(R.string.wear_source_summary),
+                                )
+                            }
+                        }
                         item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
-                        item { WearActionButton(spec, Icons.TwoTone.Download, stringResource(R.string.wear_install_download), { page = "install" }, enabled = module.releases.any { it.assets.isNotEmpty() }, colors = ButtonDefaults.buttonColors()) }
+                        item {
+                            WearActionButton(
+                                spec,
+                                Icons.TwoTone.Download,
+                                stringResource(R.string.wear_install_module),
+                                { page = "install" },
+                                enabled = module.releases.any { it.assets.isNotEmpty() },
+                                secondaryText = stringResource(R.string.wear_download_then_install),
+                                colors = ButtonDefaults.buttonColors(),
+                            )
+                        }
                     }
                 }
             }
         }
     }
     if (page.isNotEmpty()) WearSubPage(close, content) else content()
+    val downloadFailed = stringResource(R.string.operation_failed)
+    val downloadStyle = ConfirmationDialogDefaults.curvedTextStyle
+    FailureConfirmationDialog(
+        visible = failed,
+        onDismissRequest = { failed = false },
+        curvedText = { confirmationDialogCurvedText(downloadFailed, downloadStyle) },
+    )
 }

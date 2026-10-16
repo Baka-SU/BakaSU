@@ -661,7 +661,6 @@
     <string name="wear_authors_source">作者与源码</string>
     <string name="wear_catalog_empty">暂无匹配的模块</string>
     <string name="wear_catalog_summary">%1$s · %2$s</string>
-    <string name="wear_install_download">下载并安装</string>
     <string name="wear_labeled_value">%1$s: %2$s</string>
     <string name="wear_version_code">版本代码</string>
     <string name="wear_download_progress">下载中：%1$d%%</string>
@@ -725,4 +724,10 @@
     <string name="wear_no_internet">未连接到互联网</string>
     <string name="wear_repo_unreachable">无法连接到模块仓库</string>
     <string name="wear_load_failed">加载失败</string>
+    <string name="wear_readme_summary">README 内容</string>
+    <string name="wear_release_summary">Release 记录</string>
+    <string name="wear_info_summary">ID · 简介 · 作者</string>
+    <string name="wear_author_link_summary">打开作者链接</string>
+    <string name="wear_source_summary">打开项目页面</string>
+    <string name="wear_download_then_install">下载后确认安装</string>
 </resources>

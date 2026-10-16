@@ -688,7 +688,6 @@
     <string name="wear_authors_source">Authors and source</string>
     <string name="wear_catalog_empty">No matching modules</string>
     <string name="wear_catalog_summary">%1$s · %2$s</string>
-    <string name="wear_install_download">Download and install</string>
     <string name="wear_labeled_value">%1$s: %2$s</string>
     <string name="wear_version_code">Version code</string>
     <string name="wear_download_progress">Downloading: %1$d%%</string>
@@ -752,4 +751,10 @@
     <string name="wear_no_internet">Not connected to the internet</string>
     <string name="wear_repo_unreachable">Can\'t reach the module repository</string>
     <string name="wear_load_failed">Loading failed</string>
+    <string name="wear_readme_summary">README content</string>
+    <string name="wear_release_summary">Release history</string>
+    <string name="wear_info_summary">ID · summary · authors</string>
+    <string name="wear_author_link_summary">Open the author\'s page</string>
+    <string name="wear_source_summary">Open the project page</string>
+    <string name="wear_download_then_install">Download, then confirm installing</string>
 </resources>
