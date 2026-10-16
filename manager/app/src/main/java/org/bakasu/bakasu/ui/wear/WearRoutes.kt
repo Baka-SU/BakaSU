@@ -158,6 +158,4 @@ sealed interface WearRoute : NavKey {
     data class Browser(val url: String) : WearRoute
 
     /** A link that could not be opened, with the reason as a string resource. */
-    @Serializable
-    data class LinkResult(val message: Int) : WearRoute
 }

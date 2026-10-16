@@ -25,6 +25,7 @@ import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -157,9 +158,16 @@ fun WearManagerScreen() {
     var homeError by remember { mutableStateOf<String?>(null) }
     var logError by remember { mutableStateOf<String?>(null) }
     // Results of opening a module WebUI on the phone, shown as confirmation dialogs.
-    var webUiOnPhone by remember { mutableStateOf(false) }
-    var webUiPhoneFailure by remember { mutableStateOf<WearLinkFailure?>(null) }
-    var webUiPhoneFailed by remember { mutableStateOf(false) }
+    // Links and module WebUI share the official result overlays: open on phone, or a failure.
+    var openedOnPhone by remember { mutableStateOf(false) }
+    var openFailure by remember { mutableStateOf<WearLinkFailure?>(null) }
+    var openFailureFallback by remember { mutableIntStateOf(R.string.wear_link_open_failed) }
+    var openFailed by remember { mutableStateOf(false) }
+    fun showOpenFailure(reason: WearLinkFailure?, fallback: Int) {
+        openFailure = reason
+        openFailureFallback = fallback
+        openFailed = true
+    }
     val operationFailedText = stringResource(R.string.operation_failed)
 
     // Settings feedback belongs to the page that caused it; navigating clears it.
@@ -307,16 +315,13 @@ fun WearManagerScreen() {
                     )
                 }.onFailure { moduleError = operationFailedText }
 
-                WearLinkEvent.SentToPhone -> open(WearRoute.LinkResult(R.string.wear_phone_sent))
+                WearLinkEvent.SentToPhone -> openedOnPhone = true
 
-                is WearLinkEvent.Failed -> open(WearRoute.LinkResult(linkFailureMessage(event.reason)))
+                is WearLinkEvent.Failed -> showOpenFailure(event.reason, R.string.wear_link_open_failed)
 
-                WearLinkEvent.WebUiOnPhone -> webUiOnPhone = true
+                WearLinkEvent.WebUiOnPhone -> openedOnPhone = true
 
-                is WearLinkEvent.WebUiPhoneFailed -> {
-                    webUiPhoneFailure = event.reason
-                    webUiPhoneFailed = true
-                }
+                is WearLinkEvent.WebUiPhoneFailed -> showOpenFailure(event.reason, R.string.wear_phone_open_failed)
             }
         }
     }
@@ -324,8 +329,8 @@ fun WearManagerScreen() {
 
     // A found manager update is offered in a dialog, the stable channel first as on the phone's Home.
     WearManagerUpdateDialog(home.stableManagerUpdate ?: home.betaManagerUpdate)
-    WearPhoneWebUiDialogs(webUiOnPhone, { webUiOnPhone = false }, webUiPhoneFailure, webUiPhoneFailed) {
-        webUiPhoneFailed = false
+    WearOpenResultDialogs(openedOnPhone, { openedOnPhone = false }, openFailure, openFailureFallback, openFailed) {
+        openFailed = false
     }
     AppScaffold(
         timeText = { WearTimeText() },
@@ -632,21 +637,7 @@ fun WearManagerScreen() {
                                     if (preferences.link == "auto") {
                                         linkViewModel.open(route.url, "phone")
                                     } else {
-                                        open(WearRoute.LinkResult(R.string.wear_link_webview_unavailable))
-                                    }
-                                }
-                            }
-                            entry<WearRoute.LinkResult> { route ->
-                                WearList(onBack = ::back) { spec ->
-                                    item { WearPageHeader(spec, stringResource(R.string.operation_failed)) }
-                                    item { WearInfoCard(spec) { Text(stringResource(route.message)) } }
-                                    item {
-                                        WearActionButton(
-                                            spec,
-                                            Icons.TwoTone.Settings,
-                                            stringResource(R.string.wear_link_mode),
-                                            { open(WearRoute.Selection(WearSelection.LinkMode)) },
-                                        )
+                                        showOpenFailure(WearLinkFailure.WEBVIEW_UNAVAILABLE, R.string.wear_link_open_failed)
                                     }
                                 }
                             }
@@ -864,24 +855,17 @@ private fun WearRoute.BootFlash.toOperation() = FlashOperation.Boot(
     forceBackup = forceBackup,
 )
 
-private fun linkFailureMessage(reason: WearLinkFailure?): Int = when (reason) {
-    null -> R.string.operation_failed
-    WearLinkFailure.UNSUPPORTED_URL -> R.string.wear_link_unsupported
-    WearLinkFailure.WEBVIEW_UNAVAILABLE -> R.string.wear_link_webview_unavailable
-    WearLinkFailure.PHONE_UNAVAILABLE -> R.string.wear_link_phone_unavailable
-    WearLinkFailure.PHONE_APP_MISSING -> R.string.wear_phone_app_missing
-    WearLinkFailure.PHONE_FAILED -> R.string.wear_link_phone_failed
-}
-
 /**
- * The official open-on-phone confirmation after a module WebUI was opened on the phone, and the
- * failure confirmation when it could not be: a disconnected phone shows the connection failure icon.
+ * The official open-on-phone confirmation after a link or module WebUI was sent to the phone, and
+ * the failure confirmation when it could not be opened: a disconnected phone shows the connection
+ * failure icon. The curved text is short, so a failure without a phone-specific reason shows [fallback].
  */
 @Composable
-private fun WearPhoneWebUiDialogs(
+private fun WearOpenResultDialogs(
     opened: Boolean,
     onOpenedDismissed: () -> Unit,
     failure: WearLinkFailure?,
+    fallback: Int,
     failed: Boolean,
     onFailureDismissed: () -> Unit,
 ) {
@@ -896,7 +880,8 @@ private fun WearPhoneWebUiDialogs(
         when (failure) {
             WearLinkFailure.PHONE_UNAVAILABLE -> R.string.wear_phone_disconnected
             WearLinkFailure.PHONE_APP_MISSING -> R.string.wear_phone_app_missing
-            else -> R.string.wear_phone_open_failed
+            WearLinkFailure.PHONE_FAILED -> R.string.wear_phone_open_failed
+            else -> fallback
         },
     )
     val failureStyle = ConfirmationDialogDefaults.curvedTextStyle

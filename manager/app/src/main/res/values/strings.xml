@@ -615,7 +615,6 @@
     <string name="wear_system_picker">System picker</string>
     <string name="wear_phone">Open on phone</string>
     <string name="wear_close_panel">Close menu</string>
-    <string name="wear_phone_sent">Open request sent to phone</string>
     <string name="wear_directory_unavailable">Cannot read this directory. Check storage access.</string>
     <string name="wear_file_exists">A file with this name already exists.</string>
     <string name="wear_parent_directory">Parent directory</string>
@@ -623,10 +622,6 @@
     <string name="wear_ui_scale" translatable="false">%1$.2fx</string>
     <string name="wear_file_name">File name</string>
     <string name="wear_remove_background">Remove background</string>
-    <string name="wear_link_unsupported">This type of link can\'t be opened.</string>
-    <string name="wear_link_webview_unavailable">System WebView isn\'t available on this watch.</string>
-    <string name="wear_link_phone_unavailable">No connected phone is available to open this link.</string>
-    <string name="wear_link_phone_failed">Couldn\'t send the link to the phone.</string>
     <string name="wear_custom_color">Custom colour</string>
     <string name="wear_joined" translatable="false">%1$s · %2$s</string>
     <string name="wear_directory_empty">No matching files in this folder</string>
@@ -751,4 +746,5 @@
     <string name="wear_file_access_failed">Cannot access this location</string>
     <string name="wear_storage_permission_title">Allow storage access</string>
     <string name="wear_storage_permission_message">Without root, the file picker needs all-files access to show the files in internal storage.</string>
+    <string name="wear_link_open_failed">Couldn\'t open link</string>
 </resources>
