@@ -128,7 +128,7 @@ sealed interface Route :
 
     @Parcelize
     @Serializable
-    data class ExecuteModuleAction(val moduleId: String) : Route
+    data class ExecuteModuleAction(val moduleId: String, val fromShortcut: Boolean) : Route
 
     @Parcelize
     @Serializable

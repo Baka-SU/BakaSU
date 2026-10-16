@@ -141,7 +141,7 @@ fun AboutScreen() {
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
                         .padding(top = 8.dp, bottom = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(
                         alpha = cardConfig.cardAlpha,
                     ),
                     message = AnnotatedString.fromHtml(

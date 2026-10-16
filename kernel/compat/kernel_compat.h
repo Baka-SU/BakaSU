@@ -487,4 +487,13 @@ static inline struct file *ksu_filp_open_nonotify(const char *path, int flags)
     return f;
 }
 
+// use in sepolicy.c and selinux_hide.c
+
+// symtab_search is introduced on 5.9.0:
+// https://elixir.bootlin.com/linux/v5.9-rc1/source/security/selinux/ss/symtab.h
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) && !defined(KSU_COMPAT_HAS_SYMTAB_SEARCH)
+#define symtab_search(s, name) hashtab_search((s)->table, name)
+#define symtab_insert(s, name, datum) hashtab_insert((s)->table, name, datum)
+#endif
+
 #endif

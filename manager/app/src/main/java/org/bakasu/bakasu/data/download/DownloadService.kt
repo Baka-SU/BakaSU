@@ -27,6 +27,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
 import org.bakasu.bakasu.data.update.ManagerUpdateRepository
 import org.bakasu.bakasu.data.update.ZipRangeArchive
 import org.bakasu.bakasu.ui.MainActivity
@@ -36,6 +37,7 @@ class DownloadService : Service() {
     private val downloadRepository: DownloadRepository by inject()
     private val httpClient: OkHttpClient by inject()
     private val managerUpdateRepository: ManagerUpdateRepository by inject()
+    private val settingsRepository: SettingsPlatformRepository by inject()
 
     companion object {
         const val CHANNEL_ID = "download_channel"
@@ -45,6 +47,7 @@ class DownloadService : Service() {
         const val ACTION_DISMISS_DOWNLOAD = "org.bakasu.bakasu.action.DISMISS_DOWNLOAD"
         const val ACTION_INSTALL_MODULE = "org.bakasu.bakasu.action.INSTALL_MODULE"
         const val EXTRA_URL = "url"
+        const val EXTRA_TOKEN = "token"
         const val EXTRA_FILE_NAME = "fileName"
         const val EXTRA_DOWNLOAD_ID = "downloadId"
         const val EXTRA_MODULE_URI = "moduleUri"
@@ -341,6 +344,7 @@ class DownloadService : Service() {
             action = ACTION_INSTALL_MODULE
             putExtra(EXTRA_MODULE_URI, uri.toString())
             putExtra(EXTRA_DOWNLOAD_ID, id)
+            putExtra(EXTRA_TOKEN, settingsRepository.intentToken)
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         val installPendingIntent = PendingIntent.getActivity(

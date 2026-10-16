@@ -77,3 +77,5 @@ codegen-units = 1
 [build-dependencies]
 bindgen = "0.73.2"
 cc = "1"
+# Keep bindgen and prettyplease on the same syn major version.
+prettyplease = "=0.2.37"

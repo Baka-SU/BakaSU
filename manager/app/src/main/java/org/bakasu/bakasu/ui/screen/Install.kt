@@ -44,6 +44,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -51,6 +52,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -62,6 +64,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.LkmSelection
@@ -76,12 +79,16 @@ import org.bakasu.bakasu.ui.component.settings.SettingsChooseDialog
 import org.bakasu.bakasu.ui.component.settings.SettingsChooseWidget
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Route
+import org.bakasu.bakasu.ui.rememberMaterial3BlurBackdrop
 import org.bakasu.bakasu.ui.screen.kernelFlash.component.SlotSelectionDialog
+import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
+import org.bakasu.bakasu.ui.util.LocalBlurState
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.viewmodel.InstallUiEvent
 import org.bakasu.bakasu.ui.viewmodel.InstallViewModel
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -92,6 +99,7 @@ fun InstallScreen(
     val viewModel = koinViewModel<InstallViewModel>()
     val installState by viewModel.state.collectAsStateWithLifecycle()
     val environment = installState.environment
+    val themeConfig: ThemeConfig = koinInject()
     val context = LocalContext.current
 
     val pagerState = rememberPagerState(pageCount = { 2 })
@@ -119,7 +127,9 @@ fun InstallScreen(
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(scrollBehavior) {
+        snapshotFlow { scrollBehavior.state.heightOffsetLimit }
+            .first { it < 0f }
         scrollBehavior.state.heightOffset = scrollBehavior.state.heightOffsetLimit
     }
 
@@ -142,62 +152,70 @@ fun InstallScreen(
                 .fillMaxSize()
                 .blurSource(),
         ) { page ->
-            if (installState.loading) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .nestedScroll(scrollBehavior.nestedScrollConnection)
-                        .blurSource(),
-                ) {
-                    item {
-                        Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
-                    }
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(240.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            LoadingIndicator()
+            CompositionLocalProvider(
+                LocalBlurState provides rememberMaterial3BlurBackdrop(
+                    enableBlur = themeConfig.isEnableBlur,
+                    pagerState = pagerState,
+                    pagerPage = page,
+                ),
+            ) {
+                if (installState.loading) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .nestedScroll(scrollBehavior.nestedScrollConnection)
+                            .blurSource(),
+                    ) {
+                        item {
+                            Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
+                        }
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(240.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                LoadingIndicator()
+                            }
+                        }
+                        item {
+                            Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
                         }
                     }
-                    item {
-                        Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
-                    }
-                }
-            } else {
-                when (page) {
-                    0 -> LKMInstallPage(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection)
-                            .blurSource(),
-                        topPadding = innerPadding.calculateTopPadding(),
-                        bottomPadding = innerPadding.calculateBottomPadding(),
-                        isGKI = environment.isGki,
-                        rootAvailable = environment.rootAvailable,
-                        isAbDevice = environment.isAbDevice,
-                        currentKmi = environment.currentKmi,
-                        supportedKmis = environment.supportedKmis,
-                        activeSlotSuffix = environment.activeSlotSuffix,
-                        inactiveSlotSuffix = environment.inactiveSlotSuffix,
-                        availablePartitions = environment.availablePartitions,
-                        defaultPartition = environment.defaultPartition,
-                    )
+                } else {
+                    when (page) {
+                        0 -> LKMInstallPage(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                                .blurSource(),
+                            topPadding = innerPadding.calculateTopPadding(),
+                            bottomPadding = innerPadding.calculateBottomPadding(),
+                            isGKI = environment.isGki,
+                            rootAvailable = environment.rootAvailable,
+                            isAbDevice = environment.isAbDevice,
+                            currentKmi = environment.currentKmi,
+                            supportedKmis = environment.supportedKmis,
+                            activeSlotSuffix = environment.activeSlotSuffix,
+                            inactiveSlotSuffix = environment.inactiveSlotSuffix,
+                            availablePartitions = environment.availablePartitions,
+                            defaultPartition = environment.defaultPartition,
+                        )
 
-                    1 -> Anykernel3InstallPage(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection)
-                            .blurSource(),
-                        topPadding = innerPadding.calculateTopPadding(),
-                        bottomPadding = innerPadding.calculateBottomPadding(),
-                        rootAvailable = environment.rootAvailable,
-                        isAbDevice = environment.isAbDevice,
-                        activeSlotSuffix = environment.activeSlotSuffix,
-                        preselectedKernelUri = preselectedKernelUri,
-                    )
+                        1 -> Anykernel3InstallPage(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                                .blurSource(),
+                            topPadding = innerPadding.calculateTopPadding(),
+                            bottomPadding = innerPadding.calculateBottomPadding(),
+                            rootAvailable = environment.rootAvailable,
+                            isAbDevice = environment.isAbDevice,
+                            activeSlotSuffix = environment.activeSlotSuffix,
+                            preselectedKernelUri = preselectedKernelUri,
+                        )
+                    }
                 }
             }
         }
@@ -537,21 +555,17 @@ private fun LKMInstallPage(
         }
 
         item {
-            Column(
+            Button(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
+                enabled = lkmInstallMethod != null,
+                onClick = onClickNext,
             ) {
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = lkmInstallMethod != null,
-                    onClick = onClickNext,
-                ) {
-                    Text(
-                        stringResource(id = R.string.install_next),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+                Text(
+                    stringResource(id = R.string.install_next),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
 
@@ -745,23 +759,19 @@ private fun Anykernel3InstallPage(
         }
 
         item {
-            Column(
+            Button(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
+                enabled = ak3InstallMethod != null,
+                onClick = {
+                    onClickNext()
+                },
             ) {
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = ak3InstallMethod != null,
-                    onClick = {
-                        onClickNext()
-                    },
-                ) {
-                    Text(
-                        stringResource(id = R.string.install_next),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+                Text(
+                    stringResource(id = R.string.install_next),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
 

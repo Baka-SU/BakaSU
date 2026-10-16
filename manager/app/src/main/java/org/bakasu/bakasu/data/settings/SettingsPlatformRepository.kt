@@ -7,6 +7,7 @@ import android.content.res.Configuration
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.topjohnwu.superuser.ShellUtils
+import java.security.SecureRandom
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,6 +34,10 @@ class SettingsPlatformRepository(
     private val localeHelper: LocaleHelper,
     private val ksuCliRepository: KsuCliRepository,
 ) {
+    private companion object {
+        private val secureRandom = SecureRandom()
+    }
+
     fun load(): SettingsPlatformSnapshot {
         themeConfig.forceDarkMode = themeRepository.loadThemeMode()
         themeConfig.seedColor = themeRepository.loadSeedColor()
@@ -277,18 +282,14 @@ class SettingsPlatformRepository(
         cardConfig.isCustomAlphaSet = false
         cardConfig.isCustomBackgroundEnabled = false
         cardConfig.save()
-        themeConfig.preventBackgroundRefresh = false
         backgroundManager.saveBackgroundDim(0f)
         backgroundManager.saveEnableBlurExp(false)
         backgroundManager.saveUseBackgroundSeedColor(false)
         backgroundManager.saveEnableHighContrastMode(false)
-        settings.putBoolean("prevent_background_refresh", false)
     }
 
     private fun initializeFirstRun() {
         if (settings.getBoolean("is_first_run", true)) {
-            themeConfig.preventBackgroundRefresh = false
-            settings.putBoolean("prevent_background_refresh", false)
             settings.putBoolean("is_first_run", false)
         }
     }
@@ -342,4 +343,14 @@ class SettingsPlatformRepository(
 
     private fun isSystemDark(): Boolean = application.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
         Configuration.UI_MODE_NIGHT_YES
+
+    val intentToken: String
+        get() {
+            val existing = settings.getString("intent_token", null)
+            if (!existing.isNullOrBlank()) return existing
+            val token = ByteArray(32).also(secureRandom::nextBytes)
+                .joinToString(separator = "") { "%02x".format(it) }
+            settings.putString("intent_token", token)
+            return token
+        }
 }

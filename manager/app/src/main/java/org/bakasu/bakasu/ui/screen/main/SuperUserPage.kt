@@ -79,6 +79,8 @@ import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.screen.LabelText
 import org.bakasu.bakasu.ui.theme.blurSource
+import org.bakasu.bakasu.ui.util.LocalPagerPage
+import org.bakasu.bakasu.ui.util.LocalPagerState
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
@@ -102,6 +104,8 @@ fun SuperUserPage(bottomPadding: Dp) {
     val context = LocalContext.current
     val viewModel = koinViewModel<SuperUserViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val pagerPage = LocalPagerPage.current
+    val isPageVisible = pagerPage == null || LocalPagerState.current.currentPage == pagerPage
     val scope = rememberCoroutineScope()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
@@ -177,6 +181,10 @@ fun SuperUserPage(bottomPadding: Dp) {
 
     LaunchedEffect(Unit) {
         viewModel.dispatch(SuperUserUiAction.Search(""))
+    }
+
+    LaunchedEffect(viewModel, isPageVisible) {
+        if (isPageVisible) viewModel.dispatch(SuperUserUiAction.LoadInitialData)
     }
 
     Scaffold(
