@@ -721,4 +721,5 @@
     <string name="wear_warning_pr_build">PR 构建</string>
     <string name="wear_warning_apatch">检测到 APatch</string>
     <string name="wear_warning_unofficial">非官方管理器</string>
+    <string name="wear_file_access_failed">无法访问此位置</string>
 </resources>

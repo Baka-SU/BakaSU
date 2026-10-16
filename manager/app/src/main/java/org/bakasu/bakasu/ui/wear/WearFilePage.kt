@@ -12,11 +12,13 @@ import androidx.compose.material.icons.twotone.Folder
 import androidx.compose.material.icons.twotone.FolderOff
 import androidx.compose.material.icons.twotone.FolderZip
 import androidx.compose.material.icons.twotone.Image
+import androidx.compose.material.icons.twotone.Refresh
 import androidx.compose.material.icons.twotone.SubdirectoryArrowLeft
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -28,12 +30,16 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.items
+import androidx.wear.compose.material3.AlertDialog
+import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.file.matchesMimeType
 import org.bakasu.bakasu.data.file.wearFileMimeType
+import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.WearFileEvent
 import org.bakasu.bakasu.ui.viewmodel.WearFileViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
@@ -58,7 +64,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * The built-in picker as a Wear list: the title, the current path as a caption, a low-emphasis
  * entry to the parent folder, then folders and the files matching [mimeTypes] as tonal buttons. In
  * save mode the file name follows and the edge button confirms; otherwise picking a file returns it.
- * [onPicked] receives the file as a content URI.
+ * [onPicked] receives the file as a content URI. Failed operations open an AlertDialog to retry or cancel.
  */
 @Composable
 internal fun WearFilePage(
@@ -72,17 +78,50 @@ internal fun WearFilePage(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     LaunchedEffect(viewModel) {
-        if (viewModel.state.value.directory == null) {
-            viewModel.setName(initialName)
-            viewModel.load(null, mimeTypes, saving)
-        }
-    }
-    LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             if (event is WearFileEvent.Picked) onPicked(event.uri.toUri())
         }
     }
     var editingName by rememberSaveable { mutableStateOf(false) }
+    // The last directory or file operation, so a failure can be retried as it was requested.
+    var lastOperation by remember { mutableStateOf<(() -> Unit)?>(null) }
+    fun perform(operation: () -> Unit) {
+        lastOperation = operation
+        operation()
+    }
+    LaunchedEffect(viewModel) {
+        if (viewModel.state.value.directory == null) {
+            viewModel.setName(initialName)
+            perform { viewModel.load(null, mimeTypes, saving) }
+        }
+    }
+    // A failed operation needs a decision, so it opens an AlertDialog with Retry and Cancel instead of
+    // a message in the list. Cancelling a failed first load leaves the picker, as nothing can be shown.
+    val errorDialog = rememberCustomDialog { dismiss ->
+        val close = {
+            dismiss()
+            viewModel.clearError()
+            if (state.directory == null) onBack()
+        }
+        AlertDialog(
+            visible = true,
+            onDismissRequest = close,
+            icon = { Icon(Icons.TwoTone.Error, contentDescription = null) },
+            title = { Text(stringResource(R.string.wear_file_access_failed)) },
+            text = { Text(state.error ?: stringResource(R.string.operation_failed)) },
+            confirmButton = {
+                AlertDialogDefaults.ConfirmButton(
+                    onClick = {
+                        dismiss()
+                        viewModel.clearError()
+                        lastOperation?.invoke()
+                    },
+                ) { Icon(Icons.TwoTone.Refresh, contentDescription = stringResource(R.string.wear_retry)) }
+            },
+            dismissButton = { AlertDialogDefaults.DismissButton(onClick = close) },
+        )
+    }
+    LaunchedEffect(state.failed) { if (state.failed) errorDialog.show() }
     if (editingName) {
         WearSubPage({ editingName = false }) {
             WearTextInputPage(stringResource(R.string.wear_file_name), state.name) {
@@ -91,13 +130,12 @@ internal fun WearFilePage(
             }
         }
     } else {
-        val error = state.error ?: if (state.failed) stringResource(R.string.operation_failed) else null
         val directory = state.directory
         WearList(
             isLoading = state.loading || directory == null && !state.failed,
             onBack = onBack,
             snap = true,
-            onConfirm = if (saving && directory?.writable == true) ({ viewModel.create() }) else null,
+            onConfirm = if (saving && directory?.writable == true) ({ perform { viewModel.create() } }) else null,
         ) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.wear_picker_mode)) }
             directory?.let {
@@ -115,7 +153,6 @@ internal fun WearFilePage(
                     }
                 }
             }
-            error?.let { item { WearStatusItem(spec, Icons.TwoTone.Error, it, tone = WearStatusTone.ERROR) } }
             directory?.parent?.let { parent ->
                 item {
                     WearChip(
@@ -123,7 +160,7 @@ internal fun WearFilePage(
                         stringResource(R.string.wear_parent_directory),
                         icon = Icons.TwoTone.SubdirectoryArrowLeft,
                         emphasis = WearChipEmphasis.HIGH,
-                        onClick = { viewModel.load(parent, mimeTypes, saving) },
+                        onClick = { perform { viewModel.load(parent, mimeTypes, saving) } },
                     )
                 }
             }
@@ -143,7 +180,9 @@ internal fun WearFilePage(
                         else -> Icons.TwoTone.FilePresent
                     },
                     label = entry.name,
-                    onClick = { if (entry.directory) viewModel.load(entry.path, mimeTypes, saving) else viewModel.select(entry.path) },
+                    onClick = {
+                        perform { if (entry.directory) viewModel.load(entry.path, mimeTypes, saving) else viewModel.select(entry.path) }
+                    },
                     secondaryText = if (entry.directory) null else Formatter.formatShortFileSize(context, entry.size),
                     colors = ButtonDefaults.filledTonalButtonColors(),
                 )

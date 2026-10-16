@@ -748,4 +748,5 @@
     <string name="wear_warning_pr_build">PR build</string>
     <string name="wear_warning_apatch">APatch detected</string>
     <string name="wear_warning_unofficial">Unofficial manager</string>
+    <string name="wear_file_access_failed">Cannot access this location</string>
 </resources>
