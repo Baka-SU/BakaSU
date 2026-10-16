@@ -573,6 +573,7 @@
     <string name="repo_discover">Discover</string>
     <string name="repo_custom_url">Custom URL</string>
     <string name="repo_url">Repository URL</string>
+    <string name="repo_url_hint">Enter MMRL repository URL</string>
     <string name="repo_remove">Remove repository</string>
     <string name="repo_remove_action">Remove</string>
     <string name="repo_remove_message">Remove %1$s from your sources? Installed modules will stay on your device.</string>
@@ -606,4 +607,32 @@
     <string name="repo_kernel_su">KernelSU Official</string>
     <string name="repo_kernel_su_description">Official KernelSU module repository</string>
     <string name="repo_built_in">Built-in</string>
+    <string name="repo_download_url_blocked">The repository download link was blocked.</string>
+    <string name="repo_download_verify_failed">Verification failed for %1$s. The file was not installed.</string>
+    <string name="repo_install_verify_failed">The module file failed verification and was not installed.</string>
+    <string name="repo_update_unverifiable">This repository update could not be verified.</string>
+    <string name="repo_module_id">Module ID</string>
+    <string name="repo_module_id_value">ID: %1$s</string>
+    <string name="repo_tags">Tags</string>
+    <string name="repo_stars">GitHub stars</string>
+    <string name="repo_license">License</string>
+    <string name="repo_homepage">Homepage</string>
+    <string name="repo_support">Support</string>
+    <string name="repo_source_commit">Commit: %1$s</string>
+    <string name="repo_release_page">Release page</string>
+    <string name="repo_attestation">Attestations</string>
+    <string name="repo_immutable_release">Immutable release</string>
+    <string name="repo_sha256">SHA-256: %1$s</string>
+    <string name="repo_using_cache">Showing saved repository data.</string>
+    <string name="repo_health_stale">Repository metadata for this module may be out of date.</string>
+    <string name="repo_detail_error">Module details could not be refreshed.</string>
+    <string name="repo_no_releases">No releases available.</string>
+    <string name="repo_update_available">Update available</string>
+    <string name="repo_download_percent">%1$d%%</string>
+    <string name="repo_download_progress">Downloading %1$s: %2$d%%</string>
+    <string name="repo_open_link">Open %1$s</string>
+    <plurals name="repo_module_count">
+        <item quantity="one">%1$d module</item>
+        <item quantity="other">%1$d modules</item>
+    </plurals>
 </resources>

@@ -44,7 +44,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.io.InputStream
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -53,10 +52,15 @@ import org.bakasu.bakasu.data.file.withInstallArchive
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
-import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
+import org.bakasu.bakasu.domain.model.DocumentFormat
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
 import org.bakasu.bakasu.ui.util.downloader.download
+import org.bakasu.bakasu.ui.util.downloader.downloadFailureMessage
+import org.bakasu.bakasu.domain.model.RepositorySource
+import org.bakasu.bakasu.domain.model.DownloadStatus
+import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.koin.compose.koinInject
 
 val LocalRepositoryModuleInstall = staticCompositionLocalOf<(Uri, () -> Boolean) -> Unit> {
@@ -70,42 +74,44 @@ fun rememberRepositoryInstallDialog(): (CatalogModule, ModuleReleaseAsset, () ->
     val installRepositoryModule = LocalRepositoryModuleInstall.current
     val enqueueDownload = koinInject<EnqueueDownloadUseCase>()
     val observeDownload = koinInject<ObserveDownloadUseCase>()
-    val fetchText = koinInject<FetchRemoteTextUseCase>()
+    val observeAssetDownload = koinInject<ObserveAssetDownloadUseCase>()
+    val getReleaseDetails = koinInject<GetModuleReleaseDetailsUseCase>()
     val scope = rememberCoroutineScope()
     val dialog = rememberConfirmDialog()
     val loading = rememberLoadingDialog()
     val title = stringResource(R.string.confirm_install_module_title)
-    val changelogFailed = stringResource(R.string.module_changelog_failed)
     val downloading = stringResource(R.string.module_downloading)
     var busy by remember { mutableStateOf(false) }
+    fun isDownloading(asset: ModuleReleaseAsset): Boolean = observeAssetDownload.current(asset)?.status.let {
+        it == DownloadStatus.PENDING || it == DownloadStatus.DOWNLOADING
+    }
     return { module, asset, canEnqueue ->
         scope.launch {
-            if (busy || !canEnqueue()) return@launch
+            if (busy || !canEnqueue() || isDownloading(asset)) return@launch
+            if ((asset.verificationRequired || module.repositoryUrl == RepositorySource.KERNEL_SU_URL) && asset.expected == null) {
+                Toast.makeText(context, R.string.repo_update_unverifiable, Toast.LENGTH_LONG).show()
+                return@launch
+            }
             busy = true
             val confirmed = try {
                 val release = module.releases.firstOrNull { release -> release.assets.any { it.hasSameIdentity(asset) } }
                     ?: return@launch
-                val changelog = if (release.changelogUrl.isNotBlank()) {
-                    loading.withLoading { fetchText(release.changelogUrl) }.onFailure { error ->
-                        if (error is CancellationException) throw error
-                        Toast.makeText(context, changelogFailed.format(error.message), Toast.LENGTH_LONG).show()
-                    }.getOrNull()
-                } else {
-                    null
-                }
-                val html = release.changelogUrl.isBlank() && release.descriptionHTML.isNotBlank()
-                val content = changelog ?: if (html) release.descriptionHTML else module.summary
+                val notes = loading.withLoading { getReleaseDetails.notes(module, release) }
+                val html = notes?.format == DocumentFormat.HTML
+                val content = notes?.content ?: module.summary
                 if (!canEnqueue()) return@launch
                 dialog.awaitConfirm(
                     title = title.format(module.moduleName),
                     content = content,
-                    markdown = changelog != null,
+                    markdown = notes != null && !html,
                     html = html,
+                    restrictedBaseUrl = notes?.registryOrigin,
+                    documentBaseUrl = notes?.baseUrl,
                 ) == ConfirmResult.Confirmed
             } finally {
                 busy = false
             }
-            if (!confirmed || !canEnqueue()) return@launch
+            if (!confirmed || !canEnqueue() || isDownloading(asset)) return@launch
             withContext(Dispatchers.IO) {
                 download(
                     context = context,
@@ -114,7 +120,9 @@ fun rememberRepositoryInstallDialog(): (CatalogModule, ModuleReleaseAsset, () ->
                     fileName = asset.name,
                     enqueueDownload = enqueueDownload,
                     observeDownload = observeDownload,
-                    canEnqueue = canEnqueue,
+                    canEnqueue = { canEnqueue() && !isDownloading(asset) },
+                    expected = asset.expected,
+                    onFailed = { state -> Toast.makeText(context, downloadFailureMessage(context, state), Toast.LENGTH_LONG).show() },
                     onDownloaded = { uri ->
                         if (canEnqueue()) installRepositoryModule(uri, canEnqueue)
                     },

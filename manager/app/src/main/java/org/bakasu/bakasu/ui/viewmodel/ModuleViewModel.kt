@@ -1,6 +1,9 @@
 package org.bakasu.bakasu.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
+import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
+import org.bakasu.bakasu.domain.usecase.ResolveModuleUpdateUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleUpdateChangelogUseCase
 import androidx.lifecycle.viewModelScope
 import java.text.Collator
 import java.util.Locale
@@ -79,7 +82,7 @@ private data class ModuleControls(
 )
 
 class ModuleViewModel(
-    observeInstalledModules: ObserveInstalledModulesUseCase,
+    private val observeInstalledModules: ObserveInstalledModulesUseCase,
     private val modulePreferences: ModulePreferencesRepository,
     private val refreshInstalledModules: RefreshInstalledModulesUseCase,
     private val calculateModuleSize: CalculateInstalledModuleSizeUseCase,
@@ -90,6 +93,8 @@ class ModuleViewModel(
     private val setModuleRemoved: SetModuleRemovedUseCase,
     private val reboot: RebootUseCase,
     private val isSoftRebootPreferred: IsSoftRebootPreferredUseCase,
+    private val resolveModuleUpdate: ResolveModuleUpdateUseCase,
+    private val getModuleUpdateChangelog: GetModuleUpdateChangelogUseCase,
 ) : ViewModel() {
     private val controls = MutableStateFlow(ModuleControls())
     private val mutableEvents = MutableSharedFlow<ModuleUiEvent>(extraBufferCapacity = 1)
@@ -120,6 +125,19 @@ class ModuleViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ModuleUiState())
     val uiState: StateFlow<ModuleUiState> = state
+
+    suspend fun resolveUpdate(module: InstalledModule): ModuleUpdateVerification {
+        val update = module.moduleUpdate ?: return ModuleUpdateVerification.Rejected
+        return resolveModuleUpdate(module.id, module.updateJson, update.zipUrl, update.versionCode)
+    }
+
+    suspend fun loadUpdateChangelog(url: String) = getModuleUpdateChangelog(url)
+
+    fun isUpdateCurrent(module: InstalledModule, update: ModuleUpdateVerification.Registry): Boolean =
+        resolveModuleUpdate.isCurrent(update) && observeInstalledModules().value.modules.any {
+            it.id == module.id && !it.remove && it.versionCode == module.versionCode &&
+                it.updateJson == module.updateJson && it.moduleUpdate == module.moduleUpdate
+        }
 
     fun dispatch(action: ModuleUiAction) {
         when (action) {

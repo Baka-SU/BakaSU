@@ -47,7 +47,7 @@ object MmrlRepositoryParser {
             module(source, it ?: fail(RepositoryError.INVALID_FEED))
         }
         if (modules.map { it.moduleId }.distinct().size != modules.size) fail(RepositoryError.INVALID_FEED)
-        return RepositoryFeed(source, modules)
+        return RepositoryFeed(source.copy(moduleCount = modules.size), modules)
     }
 
     fun discovery(body: String): List<RepositorySource> = decode<List<RepositoryDiscoveryDto?>>(body)
@@ -60,6 +60,7 @@ object MmrlRepositoryParser {
                 name,
                 item.id.orEmpty(),
                 item.description.orEmpty(),
+                moduleCount = item.moduleCount?.takeIf { it >= 0 },
             )
         }.distinctBy { it.url }
 
@@ -68,7 +69,10 @@ object MmrlRepositoryParser {
         val name = item.name.orEmpty()
         if (!id.matches(Regex("[A-Za-z0-9][A-Za-z0-9_.-]*")) || name.isBlank()) fail(RepositoryError.INVALID_FEED)
         val versionCode = item.versionCode ?: fail(RepositoryError.INVALID_FEED)
-        val releases = (item.versions ?: fail(RepositoryError.INVALID_FEED)).map { entry ->
+        val entries = item.versions ?: fail(RepositoryError.INVALID_FEED)
+        val currentRelease = entries.singleOrNull { it?.versionCode == versionCode }
+        val currentSize = item.size?.takeIf { it >= 0 }
+        val releases = entries.map { entry ->
             val release = entry ?: fail(RepositoryError.INVALID_FEED)
             val releaseCode = release.versionCode ?: fail(RepositoryError.INVALID_FEED)
             val zip = resourceUrl(source.url, release.zipUrl.orEmpty()).takeIf(String::isNotBlank) ?: fail(RepositoryError.INVALID_FEED)
@@ -84,7 +88,7 @@ object MmrlRepositoryParser {
                     ModuleReleaseAsset(
                         name = fileName,
                         downloadUrl = zip,
-                        size = release.size?.takeIf { it >= 0 },
+                        size = release.size?.takeIf { it >= 0 } ?: currentSize?.takeIf { release === currentRelease },
                         downloadCount = null,
                     ),
                 ),
@@ -115,6 +119,8 @@ object MmrlRepositoryParser {
             repositoryUrl = source.url,
             repositoryName = source.name,
             readmeUrl = resourceUrl(source.url, item.readme.orEmpty()),
+            releaseMetadataUrl = resourceUrl(source.url, item.track?.buildMetadata.orEmpty()),
+            iconUrl = resourceUrl(source.url, item.icon.orEmpty()).takeIf(String::isNotBlank),
         )
     }
 

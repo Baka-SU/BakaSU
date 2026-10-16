@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.CacheControl
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okio.Buffer
 
 data class NetworkResponse(
     val body: String?,
@@ -41,6 +42,7 @@ class NetworkRequestRepository(
         headers: Map<String, String> = emptyMap(),
         forceNetwork: Boolean = false,
         callTimeoutSeconds: Long? = null,
+        maxResponseBytes: Long? = null,
     ): Result<NetworkResponse> = withContext(Dispatchers.IO) {
         if (!networkStatusRepository.isAvailable()) {
             return@withContext Result.failure(IllegalStateException("offline"))
@@ -61,7 +63,20 @@ class NetworkRequestRepository(
             call.execute().use { response ->
                 check(response.isSuccessful) { "HTTP ${response.code}" }
                 NetworkResponse(
-                    body = response.body?.string(),
+                    body = response.body?.let { body ->
+                        if (maxResponseBytes == null) {
+                            body.string()
+                        } else {
+                            require(maxResponseBytes > 0)
+                            val buffer = Buffer()
+                            val source = body.source()
+                            while (buffer.size <= maxResponseBytes) {
+                                if (source.read(buffer, minOf(8192L, maxResponseBytes - buffer.size + 1)) == -1L) break
+                            }
+                            check(buffer.size <= maxResponseBytes) { "Response too large" }
+                            buffer.readString(body.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8)
+                        }
+                    },
                     headers = response.headers.toMultimap(),
                     url = response.request.url.toString(),
                 )

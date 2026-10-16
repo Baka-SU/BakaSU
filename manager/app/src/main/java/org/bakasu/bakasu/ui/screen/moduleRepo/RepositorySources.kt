@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.ui.screen.moduleRepo
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,14 +11,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -54,15 +50,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -139,7 +134,7 @@ fun AddRepositoryScreen() {
                     modifier = Modifier.fillMaxSize(),
                     state = discoverScroll,
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     if (state.discovering) {
                         item {
@@ -174,36 +169,29 @@ fun AddRepositoryScreen() {
                     items(state.discovered, key = { it.url }) { source ->
                         val added = state.sources.any { it.url == source.url }
                         val adding = state.addingUrl == source.url
-                        CatalogCard(shape = RoundedCornerShape(20.dp)) {
-                            CatalogCardHeading(source.name, scrollTitle = false)
-                            Text(
-                                source.shortUrl(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            if (source.description.isNotBlank()) {
-                                Spacer(Modifier.height(12.dp))
-                                Text(
-                                    source.description,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            Spacer(Modifier.height(12.dp))
-                            HorizontalDivider()
+                        val description = source.description.takeIf(String::isNotBlank)
+                        CatalogCard {
                             Row(
-                                Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 16.dp),
-                                horizontalArrangement = Arrangement.End,
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
+                                Column(Modifier.weight(1f)) {
+                                    CatalogCardHeading(source.name)
+                                    Text(
+                                        source.shortUrl(),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
                                 if (added && !adding) {
                                     FilledTonalButton(onClick = {}, enabled = false) {
                                         Text(stringResource(R.string.repo_added))
                                     }
-                                }
-                                if (!added || adding) {
+                                } else {
                                     FilledTonalLoadingButton(
                                         text = stringResource(R.string.add),
                                         loading = adding,
@@ -211,6 +199,26 @@ fun AddRepositoryScreen() {
                                         enabled = !state.busy,
                                     )
                                 }
+                            }
+                            if (description != null) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            source.moduleCount?.let { count ->
+                                Spacer(Modifier.height(8.dp))
+                                HorizontalDivider(thickness = Dp.Hairline)
+                                Text(
+                                    pluralStringResource(R.plurals.repo_module_count, count, count),
+                                    modifier = Modifier.padding(top = 4.dp),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
@@ -224,6 +232,7 @@ fun AddRepositoryScreen() {
                         value = state.url,
                         onValueChange = viewModel::setUrl,
                         label = { Text(stringResource(R.string.repo_url)) },
+                        placeholder = { Text(stringResource(R.string.repo_url_hint)) },
                         singleLine = true,
                         enabled = !state.busy,
                         isError = state.error != null,
@@ -261,47 +270,31 @@ internal fun RepositorySourceItem(
         title = null,
         iconPlaceholder = false,
         onClick = { onOpen() },
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         foreContent = {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    source.displayName,
-                    modifier = Modifier.weight(1f).padding(end = 8.dp),
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 18.sp,
-                        lineHeight = 24.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (source.isBuiltIn) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.weight(1f)) {
+                    CatalogCardHeading(source.displayName)
                     Text(
-                        stringResource(R.string.repo_built_in),
-                        style = MaterialTheme.typography.labelMedium,
+                        source.shortUrl(),
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                } else {
-                    Box(Modifier.width(28.dp).height(24.dp).wrapContentSize(unbounded = true)) {
-                        RepositoryActions(source, busy, onRename, onRemove)
-                    }
+                }
+                if (!source.isBuiltIn) {
+                    RepositoryActions(source, busy, onRename, onRemove)
                 }
             }
         },
         descriptionColumnContent = {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                source.shortUrl(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
             if (source.description.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
                 Text(
                     source.description,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 22.sp),
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -309,7 +302,33 @@ internal fun RepositorySourceItem(
             }
             if (failed) {
                 Spacer(Modifier.height(8.dp))
-                Text(stringResource(R.string.repo_refresh_failed), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.repo_refresh_failed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
+            if (source.moduleCount != null || source.isBuiltIn) {
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider(thickness = Dp.Hairline)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        source.moduleCount?.let { count ->
+                            Text(
+                                pluralStringResource(R.plurals.repo_module_count, count, count),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    if (source.isBuiltIn) {
+                        Text(
+                            stringResource(R.string.repo_built_in),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         },
     )

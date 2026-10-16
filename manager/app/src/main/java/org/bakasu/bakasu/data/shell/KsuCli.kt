@@ -12,12 +12,17 @@ import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ShellUtils
 import com.topjohnwu.superuser.io.SuFile
 import java.io.File
+import java.io.IOException
 import java.util.Properties
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.Natives
 import org.bakasu.bakasu.domain.model.LkmSelection
+import org.bakasu.bakasu.R
+import org.bakasu.bakasu.data.module.registry.RegistryDownloadStore
+import org.bakasu.bakasu.data.module.registry.DownloadVerificationException
+import org.bakasu.bakasu.data.module.registry.copyForInstall
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -252,20 +257,27 @@ class KsuCliRepository(context: Context) {
         onStdout: (String) -> Unit,
         onStderr: (String) -> Unit,
     ): Boolean {
-        val resolver = context.contentResolver
-        with(resolver.openInputStream(uri)) {
-            val file = File(context.cacheDir, "module.zip")
-            file.outputStream().use { output ->
-                this?.copyTo(output)
+        val root = File(context.filesDir, RegistryDownloadStore.DIR_NAME)
+        val expected = if (uri.scheme == "file") uri.path?.let { RegistryDownloadStore.expectedFor(root, File(it)) } else null
+        val file = File.createTempFile("module-", ".zip", context.cacheDir)
+        try {
+            try {
+                val input = context.contentResolver.openInputStream(uri) ?: throw IOException("Cannot open module")
+                input.use { copyForInstall(it, file, expected) }
+            } catch (error: IOException) {
+                if (error is DownloadVerificationException) uri.path?.let { RegistryDownloadStore.delete(root, File(it)) }
+                onStderr(context.getString(if (error is DownloadVerificationException) R.string.repo_install_verify_failed else R.string.repo_error_module_archive))
+                onFinish(false, 1)
+                return false
             }
             val cmd = "module install ${file.absolutePath}"
             val result = flashWithIO("${getKsuDaemonPath()} $cmd", onStdout, onStderr)
             Log.i("KernelSU", "install module $uri result: $result")
 
-            file.delete()
-
             onFinish(result.isSuccess, result.code)
             return result.isSuccess
+        } finally {
+            file.delete()
         }
     }
 

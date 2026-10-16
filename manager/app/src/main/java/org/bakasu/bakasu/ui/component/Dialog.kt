@@ -66,6 +66,8 @@ interface ConfirmDialogVisuals : Parcelable {
     val isHtml: Boolean
     val confirm: String?
     val dismiss: String?
+    val restrictedBaseUrl: String?
+    val documentBaseUrl: String?
 }
 
 @Parcelize
@@ -76,6 +78,8 @@ private data class ConfirmDialogVisualsImpl(
     override val isHtml: Boolean,
     override val confirm: String?,
     override val dismiss: String?,
+    override val restrictedBaseUrl: String? = null,
+    override val documentBaseUrl: String? = null,
 ) : ConfirmDialogVisuals {
     companion object {
         val Empty: ConfirmDialogVisuals = ConfirmDialogVisualsImpl(
@@ -116,6 +120,8 @@ interface ConfirmDialogHandle : DialogHandle {
         html: Boolean = false,
         confirm: String? = null,
         dismiss: String? = null,
+        restrictedBaseUrl: String? = null,
+        documentBaseUrl: String? = null,
     )
 
     suspend fun awaitConfirm(
@@ -125,6 +131,8 @@ interface ConfirmDialogHandle : DialogHandle {
         html: Boolean = false,
         confirm: String? = null,
         dismiss: String? = null,
+        restrictedBaseUrl: String? = null,
+        documentBaseUrl: String? = null,
     ): ConfirmResult
 }
 
@@ -278,9 +286,11 @@ private class ConfirmDialogHandleImpl(
         html: Boolean,
         confirm: String?,
         dismiss: String?,
+        restrictedBaseUrl: String?,
+        documentBaseUrl: String?,
     ) {
         coroutineScope.launch {
-            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss))
+            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss, restrictedBaseUrl, documentBaseUrl))
             show()
         }
     }
@@ -292,9 +302,11 @@ private class ConfirmDialogHandleImpl(
         html: Boolean,
         confirm: String?,
         dismiss: String?,
+        restrictedBaseUrl: String?,
+        documentBaseUrl: String?,
     ): ConfirmResult {
         coroutineScope.launch {
-            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss))
+            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss, restrictedBaseUrl, documentBaseUrl))
             show()
         }
         return awaitResult()
@@ -437,7 +449,15 @@ private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, di
                     .heightIn(max = 325.dp),
             ) {
                 item {
-                    if (visuals.isMarkdown) {
+                    if (visuals.restrictedBaseUrl != null || visuals.documentBaseUrl != null) {
+                        GithubMarkdown(
+                            content = visuals.content,
+                            backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            renderMarkdown = visuals.isMarkdown,
+                            baseUrl = visuals.documentBaseUrl ?: visuals.restrictedBaseUrl.orEmpty(),
+                            restrictedBaseUrl = visuals.restrictedBaseUrl,
+                        )
+                    } else if (visuals.isMarkdown) {
                         MarkdownContent(content = visuals.content)
                     } else if (visuals.isHtml) {
                         GithubMarkdown(

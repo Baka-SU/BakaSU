@@ -1,23 +1,20 @@
 package org.bakasu.bakasu.ui.screen.moduleRepo
 
-import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -25,26 +22,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Add
-import androidx.compose.material.icons.twotone.Download
 import androidx.compose.material.icons.twotone.MoreVert
 import androidx.compose.material.icons.twotone.Star
 import androidx.compose.material.icons.twotone.Warning
-import androidx.compose.material.icons.twotone.WebAsset
 import androidx.compose.material3.Button
 import androidx.compose.material3.CheckableDropdownMenuItem
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuPopup
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,16 +57,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogAuthor
@@ -85,13 +74,11 @@ import org.bakasu.bakasu.domain.model.RepositoryError
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
 import org.bakasu.bakasu.ui.component.CatalogCard
 import org.bakasu.bakasu.ui.component.CatalogCardHeading
+import org.bakasu.bakasu.ui.component.CatalogModuleIcon
 import org.bakasu.bakasu.ui.component.NetworkRefreshContent
 import org.bakasu.bakasu.ui.component.RepositoryEmptyContent
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
-import org.bakasu.bakasu.ui.component.moduleAssetDetails
-import org.bakasu.bakasu.ui.component.rememberCustomDialog
-import org.bakasu.bakasu.ui.component.rememberRepositoryInstallDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
 import org.bakasu.bakasu.ui.component.repositoryErrorText
 import org.bakasu.bakasu.ui.component.settings.LocalSegmentedItemShape
@@ -110,7 +97,6 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -131,35 +117,11 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
     val sourcesViewModel = koinViewModel<RepositorySourcesViewModel>(key = "repository-home-actions")
     val sourcesState by sourcesViewModel.state.collectAsStateWithLifecycle()
     val layoutDirection = LocalLayoutDirection.current
-    val confirmDownload = rememberRepositoryInstallDialog()
     val snackBarHost = LocalSnackbarHost.current
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState),
     )
-    val currentModuleForChooseDialog = remember { mutableStateOf<CatalogModule?>(null) }
-    fun downloadSelectedAsset(catalogId: String, asset: ModuleReleaseAsset) {
-        val module = viewModel.resolveAsset(catalogId, asset) ?: return
-        confirmDownload(module, asset) { viewModel.resolveAsset(catalogId, asset) != null }
-    }
-    val chooseDialog = rememberCustomDialog({ dismiss ->
-        val module = uiState.modules.firstOrNull { it.catalogId == currentModuleForChooseDialog.value?.catalogId }
-        if (module == null) {
-            LaunchedEffect(Unit) { dismiss() }
-        } else {
-            ChooseDialogContent(module, onSelect = { downloadSelectedAsset(module.catalogId, it) }, dismiss = dismiss)
-        }
-    })
-    fun downloadSelectedModule(selected: CatalogModule) {
-        val module = viewModel.resolveModule(selected.catalogId) ?: return
-        val assets = module.latestAsset?.assets.orEmpty()
-        if (assets.size == 1) {
-            downloadSelectedAsset(module.catalogId, assets.single())
-        } else if (assets.size > 1) {
-            currentModuleForChooseDialog.value = module
-            chooseDialog.show()
-        }
-    }
     val repositoryListState = rememberLazyListState()
     val moduleListState = rememberLazyListState()
     var showDropdown by remember { mutableStateOf(false) }
@@ -252,7 +214,7 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                         }
                     }
                     lazySegmentColumn(uiState.sources, noHorizontalPadding = true, itemSpacing = 12.dp, key = { _, source -> source.url }) { _, source ->
-                        CompositionLocalProvider(LocalSegmentedItemShape provides RoundedCornerShape(20.dp)) {
+                        CompositionLocalProvider(LocalSegmentedItemShape provides RoundedCornerShape(16.dp)) {
                             RepositorySourceItem(
                                 source = source,
                                 busy = sourcesState.busy,
@@ -268,8 +230,13 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                 CatalogContent.MODULES -> LazyColumn(
                     state = moduleListState,
                     modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
-                    contentPadding = PaddingValues(16.dp, innerPadding.calculateTopPadding(), 16.dp, innerPadding.calculateBottomPadding()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(
+                        start = innerPadding.calculateStartPadding(layoutDirection) + 16.dp,
+                        top = innerPadding.calculateTopPadding(),
+                        end = innerPadding.calculateEndPadding(layoutDirection) + 16.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 16.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     val failures = uiState.sources.filter { repositoryUrl == null || it.url == repositoryUrl }
                         .mapNotNull { uiState.failures[it.url] }.distinct()
@@ -281,13 +248,13 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                     items(uiState.modules, key = { it.catalogId }) { module ->
                         OnlineModuleItem(
                             module = module,
+                            installedVersionCode = uiState.installedVersions[module.moduleId],
                             showSource = repositoryUrl == null,
                             onOpen = {
                                 viewModel.resolveModule(module.catalogId)?.let {
                                     navigator.push(Route.ModuleRepoDetail(it.moduleId, it.repositoryUrl))
                                 }
                             },
-                            onDownload = if (module.latestAsset?.assets?.isNotEmpty() == true) ({ downloadSelectedModule(module) }) else null,
                         )
                     }
                 }
@@ -400,248 +367,122 @@ private fun ModuleRepoDropdown(
 fun OnlineModuleItem(
     module: CatalogModule,
     onOpen: () -> Unit,
-    onDownload: (() -> Unit)? = null,
     showSource: Boolean = true,
+    installedVersionCode: Int? = null,
 ) {
-    CatalogCard(
-        onClick = onOpen,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val moduleVersion = stringResource(id = R.string.module_version)
-            val moduleAuthor = stringResource(id = R.string.module_author)
-
-            Column(
+    val installed = module.installed || installedVersionCode != null
+    val updatable = installedVersionCode != null && module.latestVersionCode > installedVersionCode
+    val metadataColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val locale = LocalConfiguration.current.locales[0]
+    CatalogCard(onClick = onOpen) {
+        CatalogCardHeading(
+            title = module.moduleName,
+            leadingContent = {
+                CatalogModuleIcon(
+                    url = module.registryMetadata?.iconUrl ?: module.iconUrl,
+                    origin = module.registryMetadata?.let { module.repositoryUrl },
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+            },
+        )
+        Text(
+            text = stringResource(R.string.repo_module_id_value, module.moduleId),
+            style = MaterialTheme.typography.bodySmall,
+            color = metadataColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (module.authors.isNotBlank()) {
+            Text(
+                text = "${stringResource(R.string.module_author)}: ${module.authors}",
+                style = MaterialTheme.typography.bodySmall,
+                color = metadataColor,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (showSource) {
+            Text(
+                text = stringResource(R.string.repo_source_label, module.repositoryName),
+                style = MaterialTheme.typography.bodySmall,
+                color = metadataColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (module.summary.isNotBlank()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = module.summary,
                 modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = metadataColor,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 4,
+            )
+        }
+        if (module.metamodule || installed) {
+            FlowRow(
+                modifier = Modifier.padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
-                CatalogCardHeading(module.moduleName) {
-                    if (module.stargazerCount > 0) {
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.End,
-                        ) {
-                            Icon(
-                                imageVector = Icons.TwoTone.Star,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp),
-                            )
-                            Text(
-                                text = module.stargazerCount.toString(),
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = 4.dp),
-                            )
-                        }
-                    }
+                if (module.metamodule) {
+                    LabelText(
+                        label = stringResource(R.string.module_meta_label),
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    )
                 }
-
-                Text(
-                    text = "$moduleVersion: ${module.latestRelease} (${module.latestVersionCode})",
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                    lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
-                    fontFamily = MaterialTheme.typography.bodySmall.fontFamily,
-                )
-
-                Text(
-                    text = "$moduleAuthor: ${module.authors}",
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                    lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
-                    fontFamily = MaterialTheme.typography.bodySmall.fontFamily,
-                )
-                if (showSource) {
+                if (installed) {
                     Text(
-                        text = stringResource(R.string.repo_source_label, module.repositoryName),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = stringResource(if (updatable) R.string.repo_update_available else R.string.installed),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (updatable) MaterialTheme.colorScheme.primary else metadataColor,
                     )
                 }
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = module.summary,
-            fontSize = MaterialTheme.typography.bodySmall.fontSize,
-            fontFamily = MaterialTheme.typography.bodySmall.fontFamily,
-            lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
-            fontWeight = MaterialTheme.typography.bodySmall.fontWeight,
-            overflow = TextOverflow.Ellipsis,
-            maxLines = 4,
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider(thickness = Dp.Hairline)
         Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth(),
         ) {
-            LabelText(
-                label = module.moduleId,
-                containerColor = MaterialTheme.colorScheme.primary,
-            )
-            if (module.metamodule) {
-                LabelText(
-                    label = stringResource(R.string.module_meta_label),
-                    containerColor = MaterialTheme.colorScheme.tertiary,
-                )
-            }
-            if (module.installed) {
-                LabelText(
-                    label = stringResource(R.string.installed),
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        HorizontalDivider(thickness = Dp.Hairline)
-
-        Row(horizontalArrangement = Arrangement.SpaceBetween) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.CenterVertically)) {
-                Spacer(modifier = Modifier.weight(1f))
-                FilledTonalButton(
-                    modifier = Modifier.defaultMinSize(minWidth = 52.dp, minHeight = 32.dp),
-                    onClick = onOpen,
-                    contentPadding = PaddingValues(
-                        start = 12.dp,
-                        top = 7.dp,
-                        end = 12.dp,
-                        bottom = 7.dp,
-                    ),
-                ) {
-                    Icon(
-                        modifier = Modifier.size(20.dp),
-                        imageVector = Icons.TwoTone.WebAsset,
-                        contentDescription = null,
-                    )
-                }
-                Spacer(Modifier.width(10.dp))
-
-                if (onDownload != null) {
-                    FilledTonalButton(
-                        modifier = Modifier.defaultMinSize(minWidth = 52.dp, minHeight = 32.dp),
-                        onClick = onDownload,
-                        contentPadding = PaddingValues(
-                            start = 12.dp,
-                            top = 7.dp,
-                            end = 12.dp,
-                            bottom = 7.dp,
-                        ),
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(20.dp),
-                            imageVector = Icons.TwoTone.Download,
-                            contentDescription = stringResource(R.string.install),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ChooseDialogContent(
-    module: CatalogModule?,
-    onSelect: (ModuleReleaseAsset) -> Unit,
-    dismiss: () -> Unit,
-) {
-    val context = LocalContext.current
-    if (module == null || module.latestAsset == null) {
-        LaunchedEffect(Unit) { dismiss() }
-        return
-    }
-    var selectedAsset by remember(module.catalogId, module.latestAsset) { mutableStateOf<ModuleReleaseAsset?>(null) }
-
-    Dialog(
-        onDismissRequest = { dismiss() },
-    ) {
-        ElevatedCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(R.string.assets_multiple_select_dialog_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center,
+                    text = module.latestRelease,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = metadataColor,
+                    modifier = Modifier.weight(1f, fill = false),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(module.latestAsset.assets) { asset ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(shape = RoundedCornerShape(24.dp))
-                                .clickable { selectedAsset = asset }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = selectedAsset == asset,
-                                onClick = null,
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Column {
-                                Text(
-                                    text = asset.name,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                                moduleAssetDetails(asset, R.string.assets_multiple_select_dialog_content_description)?.let { details ->
-                                    Text(
-                                        text = details,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
+                if (module.stargazerCount > 0) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(
+                            imageVector = Icons.TwoTone.Star,
+                            contentDescription = stringResource(R.string.repo_stars),
+                            tint = metadataColor,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Text(module.stargazerCount.toString(), style = MaterialTheme.typography.bodySmall, color = metadataColor)
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    TextButton(onClick = { dismiss() }) {
-                        Text(stringResource(android.R.string.cancel))
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(
-                        onClick = {
-                            if (selectedAsset == null) {
-                                Toast.makeText(context, R.string.assets_multiple_select_dialog_warning, Toast.LENGTH_SHORT).show()
-                                return@TextButton
-                            }
-                            selectedAsset?.let { selected ->
-                                dismiss()
-                                onSelect(selected)
-                            }
-                        },
-                    ) {
-                        Text(stringResource(android.R.string.ok))
-                    }
-                }
+            }
+            if (module.latestReleaseTime.isNotBlank()) {
+                Text(
+                    text = releaseDate(module.latestReleaseTime, locale),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = metadataColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -722,38 +563,6 @@ private fun OnlineModuleItemPreview() {
         OnlineModuleItem(
             initFakeRepoModuleForPreview(),
             onOpen = {},
-            onDownload = {},
         )
-    }
-}
-
-@Preview(locale = "zh-rCN", showBackground = true)
-@Composable
-private fun ChooseDialogPreview() {
-    val currentModuleForChooseDialog =
-        remember { mutableStateOf<CatalogModule?>(initFakeRepoModuleForPreview()) }
-
-    CompositionLocalProvider(
-        LocalNavigator provides Navigator(Route.ModuleRepo),
-        LocalPermissionRequestInterface provides object : PermissionRequestInterface {
-            override fun requestPermission(
-                permission: String,
-                callback: (Boolean) -> Unit,
-                requestDescription: String,
-            ) {
-            }
-
-            override fun requestPermissions(
-                permissions: Array<String>,
-                callback: (Map<String, @JvmSuppressWildcards Boolean>) -> Unit,
-                requestDescription: Map<String, String>,
-            ) {
-            }
-        },
-    ) {
-        ChooseDialogContent(
-            currentModuleForChooseDialog.value,
-            onSelect = {},
-        ) {}
     }
 }

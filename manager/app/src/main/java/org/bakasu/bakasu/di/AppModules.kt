@@ -25,9 +25,12 @@ import org.bakasu.bakasu.data.logging.BugreportRepository
 import org.bakasu.bakasu.data.logging.SulogRepository
 import org.bakasu.bakasu.data.module.ModuleActionRepository
 import org.bakasu.bakasu.data.module.ModuleCatalogRepository
+import org.bakasu.bakasu.data.module.ModuleReleaseRepository
+import org.bakasu.bakasu.data.module.ModuleIconRepository
 import org.bakasu.bakasu.data.module.ModulePreferencesRepository
 import org.bakasu.bakasu.data.module.ModuleRepository
 import org.bakasu.bakasu.data.module.RepositorySourceStore
+import org.bakasu.bakasu.data.module.registry.KernelSuRegistryRepository
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.data.network.WebResourceRepository
@@ -83,6 +86,7 @@ import org.bakasu.bakasu.domain.usecase.GetAppProfileUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppSepolicyUseCase
 import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetCatalogModuleUseCase
+import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
 import org.bakasu.bakasu.domain.usecase.GetDefaultUmountModulesUseCase
 import org.bakasu.bakasu.domain.usecase.GetHomeBasicInfoUseCase
 import org.bakasu.bakasu.domain.usecase.GetInstallEnvironmentUseCase
@@ -90,6 +94,8 @@ import org.bakasu.bakasu.domain.usecase.GetKernelFeatureSettingsUseCase
 import org.bakasu.bakasu.domain.usecase.GetKernelStatusUseCase
 import org.bakasu.bakasu.domain.usecase.GetManagerRuntimeInfoUseCase
 import org.bakasu.bakasu.domain.usecase.GetModuleReadmeUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
+import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
 import org.bakasu.bakasu.domain.usecase.GetPlatformFeatureStatusUseCase
 import org.bakasu.bakasu.domain.usecase.GetProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
@@ -108,6 +114,7 @@ import org.bakasu.bakasu.domain.usecase.LaunchSystemLanguageSettingsUseCase
 import org.bakasu.bakasu.domain.usecase.LoadSettingsPlatformUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDynamicManagerStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveInstalledModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveKernelFlashUseCase
@@ -132,6 +139,8 @@ import org.bakasu.bakasu.domain.usecase.RemoveModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.RemovePreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveUmountPathUseCase
 import org.bakasu.bakasu.domain.usecase.RenameModuleRepositoryUseCase
+import org.bakasu.bakasu.domain.usecase.ResolveModuleUpdateUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleUpdateChangelogUseCase
 import org.bakasu.bakasu.domain.usecase.SaveModuleActionLogUseCase
 import org.bakasu.bakasu.domain.usecase.SaveProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.SelectDynamicManagerUseCase
@@ -271,6 +280,9 @@ val repositoryModule = module {
     singleOf(::BugreportRepository)
     singleOf(::UmountRepository)
     singleOf(::ModuleCatalogRepository)
+    single { ModuleReleaseRepository(get(), get(applicationScopeQualifier)) }
+    singleOf(::ModuleIconRepository)
+    singleOf(::KernelSuRegistryRepository)
     singleOf(::RepositorySourceStore)
     singleOf(::ModuleRepository)
     singleOf(::ModulePreferencesRepository)
@@ -316,6 +328,7 @@ val useCaseModule = module {
     factoryOf(::EnqueueDownloadUseCase)
     factoryOf(::EnqueueManagerUpdateUseCase)
     factoryOf(::ObserveDownloadUseCase)
+    factoryOf(::ObserveAssetDownloadUseCase)
     factoryOf(::GetKernelStatusUseCase)
     factoryOf(::GetInstallEnvironmentUseCase)
     factoryOf(::ExecuteFlashOperationUseCase)
@@ -347,7 +360,12 @@ val useCaseModule = module {
     factoryOf(::ObserveModuleCatalogRefreshingUseCase)
     factoryOf(::RefreshModuleCatalogUseCase)
     factoryOf(::GetCatalogModuleUseCase)
+    factoryOf(::IsCatalogModuleCurrentUseCase)
     factoryOf(::GetModuleReadmeUseCase)
+    factoryOf(::GetModuleReleaseDetailsUseCase)
+    factoryOf(::LoadModuleIconUseCase)
+    factoryOf(::ResolveModuleUpdateUseCase)
+    factoryOf(::GetModuleUpdateChangelogUseCase)
     factoryOf(::ObserveRepositorySourcesUseCase)
     factoryOf(::DiscoverModuleRepositoriesUseCase)
     factoryOf(::AddModuleRepositoryUseCase)
@@ -427,8 +445,8 @@ val viewModelModule = module {
     viewModelOf(::ModuleViewModel)
     viewModelOf(::SuperUserViewModel)
     viewModelOf(::SuSFSViewModel)
-    viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
-    viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get()) }
+    viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
+    viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get(), get()) }
     viewModelOf(::RepositorySourcesViewModel)
     viewModelOf(::TemplateViewModel)
     viewModel { parameters ->

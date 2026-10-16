@@ -250,6 +250,7 @@ dependencies {
     implementation(libs.ucrop)
 
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.me.zhanghai.android.appiconloader)
     implementation(libs.me.zhanghai.android.appiconloader.coil)

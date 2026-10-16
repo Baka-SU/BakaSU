@@ -36,6 +36,7 @@ import androidx.core.net.toUri
 import androidx.webkit.WebViewAssetLoader
 import java.nio.charset.StandardCharsets
 import kotlin.math.abs
+import org.bakasu.bakasu.data.module.registry.RegistryUrls
 import org.bakasu.bakasu.data.network.WebResourceRepository
 import org.bakasu.bakasu.ui.activity.util.adjustLightnessArgb
 import org.bakasu.bakasu.ui.activity.util.cssColorFromArgb
@@ -45,8 +46,26 @@ import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.isInDarkTheme
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.parser.Parser
+import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
 import org.koin.compose.koinInject
+
+private fun renderMarkdownDocument(content: String, restricted: Boolean): String {
+    val extensions = listOf(TablesExtension.create())
+    val parser = Parser.builder().extensions(extensions).build()
+    val renderer = HtmlRenderer.builder().extensions(extensions).escapeHtml(restricted)
+    // CommonMark 0.13 lacks sanitizeUrls.
+    if (restricted) renderer.attributeProviderFactory {
+        AttributeProvider { _, _, attributes ->
+            for (name in listOf("href", "src")) {
+                val value = attributes[name] ?: continue
+                val scheme = value.toUri().scheme
+                if (scheme != null && scheme.lowercase() !in setOf("https", "http")) attributes.remove(name)
+            }
+        }
+    }
+    return renderer.build().render(parser.parse(content))
+}
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -57,6 +76,8 @@ fun GithubMarkdown(
     callerProvideLoadingIndicator: Boolean = false,
     renderMarkdown: Boolean = false,
     baseUrl: String = "https://appassets.androidplatform.net",
+    restrictedBaseUrl: String? = null,
+    readmeLinks: Boolean = false,
 ) {
     val themeConfig: ThemeConfig = koinInject()
     val isDark = isInDarkTheme(themeConfig.forceDarkMode)
@@ -75,19 +96,26 @@ fun GithubMarkdown(
     val bgMuted = cssColorFromArgb(makeVariant(if (bgLuminance > 0.6) -0.06f else 0.06f))
     val bgNeutralMuted = cssColorFromArgb(makeVariant(if (bgLuminance > 0.6) -0.12f else 0.12f))
     val bgAttentionMuted = cssColorFromArgb(makeVariant(-0.12f))
-    val fgLink = cssColorFromArgb(MaterialTheme.colorScheme.primary.toArgb())
+    // Match upstream's blue light/dark link palette only for the README surface.
+    val fgLink = if (readmeLinks) {
+        if (isDark) "#85beff" else "#0366d6"
+    } else cssColorFromArgb(MaterialTheme.colorScheme.primary.toArgb())
+    val linkStyles = if (readmeLinks) {
+        """
+        .markdown-body a[href] {
+          color: $fgLink;
+          text-decoration: underline;
+          -webkit-tap-highlight-color: ${if (isDark) "rgba(46, 143, 255, 0.08)" else "rgba(3, 102, 214, 0.08)"};
+          word-break: break-word;
+        }
+        """.trimIndent()
+    } else ""
 
     val cssHref = "https://appassets.androidplatform.net/assets/github-markdown.css"
-    val rendered = remember(content, renderMarkdown) {
-        if (renderMarkdown) {
-            val extensions = listOf(TablesExtension.create())
-            val parser = Parser.builder().extensions(extensions).build()
-            HtmlRenderer.builder().extensions(extensions).escapeHtml(false).build().render(parser.parse(content))
-        } else {
-            content
-        }
+    val rendered = remember(content, renderMarkdown, restrictedBaseUrl) {
+        if (renderMarkdown) renderMarkdownDocument(content, restrictedBaseUrl != null) else content
     }
-    val contentPolicy = if (renderMarkdown) {
+    val contentPolicy = if (renderMarkdown || restrictedBaseUrl != null) {
         """<meta http-equiv="Content-Security-Policy" content="script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; img-src https: data:" />"""
     } else {
         ""
@@ -111,6 +139,7 @@ fun GithubMarkdown(
               --bgColor-attention-muted: $bgAttentionMuted;
               --fgColor-accent: $fgLink;
             }
+            $linkStyles
           </style>
         </head>
         <body dir='$dir'>
@@ -119,8 +148,8 @@ fun GithubMarkdown(
         </html>
     """.trimIndent()
 
-    key(html, baseUrl, renderMarkdown) {
-        GithubMarkdownWebView(loading, html, baseUrl, renderMarkdown)
+    key(html, baseUrl, renderMarkdown, restrictedBaseUrl) {
+        GithubMarkdownWebView(loading, html, baseUrl, renderMarkdown, restrictedBaseUrl)
     }
 
     if (loading.value && !callerProvideLoadingIndicator) {
@@ -137,23 +166,32 @@ fun GithubMarkdown(
 @SuppressLint("ClickableViewAccessibility", "JavascriptInterface", "SetJavaScriptEnabled")
 @Suppress("DEPRECATION")
 @Composable
-private fun GithubMarkdownWebView(loading: MutableState<Boolean>, html: String, baseUrl: String, renderMarkdown: Boolean) {
+private fun GithubMarkdownWebView(
+    loading: MutableState<Boolean>,
+    html: String,
+    baseUrl: String,
+    renderMarkdown: Boolean,
+    restrictedBaseUrl: String?,
+) {
+    val scriptsOff = renderMarkdown || restrictedBaseUrl != null
     val scrollInterface = remember { MarkdownScrollInterface() }
     val resourceRepository = koinInject<WebResourceRepository>()
 
     AndroidView(
         factory = { context ->
             val frameLayout = FrameLayout(context)
-            val webView = WebView(context).apply {
+            val webView = (if (restrictedBaseUrl != null) EdgeAwareWebView(context) else WebView(context)).apply {
                 try {
                     setBackgroundColor(Color.TRANSPARENT)
                     isVerticalScrollBarEnabled = false
                     isHorizontalScrollBarEnabled = false
                     settings.apply {
                         offscreenPreRaster = true
-                        javaScriptEnabled = !renderMarkdown
-                        domStorageEnabled = !renderMarkdown
-                        mixedContentMode = if (renderMarkdown) WebSettings.MIXED_CONTENT_NEVER_ALLOW else WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        javaScriptEnabled = !scriptsOff
+                        domStorageEnabled = !scriptsOff
+                        mixedContentMode = if (scriptsOff) WebSettings.MIXED_CONTENT_NEVER_ALLOW else WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        javaScriptCanOpenWindowsAutomatically = false
+                        setSupportMultipleWindows(false)
                         allowContentAccess = false
                         allowFileAccessFromFileURLs = false
                         allowFileAccess = false
@@ -162,7 +200,7 @@ private fun GithubMarkdownWebView(loading: MutableState<Boolean>, html: String, 
                         setSupportZoom(false)
                         setGeolocationEnabled(false)
                     }
-                    if (!renderMarkdown) addJavascriptInterface(scrollInterface, "AndroidScroll")
+                    if (!scriptsOff) addJavascriptInterface(scrollInterface, "AndroidScroll")
                     webViewClient = object : WebViewClient() {
                         private val assetLoader = WebViewAssetLoader.Builder()
                             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(context))
@@ -170,7 +208,7 @@ private fun GithubMarkdownWebView(loading: MutableState<Boolean>, html: String, 
 
                         override fun onPageFinished(view: WebView, url: String) {
                             super.onPageFinished(view, url)
-                            if (renderMarkdown) return
+                            if (scriptsOff) return
 
                             val js = """
                                 (function() {
@@ -241,14 +279,15 @@ private fun GithubMarkdownWebView(loading: MutableState<Boolean>, html: String, 
                             request: WebResourceRequest,
                         ): Boolean {
                             val url = request.url.toString()
-                            if (renderMarkdown) {
-                                if (request.url.scheme !in setOf("https", "http", "mailto")) return true
+                            if (scriptsOff) {
+                                if (restrictedBaseUrl != null && RegistryUrls.isInPageAnchor(url, restrictedBaseUrl)) return true
+                                if (request.url.scheme !in (if (restrictedBaseUrl != null) setOf("https", "http") else setOf("https", "http", "mailto"))) return true
                                 if (!request.hasGesture() || !request.isForMainFrame) return true
                                 if (request.url.fragment != null && url.substringBefore('#') == baseUrl.substringBefore('#')) return false
                             }
                             val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            if (renderMarkdown) runCatching { context.startActivity(intent) } else context.startActivity(intent)
+                            if (scriptsOff) runCatching { context.startActivity(intent) } else context.startActivity(intent)
                             return true
                         }
 
@@ -257,8 +296,12 @@ private fun GithubMarkdownWebView(loading: MutableState<Boolean>, html: String, 
                             request: WebResourceRequest,
                         ): WebResourceResponse? {
                             assetLoader.shouldInterceptRequest(request.url)?.let { return it }
+                            if (restrictedBaseUrl != null) {
+                                if (request.isForMainFrame && request.url.scheme == "data") return null
+                                if (request.method != "GET" || !RegistryUrls.isAllowedRestrictedResource(request.url.toString(), restrictedBaseUrl)) return blockedDocumentResource()
+                            }
                             val scheme = request.url.scheme ?: return null
-                            if (renderMarkdown && scheme !in setOf("https", "data")) {
+                            if (scriptsOff && scheme !in setOf("https", "data")) {
                                 return WebResourceResponse("text/plain", "utf-8", "".byteInputStream())
                             }
                             if (!scheme.startsWith("http")) return null
@@ -266,20 +309,22 @@ private fun GithubMarkdownWebView(loading: MutableState<Boolean>, html: String, 
                                 url = request.url.toString(),
                                 method = request.method,
                                 requestHeaders = request.requestHeaders,
+                                restrictedOrigin = restrictedBaseUrl,
                             )?.let { resource ->
                                 WebResourceResponse(
                                     resource.mimeType,
                                     resource.encoding,
                                     resource.body,
                                 )
-                            }
+                            } ?: if (restrictedBaseUrl != null) blockedDocumentResource() else null
                         }
 
                         override fun onPageCommitVisible(view: WebView?, url: String?) {
                             loading.value = false
                         }
                     }
-                    setOnTouchListener(object : View.OnTouchListener {
+                    if (restrictedBaseUrl != null) setOnTouchListener(RestrictedTouchHandler(this as EdgeAwareWebView))
+                    else setOnTouchListener(object : View.OnTouchListener {
                         private var isHorizontalScrollLocked = false
                         private var initialDownX = 0f
                         private var initialDownY = 0f
@@ -301,7 +346,7 @@ private fun GithubMarkdownWebView(loading: MutableState<Boolean>, html: String, 
                                         val dy = event.y - initialDownY
                                         if (abs(dx) > abs(dy)) {
                                             // Untrusted documents keep horizontal scrolling without a JavaScript bridge.
-                                            val canScroll = renderMarkdown || if (dx < 0) scrollInterface.canScrollRight else scrollInterface.canScrollLeft
+                                            val canScroll = scriptsOff || if (dx < 0) scrollInterface.canScrollRight else scrollInterface.canScrollLeft
                                             if (canScroll) {
                                                 isHorizontalScrollLocked = true
                                                 v.parent.requestDisallowInterceptTouchEvent(true)
@@ -350,6 +395,51 @@ private fun GithubMarkdownWebView(loading: MutableState<Boolean>, html: String, 
             .wrapContentHeight()
             .clipToBounds(),
     )
+}
+
+private fun blockedDocumentResource() = WebResourceResponse("text/plain", "utf-8", 403, "Blocked", emptyMap(), "".byteInputStream())
+
+private class EdgeAwareWebView(context: android.content.Context) : WebView(context) {
+    var horizontalEdgeReached = false
+
+    override fun onOverScrolled(scrollX: Int, scrollY: Int, clampedX: Boolean, clampedY: Boolean) {
+        super.onOverScrolled(scrollX, scrollY, clampedX, clampedY)
+        if (clampedX) horizontalEdgeReached = true
+    }
+}
+
+private class RestrictedTouchHandler(private val webView: EdgeAwareWebView) : View.OnTouchListener {
+    private val touchSlop = android.view.ViewConfiguration.get(webView.context).scaledTouchSlop
+    private var downX = 0f
+    private var downY = 0f
+    private var direction = 0
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouch(v: View, event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                downX = event.x
+                downY = event.y
+                direction = 0
+                webView.horizontalEdgeReached = false
+                v.parent.requestDisallowInterceptTouchEvent(true)
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val dx = event.x - downX
+                val dy = event.y - downY
+                if (direction == 0 && (abs(dx) > touchSlop || abs(dy) > touchSlop)) direction = if (abs(dx) > abs(dy)) 1 else 2
+                when (direction) {
+                    1 -> if (webView.horizontalEdgeReached) v.parent.requestDisallowInterceptTouchEvent(false)
+                    2 -> { v.parent.requestDisallowInterceptTouchEvent(false); return true }
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                v.parent.requestDisallowInterceptTouchEvent(false)
+                direction = 0
+            }
+        }
+        return false
+    }
 }
 
 class MarkdownScrollInterface {

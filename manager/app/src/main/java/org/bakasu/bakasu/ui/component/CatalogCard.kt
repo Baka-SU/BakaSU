@@ -1,13 +1,11 @@
 package org.bakasu.bakasu.ui.component
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -49,22 +47,22 @@ fun CatalogCard(
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .renderBackgroundBlur(),
     ) {
-        Column(Modifier.padding(horizontal = 16.dp).padding(top = 12.dp), content = content)
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), content = content)
     }
 }
 
 @Composable
-fun CatalogCardHeading(title: String, scrollTitle: Boolean = true, trailingContent: @Composable () -> Unit = {}) {
+fun CatalogCardHeading(title: String, leadingContent: @Composable () -> Unit = {}) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        leadingContent()
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f).then(if (scrollTitle) Modifier.horizontalScroll(rememberScrollState()) else Modifier),
-            maxLines = 1,
+            modifier = Modifier.weight(1f),
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        trailingContent()
     }
 }
 

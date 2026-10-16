@@ -9,11 +9,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.ModuleCatalogResult
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.model.RepositoryFailure
 import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
+import org.bakasu.bakasu.domain.usecase.GetCatalogModuleUseCase
+import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveInstalledModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveModuleCatalogRefreshingUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
@@ -31,6 +35,7 @@ data class ModuleRepoUiState(
     val sources: List<RepositorySource> = emptyList(),
     val repositoryUrl: String? = null,
     val failures: Map<String, RepositoryFailure> = emptyMap(),
+    val installedVersions: Map<String, Int> = emptyMap(),
 ) {
     val content: CatalogContent get() = when {
         repositoryUrl != null && sources.none { it.url == repositoryUrl } -> CatalogContent.SOURCE_UNAVAILABLE
@@ -58,6 +63,9 @@ class ModuleRepoViewModel(
     private val setBooleanPreference: SetBooleanPreferenceUseCase,
     private val transliterateText: TransliterateTextUseCase,
     private val observeSources: ObserveRepositorySourcesUseCase,
+    private val getModule: GetCatalogModuleUseCase,
+    private val isCurrent: IsCatalogModuleCurrentUseCase,
+    private val observeInstalledModules: ObserveInstalledModulesUseCase,
     private val repositoryUrl: String? = null,
 ) : ViewModel() {
     private val search = MutableStateFlow("")
@@ -65,45 +73,51 @@ class ModuleRepoViewModel(
         getBooleanPreference("module_repo_sort_star_first", false),
     )
     private val pullRefreshing = MutableStateFlow(false)
+    private data class VisibleCatalogCache(val input: ModuleRepoUiState, val sources: List<RepositorySource>, val result: ModuleRepoUiState)
+    private var visibleCatalogCache: VisibleCatalogCache? = null
 
     private val catalogState = combine(
         observeModules(),
-        observeRefreshing.sources,
+        observeSources.sources,
         search,
         sortStarsFirst,
-    ) { modules, refreshingSources, query, starsFirst ->
-        ModuleRepoUiState(
-            modules = modules,
-            sortStargazerCountFirst = starsFirst,
-            isRefreshing = refreshingSources.any { repositoryUrl == null || it == repositoryUrl },
-            search = query,
+        observeInstalledModules(),
+    ) { modules, sources, query, starsFirst, installed ->
+        visibleState(
+            ModuleRepoUiState(
+                modules = modules,
+                sortStargazerCountFirst = starsFirst,
+                search = query,
+                installedVersions = installed.modules.associate { it.id to it.versionCode },
+            ),
+            sources,
         )
     }
     val state: StateFlow<ModuleRepoUiState> = combine(
         catalogState,
-        observeSources.sources,
+        observeRefreshing.sources,
         observeSources.failures,
         pullRefreshing,
-    ) { catalog, sources, failures, pulling ->
-        visibleState(catalog.copy(isPullRefreshing = pulling && catalog.isRefreshing), sources, failures)
+    ) { catalog, refreshingSources, failures, pulling ->
+        val refreshing = refreshingSources.any { repositoryUrl == null || it == repositoryUrl }
+        catalog.copy(isRefreshing = refreshing, isPullRefreshing = pulling && refreshing, failures = failures)
     }.stateIn(
         viewModelScope,
-        SharingStarted.Eagerly,
-        visibleState(
-            ModuleRepoUiState(
-                modules = observeModules().value,
-                sortStargazerCountFirst = sortStarsFirst.value,
-                isRefreshing = observeRefreshing.sources.value.any { repositoryUrl == null || it == repositoryUrl },
-            ),
-            observeSources.sources.value,
-            observeSources.failures.value,
+        SharingStarted.WhileSubscribed(),
+        ModuleRepoUiState(
+            sortStargazerCountFirst = sortStarsFirst.value,
+            isRefreshing = true,
+            sources = observeSources.sources.value,
+            repositoryUrl = repositoryUrl,
+            failures = observeSources.failures.value,
         ),
     )
     val uiState: StateFlow<ModuleRepoUiState> = state
 
-    private fun visibleState(catalog: ModuleRepoUiState, sources: List<RepositorySource>, failures: Map<String, RepositoryFailure>): ModuleRepoUiState {
+    private fun visibleState(catalog: ModuleRepoUiState, sources: List<RepositorySource>): ModuleRepoUiState {
+        visibleCatalogCache?.let { if (it.input == catalog && it.sources == sources) return it.result }
         val sourceUrls = sources.map { it.url }.toSet()
-        return catalog.copy(
+        val result = catalog.copy(
             modules = catalog.modules.filter { module ->
                 module.repositoryUrl in sourceUrls && (repositoryUrl == null || module.repositoryUrl == repositoryUrl) &&
                     (
@@ -116,8 +130,9 @@ class ModuleRepoViewModel(
             ),
             sources = sources,
             repositoryUrl = repositoryUrl,
-            failures = failures,
         )
+        visibleCatalogCache = VisibleCatalogCache(catalog, sources, result)
+        return result
     }
 
     fun resolveModule(catalogId: String): CatalogModule? = observeModules().value.firstOrNull { module ->
@@ -126,7 +141,13 @@ class ModuleRepoViewModel(
     }
 
     fun resolveAsset(catalogId: String, asset: ModuleReleaseAsset): CatalogModule? = resolveModule(catalogId)?.takeIf { module ->
-        module.latestAsset?.assets?.any { it.hasSameIdentity(asset) } == true
+        isCurrent(module) && module.latestAsset?.assets?.any { it.hasSameIdentity(asset) && it.hasSameVerification(asset) } == true
+    }
+
+    suspend fun resolveModuleForInstall(catalogId: String): CatalogModule? {
+        val module = resolveModule(catalogId) ?: return null
+        val loaded = (getModule(module.moduleId, module.repositoryUrl) as? ModuleCatalogResult.Success)?.value ?: return null
+        return resolveModule(loaded.catalogId)?.takeIf { it.detailLoaded && isCurrent(it) }
     }
 
     fun updateSearch(value: String) {

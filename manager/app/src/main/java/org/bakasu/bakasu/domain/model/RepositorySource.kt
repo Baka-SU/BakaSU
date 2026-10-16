@@ -6,6 +6,7 @@ data class RepositorySource(
     val id: String = "",
     val description: String = "",
     val customName: String = "",
+    val moduleCount: Int? = null,
 ) {
     val displayName: String get() = customName.ifBlank { name }
     val isBuiltIn: Boolean get() = url == KERNEL_SU_URL

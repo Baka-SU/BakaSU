@@ -15,6 +15,7 @@ internal data class RepositoryDiscoveryDto(
     @SerializedName("name") val name: String? = null,
     @SerializedName("id") val id: String? = null,
     @SerializedName("description") val description: String? = null,
+    @SerializedName("modules_count") val moduleCount: Int? = null,
 )
 
 internal data class RepositoryMetadataDto(@SerializedName("version") val version: Int? = null)
@@ -29,7 +30,9 @@ internal data class RepositoryModuleDto(
     @SerializedName("description") val description: String? = null,
     @SerializedName("stars") val stars: Int? = null,
     @SerializedName("readme") val readme: String? = null,
+    @SerializedName("icon") val icon: String? = null,
     @SerializedName("timestamp") val timestamp: Double? = null,
+    @SerializedName("size") val size: Long? = null,
     @SerializedName("added") val added: Double? = null,
     @SerializedName("track") val track: RepositoryTrackDto? = null,
 )
@@ -37,6 +40,7 @@ internal data class RepositoryModuleDto(
 internal data class RepositoryTrackDto(
     @SerializedName("source") val source: String? = null,
     @SerializedName("added") val added: Double? = null,
+    @SerializedName("build_metadata") val buildMetadata: String? = null,
 )
 
 internal data class RepositoryReleaseDto(

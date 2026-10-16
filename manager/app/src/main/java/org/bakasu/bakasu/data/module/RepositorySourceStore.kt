@@ -33,6 +33,8 @@ class RepositorySourceStore(
                     id = fields.text("id"),
                     description = fields.text("description"),
                     customName = fields.text("customName").trim().take(100),
+                    moduleCount = fields.get("moduleCount")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isNumber }
+                        ?.asString?.toIntOrNull()?.takeIf { it >= 0 },
                 ).takeIf { !it.isBuiltIn && it.name.isNotBlank() }
             }.getOrNull()
         }.distinctBy { it.url }
@@ -49,6 +51,7 @@ class RepositorySourceStore(
                         addProperty("customName", source.customName)
                         addProperty("id", source.id)
                         addProperty("description", source.description)
+                        source.moduleCount?.let { addProperty("moduleCount", it) }
                     },
                 )
             }

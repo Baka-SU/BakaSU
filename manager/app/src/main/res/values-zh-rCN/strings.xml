@@ -570,6 +570,7 @@
     <string name="repo_discover">发现</string>
     <string name="repo_custom_url">自定义 URL</string>
     <string name="repo_url">仓库 URL</string>
+    <string name="repo_url_hint">输入 MMRL 仓库 URL</string>
     <string name="repo_remove">移除仓库</string>
     <string name="repo_remove_action">移除</string>
     <string name="repo_remove_message">从来源中移除 %1$s？已安装的模块将保留在设备上。</string>
@@ -603,4 +604,31 @@
     <string name="repo_kernel_su">KernelSU 官方</string>
     <string name="repo_kernel_su_description">KernelSU 官方模块仓库</string>
     <string name="repo_built_in">内置</string>
+    <string name="repo_download_url_blocked">仓库下载链接已被阻止。</string>
+    <string name="repo_download_verify_failed">%1$s 验证失败。文件未安装。</string>
+    <string name="repo_install_verify_failed">模块文件验证失败，未安装。</string>
+    <string name="repo_update_unverifiable">无法验证此仓库更新。</string>
+    <string name="repo_module_id">模块 ID</string>
+    <string name="repo_module_id_value">ID: %1$s</string>
+    <string name="repo_tags">标签</string>
+    <string name="repo_stars">GitHub 星标</string>
+    <string name="repo_license">许可证</string>
+    <string name="repo_homepage">主页</string>
+    <string name="repo_support">支持</string>
+    <string name="repo_source_commit">提交：%1$s</string>
+    <string name="repo_release_page">发布页面</string>
+    <string name="repo_attestation">证明</string>
+    <string name="repo_immutable_release">不可变发布</string>
+    <string name="repo_sha256">SHA-256：%1$s</string>
+    <string name="repo_using_cache">正在显示已保存的仓库数据。</string>
+    <string name="repo_health_stale">此模块的仓库元数据可能已过期。</string>
+    <string name="repo_detail_error">无法刷新模块详情。</string>
+    <string name="repo_no_releases">暂无可用发布。</string>
+    <string name="repo_update_available">有可用更新</string>
+    <string name="repo_download_percent">%1$d%%</string>
+    <string name="repo_download_progress">正在下载 %1$s：%2$d%%</string>
+    <string name="repo_open_link">打开%1$s</string>
+    <plurals name="repo_module_count">
+        <item quantity="other">%1$d 个模块</item>
+    </plurals>
 </resources>

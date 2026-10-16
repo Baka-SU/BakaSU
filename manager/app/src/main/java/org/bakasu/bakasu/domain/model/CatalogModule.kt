@@ -10,8 +10,13 @@ data class ModuleReleaseAsset(
     val downloadUrl: String,
     val size: Long?,
     val downloadCount: Int?,
+    val expected: ExpectedFile? = null,
+    val verificationRequired: Boolean = false,
 ) {
     fun hasSameIdentity(other: ModuleReleaseAsset): Boolean = name == other.name && downloadUrl == other.downloadUrl
+
+    fun hasSameVerification(other: ModuleReleaseAsset): Boolean = verificationRequired == other.verificationRequired &&
+        if (expected == null) other.expected == null else expected.sameAs(other.expected)
 }
 
 data class ModuleRelease(
@@ -22,6 +27,10 @@ data class ModuleRelease(
     val descriptionHTML: String = "",
     val versionCode: Int? = null,
     val changelogUrl: String = "",
+    val tagCommit: String = "",
+    val releaseUrl: String = "",
+    val attestationUrl: String? = null,
+    val immutable: Boolean = false,
 )
 
 data class CatalogModule(
@@ -45,12 +54,48 @@ data class CatalogModule(
     val readme: String = "",
     val repositoryName: String = "",
     val readmeUrl: String = "",
+    val detailLoaded: Boolean = true,
+    val registryMetadata: RegistryModuleMetadata? = null,
+    val releaseMetadataUrl: String = "",
+    val iconUrl: String? = null,
 ) {
     val catalogId: String get() = "$repositoryUrl#$moduleId"
     val pageUrl: String get() = sourceUrl.ifBlank { repositoryUrl }
 }
 
-data class ModuleReadme(val content: String, val baseUrl: String)
+data class RegistryModuleMetadata(
+    val buildId: String,
+    val detailPath: String,
+    val tags: List<String>,
+    val iconUrl: String?,
+    val stars: Int?,
+    val starsRepository: String?,
+    val sourceCommit: String = "",
+    val sourceFullName: String = "",
+    val license: String? = null,
+    val homepage: String? = null,
+    val support: String? = null,
+    val fromCache: Boolean = false,
+    val healthStale: Boolean = false,
+)
+
+enum class DocumentFormat { MARKDOWN, HTML }
+
+data class ModuleReadme(
+    val content: String,
+    val baseUrl: String,
+    val format: DocumentFormat = DocumentFormat.MARKDOWN,
+    val registryOrigin: String? = null,
+)
+
+/** Presentation data only. The selected repository still owns the release assets and verification. */
+data class ModuleReleaseDetails(
+    val title: String? = null,
+    val publishedAt: String? = null,
+    val releaseUrl: String? = null,
+    val notes: ModuleReadme? = null,
+    val notesFailed: Boolean = false,
+)
 
 sealed interface ModuleCatalogFailure {
     data object Offline : ModuleCatalogFailure
