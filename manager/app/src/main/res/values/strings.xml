@@ -719,4 +719,10 @@
     <string name="wear_save_log_summary">For troubleshooting</string>
     <string name="wear_reboot_device">Reboot device</string>
     <string name="wear_reboot_apply_module">Apply the new module</string>
+    <string name="wear_execute_action">Run action</string>
+    <string name="wear_execution_status">Execution status</string>
+    <string name="wear_running">Running</string>
+    <string name="wear_full_log">Full log</string>
+    <string name="wear_save_output">Save output</string>
+    <string name="wear_save_output_summary">Save the log to a file</string>
 </resources>

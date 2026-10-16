@@ -692,4 +692,10 @@
     <string name="wear_save_log_summary">供排查使用</string>
     <string name="wear_reboot_device">重启设备</string>
     <string name="wear_reboot_apply_module">应用新模块</string>
+    <string name="wear_execute_action">执行动作</string>
+    <string name="wear_execution_status">执行状态</string>
+    <string name="wear_running">运行中</string>
+    <string name="wear_full_log">完整日志</string>
+    <string name="wear_save_output">保存输出</string>
+    <string name="wear_save_output_summary">将日志保存到文件</string>
 </resources>

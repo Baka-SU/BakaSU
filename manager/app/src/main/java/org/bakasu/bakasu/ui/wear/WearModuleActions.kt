@@ -2,7 +2,11 @@ package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.twotone.Article
+import androidx.compose.material.icons.twotone.CheckCircle
 import androidx.compose.material.icons.twotone.Error
+import androidx.compose.material.icons.twotone.PlayArrow
+import androidx.compose.material.icons.twotone.Save
 import androidx.compose.material.icons.twotone.Update
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,9 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.ConfirmationDialogDefaults
+import androidx.wear.compose.material3.FailureConfirmationDialog
+import androidx.wear.compose.material3.SuccessConfirmationDialog
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.confirmationDialogCurvedText
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
@@ -29,22 +36,20 @@ import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiAction
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
-import org.bakasu.bakasu.ui.wear.component.WearFlashProgress
-import org.bakasu.bakasu.ui.wear.component.WearFlashStatus
-import org.bakasu.bakasu.ui.wear.component.WearFlashStatusChip
-import org.bakasu.bakasu.ui.wear.component.WearFollowLog
+import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearLogPage
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.toLogLines
-import org.bakasu.bakasu.ui.wear.component.wearLogLines
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -124,43 +129,95 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
     }
 }
 
+/**
+ * Runs a module's action script with the phone's ExecuteModuleActionViewModel: the status shows
+ * the latest output line, the full output opens as its own log page, and saving goes through the
+ * shared log use case once the script has finished.
+ */
 @Composable
 internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompleted: () -> Unit) {
     val viewModel = koinViewModel<ExecuteModuleActionViewModel>(parameters = { parametersOf(moduleId) })
     val state by viewModel.state.collectAsStateWithLifecycle()
     var successful by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    var showLog by rememberSaveable { mutableStateOf(false) }
+    var logSaved by remember { mutableStateOf(false) }
+    var saveFailed by remember { mutableStateOf(false) }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
-            if (event is ExecuteModuleActionUiEvent.Completed) {
-                successful = event.successful
-                onCompleted()
+            when (event) {
+                is ExecuteModuleActionUiEvent.Completed -> {
+                    successful = event.successful
+                    onCompleted()
+                }
+
+                is ExecuteModuleActionUiEvent.LogSaved -> logSaved = true
+
+                is ExecuteModuleActionUiEvent.Error -> saveFailed = true
             }
         }
     }
-    val status = when (successful) {
-        true -> WearFlashStatus.SUCCESS
-        false -> WearFlashStatus.FAILED
-        null -> WearFlashStatus.RUNNING
-    }
     val lines = remember(state.output) { state.output.toLogLines() }
-    val listState = rememberTransformingLazyColumnState()
-    WearFollowLog(listState, lines.size, following = state.running)
-    WearList(onBack = onBack, listState = listState) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.action)) }
+    val fullLog = stringResource(R.string.wear_full_log)
+
+    if (showLog) {
+        WearLogPage(fullLog, lines, following = state.running) { showLog = false }
+        return
+    }
+
+    WearList(onBack = onBack) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.wear_execute_action)) }
+        item { WearSectionHeader(spec, stringResource(R.string.wear_execution_status)) }
         item {
-            WearFlashStatusChip(
+            WearChip(
                 spec,
-                status,
                 stringResource(
-                    when (status) {
-                        WearFlashStatus.RUNNING -> R.string.action
-                        WearFlashStatus.SUCCESS -> R.string.module_action_success
-                        WearFlashStatus.FAILED -> R.string.operation_failed
+                    when (successful) {
+                        true -> R.string.module_action_success
+                        false -> R.string.operation_failed
+                        null -> R.string.wear_running
                     },
                 ),
+                secondaryLabel = lines.lastOrNull { it.isNotBlank() },
+                icon = when (successful) {
+                    true -> Icons.TwoTone.CheckCircle
+                    false -> Icons.TwoTone.Error
+                    null -> Icons.TwoTone.PlayArrow
+                },
             )
         }
-        if (state.running) item { WearFlashProgress(spec) }
-        wearLogLines(spec, lines)
+        item {
+            WearActionButton(
+                spec,
+                Icons.AutoMirrored.TwoTone.Article,
+                fullLog,
+                { showLog = true },
+                secondaryText = stringResource(R.string.wear_install_log_summary),
+            )
+        }
+        item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
+        // The view model saves the log only after the script has finished, as on the phone.
+        item {
+            WearActionButton(
+                spec,
+                Icons.TwoTone.Save,
+                stringResource(R.string.wear_save_output),
+                { viewModel.dispatch(ExecuteModuleActionUiAction.SaveLog) },
+                enabled = !state.running,
+                secondaryText = stringResource(R.string.wear_save_output_summary),
+            )
+        }
     }
+    val savedText = stringResource(R.string.log_saved)
+    val failedText = stringResource(R.string.operation_failed)
+    val style = ConfirmationDialogDefaults.curvedTextStyle
+    SuccessConfirmationDialog(
+        visible = logSaved,
+        onDismissRequest = { logSaved = false },
+        curvedText = { confirmationDialogCurvedText(savedText, style) },
+    )
+    FailureConfirmationDialog(
+        visible = saveFailed,
+        onDismissRequest = { saveFailed = false },
+        curvedText = { confirmationDialogCurvedText(failedText, style) },
+    )
 }
