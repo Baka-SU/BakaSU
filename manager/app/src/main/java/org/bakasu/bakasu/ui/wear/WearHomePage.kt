@@ -47,7 +47,6 @@ import org.bakasu.bakasu.Natives.KernelPatchImplementation
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
-import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -229,23 +228,25 @@ internal fun WearHomePage(
             }
             if (state.isSimpleMode) {
                 // Simple mode folds each section into one summary row; the full section opens on its own page.
+                // The rows use the tonal surface of the other Home chips, so they follow the dynamic
+                // color scheme and the card transparency.
                 item {
-                    WearActionButton(
+                    WearChip(
                         spec,
-                        Icons.TwoTone.Info,
                         stringResource(R.string.home_version_info),
-                        onVersionInfo,
-                        secondaryText = listOf(info.deviceModel, info.kernelRelease).filter { it.isNotBlank() }
+                        secondaryLabel = listOf(info.deviceModel, info.kernelRelease).filter { it.isNotBlank() }
                             .joinToString(" · ").ifBlank { unknown },
+                        icon = Icons.TwoTone.Info,
+                        onClick = onVersionInfo,
                     )
                 }
                 item {
-                    WearActionButton(
+                    WearChip(
                         spec,
-                        Icons.TwoTone.CheckCircle,
                         stringResource(R.string.home_status_info),
-                        onStatusInfo,
-                        secondaryText = listOf(info.selinuxStatus.ifBlank { unknown }, seccomp).joinToString(" · "),
+                        secondaryLabel = listOf(info.selinuxStatus.ifBlank { unknown }, seccomp).joinToString(" · "),
+                        icon = Icons.TwoTone.CheckCircle,
+                        onClick = onStatusInfo,
                     )
                 }
             } else {
