@@ -43,7 +43,6 @@ import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 internal fun WearSuSFSStandardPage(
     config: SuSFSConfig,
     busy: Boolean,
-    message: String?,
     viewModel: SuSFSViewModel,
     onBack: () -> Unit,
     onCommand: (WearSuSFSCommand, () -> Unit) -> Unit,
@@ -118,7 +117,6 @@ internal fun WearSuSFSStandardPage(
                         ),
                     )
                 }
-                message?.let { item { WearInfoCard(spec) { Text(it) } } }
                 if (shownPage == "uname") {
                     SegmentedColumn(listOf("release", "version"), { it }) { name ->
                         WearSettingsJumpPageWidget(
@@ -183,7 +181,6 @@ internal fun WearSuSFSStandardPage(
     } else {
         WearList(isLoading = busy, onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.susfs_tab_standard)) }
-            message?.let { item { WearInfoCard(spec) { Text(it) } } }
             item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_logging_hiding)) }
             SegmentedColumn(
                 listOf(

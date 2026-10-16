@@ -46,6 +46,8 @@ import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
@@ -69,7 +71,8 @@ internal fun WearTemplatePage(onBack: () -> Unit, onOpenTemplate: (id: String, r
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    var message by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<WearResult?>(null) }
+    WearResultDialog(result) { result = null }
     val imported = stringResource(R.string.app_profile_template_import_success)
     val emptyExport = stringResource(R.string.app_profile_template_export_empty)
     val emptyClipboard = stringResource(R.string.app_profile_template_import_empty)
@@ -80,18 +83,18 @@ internal fun WearTemplatePage(onBack: () -> Unit, onOpenTemplate: (id: String, r
         viewModel.events.collect { event ->
             when (event) {
                 TemplateUiEvent.ImportCompleted -> {
-                    message = imported
+                    result = WearResult(imported, success = true)
                     viewModel.dispatch(TemplateUiAction.Refresh())
                 }
 
                 is TemplateUiEvent.Exported -> {
                     clipboard.setPrimaryClip(ClipData.newPlainText(exported, event.json))
-                    message = exported
+                    result = WearResult(exported, success = true)
                 }
 
-                TemplateUiEvent.ExportEmpty -> message = emptyExport
+                TemplateUiEvent.ExportEmpty -> result = WearResult(emptyExport, success = false)
 
-                is TemplateUiEvent.Error -> message = event.message.ifBlank { failed }
+                is TemplateUiEvent.Error -> result = WearResult(event.message.ifBlank { failed }, success = false)
             }
         }
     }
@@ -108,7 +111,6 @@ internal fun WearTemplatePage(onBack: () -> Unit, onOpenTemplate: (id: String, r
                 )
             }
         }
-        message?.let { item { WearInfoCard(spec) { Text(it) } } }
         item {
             WearActionButton(
                 spec,
@@ -119,14 +121,14 @@ internal fun WearTemplatePage(onBack: () -> Unit, onOpenTemplate: (id: String, r
         }
         item {
             WearActionButton(spec, Icons.TwoTone.Sync, stringResource(R.string.app_profile_template_sync), {
-                message = null
+                result = null
                 viewModel.dispatch(TemplateUiAction.Refresh(synchronize = true))
             }, enabled = !state.isRefreshing)
         }
         item {
             WearActionButton(spec, Icons.TwoTone.ContentPaste, stringResource(R.string.app_profile_import_from_clipboard), {
                 val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
-                if (text.isNullOrBlank()) message = emptyClipboard else viewModel.dispatch(TemplateUiAction.Import(text))
+                if (text.isNullOrBlank()) result = WearResult(emptyClipboard, success = false) else viewModel.dispatch(TemplateUiAction.Import(text))
             })
         }
         item { WearActionButton(spec, Icons.TwoTone.ContentCopy, exported, { viewModel.dispatch(TemplateUiAction.Export) }) }
@@ -147,12 +149,13 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
     val viewModel = koinViewModel<TemplateEditorViewModel>(parameters = { parametersOf(id, readOnly, creation) })
     val state by viewModel.state.collectAsStateWithLifecycle()
     val failed = stringResource(R.string.app_profile_template_save_failed)
-    var message by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<WearResult?>(null) }
+    WearResultDialog(result) { result = null }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
                 TemplateEditorUiEvent.Deleted, TemplateEditorUiEvent.Saved -> onBack()
-                is TemplateEditorUiEvent.Error -> message = failed
+                is TemplateEditorUiEvent.Error -> result = WearResult(failed, success = false)
             }
         }
     }
@@ -179,7 +182,7 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
                 }
             } else {
                 WearTextInputPage(stringResource(shownInput), template.field(shownInput), multiline = shownInput == R.string.profile_selinux_rules) { text ->
-                    runCatching { template.withField(shownInput, text) }.fold(onSuccess = { viewModel.dispatch(TemplateEditorUiAction.Update(it)) }, onFailure = { message = failed })
+                    runCatching { template.withField(shownInput, text) }.fold(onSuccess = { viewModel.dispatch(TemplateEditorUiAction.Update(it)) }, onFailure = { result = WearResult(failed, success = false) })
                     input = 0
                 }
             }
@@ -188,7 +191,6 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
         WearList(isLoading = state.loading, onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(if (readOnly) R.string.app_profile_template_view else R.string.app_profile_template_edit)) }
             if (state.loadFailure != null) item { WearStatusItem(spec, Icons.TwoTone.Error, failed, tone = WearStatusTone.ERROR) }
-            message?.let { item { WearInfoCard(spec) { Text(it) } } }
             if (state.loadFailure == null) {
                 // A TransformingLazyColumn item places only its last child, so the value is the widget's description.
                 SegmentedColumn(fields, { it }) { field ->

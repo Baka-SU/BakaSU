@@ -101,6 +101,8 @@ import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
 import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
@@ -234,9 +236,14 @@ fun WearManagerScreen() {
         clearSettingsFeedback()
         settingsViewModel.dispatch(it)
     }
-    val settingsMessage = settingsError ?: settingsMessageResource?.let { (id, arg) ->
-        if (arg == null) stringResource(id) else stringResource(id, arg)
-    }
+    // Settings results show once as the official confirmation overlay; a few messages report failures.
+    val settingsResult = settingsError?.let { WearResult(it.ifBlank { operationFailedText }, success = false) }
+        ?: settingsMessageResource?.let { (id, arg) ->
+            WearResult(
+                if (arg == null) stringResource(id) else stringResource(id, arg),
+                success = id != R.string.background_crop_failed && id != R.string.settings_selinux_hide_failed,
+            )
+        }
 
     LaunchedEffect(home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled) {
         val lost = backStack.any {
@@ -329,6 +336,7 @@ fun WearManagerScreen() {
 
     // A found manager update is offered in a dialog, the stable channel first as on the phone's Home.
     WearManagerUpdateDialog(home.stableManagerUpdate ?: home.betaManagerUpdate)
+    WearResultDialog(settingsResult) { clearSettingsFeedback() }
     WearOpenResultDialogs(openedOnPhone, { openedOnPhone = false }, openFailure, openFailureFallback, openFailed) {
         openFailed = false
     }
@@ -371,7 +379,6 @@ fun WearManagerScreen() {
                                     homeError = homeError,
                                     superuserError = superuserError,
                                     moduleError = moduleError,
-                                    settingsMessage = settingsMessage,
                                     onHome = { action ->
                                         if (action is HomeUiAction.Refresh) homeError = null
                                         homeViewModel.dispatch(action)
@@ -405,6 +412,7 @@ fun WearManagerScreen() {
                                     onWebUi = { linkViewModel.openWebUi(it.id, it.name, preferences.link) },
                                     onExecute = { open(WearRoute.ModuleAction(it.id)) },
                                     onUpdate = { open(WearRoute.ModuleUpdate(it.id)) },
+                                    onErrorShown = { moduleError = null },
                                 )
                             }
                             entry<WearRoute.ModuleAction> { route ->
@@ -537,7 +545,6 @@ fun WearManagerScreen() {
                                 WearSettingsPage(
                                     settings,
                                     home.systemStatus,
-                                    settingsMessage,
                                     dispatchSettings,
                                     ::open,
                                     ::back,
@@ -551,19 +558,18 @@ fun WearManagerScreen() {
                                     settings,
                                     preferences,
                                     preferenceViewModel,
-                                    settingsMessage,
                                     ::back,
                                     dispatchSettings,
                                 )
                             }
                             entry<WearRoute.Color> {
-                                WearColorPage(settings, settingsMessage, ::back, dispatchSettings, ::open) {
+                                WearColorPage(settings, ::back, dispatchSettings, ::open) {
                                     runCatching { selectImageLauncher.launch(arrayOf("image/*")) }
                                         .onFailure { settingsError = operationFailedText }
                                 }
                             }
                             entry<WearRoute.Dpi> {
-                                WearDpiPage(settings, settingsMessage, ::back, dispatchSettings, ::open, preferences, preferenceViewModel, home.isSimpleMode) {
+                                WearDpiPage(settings, ::back, dispatchSettings, ::open, preferences, preferenceViewModel, home.isSimpleMode) {
                                     homeViewModel.dispatch(HomeUiAction.SetSimpleMode(it))
                                 }
                             }
@@ -732,7 +738,6 @@ private fun WearMainPages(
     homeError: String?,
     superuserError: String?,
     moduleError: String?,
-    settingsMessage: String?,
     onHome: (HomeUiAction) -> Unit,
     onSuperUser: (SuperUserUiAction) -> Unit,
     onModule: (ModuleUiAction) -> Unit,
@@ -829,7 +834,7 @@ private fun WearMainPages(
                             )
 
                             SETTINGS -> WearSettingsPage(
-                                settings, home.systemStatus, settingsMessage, onSettings, onOpen,
+                                settings, home.systemStatus, onSettings, onOpen,
                                 { activity?.finish() }, preferences = preferences,
                                 susfsAvailable = home.systemInfo.susfsEnabled, listState = settingsListState, backToTop = true,
                             )

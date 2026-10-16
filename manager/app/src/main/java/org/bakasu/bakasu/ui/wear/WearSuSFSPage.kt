@@ -44,6 +44,8 @@ import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
@@ -77,7 +79,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     var sectionName by rememberSaveable { mutableStateOf(WearSuSFSSection.Standard.name) }
     val section = WearSuSFSSection.valueOf(sectionName)
     var selectedPath by rememberSaveable { mutableStateOf("") }
-    var message by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<WearResult?>(null) }
     var busy by remember { mutableStateOf(false) }
     var pendingImport by rememberSaveable { mutableStateOf("") }
     val failed = stringResource(R.string.susfs_operation_failed)
@@ -93,7 +95,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     var showConfirmFailure by remember { mutableStateOf(false) }
 
     // Export, import and restoring defaults are one-shot file operations; their result shows as the
-    // official confirmation overlay instead of the persistent in-list message the other commands use.
+    // official confirmation overlay with a curved label; the other commands report with WearResultDialog.
     fun submitConfirmed(command: WearSuSFSCommand, successMessage: String) {
         if (busy) return
         busy = true
@@ -116,15 +118,15 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     fun submit(command: WearSuSFSCommand, successMessage: String = succeeded, onSuccess: () -> Unit = {}) {
         if (busy) return
         busy = true
-        message = null
+        result = null
         scope.launch {
             try {
                 if (awaitSuSFSBoolean(viewModel, command)) {
                     awaitSuSFSConfig(viewModel) { SuSFSUiAction.Load(it) }
-                    message = successMessage
+                    result = WearResult(successMessage, success = true)
                     onSuccess()
                 } else {
-                    message = failed
+                    result = WearResult(failed, success = false)
                 }
             } finally {
                 busy = false
@@ -135,20 +137,23 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     fun addEntries(commands: List<WearSuSFSCommand>) {
         if (busy || commands.isEmpty()) return
         busy = true
-        message = null
+        result = null
         scope.launch {
             try {
                 var successCount = 0
                 commands.forEach { if (awaitSuSFSBoolean(viewModel, it)) successCount++ }
                 if (successCount > 0) awaitSuSFSConfig(viewModel) { SuSFSUiAction.Load(it) }
                 val failCount = commands.size - successCount
-                message = if (commands.size > 1) {
-                    batchResult.format(successCount, failCount)
-                } else if (failCount == 0) {
-                    succeeded
-                } else {
-                    failed
-                }
+                result = WearResult(
+                    if (commands.size > 1) {
+                        batchResult.format(successCount, failCount)
+                    } else if (failCount == 0) {
+                        succeeded
+                    } else {
+                        failed
+                    },
+                    success = failCount == 0,
+                )
                 if (failCount == 0) page = "section"
             } finally {
                 busy = false
@@ -156,6 +161,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
         }
     }
 
+    WearResultDialog(result) { result = null }
     ActivityResumeEffect(viewModel) {
         if (!busy) {
             awaitSuSFSConfig(viewModel) { SuSFSUiAction.Refresh(it) }
@@ -163,7 +169,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
         }
     }
     LaunchedEffect(viewModel) {
-        viewModel.events.collect { if (it is SuSFSUiEvent.Error) message = it.message.ifBlank { failed } }
+        viewModel.events.collect { if (it is SuSFSUiEvent.Error) result = WearResult(it.message.ifBlank { failed }, success = false) }
     }
     LaunchedEffect(config?.enabled) {
         if (config?.enabled == false && page in setOf("section", "add", "detail")) page = ""
@@ -200,7 +206,6 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     val statusContent: @Composable () -> Unit = {
         WearList(isLoading = state.isLoading || busy, onBack = { page = "" }) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.susfs_tab_status)) }
-            message?.let { item { WearInfoCard(spec) { Text(it) } } }
             item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_status_controls)) }
             item {
                 WearSettingsSwitchWidget(
@@ -276,7 +281,6 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                         WearSuSFSStandardPage(
                             config,
                             busy,
-                            message,
                             viewModel,
                             onBack = { page = "" },
                             onCommand = { command, onSuccess -> submit(command, onSuccess = onSuccess) },
@@ -286,7 +290,6 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                             section,
                             config,
                             busy,
-                            message,
                             onBack = { page = "" },
                             onAdd = { page = "add" },
                             onSelect = {
@@ -300,7 +303,6 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                 "add" -> WearSuSFSAddPage(
                     section,
                     busy,
-                    message,
                     viewModel,
                     onBack = { page = "section" },
                     onCommand = ::addEntries,
@@ -312,7 +314,6 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                         config,
                         selectedPath,
                         busy,
-                        message,
                         onBack = { page = "section" },
                     ) { command -> submit(command) { page = "section" } }
                 }

@@ -48,6 +48,8 @@ import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
@@ -74,6 +76,7 @@ internal fun WearModuleDetail(
     onWebUi: (InstalledModule) -> Unit,
     onExecute: (InstalledModule) -> Unit,
     onUpdate: (InstalledModule) -> Unit,
+    onErrorShown: () -> Unit = {},
 ) {
     if (module == null) {
         WearList(onBack = onBack) { spec ->
@@ -115,9 +118,9 @@ internal fun WearModuleDetail(
         if (module.hasActionScript) add(WearIconAction(Icons.TwoTone.PlayArrow, stringResource(R.string.action), { onExecute(module) }, module.enabled && !module.remove))
         if (module.moduleUpdate?.zipUrl?.isNotBlank() == true) add(WearIconAction(Icons.TwoTone.Update, stringResource(R.string.module_update), { onUpdate(module) }, !module.remove))
     }
+    WearResultDialog(error?.takeIf { it.isNotBlank() }?.let { WearResult(it, success = false) }, onErrorShown)
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_module_details)) }
-        if (!error.isNullOrBlank()) item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR) }
         item {
             WearModuleInfoCard(spec) {
                 Text(module.name, style = MaterialTheme.typography.titleMedium)
@@ -212,6 +215,7 @@ internal fun WearAppDetail(
         }
     }
 
+    WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
     if (detailPage.isNotEmpty()) {
         WearSubPage({ detailPage = "" }) {
             WearList(onBack = { detailPage = "" }) { spec ->
@@ -223,7 +227,6 @@ internal fun WearAppDetail(
                         item { WearActionButton(spec, Icons.TwoTone.Apps, stringResource(label), { viewModel.dispatch(AppProfileUiAction.ControlApp(action)) }) }
                     }
                 }
-                error?.let { item { WearStatusItem(spec, Icons.TwoTone.Error, it, tone = WearStatusTone.ERROR) } }
             }
         }
         return
@@ -232,8 +235,11 @@ internal fun WearAppDetail(
         WearSubPage({ editingProfile = false }) {
             state.profile?.let { profile ->
                 WearAppProfileConfig(
-                    profile, state.defaultUmountModules, state.sepolicyValid, error,
-                    { viewModel.dispatch(AppProfileUiAction.ValidateSepolicy(it)) }, save,
+                    profile,
+                    state.defaultUmountModules,
+                    state.sepolicyValid,
+                    { viewModel.dispatch(AppProfileUiAction.ValidateSepolicy(it)) },
+                    save,
                     onManageTemplates = { onOpen(WearRoute.Templates) },
                     onViewTemplate = { onOpen(WearRoute.TemplateEditor(it, readOnly = true, creation = false)) },
                     onBack = { editingProfile = false },
@@ -298,7 +304,6 @@ internal fun WearAppDetail(
             } else {
                 item { WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
             }
-            error?.let { item { WearStatusItem(spec, Icons.TwoTone.Error, it, tone = WearStatusTone.ERROR) } }
         }
     }
 }

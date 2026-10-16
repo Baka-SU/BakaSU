@@ -37,7 +37,6 @@ internal fun WearSelectionPage(
     state: SettingsUiState,
     preferences: WearPreferences,
     preferenceViewModel: WearPreferencesViewModel,
-    message: String?,
     onBack: () -> Unit,
     onAction: (SettingsUiAction) -> Unit,
 ) {
@@ -75,7 +74,6 @@ internal fun WearSelectionPage(
             PickerModes.map { it to pickerModeLabel(it) },
             preferences.picker,
             onBack,
-            message = message,
             icon = { selectionIcon(selection, it) },
             onChoose = preferenceViewModel::setPicker,
         )
@@ -94,7 +92,6 @@ internal fun WearSelectionPage(
             LinkModes.map { it to linkModeLabel(it) },
             preferences.link,
             onBack,
-            message = message,
             icon = { selectionIcon(selection, it) },
             onChoose = preferenceViewModel::setLink,
         )

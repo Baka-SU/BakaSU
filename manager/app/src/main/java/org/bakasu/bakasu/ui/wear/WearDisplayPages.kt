@@ -86,7 +86,7 @@ private fun Int.toHex() = "#%06X".format(this and 0xFFFFFF)
  * (image, removal and dimming).
  */
 @Composable
-internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit, onOpen: (WearRoute) -> Unit, onImage: () -> Unit) {
+internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit, onOpen: (WearRoute) -> Unit, onImage: () -> Unit) {
     val config = koinInject<ThemeConfig>()
     val backgrounds = koinInject<BackgroundManager>()
     val resources = LocalResources.current
@@ -115,7 +115,6 @@ internal fun WearColorPage(state: SettingsUiState, message: String?, onBack: () 
             val columns = 3
             WearList(onBack = onBack) { spec ->
                 item { WearPageHeader(spec, stringResource(R.string.theme_color)) }
-                if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
                 item {
                     WearSettingsSwitchWidget(
                         spec,
@@ -309,7 +308,6 @@ private fun TransformingLazyColumnItemScope.HexColorButton(spec: TransformationS
 @Composable
 internal fun WearDpiPage(
     state: SettingsUiState,
-    message: String?,
     onBack: () -> Unit,
     onAction: (SettingsUiAction) -> Unit,
     onOpen: (WearRoute) -> Unit,
@@ -322,7 +320,6 @@ internal fun WearDpiPage(
     val pending = (state.tempDpi.toFloat() / systemDpi).coerceIn(0.75f, 1.5f)
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_display_touch)) }
-        if (!message.isNullOrBlank()) item { WearInfoCard(spec) { Text(message) } }
         SegmentedColumn(
             listOf(R.string.wear_long_press_haptics, R.string.wear_keep_screen_on, R.string.wear_block_back_key, R.string.wear_disable_swipe_back, R.string.simple_mode),
             { it },

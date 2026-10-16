@@ -153,7 +153,6 @@ private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
 internal fun WearSettingsPage(
     state: SettingsUiState,
     status: KernelStatus,
-    message: String?,
     onAction: (SettingsUiAction) -> Unit,
     onOpen: (WearRoute) -> Unit,
     onBack: () -> Unit,
@@ -178,7 +177,6 @@ internal fun WearSettingsPage(
     val version = wearAppVersion()
     WearList(onBack = onBack, snap = true, listState = listState, backToTop = backToTop) { spec ->
         item { WearPageHeader(spec, stringResource(settingsCategoryTitle(category))) }
-        if (!message.isNullOrBlank()) item { WearScaledItem(spec) { Text(message) } }
         if (category == null) {
             val categories = buildList {
                 add(WearSettingsCategory.General)

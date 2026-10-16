@@ -42,7 +42,6 @@ fun WearAppProfileConfig(
     profile: AppProfile,
     defaultUmountModules: Boolean,
     sepolicyValid: Boolean,
-    message: String?,
     onValidateSepolicy: (String) -> Unit,
     onProfileChange: (AppProfile) -> Unit,
     onManageTemplates: () -> Unit,
@@ -73,6 +72,7 @@ fun WearAppProfileConfig(
     var rules by rememberSaveable { mutableStateOf(profile.rules) }
     var rulesInput by rememberSaveable { mutableStateOf(false) }
     val failed = stringResource(R.string.operation_failed)
+    WearResultDialog(if (inputError) WearResult(failed, success = false) else null) { inputError = false }
     val mode = if (profile.allowSu) {
         rootMode
     } else {
@@ -116,7 +116,6 @@ fun WearAppProfileConfig(
                     localTemplates.map { it.id to it.name.ifBlank { it.id } },
                     profile.rootTemplate.orEmpty(),
                     back,
-                    message = message,
                 ) { id ->
                     localTemplates.firstOrNull { it.id == id }?.let { template ->
                         onProfileChange(
@@ -173,7 +172,6 @@ fun WearAppProfileConfig(
                     } else {
                         WearList(onBack = back) { spec ->
                             item { WearPageHeader(spec, stringResource(shownPage)) }
-                            message?.let { item { WearInfoCard(spec) { Text(it) } } }
                             SegmentedColumn(listOf(R.string.profile_selinux_domain, R.string.profile_selinux_rules), { it }) { field ->
                                 WearSettingsJumpPageWidget(spec, stringResource(field), {
                                     if (field == R.string.profile_selinux_rules) {
@@ -200,7 +198,6 @@ fun WearAppProfileConfig(
 
                 else -> WearList(onBack = back) { spec ->
                     item { WearPageHeader(spec, stringResource(shownPage)) }
-                    message?.let { item { WearInfoCard(spec) { Text(it) } } }
                     when (shownPage) {
                         R.string.profile_groups -> LazySegmentedColumn(Groups.entries.toList(), { it.gid }) { group ->
                             val selected = profile.groups.ifEmpty { listOf(Natives.ROOT_GID) }
@@ -238,7 +235,6 @@ fun WearAppProfileConfig(
     } else {
         WearList(onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.profile)) }
-            (message ?: if (inputError) failed else null)?.let { item { WearInfoCard(spec) { Text(it) } } }
             item {
                 WearSettingsJumpPageWidget(
                     spec,

@@ -37,6 +37,8 @@ import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
@@ -53,7 +55,8 @@ private enum class DynamicManagerInput { Search, Size, Hash }
 internal fun WearDynamicManagerPage(onBack: () -> Unit) {
     val viewModel = koinViewModel<DynamicManagerViewModel>()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var message by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<WearResult?>(null) }
+    WearResultDialog(result) { result = null }
     val failed = stringResource(R.string.operation_failed)
     val succeeded = stringResource(R.string.dynamic_manager_set_success)
     val cleared = stringResource(R.string.dynamic_manager_disabled_success)
@@ -62,10 +65,10 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
         viewModel.dispatch(DynamicManagerUiAction.Refresh)
         viewModel.events.collect { event ->
             if (event !is DynamicManagerUiEvent.OperationCompleted) return@collect
-            message = when {
-                !event.success -> failed
-                event.operation == DynamicManagerOperation.Clear -> cleared
-                else -> succeeded
+            result = when {
+                !event.success -> WearResult(failed, success = false)
+                event.operation == DynamicManagerOperation.Clear -> WearResult(cleared, success = true)
+                else -> WearResult(succeeded, success = true)
             }
         }
     }
@@ -127,7 +130,6 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
     val pageContent: @Composable () -> Unit = {
         WearList(isLoading = state.isLoading || state.isSubmitting, onBack = navigateBack) { spec ->
             item { WearPageHeader(spec, stringResource(if (manual) R.string.dynamic_manager_manual_config else R.string.dynamic_manager_title)) }
-            message?.let { item { WearInfoCard(spec) { Text(it) } } }
             if (manual) {
                 item { WearSectionHeader(spec, stringResource(R.string.wear_signature_information)) }
                 item {
@@ -153,9 +155,9 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                     WearActionButton(spec, Icons.TwoTone.Settings, stringResource(R.string.wear_save_configuration), {
                         val length = size.toIntOrNull()
                         when {
-                            length == null || length <= 0 -> message = failed
+                            length == null || length <= 0 -> result = WearResult(failed, success = false)
 
-                            !hash.matches(Regex("[0-9a-fA-F]{64}")) -> message = invalidHash
+                            !hash.matches(Regex("[0-9a-fA-F]{64}")) -> result = WearResult(invalidHash, success = false)
 
                             else -> {
                                 pending = DynamicManagerUiAction.SetManual(length, hash)
@@ -230,7 +232,8 @@ private enum class UmountInput { Path, Flags }
 internal fun WearUmountPage(onBack: () -> Unit) {
     val viewModel = koinViewModel<UmountManagerScreenViewModel>()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var message by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<WearResult?>(null) }
+    WearResultDialog(result) { result = null }
     val failed = stringResource(R.string.operation_failed)
     var selected by remember { mutableStateOf<UmountPath?>(null) }
     val remove = rememberWearConfirmDialog(stringResource(R.string.delete), stringResource(R.string.confirm_delete)) {
@@ -239,7 +242,7 @@ internal fun WearUmountPage(onBack: () -> Unit) {
     }
     LaunchedEffect(viewModel) {
         viewModel.dispatch(UmountManagerUiAction.Refresh())
-        viewModel.events.collect { if (it is UmountManagerUiEvent.Message) message = it.message }
+        viewModel.events.collect { if (it is UmountManagerUiEvent.Message) result = WearResult(it.message, success = it.message != failed) }
     }
     var input by rememberSaveable { mutableStateOf<UmountInput?>(null) }
     var path by rememberSaveable { mutableStateOf("") }
@@ -261,7 +264,6 @@ internal fun WearUmountPage(onBack: () -> Unit) {
 
     WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.umount_path_manager)) }
-        message?.let { item { WearInfoCard(spec) { Text(it) } } }
         // A TransformingLazyColumn item places only its last child, so each entry is a single button.
         items(state.umountPaths, key = { it.path }) { entry ->
             WearActionButton(spec, Icons.TwoTone.Delete, entry.path, {
@@ -292,7 +294,7 @@ internal fun WearUmountPage(onBack: () -> Unit) {
             WearActionButton(spec, Icons.TwoTone.Add, stringResource(R.string.add), {
                 val parsed = flags.toIntOrNull()
                 if (!path.startsWith('/') || parsed == null) {
-                    message = failed
+                    result = WearResult(failed, success = false)
                 } else {
                     viewModel.dispatch(UmountManagerUiAction.Add(path, parsed))
                 }

@@ -79,7 +79,6 @@ internal fun WearSuSFSEntriesPage(
     section: WearSuSFSSection,
     config: SuSFSConfig,
     busy: Boolean,
-    message: String?,
     onBack: () -> Unit,
     onAdd: () -> Unit,
     onSelect: (String) -> Unit,
@@ -111,7 +110,6 @@ internal fun WearSuSFSEntriesPage(
     }
     WearList(isLoading = busy, onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(section.title)) }
-        message?.let { item { WearInfoCard(spec) { Text(it) } } }
         item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_entries)) }
         LazySegmentedColumn(entries.sortedBy { it.first }, { it.first }) { (path, summary) ->
             WearSettingsJumpPageWidget(spec, path, { onSelect(path) }, icon = section.icon, description = summary)
@@ -135,7 +133,6 @@ internal fun WearSuSFSDetailPage(
     config: SuSFSConfig,
     path: String,
     busy: Boolean,
-    message: String?,
     onBack: () -> Unit,
     onCommand: (WearSuSFSCommand) -> Unit,
 ) {
@@ -151,7 +148,6 @@ internal fun WearSuSFSDetailPage(
     }
     WearList(isLoading = busy, onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.susfs_entry_detail)) }
-        message?.let { item { WearInfoCard(spec) { Text(it) } } }
         item {
             WearInfoCard(spec) {
                 Text(stringResource(R.string.susfs_entry_path_label))
@@ -198,7 +194,6 @@ internal fun WearSuSFSDetailPage(
 internal fun WearSuSFSAddPage(
     section: WearSuSFSSection,
     busy: Boolean,
-    message: String?,
     viewModel: SuSFSViewModel,
     onBack: () -> Unit,
     onCommand: (List<WearSuSFSCommand>) -> Unit,
@@ -372,9 +367,9 @@ internal fun WearSuSFSAddPage(
                 }
             }
 
-            if (invalid || fileError != null || message != null) {
+            if (invalid || fileError != null) {
                 item {
-                    WearInfoCard(spec) { Text(if (invalid) stringResource(R.string.susfs_operation_failed) else fileError ?: message.orEmpty()) }
+                    WearInfoCard(spec) { Text(if (invalid) stringResource(R.string.susfs_operation_failed) else fileError.orEmpty()) }
                 }
             }
             item {
