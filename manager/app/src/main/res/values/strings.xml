@@ -599,6 +599,12 @@
     <string name="wear_clear_search">Clear search</string>
     <string name="wear_loading">Loading</string>
     <string name="wear_template_offline">No network connection</string>
+    <string name="wear_details">Details</string>
+    <string name="wear_enable_module">Enable module</string>
+    <string name="wear_root_access">Root access</string>
+    <string name="wear_profile_mode">Profile mode</string>
+    <string name="wear_same_uid_apps">Apps sharing this UID</string>
+    <string name="wear_app_operations_summary">Launch · Force stop</string>
     <string name="wear_template_view_online">View online templates</string>
     <string name="wear_template_online">Online templates</string>
     <string name="wear_template_online_empty">No online templates</string>
@@ -680,12 +686,10 @@
     <string name="wear_palette_content">Content</string>
     <string name="wear_color_spec_2021">Spec 2021</string>
     <string name="wear_color_spec_2025">Spec 2025</string>
-    <string name="wear_module_details">Module details</string>
     <string name="wear_module_information">Module information</string>
     <string name="wear_module_operations">Module actions</string>
     <string name="wear_description">Description</string>
     <string name="wear_meta_badge">META</string>
-    <string name="wear_app_details">App details</string>
     <string name="wear_authorization">Authorization</string>
     <string name="wear_app_operations">App actions</string>
     <string name="wear_operations">Actions</string>

@@ -1,17 +1,20 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.twotone.AccountCircle
 import androidx.compose.material.icons.twotone.Apps
-import androidx.compose.material.icons.twotone.Badge
 import androidx.compose.material.icons.twotone.Delete
 import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Extension
-import androidx.compose.material.icons.twotone.Folder
 import androidx.compose.material.icons.twotone.Language
-import androidx.compose.material.icons.twotone.Person
 import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.PowerSettingsNew
 import androidx.compose.material.icons.twotone.Security
@@ -25,9 +28,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
@@ -35,22 +42,19 @@ import org.bakasu.bakasu.domain.model.AppControlAction
 import org.bakasu.bakasu.domain.model.AppProfile
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.domain.model.InstalledModule
+import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiAction
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiEvent
 import org.bakasu.bakasu.ui.viewmodel.AppProfileViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileConfig
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
-import org.bakasu.bakasu.ui.wear.component.WearIconAction
-import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
-import org.bakasu.bakasu.ui.wear.component.WearIconText
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
-import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
@@ -105,54 +109,53 @@ internal fun WearModuleDetail(
         ),
         onConfirm = { onRemove(module.id, true) },
     )
-    val actions = buildList {
-        add(
-            WearIconAction(
-                Icons.TwoTone.PowerSettingsNew,
-                stringResource(if (module.enabled) R.string.wear_disabled else R.string.wear_enabled),
-                { onEnabledChange(module.id, !module.enabled) },
-                enabled = !module.remove && !module.update,
-            ),
-        )
-        if (module.hasWebUi) add(WearIconAction(Icons.TwoTone.Language, stringResource(R.string.wear_webui), { onWebUi(module) }, module.enabled && !module.remove))
-        if (module.hasActionScript) add(WearIconAction(Icons.TwoTone.PlayArrow, stringResource(R.string.action), { onExecute(module) }, module.enabled && !module.remove))
-        if (module.moduleUpdate?.zipUrl?.isNotBlank() == true) add(WearIconAction(Icons.TwoTone.Update, stringResource(R.string.module_update), { onUpdate(module) }, !module.remove))
-    }
     WearResultDialog(error?.takeIf { it.isNotBlank() }?.let { WearResult(it, success = false) }, onErrorShown)
     WearList(onBack = onBack) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.wear_module_details)) }
+        // As in the design, the page opens with the module title card instead of a page title.
         item {
             WearModuleInfoCard(spec) {
-                Text(module.name, style = MaterialTheme.typography.titleMedium)
-                Text(module.version.ifBlank { unknown }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(
-                    stringResource(
-                        if (module.remove) {
-                            R.string.wear_pending_removal
-                        } else if (module.enabled) {
-                            R.string.wear_enabled
-                        } else {
-                            R.string.wear_disabled
-                        },
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                if (module.metamodule) Text(stringResource(R.string.wear_meta_badge), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
-            }
-        }
-        item { WearSectionHeader(spec, stringResource(R.string.wear_module_information)) }
-        item { WearModuleInfoCard(spec) { WearDetailField(Icons.TwoTone.Person, stringResource(R.string.module_author), module.author.ifBlank { unknown }) } }
-        item { WearModuleInfoCard(spec) { WearDetailField(Icons.TwoTone.Folder, stringResource(R.string.info), module.id) } }
-        if (module.description.isNotBlank()) {
-            item {
-                WearModuleInfoCard(spec) {
-                    Text(stringResource(R.string.wear_description), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    Text(module.description, style = MaterialTheme.typography.bodySmall)
+                Text(module.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(module.version.ifBlank { unknown }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (module.remove) {
+                    Text(stringResource(R.string.wear_pending_removal), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                }
+                if (module.metamodule) {
+                    Text(stringResource(R.string.wear_meta_badge), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
                 }
             }
         }
+        item { WearSectionHeader(spec, stringResource(R.string.wear_module_information)) }
+        item { WearModuleInfoCard(spec) { WearLabelValue(stringResource(R.string.module_author), module.author.ifBlank { unknown }) } }
+        item {
+            WearModuleInfoCard(spec) {
+                Text(stringResource(R.string.wear_details), style = MaterialTheme.typography.titleMedium)
+                Text(module.id, style = MaterialTheme.typography.labelSmall)
+            }
+        }
+        if (module.description.isNotBlank()) {
+            item { WearModuleInfoCard(spec) { WearLabelValue(stringResource(R.string.wear_description), module.description) } }
+        }
         item { WearSectionHeader(spec, stringResource(R.string.wear_module_operations)) }
-        actions.chunked(2).forEach { row -> item { WearIconButtonGroup(spec, row) } }
+        // Every operation is a full-width button with an icon and a label, so none relies on its icon alone.
+        item {
+            WearSettingsSwitchWidget(
+                spec,
+                stringResource(R.string.wear_enable_module),
+                module.enabled,
+                { onEnabledChange(module.id, it) },
+                enabled = !module.remove && !module.update,
+                icon = Icons.TwoTone.PowerSettingsNew,
+            )
+        }
+        if (module.hasWebUi) {
+            item { WearActionButton(spec, Icons.TwoTone.Language, stringResource(R.string.wear_webui), { onWebUi(module) }, enabled = module.enabled && !module.remove) }
+        }
+        if (module.hasActionScript) {
+            item { WearActionButton(spec, Icons.TwoTone.PlayArrow, stringResource(R.string.action), { onExecute(module) }, enabled = module.enabled && !module.remove) }
+        }
+        if (module.moduleUpdate?.zipUrl?.isNotBlank() == true) {
+            item { WearActionButton(spec, Icons.TwoTone.Update, stringResource(R.string.module_update), { onUpdate(module) }, enabled = !module.remove) }
+        }
         item {
             WearActionButton(
                 spec,
@@ -160,10 +163,17 @@ internal fun WearModuleDetail(
                 stringResource(R.string.uninstall),
                 removeDialog::show,
                 enabled = !module.remove,
-                colors = androidx.wear.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
             )
         }
     }
+}
+
+/** A read-only label above its value, in the label sizes of a Wear button. */
+@Composable
+private fun WearLabelValue(label: String, value: String) {
+    Text(label, style = MaterialTheme.typography.labelMedium)
+    Text(value, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
@@ -248,12 +258,29 @@ internal fun WearAppDetail(
         }
     } else {
         WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
-            item { WearPageHeader(spec, stringResource(R.string.wear_app_details)) }
             val profile = state.profile
             if (profile != null) {
+                // As in the design, the page opens with the app title card instead of a page title.
                 item {
-                    WearInfoCard(spec, modifier = Modifier.fillMaxWidth()) {
-                        WearDetailField(Icons.TwoTone.Badge, group.mainApp.label, group.mainApp.displayIdentifier)
+                    WearModuleInfoCard(spec) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            PackageIcon(
+                                packageName = if (group.isWebViewZygote) "android" else group.mainApp.packageName,
+                                contentDescription = null,
+                                modifier = Modifier.size(ButtonDefaults.LargeIconSize),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(group.mainApp.label, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(
+                                    group.mainApp.displayIdentifier,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
                     }
                 }
                 item { WearSectionHeader(spec, stringResource(R.string.wear_authorization)) }
@@ -265,14 +292,15 @@ internal fun WearAppDetail(
                         onCheckedChange = { save(profile.copy(allowSu = it)) },
                         enabled = !isManager && !group.isWebViewZygote,
                         icon = Icons.TwoTone.Security,
+                        secondaryLabel = stringResource(R.string.wear_root_access),
                     )
                 }
                 item {
                     WearSettingsJumpPageWidget(
                         spec,
-                        stringResource(R.string.profile),
+                        stringResource(R.string.wear_profile_mode),
                         { editingProfile = true },
-                        icon = Icons.TwoTone.Security,
+                        icon = Icons.TwoTone.AccountCircle,
                         enabled = !isManager,
                         description = stringResource(
                             if (if (profile.allowSu) profile.rootUseDefault else profile.nonRootUseDefault) {
@@ -299,8 +327,24 @@ internal fun WearAppDetail(
                     }
                 }
                 item { WearSectionHeader(spec, stringResource(R.string.wear_app_operations)) }
-                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.affected_applications), { detailPage = "affected" }, icon = Icons.TwoTone.Apps) }
-                if (!group.isWebViewZygote) item { WearSettingsJumpPageWidget(spec, stringResource(R.string.wear_app_operations), { detailPage = "actions" }, icon = Icons.TwoTone.Apps) }
+                item {
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(R.string.affected_applications),
+                        { detailPage = "affected" },
+                        description = stringResource(R.string.wear_same_uid_apps),
+                    )
+                }
+                if (!group.isWebViewZygote) {
+                    item {
+                        WearSettingsJumpPageWidget(
+                            spec,
+                            stringResource(R.string.wear_app_operations),
+                            { detailPage = "actions" },
+                            description = stringResource(R.string.wear_app_operations_summary),
+                        )
+                    }
+                }
             } else {
                 item { WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
             }

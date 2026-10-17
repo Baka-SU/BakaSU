@@ -633,6 +633,12 @@
     <string name="wear_filter_sort">筛选与排序</string>
     <string name="wear_sort">排序</string>
     <string name="wear_template_offline">无网络连接</string>
+    <string name="wear_details">详细信息</string>
+    <string name="wear_enable_module">启用模块</string>
+    <string name="wear_root_access">Root 授权</string>
+    <string name="wear_profile_mode">配置模式</string>
+    <string name="wear_same_uid_apps">相同 UID 的应用组</string>
+    <string name="wear_app_operations_summary">启动 · 强制停止</string>
     <string name="wear_template_view_online">查看线上范本</string>
     <string name="wear_template_online">线上范本</string>
     <string name="wear_template_online_empty">暂无线上范本</string>
@@ -653,12 +659,10 @@
     <string name="wear_palette_content">内容</string>
     <string name="wear_color_spec_2021">Spec 2021</string>
     <string name="wear_color_spec_2025">Spec 2025</string>
-    <string name="wear_module_details">模块详情</string>
     <string name="wear_module_information">模块信息</string>
     <string name="wear_module_operations">模块操作</string>
     <string name="wear_description">描述</string>
     <string name="wear_meta_badge">META</string>
-    <string name="wear_app_details">应用详情</string>
     <string name="wear_authorization">授权配置</string>
     <string name="wear_app_operations">应用操作</string>
     <string name="wear_operations">操作</string>
