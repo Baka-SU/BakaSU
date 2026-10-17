@@ -5,6 +5,7 @@ import androidx.compose.animation.core.snap
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +31,7 @@ import androidx.compose.ui.platform.LocalScrollCaptureInProgress
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.LocalScreenIsActive
@@ -79,6 +81,7 @@ fun WearList(
     onClosePanel: (() -> Unit)? = null,
     panelLabel: String? = null,
     snap: Boolean = false,
+    itemSpacing: Dp = WearItemSpacing,
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     content: TransformingLazyColumnScope.(TransformationSpec) -> Unit,
 ) {
@@ -138,6 +141,7 @@ fun WearList(
                     modifier = Modifier.fillMaxSize().graphicsLayer { translationY = animatedOffset },
                     state = listState,
                     contentPadding = contentPadding,
+                    verticalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.Top),
                     flingBehavior = if (snap) {
                         TransformingLazyColumnDefaults.snapFlingBehavior(listState)
                     } else {
@@ -244,6 +248,12 @@ fun WearList(
         ) { listContent(it) }
     }
 }
+
+/** The gap between list items, the TransformingLazyColumn default. */
+val WearItemSpacing = 4.dp
+
+/** A slightly tighter gap for pages made of full-width rows, such as the module details. */
+val WearCompactItemSpacing = 2.dp
 
 private val SquareItemSpec = TransformationVariableSpec(1f)
 private val SquareSmallScreenSpec = ResponsiveTransformationSpec.smallScreen(containerAlpha = SquareItemSpec, contentAlpha = SquareItemSpec, scale = SquareItemSpec)

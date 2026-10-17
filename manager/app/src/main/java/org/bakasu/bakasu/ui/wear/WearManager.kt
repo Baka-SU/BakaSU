@@ -448,9 +448,19 @@ fun WearManagerScreen() {
                                 WearExecuteModulePage(route.id, ::back) { moduleViewModel.dispatch(ModuleUiAction.Refresh()) }
                             }
                             entry<WearRoute.ModuleUpdate> { route ->
-                                WearModuleUpdatePage(modules.moduleList.firstOrNull { it.id == route.id }, ::back) { uri ->
-                                    back()
-                                    open(WearRoute.ModuleInstall(uri))
+                                // The update downloads on the shared module download page.
+                                WearModuleUpdatePage(modules.moduleList.firstOrNull { it.id == route.id }, ::back) { module, update ->
+                                    open(
+                                        WearRoute.OnlineModuleDownload(
+                                            name = module.name,
+                                            fileName = "${module.name}-${update.version}.zip",
+                                            url = update.zipUrl,
+                                            size = 0L,
+                                            sha256 = "",
+                                            version = update.version,
+                                            update = true,
+                                        ),
+                                    )
                                 }
                             }
                             entry<WearRoute.ModuleInstallConfirm> { route ->
@@ -485,14 +495,24 @@ fun WearManagerScreen() {
                                 WearOnlineModuleSectionPage(route.id, route.section, ::back, ::open)
                             }
                             entry<WearRoute.OnlineModuleDownload> { route ->
-                                // A verified file replaces the download page with the install confirmation.
+                                // A repository file goes on to the install confirmation; an update, whose
+                                // page was the confirmation, leaves that page too and installs, as before.
                                 WearModuleDownloadPage(route) { uri ->
                                     back()
-                                    confirmModule(uri)
+                                    if (route.update) {
+                                        if (backStack.lastOrNull() is WearRoute.ModuleUpdate) back()
+                                        open(WearRoute.ModuleInstall(uri))
+                                    } else {
+                                        confirmModule(uri)
+                                    }
                                 }
                             }
                             entry<WearRoute.ModuleSort> {
-                                WearModulePanel(modules, ::back, moduleViewModel::dispatch)
+                                WearModulePanel(modules, ::back, moduleViewModel::dispatch) {
+                                    // The repository replaces the panel, so Back returns to the module list.
+                                    back()
+                                    open(WearRoute.ModuleRepo)
+                                }
                             }
                             entry<WearRoute.ModuleSearch> {
                                 WearTextInputPage(stringResource(R.string.search_modules), modules.search) {
@@ -877,7 +897,6 @@ private fun WearMainPages(
                                 listState = moduleListState,
                                 onModuleClick = { onOpen(WearRoute.Module(it)) },
                                 onInstallClick = onInstallModule,
-                                onRepo = { onOpen(WearRoute.ModuleRepo) },
                                 onWebUi = onWebUi,
                                 onExecute = { onOpen(WearRoute.ModuleAction(it.id)) },
                             )

@@ -5,6 +5,7 @@ import android.os.PowerManager
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.Sort
+import androidx.compose.material.icons.twotone.Cloud
 import androidx.compose.material.icons.twotone.RestartAlt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,6 +30,7 @@ import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 
@@ -73,7 +75,7 @@ internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onA
 }
 
 @Composable
-internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction: (ModuleUiAction) -> Unit) {
+internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction: (ModuleUiAction) -> Unit, onRepo: () -> Unit) {
     val listState = rememberPanelListState()
     WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_sort)) }
@@ -91,6 +93,18 @@ internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction:
                 stringResource(R.string.module_sort_enabled_first),
                 state.sortEnabledFirst,
                 { onAction(ModuleUiAction.Sort(it, state.sortActionFirst)) },
+            )
+        }
+        // The module repository is opened from this panel, labelled like the other panel entries.
+        item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
+        item {
+            WearActionButton(
+                spec,
+                Icons.TwoTone.Cloud,
+                stringResource(R.string.module_repo),
+                onRepo,
+                secondaryText = stringResource(R.string.wear_module_repo_summary),
+                colors = ButtonDefaults.filledTonalButtonColors(),
             )
         }
     }

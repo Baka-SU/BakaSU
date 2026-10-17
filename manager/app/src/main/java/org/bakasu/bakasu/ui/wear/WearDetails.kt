@@ -52,6 +52,7 @@ import org.bakasu.bakasu.ui.viewmodel.AppProfileUiEvent
 import org.bakasu.bakasu.ui.viewmodel.AppProfileViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileConfig
+import org.bakasu.bakasu.ui.wear.component.WearCompactItemSpacing
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -114,7 +115,7 @@ internal fun WearModuleDetail(
         onConfirm = { onRemove(module.id, true) },
     )
     WearResultDialog(error?.takeIf { it.isNotBlank() }?.let { WearResult(it, success = false) }, onErrorShown)
-    WearList(onBack = onBack) { spec ->
+    WearList(onBack = onBack, itemSpacing = WearCompactItemSpacing) { spec ->
         // As in the design, the page opens with the module title card instead of a page title.
         item {
             WearModuleInfoCard(spec) {

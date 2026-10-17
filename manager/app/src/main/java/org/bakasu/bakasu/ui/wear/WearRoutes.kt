@@ -48,7 +48,10 @@ sealed interface WearRoute : NavKey {
     @Serializable
     data class OnlineModuleSection(val id: String, val section: String) : WearRoute
 
-    /** The download of one repository module file, with what the file must match. */
+    /**
+     * The download of one module file, with what the file must match. Repository downloads and
+     * module updates share it; an [update] installs right away, as the update page already asked.
+     */
     @Serializable
     data class OnlineModuleDownload(
         val name: String,
@@ -56,6 +59,8 @@ sealed interface WearRoute : NavKey {
         val url: String,
         val size: Long,
         val sha256: String,
+        val version: String = "",
+        val update: Boolean = false,
     ) : WearRoute
 
     @Serializable

@@ -747,10 +747,9 @@
     <string name="wear_uninstall_summary">重启后移除</string>
     <string name="wear_update_to">更新到 %1$s</string>
     <string name="wear_update_download">下载更新</string>
-    <string name="wear_update_downloading">正在下载更新</string>
     <string name="wear_update_reading_changelog">正在读取更新日志</string>
     <string name="wear_update_changelog_unavailable">无法读取更新日志</string>
-    <string name="wear_update_retry">下载失败，点按重试</string>
+    <string name="wear_module_repo_summary">浏览与下载在线模块</string>
     <string name="wear_download_confirm_title">下载此模块？</string>
     <string name="wear_download_then_install">下载后确认安装</string>
     <string name="wear_browser_open_failed">无法打开浏览器</string>

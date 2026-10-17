@@ -17,7 +17,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,32 +30,23 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
-import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.ConfirmationDialogDefaults
 import androidx.wear.compose.material3.FailureConfirmationDialog
 import androidx.wear.compose.material3.Icon
-import androidx.wear.compose.material3.LocalContentColor
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.SuccessConfirmationDialog
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.confirmationDialogCurvedText
 import androidx.wear.compose.material3.lazy.transformedHeight
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.file.ZipFileDetector
 import org.bakasu.bakasu.data.file.ZipFileInfo
-import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.InstalledModule
-import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
+import org.bakasu.bakasu.domain.model.ModuleUpdateMetadata
 import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
-import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiAction
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
@@ -77,19 +67,14 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
- * A module update with the phone's use cases: the changelog is read first, then the ZIP downloads
- * and [onReady] installs it.
+ * A module update with the phone's use cases: the changelog is read first, then [onDownload]
+ * downloads the ZIP on the shared module download page, which installs it.
  */
 @Composable
-internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, onReady: (String) -> Unit) {
+internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, onDownload: (InstalledModule, ModuleUpdateMetadata) -> Unit) {
     val fetchRemoteText = koinInject<FetchRemoteTextUseCase>()
-    val enqueueDownload = koinInject<EnqueueDownloadUseCase>()
-    val observeDownload = koinInject<ObserveDownloadUseCase>()
-    val scope = rememberCoroutineScope()
     var changelog by rememberSaveable { mutableStateOf<String?>(null) }
     var changelogError by rememberSaveable { mutableStateOf<String?>(null) }
-    var progress by remember { mutableStateOf<Int?>(null) }
-    var failed by remember { mutableStateOf(false) }
     val update = module?.moduleUpdate
     LaunchedEffect(update?.changelog) {
         val url = update?.changelog ?: return@LaunchedEffect
@@ -146,45 +131,19 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
                     }
                 }
             }
-            // Like the phone, the update is offered only after its changelog has been read. The
-            // button shows its own progress while the ZIP downloads, and ignores taps meanwhile.
+            // Like the phone, the update is offered only after its changelog has been read; the
+            // download itself runs on the shared module download page.
             item {
-                val downloading = progress != null
                 Button(
-                    onClick = {
-                        if (progress != null) return@Button
-                        failed = false
-                        progress = 0
-                        scope.launch {
-                            val id = enqueueDownload(update.zipUrl, "${module.name}-${update.version}.zip")
-                            val result = observeDownload(id).filterNotNull().onEach { progress = it.progress }
-                                .first { it.status == DownloadStatus.COMPLETED || it.status == DownloadStatus.FAILED }
-                            progress = null
-                            result.resultUri?.let(onReady) ?: run { failed = true }
-                        }
-                    },
+                    onClick = { onDownload(module, update) },
                     enabled = changelog != null,
                     modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
                         .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
                     transformation = SurfaceTransformation(spec),
-                    icon = {
-                        if (downloading) {
-                            // The ring reads the progress state when it draws, so it follows the download.
-                            CircularProgressIndicator(
-                                progress = { (progress ?: 0) / 100f },
-                                modifier = Modifier.size(ButtonDefaults.IconSize),
-                                colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current),
-                                strokeWidth = CircularProgressIndicatorDefaults.smallStrokeWidth,
-                            )
-                        } else {
-                            Icon(Icons.TwoTone.Download, contentDescription = null)
-                        }
-                    },
+                    icon = { Icon(Icons.TwoTone.Download, contentDescription = null) },
                     secondaryLabel = {
                         Text(
                             when {
-                                downloading -> stringResource(R.string.wear_download_percent, progress ?: 0)
-                                failed -> stringResource(R.string.wear_update_retry)
                                 changelogError != null -> stringResource(R.string.wear_update_changelog_unavailable)
                                 changelog == null -> stringResource(R.string.wear_update_reading_changelog)
                                 else -> stringResource(R.string.wear_update_to, update.version)
@@ -194,11 +153,7 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
                         )
                     },
                 ) {
-                    Text(
-                        stringResource(if (downloading) R.string.wear_update_downloading else R.string.wear_update_download),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Text(stringResource(R.string.wear_update_download), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.twotone.Add
-import androidx.compose.material.icons.twotone.Cloud
 import androidx.compose.material.icons.twotone.Delete
 import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Extension
@@ -59,7 +58,6 @@ internal fun WearModulesPage(
     onModuleClick: (String) -> Unit,
     onInstallClick: () -> Unit,
     onSearch: () -> Unit,
-    onRepo: () -> Unit,
     onSort: () -> Unit,
     onWebUi: (InstalledModule) -> Unit = {},
     onExecute: (InstalledModule) -> Unit = {},
@@ -89,7 +87,6 @@ internal fun WearModulesPage(
                 ),
             )
         }
-        item { WearIconButtonGroup(spec, listOf(WearIconAction(Icons.TwoTone.Cloud, stringResource(R.string.module_repo), onRepo))) }
         if (!error.isNullOrBlank()) {
             item {
                 WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)

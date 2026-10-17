@@ -777,10 +777,9 @@
     <string name="wear_update_version" translatable="false">%1$s → %2$s</string>
     <string name="wear_update_to">Update to %1$s</string>
     <string name="wear_update_download">Download update</string>
-    <string name="wear_update_downloading">Downloading update</string>
     <string name="wear_update_reading_changelog">Reading the changelog</string>
     <string name="wear_update_changelog_unavailable">Changelog unavailable</string>
-    <string name="wear_update_retry">Download failed, tap to retry</string>
+    <string name="wear_module_repo_summary">Browse and download online modules</string>
     <string name="wear_download_confirm_title">Download this module?</string>
     <string name="wear_download_then_install">Download, then confirm installing</string>
     <string name="wear_browser_open_failed">Couldn\'t open the browser</string>

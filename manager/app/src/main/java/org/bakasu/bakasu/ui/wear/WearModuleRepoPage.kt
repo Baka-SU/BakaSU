@@ -29,7 +29,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,7 +44,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
-import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.CompactButton
@@ -56,16 +54,9 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.confirmationDialogCurvedText
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.domain.model.DownloadStatus
+import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
-import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
-import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
-import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
@@ -89,7 +80,6 @@ import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -222,7 +212,8 @@ private fun catalogModuleViewModel(moduleId: String): ModuleDetailViewModel = ko
 
 /** The download confirmation; confirming opens the download route for the chosen file. */
 @Composable
-private fun rememberModuleDownload(moduleName: String, onOpen: (WearRoute) -> Unit): (ModuleReleaseAsset) -> Unit {
+private fun rememberModuleDownload(moduleName: String, onOpen: (WearRoute) -> Unit): (ModuleRelease, ModuleReleaseAsset) -> Unit {
+    var pendingRelease by remember { mutableStateOf<ModuleRelease?>(null) }
     var pendingAsset by remember { mutableStateOf<ModuleReleaseAsset?>(null) }
     val thenInstall = stringResource(R.string.wear_download_then_install)
     val confirmDialog = rememberCustomDialog { dismiss ->
@@ -241,14 +232,16 @@ private fun rememberModuleDownload(moduleName: String, onOpen: (WearRoute) -> Un
                 AlertDialogDefaults.ConfirmButton(
                     onClick = {
                         dismiss()
-                        asset?.let { onOpen(WearRoute.OnlineModuleDownload(moduleName, it.name, it.downloadUrl, it.size, it.sha256)) }
+                        val version = pendingRelease?.let { it.name.ifBlank { it.tagName } }.orEmpty()
+                        asset?.let { onOpen(WearRoute.OnlineModuleDownload(moduleName, it.name, it.downloadUrl, it.size, it.sha256, version)) }
                     },
                 )
             },
             dismissButton = { AlertDialogDefaults.DismissButton(onClick = dismiss) },
         )
     }
-    return { asset ->
+    return { release, asset ->
+        pendingRelease = release
         pendingAsset = asset
         confirmDialog.show()
     }
@@ -309,12 +302,13 @@ internal fun WearOnlineModulePage(
                     }
                 }
             }
-            val latest = module.releases.firstOrNull { it.assets.isNotEmpty() }?.assets?.firstOrNull()
+            val latestRelease = module.releases.firstOrNull { it.assets.isNotEmpty() }
+            val latest = latestRelease?.assets?.firstOrNull()
             item {
                 WearIconButtonGroup(
                     spec,
                     listOfNotNull(
-                        WearIconAction(Icons.TwoTone.Download, stringResource(R.string.wear_download), { latest?.let(requestDownload) }, latest != null, primary = true),
+                        WearIconAction(Icons.TwoTone.Download, stringResource(R.string.wear_download), { if (latestRelease != null && latest != null) requestDownload(latestRelease, latest) }, latest != null, primary = true),
                         module.sourceUrl.takeIf { it.isNotBlank() }?.let { url ->
                             WearIconAction(Icons.TwoTone.Code, stringResource(R.string.source_code), { onLink(url) })
                         },
@@ -382,7 +376,7 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, section: String, onBa
                                 spec,
                                 Icons.TwoTone.Download,
                                 asset.name,
-                                { requestDownload(asset) },
+                                { requestDownload(release, asset) },
                                 secondaryText = formatFileSize(asset.size),
                             )
                         }
@@ -420,6 +414,7 @@ internal fun WearModuleDownloadPage(route: WearRoute.OnlineModuleDownload, onDow
     }
     WearModuleDownloadScreen(
         route.name,
+        route.version,
         download,
         // Read through the state when the ring draws, not captured once.
         fraction = { downloadState.value.fraction ?: 1f.takeIf { downloadState.value.phase == ModuleDownloadPhase.VERIFYING } ?: 0f },
@@ -452,7 +447,7 @@ private fun WearModuleIcon(size: Dp) {
  * A failure says why and offers to retry; swiping back leaves.
  */
 @Composable
-private fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState, fraction: () -> Float, onRetry: () -> Unit) {
+private fun WearModuleDownloadScreen(name: String, version: String, state: ModuleDownloadUiState, fraction: () -> Float, onRetry: () -> Unit) {
     val failed = state.phase == ModuleDownloadPhase.FAILED || state.phase == ModuleDownloadPhase.VERIFY_FAILED
     val sizeKnown = state.totalBytes > 0L
     ScreenScaffold {
@@ -481,6 +476,16 @@ private fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (version.isNotBlank()) {
+                    Text(
+                        version,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 when {
                     failed -> {
                         Text(
