@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -91,7 +91,7 @@ internal fun WearBrowserPage(url: String, onBack: () -> Unit, onUnavailable: () 
     val focus = remember { FocusRequester() }
     LaunchedEffect(webView) { focus.requestFocus() }
     ScreenScaffold(scrollInfoProvider = provider, edgeButton = {
-        EdgeButton(onClick = onBack) { Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back)) }
+        EdgeButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, stringResource(R.string.back)) }
     }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             AndroidView(

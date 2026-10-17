@@ -3,12 +3,12 @@ package org.bakasu.bakasu.ui.wear
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Add
-import androidx.compose.material.icons.twotone.Error
-import androidx.compose.material.icons.twotone.Extension
-import androidx.compose.material.icons.twotone.Language
-import androidx.compose.material.icons.twotone.PlayArrow
-import androidx.compose.material.icons.twotone.Search
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Error
+import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -80,19 +80,19 @@ internal fun WearModulesPage(
             WearIconButtonGroup(
                 spec,
                 listOf(
-                    WearIconAction(Icons.TwoTone.Search, stringResource(R.string.search_modules), onSearch),
-                    WearIconAction(Icons.TwoTone.Add, stringResource(R.string.install), onInstallClick),
+                    WearIconAction(Icons.Rounded.Search, stringResource(R.string.search_modules), onSearch),
+                    WearIconAction(Icons.Rounded.Add, stringResource(R.string.install), onInstallClick),
                 ),
             )
         }
         if (!error.isNullOrBlank()) {
             item {
-                WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
+                WearStatusItem(spec, Icons.Rounded.Error, error, tone = WearStatusTone.ERROR)
             }
         }
         if (state.moduleList.isEmpty() && error.isNullOrBlank()) {
             item {
-                WearEmptyState(spec, Icons.TwoTone.Extension, stringResource(R.string.module_empty))
+                WearEmptyState(spec, Icons.Rounded.Extension, stringResource(R.string.module_empty))
             }
         }
         items(state.moduleList, key = { it.id }) { module ->
@@ -121,7 +121,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             if (module.hasWebUi && onWebUi != null) {
                 add(
                     WearIconAction(
-                        Icons.TwoTone.Language,
+                        Icons.Rounded.Language,
                         stringResource(R.string.wear_webui),
                     ) { onWebUi(module) },
                 )
@@ -129,7 +129,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             if (module.hasActionScript && onExecute != null) {
                 add(
                     WearIconAction(
-                        Icons.TwoTone.PlayArrow,
+                        Icons.Rounded.PlayArrow,
                         stringResource(R.string.action),
                     ) { onExecute(module) },
                 )
@@ -155,7 +155,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             // A reveal row owns its transformation; a standalone row owns its own.
             transformation = if (actions.isEmpty()) SurfaceTransformation(spec) else null,
             colors = if (module.enabled) ButtonDefaults.filledVariantButtonColors() else ButtonDefaults.filledTonalButtonColors(),
-            icon = { Icon(Icons.TwoTone.Extension, contentDescription = null) },
+            icon = { Icon(Icons.Rounded.Extension, contentDescription = null) },
             // The metamodule label follows the version on its baseline; a long version is cut so the
             // label always shows whole.
             secondaryLabel = if (details.isNotBlank() || module.metamodule) {

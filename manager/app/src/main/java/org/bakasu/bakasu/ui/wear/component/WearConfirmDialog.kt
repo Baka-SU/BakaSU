@@ -2,8 +2,8 @@ package org.bakasu.bakasu.ui.wear.component
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Info
-import androidx.compose.material.icons.twotone.Warning
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
@@ -46,7 +46,7 @@ fun rememberWearConfirmDialog(
 ): DialogHandle = rememberCustomDialog { dismiss ->
     val icon: @Composable () -> Unit = {
         Icon(
-            if (destructive) Icons.TwoTone.Warning else Icons.TwoTone.Info,
+            if (destructive) Icons.Rounded.Warning else Icons.Rounded.Info,
             contentDescription = null,
             tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
         )

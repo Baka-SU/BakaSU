@@ -2,33 +2,33 @@ package org.bakasu.bakasu.ui.wear
 
 import android.os.Build
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.Article
-import androidx.compose.material.icons.twotone.Adb
-import androidx.compose.material.icons.twotone.Apps
-import androidx.compose.material.icons.twotone.AspectRatio
-import androidx.compose.material.icons.twotone.BugReport
-import androidx.compose.material.icons.twotone.Build
-import androidx.compose.material.icons.twotone.Delete
-import androidx.compose.material.icons.twotone.ElectricalServices
-import androidx.compose.material.icons.twotone.Extension
-import androidx.compose.material.icons.twotone.Fence
-import androidx.compose.material.icons.twotone.FolderDelete
-import androidx.compose.material.icons.twotone.FolderOff
-import androidx.compose.material.icons.twotone.FolderOpen
-import androidx.compose.material.icons.twotone.FormatSize
-import androidx.compose.material.icons.twotone.Info
-import androidx.compose.material.icons.twotone.Language
-import androidx.compose.material.icons.twotone.Palette
-import androidx.compose.material.icons.twotone.Policy
-import androidx.compose.material.icons.twotone.RemoveCircle
-import androidx.compose.material.icons.twotone.RemoveModerator
-import androidx.compose.material.icons.twotone.RestartAlt
-import androidx.compose.material.icons.twotone.Science
-import androidx.compose.material.icons.twotone.Security
-import androidx.compose.material.icons.twotone.Settings
-import androidx.compose.material.icons.twotone.Translate
-import androidx.compose.material.icons.twotone.Update
-import androidx.compose.material.icons.twotone.VisibilityOff
+import androidx.compose.material.icons.rounded.Adb
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Article
+import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.DoNotDisturbOn
+import androidx.compose.material.icons.rounded.ElectricalServices
+import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.Fence
+import androidx.compose.material.icons.rounded.FolderDelete
+import androidx.compose.material.icons.rounded.FolderOff
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.FormatSize
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Policy
+import androidx.compose.material.icons.rounded.RemoveModerator
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.Science
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Translate
+import androidx.compose.material.icons.rounded.Update
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -95,54 +95,54 @@ private data class SettingsPageLink(
 )
 
 private fun settingsToggleIcon(label: Int): ImageVector = when (label) {
-    R.string.settings_check_manager_update -> Icons.TwoTone.Update
-    R.string.settings_check_beta_update -> Icons.TwoTone.Science
-    R.string.settings_check_module_update -> Icons.TwoTone.Extension
-    R.string.settings_soft_reboot -> Icons.TwoTone.RestartAlt
-    R.string.icon_switch_title -> Icons.TwoTone.Apps
-    R.string.settings_kernel_umount -> Icons.TwoTone.RemoveCircle
-    R.string.settings_umount_modules_default -> Icons.TwoTone.FolderDelete
-    R.string.settings_sulog -> Icons.AutoMirrored.TwoTone.Article
-    R.string.settings_selinux_hide -> Icons.TwoTone.Policy
-    R.string.settings_adb_root -> Icons.TwoTone.Adb
-    R.string.settings_auto_jailbreak -> Icons.TwoTone.ElectricalServices
-    else -> Icons.TwoTone.Settings
+    R.string.settings_check_manager_update -> Icons.Rounded.Update
+    R.string.settings_check_beta_update -> Icons.Rounded.Science
+    R.string.settings_check_module_update -> Icons.Rounded.Extension
+    R.string.settings_soft_reboot -> Icons.Rounded.RestartAlt
+    R.string.icon_switch_title -> Icons.Rounded.Apps
+    R.string.settings_kernel_umount -> Icons.Rounded.DoNotDisturbOn
+    R.string.settings_umount_modules_default -> Icons.Rounded.FolderDelete
+    R.string.settings_sulog -> Icons.Rounded.Article
+    R.string.settings_selinux_hide -> Icons.Rounded.Policy
+    R.string.settings_adb_root -> Icons.Rounded.Adb
+    R.string.settings_auto_jailbreak -> Icons.Rounded.ElectricalServices
+    else -> Icons.Rounded.Settings
 }
 
 private fun settingsCategoryIcon(category: WearSettingsCategory): ImageVector = when (category) {
-    WearSettingsCategory.General -> Icons.TwoTone.Settings
-    WearSettingsCategory.Security -> Icons.TwoTone.Security
-    WearSettingsCategory.Advanced -> Icons.TwoTone.Build
-    WearSettingsCategory.Display -> Icons.TwoTone.Palette
+    WearSettingsCategory.General -> Icons.Rounded.Settings
+    WearSettingsCategory.Security -> Icons.Rounded.Security
+    WearSettingsCategory.Advanced -> Icons.Rounded.Build
+    WearSettingsCategory.Display -> Icons.Rounded.Palette
 }
 
 private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
-    WearRoute.DynamicManager -> Icons.TwoTone.Security
+    WearRoute.DynamicManager -> Icons.Rounded.Security
 
-    WearRoute.Color -> Icons.TwoTone.Palette
+    WearRoute.Color -> Icons.Rounded.Palette
 
-    WearRoute.Dpi -> Icons.TwoTone.FormatSize
+    WearRoute.Dpi -> Icons.Rounded.FormatSize
 
-    WearRoute.Logs -> Icons.AutoMirrored.TwoTone.Article
+    WearRoute.Logs -> Icons.Rounded.Article
 
-    WearRoute.Bugreport -> Icons.TwoTone.BugReport
+    WearRoute.Bugreport -> Icons.Rounded.BugReport
 
-    WearRoute.Templates -> Icons.TwoTone.Fence
+    WearRoute.Templates -> Icons.Rounded.Fence
 
-    WearRoute.Umount -> Icons.TwoTone.FolderOff
+    WearRoute.Umount -> Icons.Rounded.FolderOff
 
-    WearRoute.Uninstall -> Icons.TwoTone.Delete
+    WearRoute.Uninstall -> Icons.Rounded.Delete
 
     is WearRoute.Selection -> when (route.selection) {
-        WearSelection.ScreenShape -> Icons.TwoTone.AspectRatio
-        WearSelection.Language -> Icons.TwoTone.Translate
-        WearSelection.LinkMode -> Icons.TwoTone.Language
-        WearSelection.PickerMode -> Icons.TwoTone.FolderOpen
-        WearSelection.SuCompat -> Icons.TwoTone.RemoveModerator
-        WearSelection.BackAnimation, WearSelection.BackDirection, WearSelection.Palette, WearSelection.ColorSpec -> Icons.TwoTone.Settings
+        WearSelection.ScreenShape -> Icons.Rounded.AspectRatio
+        WearSelection.Language -> Icons.Rounded.Translate
+        WearSelection.LinkMode -> Icons.Rounded.Language
+        WearSelection.PickerMode -> Icons.Rounded.FolderOpen
+        WearSelection.SuCompat -> Icons.Rounded.RemoveModerator
+        WearSelection.BackAnimation, WearSelection.BackDirection, WearSelection.Palette, WearSelection.ColorSpec -> Icons.Rounded.Settings
     }
 
-    else -> Icons.TwoTone.Settings
+    else -> Icons.Rounded.Settings
 }
 
 /**
@@ -207,7 +207,7 @@ internal fun WearSettingsPage(
                         spec,
                         stringResource(R.string.susfs_config_setting_title),
                         { onOpen(WearRoute.SuSFS) },
-                        icon = Icons.TwoTone.VisibilityOff,
+                        icon = Icons.Rounded.VisibilityOff,
                     )
                 }
             }
@@ -217,7 +217,7 @@ internal fun WearSettingsPage(
                     spec,
                     stringResource(R.string.about),
                     { onOpen(WearRoute.About) },
-                    icon = Icons.TwoTone.Info,
+                    icon = Icons.Rounded.Info,
                     description = version,
                 )
             }

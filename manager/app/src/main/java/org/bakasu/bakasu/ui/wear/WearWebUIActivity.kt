@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -212,7 +212,7 @@ private fun WearWebContent(state: WebUIState, onBack: () -> Unit) {
     val configuration = LocalConfiguration.current
     ScreenScaffold(scrollInfoProvider = provider, edgeButton = {
         EdgeButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back))
+            Icon(Icons.Rounded.ArrowBack, stringResource(R.string.back))
         }
     }) { padding ->
         BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {

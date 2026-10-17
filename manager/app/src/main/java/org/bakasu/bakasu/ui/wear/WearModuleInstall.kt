@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Extension
+import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -159,7 +159,7 @@ internal fun WearModuleInstallConfirmDialog(installer: WearModuleInstaller) {
         onDismissRequest = installer::dismissConfirmation,
         icon = {
             Icon(
-                Icons.TwoTone.Extension,
+                Icons.Rounded.Extension,
                 contentDescription = null,
                 modifier = Modifier.size(ButtonDefaults.LargeIconSize),
                 tint = MaterialTheme.colorScheme.primary,

@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -81,7 +81,7 @@ fun WearPullIndicator(progress: Float, closing: Boolean, modifier: Modifier = Mo
             )
         }
         Icon(
-            if (closing) Icons.Default.Close else Icons.Default.KeyboardArrowDown,
+            if (closing) Icons.Rounded.Close else Icons.Rounded.KeyboardArrowDown,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onPrimaryContainer,
             modifier = Modifier.size(20.dp).graphicsLayer { if (!closing) rotationZ = flip },

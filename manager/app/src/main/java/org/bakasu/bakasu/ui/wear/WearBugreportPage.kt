@@ -5,8 +5,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Save
-import androidx.compose.material.icons.twotone.Share
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,13 +65,13 @@ internal fun WearBugreportPage(onBack: () -> Unit) {
     WearList(isLoading = busy, onBack = onBack) { spec ->
         item { WearPageHeader(spec, sendLog) }
         item {
-            WearActionButton(spec, Icons.TwoTone.Save, stringResource(R.string.save_log), {
+            WearActionButton(spec, Icons.Rounded.Save, stringResource(R.string.save_log), {
                 val current = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm"))
                 runCatching { exportLauncher.launch("KernelSU_bugreport_$current.tar.gz") }.onFailure { result = failed }
             })
         }
         item {
-            WearActionButton(spec, Icons.TwoTone.Share, sendLog, {
+            WearActionButton(spec, Icons.Rounded.Share, sendLog, {
                 run {
                     val bugreport = withContext(Dispatchers.IO) { generateBugreport() }
                     val uri = FileProvider.getUriForFile(context, "${BuildConfig.APPLICATION_ID}.fileprovider", bugreport)

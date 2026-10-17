@@ -7,7 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.SystemUpdate
+import androidx.compose.material.icons.rounded.SystemUpdateAlt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,7 +70,7 @@ fun WearManagerUpdateDialog(update: ManagerUpdateInfo?) {
         AlertDialog(
             visible = true,
             onDismissRequest = dismiss,
-            icon = { Icon(Icons.TwoTone.SystemUpdate, contentDescription = null) },
+            icon = { Icon(Icons.Rounded.SystemUpdateAlt, contentDescription = null) },
             title = { Text(stringResource(if (stable) R.string.manager_update_stable else R.string.manager_update_beta)) },
             text = {
                 Text(

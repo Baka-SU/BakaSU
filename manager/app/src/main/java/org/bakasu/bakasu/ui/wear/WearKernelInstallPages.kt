@@ -5,18 +5,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.ArrowForward
-import androidx.compose.material.icons.automirrored.twotone.Article
-import androidx.compose.material.icons.twotone.AutoFixHigh
-import androidx.compose.material.icons.twotone.CheckCircle
-import androidx.compose.material.icons.twotone.Download
-import androidx.compose.material.icons.twotone.Error
-import androidx.compose.material.icons.twotone.FileOpen
-import androidx.compose.material.icons.twotone.FileUpload
-import androidx.compose.material.icons.twotone.Memory
-import androidx.compose.material.icons.twotone.Refresh
-import androidx.compose.material.icons.twotone.Save
-import androidx.compose.material.icons.twotone.Warning
+import androidx.compose.material.icons.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Article
+import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Error
+import androidx.compose.material.icons.rounded.FileOpen
+import androidx.compose.material.icons.rounded.Memory
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Upload
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,7 +72,7 @@ internal fun WearInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit) {
                 spec,
                 stringResource(R.string.Lkm_install_methods),
                 { onOpen(WearRoute.LkmInstall) },
-                icon = Icons.TwoTone.Memory,
+                icon = Icons.Rounded.Memory,
                 description = stringResource(R.string.select_file_tip, environment.defaultPartition),
             )
         }
@@ -82,7 +82,7 @@ internal fun WearInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit) {
                 spec,
                 stringResource(R.string.GKI_install_methods),
                 { onOpen(WearRoute.Ak3Install) },
-                icon = Icons.TwoTone.FileUpload,
+                icon = Icons.Rounded.Upload,
                 enabled = environment.rootAvailable,
                 description = stringResource(if (environment.rootAvailable) R.string.ak3_select_zip else R.string.root_required),
             )
@@ -226,7 +226,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
                         spec,
                         stringResource(R.string.install_select_partition),
                         { choosing = "partition" },
-                        icon = Icons.TwoTone.AutoFixHigh,
+                        icon = Icons.Rounded.AutoFixHigh,
                         description = "$shownPartition ($suffix)",
                     )
                 }
@@ -237,7 +237,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
                     stringResource(R.string.install_upload_lkm_file),
                     lkmUri != null,
                     { if (it) selectLkm.launch(arrayOf("application/octet-stream")) else lkmUri = null },
-                    icon = Icons.TwoTone.FileOpen,
+                    icon = Icons.Rounded.FileOpen,
                     secondaryLabel = lkmUri?.toUri()?.fileName()
                         ?: stringResource(R.string.install_upload_lkm_file_summary),
                 )
@@ -246,7 +246,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
                 item {
                     WearStatusItem(
                         spec,
-                        Icons.TwoTone.Warning,
+                        Icons.Rounded.Warning,
                         stringResource(R.string.install_only_support_ko_file),
                         tone = WearStatusTone.ERROR,
                     )
@@ -283,7 +283,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
             }
             wearGroupGap("next-gap")
             item {
-                WearActionButton(spec, Icons.AutoMirrored.TwoTone.ArrowForward, stringResource(R.string.install_next), {
+                WearActionButton(spec, Icons.Rounded.ArrowForward, stringResource(R.string.install_next), {
                     if (environment.isGki && lkmUri == null && environment.currentKmi.isBlank()) {
                         choosing = "kmi"
                     } else {
@@ -324,7 +324,7 @@ internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
                 spec,
                 stringResource(R.string.horizon_kernel),
                 { selectZip.launch(arrayOf("application/zip", "application/octet-stream")) },
-                icon = Icons.TwoTone.FileUpload,
+                icon = Icons.Rounded.Upload,
                 description = zipUri?.toUri()?.fileName() ?: stringResource(R.string.ak3_select_zip),
             )
         }
@@ -363,7 +363,7 @@ internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
         }
         wearGroupGap("next-gap")
         item {
-            WearActionButton(spec, Icons.AutoMirrored.TwoTone.ArrowForward, stringResource(R.string.install_next), {
+            WearActionButton(spec, Icons.Rounded.ArrowForward, stringResource(R.string.install_next), {
                 zipUri?.let { onOpen(WearRoute.KernelFlash(it, slot, skipKsud)) }
             }, enabled = ready, colors = ButtonDefaults.buttonColors())
         }
@@ -443,7 +443,7 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
                     spec,
                     stringResource(R.string.flashing),
                     secondaryLabel = flash.currentStep.ifBlank { null },
-                    icon = Icons.TwoTone.Download,
+                    icon = Icons.Rounded.Download,
                     onClick = { showLog = true },
                 )
             }
@@ -454,13 +454,13 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
                         spec,
                         stringResource(R.string.horizon_flash_complete),
                         secondaryLabel = stringResource(R.string.wear_kernel_complete_summary),
-                        icon = Icons.TwoTone.CheckCircle,
+                        icon = Icons.Rounded.CheckCircle,
                     )
                 }
                 item {
                     WearActionButton(
                         spec,
-                        Icons.TwoTone.Save,
+                        Icons.Rounded.Save,
                         stringResource(R.string.save_log),
                         saveLog,
                         secondaryText = stringResource(R.string.wear_save_log_summary),
@@ -469,7 +469,7 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
                 item {
                     WearActionButton(
                         spec,
-                        Icons.TwoTone.Refresh,
+                        Icons.Rounded.Refresh,
                         stringResource(R.string.wear_reboot_device),
                         { viewModel.dispatch(KernelFlashUiAction.Reboot) },
                         secondaryText = stringResource(R.string.wear_reboot_apply_kernel),
@@ -484,13 +484,13 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
                         spec,
                         stringResource(R.string.flash_failed),
                         secondaryLabel = flash.error,
-                        icon = Icons.TwoTone.Error,
+                        icon = Icons.Rounded.Error,
                     )
                 }
                 item {
                     WearActionButton(
                         spec,
-                        Icons.AutoMirrored.TwoTone.Article,
+                        Icons.Rounded.Article,
                         stringResource(R.string.wear_check_log),
                         { showLog = true },
                         secondaryText = stringResource(R.string.wear_check_log_summary),
@@ -499,7 +499,7 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
                 item {
                     WearActionButton(
                         spec,
-                        Icons.TwoTone.Save,
+                        Icons.Rounded.Save,
                         stringResource(R.string.save_log),
                         saveLog,
                         secondaryText = stringResource(R.string.wear_save_log_summary),
@@ -509,7 +509,7 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
                 item {
                     WearActionButton(
                         spec,
-                        Icons.TwoTone.Refresh,
+                        Icons.Rounded.Refresh,
                         stringResource(R.string.wear_retry),
                         onBack,
                         secondaryText = stringResource(R.string.wear_retry_install_summary),
@@ -522,7 +522,7 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
             item {
                 WearStatusItem(
                     spec,
-                    Icons.TwoTone.Warning,
+                    Icons.Rounded.Warning,
                     message.ifBlank { stringResource(R.string.failed_reboot) },
                     tone = WearStatusTone.ERROR,
                 )

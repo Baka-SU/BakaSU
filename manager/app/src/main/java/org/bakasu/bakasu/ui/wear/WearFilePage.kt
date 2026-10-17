@@ -11,15 +11,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.DriveFileRenameOutline
-import androidx.compose.material.icons.twotone.Error
-import androidx.compose.material.icons.twotone.FilePresent
-import androidx.compose.material.icons.twotone.Folder
-import androidx.compose.material.icons.twotone.FolderOff
-import androidx.compose.material.icons.twotone.FolderZip
-import androidx.compose.material.icons.twotone.Image
-import androidx.compose.material.icons.twotone.Refresh
-import androidx.compose.material.icons.twotone.SubdirectoryArrowLeft
+import androidx.compose.material.icons.rounded.DriveFileRenameOutline
+import androidx.compose.material.icons.rounded.Error
+import androidx.compose.material.icons.rounded.FilePresent
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.FolderOff
+import androidx.compose.material.icons.rounded.FolderZip
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.SubdirectoryArrowLeft
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -119,7 +119,7 @@ internal fun WearFilePage(
         AlertDialog(
             visible = true,
             onDismissRequest = close,
-            icon = { Icon(Icons.TwoTone.Error, contentDescription = null) },
+            icon = { Icon(Icons.Rounded.Error, contentDescription = null) },
             title = { Text(stringResource(R.string.wear_file_access_failed)) },
             text = { Text(state.error ?: stringResource(R.string.operation_failed)) },
             confirmButton = {
@@ -129,7 +129,7 @@ internal fun WearFilePage(
                         viewModel.clearError()
                         lastOperation?.invoke()
                     },
-                ) { Icon(Icons.TwoTone.Refresh, contentDescription = stringResource(R.string.wear_retry)) }
+                ) { Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.wear_retry)) }
             },
             dismissButton = { AlertDialogDefaults.DismissButton(onClick = close) },
         )
@@ -169,7 +169,7 @@ internal fun WearFilePage(
         AlertDialog(
             visible = true,
             onDismissRequest = cancel,
-            icon = { Icon(Icons.TwoTone.Folder, contentDescription = null) },
+            icon = { Icon(Icons.Rounded.Folder, contentDescription = null) },
             title = { Text(stringResource(R.string.wear_storage_permission_title)) },
             text = { Text(stringResource(R.string.wear_storage_permission_message)) },
             confirmButton = {
@@ -230,7 +230,7 @@ internal fun WearFilePage(
                     WearChip(
                         spec,
                         stringResource(R.string.wear_parent_directory),
-                        icon = Icons.TwoTone.SubdirectoryArrowLeft,
+                        icon = Icons.Rounded.SubdirectoryArrowLeft,
                         emphasis = WearChipEmphasis.HIGH,
                         onClick = { perform { viewModel.load(parent, mimeTypes, saving) } },
                     )
@@ -238,7 +238,7 @@ internal fun WearFilePage(
             }
             if (directory != null && directory.entries.isEmpty()) {
                 item {
-                    WearStatusItem(spec, Icons.TwoTone.FolderOff, stringResource(R.string.wear_directory_empty))
+                    WearStatusItem(spec, Icons.Rounded.FolderOff, stringResource(R.string.wear_directory_empty))
                 }
             }
             items(directory?.entries.orEmpty(), key = { it.path }) { entry ->
@@ -246,10 +246,10 @@ internal fun WearFilePage(
                 WearActionButton(
                     spec,
                     icon = when {
-                        entry.directory -> Icons.TwoTone.Folder
-                        matchesMimeType(mimeType, listOf("image/*")) -> Icons.TwoTone.Image
-                        mimeType == "application/zip" -> Icons.TwoTone.FolderZip
-                        else -> Icons.TwoTone.FilePresent
+                        entry.directory -> Icons.Rounded.Folder
+                        matchesMimeType(mimeType, listOf("image/*")) -> Icons.Rounded.Image
+                        mimeType == "application/zip" -> Icons.Rounded.FolderZip
+                        else -> Icons.Rounded.FilePresent
                     },
                     label = entry.name,
                     onClick = {
@@ -263,13 +263,13 @@ internal fun WearFilePage(
                 wearGroupGap("save-gap")
                 if (directory?.writable == false) {
                     item {
-                        WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.wear_directory_unavailable), tone = WearStatusTone.ERROR)
+                        WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_directory_unavailable), tone = WearStatusTone.ERROR)
                     }
                 }
                 item {
                     WearActionButton(
                         spec,
-                        Icons.TwoTone.DriveFileRenameOutline,
+                        Icons.Rounded.DriveFileRenameOutline,
                         state.name,
                         { editingName = true },
                         secondaryText = stringResource(R.string.wear_file_name),

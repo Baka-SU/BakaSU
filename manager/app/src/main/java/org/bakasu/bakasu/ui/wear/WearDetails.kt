@@ -7,19 +7,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.AccountCircle
-import androidx.compose.material.icons.twotone.Apps
-import androidx.compose.material.icons.twotone.Delete
-import androidx.compose.material.icons.twotone.Description
-import androidx.compose.material.icons.twotone.Error
-import androidx.compose.material.icons.twotone.Extension
-import androidx.compose.material.icons.twotone.Language
-import androidx.compose.material.icons.twotone.Person
-import androidx.compose.material.icons.twotone.PlayArrow
-import androidx.compose.material.icons.twotone.PowerSettingsNew
-import androidx.compose.material.icons.twotone.Security
-import androidx.compose.material.icons.twotone.Tag
-import androidx.compose.material.icons.twotone.Update
+import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Error
+import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Tag
+import androidx.compose.material.icons.rounded.Update
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -91,7 +91,7 @@ internal fun WearModuleDetail(
             }
             if (!error.isNullOrBlank()) {
                 item {
-                    WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
+                    WearStatusItem(spec, Icons.Rounded.Error, error, tone = WearStatusTone.ERROR)
                 }
             }
         }
@@ -125,10 +125,10 @@ internal fun WearModuleDetail(
         item { WearSectionHeader(spec, stringResource(R.string.wear_module_information)) }
         // Information rows read like the operation buttons below (icon, label, secondary label), but
         // stay cards, as nothing happens on a tap.
-        item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.TwoTone.Person, stringResource(R.string.module_author), module.author.ifBlank { unknown }) } }
-        item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.TwoTone.Tag, stringResource(R.string.wear_details), module.id) } }
+        item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.Rounded.Person, stringResource(R.string.module_author), module.author.ifBlank { unknown }) } }
+        item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.Rounded.Tag, stringResource(R.string.wear_details), module.id) } }
         if (module.description.isNotBlank()) {
-            item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.TwoTone.Description, stringResource(R.string.wear_description), module.description) } }
+            item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.Rounded.Description, stringResource(R.string.wear_description), module.description) } }
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_module_operations)) }
         // Every operation uses the button's icon, label and secondary label slots: the label names the
@@ -140,7 +140,7 @@ internal fun WearModuleDetail(
                 module.enabled,
                 { onEnabledChange(module.id, it) },
                 enabled = !module.remove && !module.update,
-                icon = Icons.TwoTone.PowerSettingsNew,
+                icon = Icons.Rounded.PowerSettingsNew,
                 secondaryLabel = stringResource(if (module.enabled) R.string.wear_enabled else R.string.wear_disabled),
                 compact = true,
             )
@@ -149,7 +149,7 @@ internal fun WearModuleDetail(
             item {
                 WearActionButton(
                     spec,
-                    Icons.TwoTone.Language,
+                    Icons.Rounded.Language,
                     stringResource(R.string.wear_webui),
                     { onWebUi(module) },
                     enabled = module.enabled && !module.remove,
@@ -162,7 +162,7 @@ internal fun WearModuleDetail(
             item {
                 WearActionButton(
                     spec,
-                    Icons.TwoTone.PlayArrow,
+                    Icons.Rounded.PlayArrow,
                     stringResource(R.string.action),
                     { onExecute(module) },
                     enabled = module.enabled && !module.remove,
@@ -175,7 +175,7 @@ internal fun WearModuleDetail(
             item {
                 WearActionButton(
                     spec,
-                    Icons.TwoTone.Update,
+                    Icons.Rounded.Update,
                     stringResource(R.string.module_update),
                     { onUpdate(module) },
                     enabled = !module.remove,
@@ -187,7 +187,7 @@ internal fun WearModuleDetail(
         item {
             WearActionButton(
                 spec,
-                Icons.TwoTone.Delete,
+                Icons.Rounded.Delete,
                 stringResource(R.string.uninstall),
                 removeDialog::show,
                 enabled = !module.remove,
@@ -235,7 +235,7 @@ internal fun WearAppDetail(
             item {
                 WearPageHeader(spec, stringResource(R.string.profile))
             }
-            item { WearStatusItem(spec, Icons.TwoTone.Apps, stringResource(R.string.no_apps_found)) }
+            item { WearStatusItem(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
         }
         return
     }
@@ -277,10 +277,10 @@ internal fun WearAppDetail(
             WearList(onBack = { detailPage = "" }) { spec ->
                 item { WearPageHeader(spec, stringResource(if (detailPage == "affected") R.string.affected_applications else R.string.wear_app_operations)) }
                 if (detailPage == "affected") {
-                    group.apps.forEach { app -> item { WearInfoCard(spec) { WearDetailField(Icons.TwoTone.Apps, app.label, app.displayIdentifier) } } }
+                    group.apps.forEach { app -> item { WearInfoCard(spec) { WearDetailField(Icons.Rounded.Apps, app.label, app.displayIdentifier) } } }
                 } else {
                     listOf(AppControlAction.LAUNCH to R.string.launch_app, AppControlAction.FORCE_STOP to R.string.force_stop_app).forEach { (action, label) ->
-                        item { WearActionButton(spec, Icons.TwoTone.Apps, stringResource(label), { viewModel.dispatch(AppProfileUiAction.ControlApp(action)) }) }
+                        item { WearActionButton(spec, Icons.Rounded.Apps, stringResource(label), { viewModel.dispatch(AppProfileUiAction.ControlApp(action)) }) }
                     }
                 }
             }
@@ -337,7 +337,7 @@ internal fun WearAppDetail(
                         checked = profile.allowSu,
                         onCheckedChange = { save(profile.copy(allowSu = it)) },
                         enabled = !isManager && !group.isWebViewZygote,
-                        icon = Icons.TwoTone.Security,
+                        icon = Icons.Rounded.Security,
                         secondaryLabel = stringResource(R.string.wear_root_access),
                     )
                 }
@@ -346,7 +346,7 @@ internal fun WearAppDetail(
                         spec,
                         stringResource(R.string.wear_profile_mode),
                         { editingProfile = true },
-                        icon = Icons.TwoTone.AccountCircle,
+                        icon = Icons.Rounded.AccountCircle,
                         enabled = !isManager,
                         description = stringResource(
                             if (if (profile.allowSu) profile.rootUseDefault else profile.nonRootUseDefault) {
@@ -368,7 +368,7 @@ internal fun WearAppDetail(
                             { save(profile.copy(umountModules = it, nonRootUseDefault = false)) },
                             enabled = !isManager && !profile.nonRootUseDefault,
                             secondaryLabel = stringResource(R.string.profile_umount_modules_summary),
-                            icon = Icons.TwoTone.Extension,
+                            icon = Icons.Rounded.Extension,
                         )
                     }
                 }
@@ -392,7 +392,7 @@ internal fun WearAppDetail(
                     }
                 }
             } else {
-                item { WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
+                item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
             }
         }
     }

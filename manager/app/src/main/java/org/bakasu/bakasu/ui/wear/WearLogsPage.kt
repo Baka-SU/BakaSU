@@ -5,14 +5,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.Article
-import androidx.compose.material.icons.twotone.DeleteSweep
-import androidx.compose.material.icons.twotone.Error
-import androidx.compose.material.icons.twotone.FilterList
-import androidx.compose.material.icons.twotone.PowerSettingsNew
-import androidx.compose.material.icons.twotone.Search
-import androidx.compose.material.icons.twotone.SearchOff
-import androidx.compose.material.icons.twotone.Warning
+import androidx.compose.material.icons.rounded.Article
+import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.Error
+import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -87,8 +87,8 @@ internal fun WearLogsPage(
             WearIconButtonGroup(
                 spec,
                 listOf(
-                    WearIconAction(Icons.TwoTone.Search, stringResource(R.string.sulog_search_placeholder), onSearch),
-                    WearIconAction(Icons.TwoTone.FilterList, stringResource(R.string.sulog_filter_title), onOptions),
+                    WearIconAction(Icons.Rounded.Search, stringResource(R.string.sulog_search_placeholder), onSearch),
+                    WearIconAction(Icons.Rounded.FilterList, stringResource(R.string.sulog_filter_title), onOptions),
                 ),
             )
         }
@@ -97,7 +97,7 @@ internal fun WearLogsPage(
             item {
                 WearActionButton(
                     spec,
-                    Icons.TwoTone.SearchOff,
+                    Icons.Rounded.SearchOff,
                     state.searchText,
                     onClearSearch,
                     secondaryText = stringResource(R.string.wear_clear_search),
@@ -109,14 +109,14 @@ internal fun WearLogsPage(
             // As on the phone, the log only offers enabling; disabling is the setting's switch.
             "supported" -> if (!state.isSulogEnabled) {
                 item {
-                    WearActionButton(spec, Icons.TwoTone.PowerSettingsNew, stringResource(R.string.wear_enable_sulog), onEnable)
+                    WearActionButton(spec, Icons.Rounded.PowerSettingsNew, stringResource(R.string.wear_enable_sulog), onEnable)
                 }
             }
 
             "unsupported" -> item {
                 WearStatusItem(
                     spec,
-                    Icons.TwoTone.Warning,
+                    Icons.Rounded.Warning,
                     stringResource(R.string.sulog_unsupported_title),
                     tone = WearStatusTone.WARNING,
                 )
@@ -125,7 +125,7 @@ internal fun WearLogsPage(
             "managed" -> item {
                 WearStatusItem(
                     spec,
-                    Icons.TwoTone.Warning,
+                    Icons.Rounded.Warning,
                     stringResource(R.string.feature_status_managed_summary),
                     tone = WearStatusTone.WARNING,
                 )
@@ -133,7 +133,7 @@ internal fun WearLogsPage(
         }
         if (state.sulogStatus == "supported" && !state.isSulogEnabled) {
             item {
-                WearStatusItem(spec, Icons.TwoTone.Warning, stringResource(R.string.sulog_disabled_title))
+                WearStatusItem(spec, Icons.Rounded.Warning, stringResource(R.string.sulog_disabled_title))
             }
         }
         val failure = listOfNotNull(error, state.errorMessage).filter { it.isNotBlank() }
@@ -141,7 +141,7 @@ internal fun WearLogsPage(
             item {
                 WearStatusItem(
                     spec,
-                    Icons.TwoTone.Error,
+                    Icons.Rounded.Error,
                     (listOf(stringResource(R.string.sulog_failed_to_load)) + failure).joinToString("\n"),
                     tone = WearStatusTone.ERROR,
                 )
@@ -151,9 +151,9 @@ internal fun WearLogsPage(
             if (state.visibleEntries.isEmpty()) {
                 item {
                     if (state.searchText.isNotBlank()) {
-                        WearStatusItem(spec, Icons.TwoTone.SearchOff, stringResource(R.string.search_no_any_match))
+                        WearStatusItem(spec, Icons.Rounded.SearchOff, stringResource(R.string.search_no_any_match))
                     } else {
-                        WearStatusItem(spec, Icons.AutoMirrored.TwoTone.Article, stringResource(R.string.wear_no_logs))
+                        WearStatusItem(spec, Icons.Rounded.Article, stringResource(R.string.wear_no_logs))
                     }
                 }
             }
@@ -193,7 +193,7 @@ internal fun WearLogsPage(
 internal fun WearLogEntryPage(entry: SulogEntry?, onBack: () -> Unit) {
     WearList(onBack = onBack) { spec ->
         if (entry == null) {
-            item { WearStatusItem(spec, Icons.AutoMirrored.TwoTone.Article, stringResource(R.string.wear_no_logs)) }
+            item { WearStatusItem(spec, Icons.Rounded.Article, stringResource(R.string.wear_no_logs)) }
             return@WearList
         }
         item { WearPageHeader(spec, sulogEntryTitle(entry)) }
@@ -251,7 +251,7 @@ internal fun WearLogOptionsPage(
         item {
             WearActionButton(
                 spec,
-                Icons.TwoTone.DeleteSweep,
+                Icons.Rounded.DeleteSweep,
                 stringResource(R.string.sulog_clean_title),
                 cleanDialog::show,
                 enabled = state.selectedFilePath != null && !state.isRefreshing,

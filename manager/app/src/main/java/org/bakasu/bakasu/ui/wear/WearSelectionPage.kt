@@ -2,14 +2,14 @@ package org.bakasu.bakasu.ui.wear
 
 import android.os.Build
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.AutoAwesome
-import androidx.compose.material.icons.twotone.Circle
-import androidx.compose.material.icons.twotone.FolderOpen
-import androidx.compose.material.icons.twotone.Language
-import androidx.compose.material.icons.twotone.RemoveModerator
-import androidx.compose.material.icons.twotone.Smartphone
-import androidx.compose.material.icons.twotone.Square
-import androidx.compose.material.icons.twotone.Translate
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Circle
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.RemoveModerator
+import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.Square
+import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -129,24 +129,24 @@ internal fun WearSelectionPage(
 
 private fun selectionIcon(selection: WearSelection, value: String): ImageVector = when (selection) {
     WearSelection.ScreenShape -> when (value) {
-        "round" -> Icons.TwoTone.Circle
-        "square" -> Icons.TwoTone.Square
-        else -> Icons.TwoTone.AutoAwesome
+        "round" -> Icons.Rounded.Circle
+        "square" -> Icons.Rounded.Square
+        else -> Icons.Rounded.AutoAwesome
     }
 
-    WearSelection.Language -> Icons.TwoTone.Translate
+    WearSelection.Language -> Icons.Rounded.Translate
 
-    WearSelection.SuCompat -> Icons.TwoTone.RemoveModerator
+    WearSelection.SuCompat -> Icons.Rounded.RemoveModerator
 
     WearSelection.LinkMode -> when (value) {
-        "webview" -> Icons.TwoTone.Language
-        "phone" -> Icons.TwoTone.Smartphone
-        else -> Icons.TwoTone.AutoAwesome
+        "webview" -> Icons.Rounded.Language
+        "phone" -> Icons.Rounded.Smartphone
+        else -> Icons.Rounded.AutoAwesome
     }
 
-    WearSelection.PickerMode -> if (value == "auto") Icons.TwoTone.AutoAwesome else Icons.TwoTone.FolderOpen
+    WearSelection.PickerMode -> if (value == "auto") Icons.Rounded.AutoAwesome else Icons.Rounded.FolderOpen
 
-    WearSelection.BackAnimation, WearSelection.BackDirection, WearSelection.Palette, WearSelection.ColorSpec -> Icons.TwoTone.AutoAwesome
+    WearSelection.BackAnimation, WearSelection.BackDirection, WearSelection.Palette, WearSelection.ColorSpec -> Icons.Rounded.AutoAwesome
 }
 
 @Composable

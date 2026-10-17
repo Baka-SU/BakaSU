@@ -1,17 +1,17 @@
 package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.Undo
-import androidx.compose.material.icons.twotone.Add
-import androidx.compose.material.icons.twotone.Apps
-import androidx.compose.material.icons.twotone.Delete
-import androidx.compose.material.icons.twotone.DeleteForever
-import androidx.compose.material.icons.twotone.Fingerprint
-import androidx.compose.material.icons.twotone.Flag
-import androidx.compose.material.icons.twotone.Folder
-import androidx.compose.material.icons.twotone.FormatSize
-import androidx.compose.material.icons.twotone.Search
-import androidx.compose.material.icons.twotone.Settings
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.FormatSize
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -139,7 +139,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                         spec,
                         stringResource(R.string.signature_size),
                         { input = DynamicManagerInput.Size },
-                        icon = Icons.TwoTone.FormatSize,
+                        icon = Icons.Rounded.FormatSize,
                         description = size.ifBlank { null },
                     )
                 }
@@ -148,13 +148,13 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                         spec,
                         stringResource(R.string.signature_hash),
                         { input = DynamicManagerInput.Hash },
-                        icon = Icons.TwoTone.Fingerprint,
+                        icon = Icons.Rounded.Fingerprint,
                         description = hash.ifBlank { null },
                     )
                 }
                 item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
                 item {
-                    WearActionButton(spec, Icons.TwoTone.Settings, stringResource(R.string.wear_save_configuration), {
+                    WearActionButton(spec, Icons.Rounded.Settings, stringResource(R.string.wear_save_configuration), {
                         val length = size.toIntOrNull()
                         when {
                             length == null || length <= 0 -> result = WearResult(failed, success = false)
@@ -172,7 +172,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                 item {
                     WearActionButton(
                         spec,
-                        Icons.TwoTone.Search,
+                        Icons.Rounded.Search,
                         stringResource(R.string.search_apps),
                         { input = DynamicManagerInput.Search },
                     )
@@ -189,7 +189,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                             }
                         },
                         enabled = app.isChangeable,
-                        icon = Icons.TwoTone.Apps,
+                        icon = Icons.Rounded.Apps,
                     )
                 }
             } else {
@@ -197,7 +197,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                 item {
                     WearInfoCard(spec) {
                         WearDetailField(
-                            Icons.TwoTone.Settings,
+                            Icons.Rounded.Settings,
                             stringResource(R.string.wear_manager_status),
                             state.config?.takeIf { it.isValid }?.let { stringResource(R.string.dynamic_manager_enabled_summary, it.size.toString()) }
                                 ?: stringResource(R.string.dynamic_manager_disabled),
@@ -206,7 +206,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                 }
                 item {
                     WearInfoCard(spec) {
-                        WearDetailField(Icons.TwoTone.Fingerprint, stringResource(R.string.signature_hash), state.config?.hash?.ifBlank { null } ?: stringResource(R.string.unknown))
+                        WearDetailField(Icons.Rounded.Fingerprint, stringResource(R.string.signature_hash), state.config?.hash?.ifBlank { null } ?: stringResource(R.string.unknown))
                     }
                 }
                 item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
@@ -215,12 +215,12 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                         spec,
                         stringResource(R.string.dynamic_manager_manual_config),
                         { manual = true },
-                        icon = Icons.TwoTone.Settings,
+                        icon = Icons.Rounded.Settings,
                         description = stringResource(R.string.dynamic_manager_manual_config_summary),
                     )
                 }
-                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_apps), { choosingApp = true }, icon = Icons.TwoTone.Apps) }
-                item { WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.dynamic_manager_clear_config), clear::show) }
+                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_apps), { choosingApp = true }, icon = Icons.Rounded.Apps) }
+                item { WearActionButton(spec, Icons.Rounded.Delete, stringResource(R.string.dynamic_manager_clear_config), clear::show) }
             }
         }
     }
@@ -268,7 +268,7 @@ internal fun WearUmountPage(onBack: () -> Unit) {
         item { WearPageHeader(spec, stringResource(R.string.umount_path_manager)) }
         // A TransformingLazyColumn item places only its last child, so each entry is a single button.
         items(state.umountPaths, key = { it.path }) { entry ->
-            WearActionButton(spec, Icons.TwoTone.Delete, entry.path, {
+            WearActionButton(spec, Icons.Rounded.Delete, entry.path, {
                 selected = entry
                 remove.show()
             }, secondaryText = entry.flags.toUmountFlagName())
@@ -278,7 +278,7 @@ internal fun WearUmountPage(onBack: () -> Unit) {
                 spec,
                 stringResource(R.string.add_umount_path),
                 { input = UmountInput.Path },
-                icon = Icons.TwoTone.Folder,
+                icon = Icons.Rounded.Folder,
                 description = path.ifEmpty { null },
             )
         }
@@ -287,13 +287,13 @@ internal fun WearUmountPage(onBack: () -> Unit) {
                 spec,
                 stringResource(R.string.umount_flags),
                 { input = UmountInput.Flags },
-                icon = Icons.TwoTone.Flag,
+                icon = Icons.Rounded.Flag,
                 description = flags,
             )
         }
         item { WearInfoCard(spec) { Text(stringResource(R.string.umount_flags_hint)) } }
         item {
-            WearActionButton(spec, Icons.TwoTone.Add, stringResource(R.string.add), {
+            WearActionButton(spec, Icons.Rounded.Add, stringResource(R.string.add), {
                 val parsed = flags.toIntOrNull()
                 if (!path.startsWith('/') || parsed == null) {
                     result = WearResult(failed, success = false)
@@ -316,7 +316,7 @@ internal fun WearUninstallPage(onBack: () -> Unit, onStart: (restore: Boolean) -
         item { WearPageHeader(spec, stringResource(R.string.settings_uninstall)) }
         listOf(UninstallType.PERMANENT, UninstallType.RESTORE_STOCK_IMAGE).forEach { option ->
             item {
-                val icon = if (option == UninstallType.RESTORE_STOCK_IMAGE) Icons.AutoMirrored.TwoTone.Undo else Icons.TwoTone.DeleteForever
+                val icon = if (option == UninstallType.RESTORE_STOCK_IMAGE) Icons.Rounded.Undo else Icons.Rounded.DeleteForever
                 WearActionButton(spec, icon, stringResource(option.title), {
                     selected = option
                     confirm.show()

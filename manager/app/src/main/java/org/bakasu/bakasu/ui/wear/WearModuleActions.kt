@@ -6,12 +6,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.Article
-import androidx.compose.material.icons.twotone.CheckCircle
-import androidx.compose.material.icons.twotone.Download
-import androidx.compose.material.icons.twotone.Error
-import androidx.compose.material.icons.twotone.PlayArrow
-import androidx.compose.material.icons.twotone.Save
+import androidx.compose.material.icons.rounded.Article
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Error
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -117,7 +117,7 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
                 changelogError != null -> item {
                     WearStatusItem(
                         spec,
-                        Icons.TwoTone.Error,
+                        Icons.Rounded.Error,
                         stringResource(R.string.module_changelog_failed, changelogError.orEmpty()),
                         tone = WearStatusTone.ERROR,
                     )
@@ -147,7 +147,7 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
                     modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
                         .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
                     transformation = SurfaceTransformation(spec),
-                    icon = { Icon(Icons.TwoTone.Download, contentDescription = null) },
+                    icon = { Icon(Icons.Rounded.Download, contentDescription = null) },
                     secondaryLabel = {
                         Text(
                             when {
@@ -239,16 +239,16 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
                 ),
                 secondaryLabel = lines.lastOrNull { it.isNotBlank() },
                 icon = when (successful) {
-                    true -> Icons.TwoTone.CheckCircle
-                    false -> Icons.TwoTone.Error
-                    null -> Icons.TwoTone.PlayArrow
+                    true -> Icons.Rounded.CheckCircle
+                    false -> Icons.Rounded.Error
+                    null -> Icons.Rounded.PlayArrow
                 },
             )
         }
         item {
             WearActionButton(
                 spec,
-                Icons.AutoMirrored.TwoTone.Article,
+                Icons.Rounded.Article,
                 fullLog,
                 { showLog = true },
                 secondaryText = stringResource(R.string.wear_install_log_summary),
@@ -259,7 +259,7 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
         item {
             WearActionButton(
                 spec,
-                Icons.TwoTone.Save,
+                Icons.Rounded.Save,
                 stringResource(R.string.wear_save_output),
                 { viewModel.dispatch(ExecuteModuleActionUiAction.SaveLog) },
                 enabled = !state.running,

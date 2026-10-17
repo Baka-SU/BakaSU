@@ -1,7 +1,7 @@
 package org.bakasu.bakasu.ui.wear.component
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Delete
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,7 +62,7 @@ fun TransformingLazyColumnItemScope.WearSwipeToDelete(
         primaryAction = {
             PrimaryActionButton(
                 onClick = ::requestDelete,
-                icon = { Icon(Icons.TwoTone.Delete, contentDescription = deleteLabel) },
+                icon = { Icon(Icons.Rounded.Delete, contentDescription = deleteLabel) },
                 text = { Text(deleteLabel) },
             )
         },

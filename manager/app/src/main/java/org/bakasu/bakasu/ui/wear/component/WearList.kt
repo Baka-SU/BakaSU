@@ -13,10 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.VerticalAlignTop
-import androidx.compose.material.icons.twotone.Check
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -216,13 +216,13 @@ fun WearList(
                     } else {
                         Icon(
                             if (onClosePanel != null) {
-                                Icons.Default.KeyboardArrowDown
+                                Icons.Rounded.KeyboardArrowDown
                             } else if (onConfirm != null) {
-                                Icons.TwoTone.Check
+                                Icons.Rounded.Check
                             } else if (backToTop) {
-                                Icons.Default.VerticalAlignTop
+                                Icons.Rounded.VerticalAlignTop
                             } else {
-                                Icons.AutoMirrored.Default.ArrowBack
+                                Icons.Rounded.ArrowBack
                             },
                             contentDescription = stringResource(
                                 if (onClosePanel != null) {

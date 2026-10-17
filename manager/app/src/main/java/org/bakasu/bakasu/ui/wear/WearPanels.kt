@@ -4,9 +4,9 @@ import android.os.Build
 import android.os.PowerManager
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.Sort
-import androidx.compose.material.icons.twotone.Cloud
-import androidx.compose.material.icons.twotone.RestartAlt
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -59,7 +59,7 @@ internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onA
                 modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
                     .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
                 transformation = SurfaceTransformation(spec),
-                icon = { Icon(Icons.AutoMirrored.TwoTone.Sort, contentDescription = null) },
+                icon = { Icon(Icons.Rounded.Sort, contentDescription = null) },
                 label = { Text(stringResource(sort.displayNameRes), maxLines = 3, overflow = TextOverflow.Ellipsis) },
             )
         }
@@ -100,7 +100,7 @@ internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction:
         item {
             WearActionButton(
                 spec,
-                Icons.TwoTone.Cloud,
+                Icons.Rounded.Cloud,
                 stringResource(R.string.module_repo),
                 onRepo,
                 secondaryText = stringResource(R.string.wear_module_repo_summary),
@@ -134,7 +134,7 @@ internal fun WearRebootPanel(rootAvailable: Boolean, onBack: () -> Unit, onReboo
             item {
                 WearActionButton(
                     spec,
-                    Icons.TwoTone.RestartAlt,
+                    Icons.Rounded.RestartAlt,
                     stringResource(label),
                     { onReboot(reason) },
                     rootAvailable,
