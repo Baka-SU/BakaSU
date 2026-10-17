@@ -50,17 +50,17 @@ import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.file.withInstallArchive
 import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
+import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
-import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
 import org.bakasu.bakasu.ui.util.downloader.download
 import org.bakasu.bakasu.ui.util.downloader.downloadFailureMessage
-import org.bakasu.bakasu.domain.model.RepositorySource
-import org.bakasu.bakasu.domain.model.DownloadStatus
-import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.koin.compose.koinInject
 
 val LocalRepositoryModuleInstall = staticCompositionLocalOf<(Uri, () -> Boolean) -> Unit> {

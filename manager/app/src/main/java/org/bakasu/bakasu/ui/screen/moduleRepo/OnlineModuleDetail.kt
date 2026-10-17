@@ -78,10 +78,10 @@ import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
-import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReadme
-import org.bakasu.bakasu.domain.model.ModuleReleaseDetails
+import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
+import org.bakasu.bakasu.domain.model.ModuleReleaseDetails
 import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
@@ -442,31 +442,37 @@ private fun LazyListScope.releaseGroup(module: CatalogModule, release: ModuleRel
     val details = state?.details
     val releaseUrl = release.releaseUrl.ifBlank { details?.releaseUrl.orEmpty() }
     val rows = buildList<Pair<String, @Composable () -> Unit>> {
-        add("heading" to {
-            LaunchedEffect(module, release) { viewModel?.loadReleaseDetails(release) }
-            ReleaseHeading(release, details)
-        })
+        add(
+            "heading" to {
+                LaunchedEffect(module, release) { viewModel?.loadReleaseDetails(release) }
+                ReleaseHeading(release, details)
+            },
+        )
         if (release.descriptionHTML.isNotBlank() || release.changelogUrl.isNotBlank() || details?.notes != null || details?.notesFailed == true) {
-            add("changelog" to {
-                SettingsBaseWidget(
-                    title = null,
-                    iconPlaceholder = false,
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                    descriptionColumnContent = { ReleaseNotes(module, release, state, viewModel) },
-                )
-            })
+            add(
+                "changelog" to {
+                    SettingsBaseWidget(
+                        title = null,
+                        iconPlaceholder = false,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        descriptionColumnContent = { ReleaseNotes(module, release, state, viewModel) },
+                    )
+                },
+            )
         }
         release.assets.forEach { asset ->
             add("asset:${asset.name}:${asset.downloadUrl}" to { ReleaseAsset(module, release, asset, viewModel) })
         }
         if (releaseUrl.isNotBlank()) {
-            add("release" to {
-                ModuleInfoLink(
-                    stringResource(R.string.repo_release_page),
-                    release.tagCommit.takeIf(String::isNotBlank)?.let { stringResource(R.string.repo_source_commit, it.take(12)) },
-                    releaseUrl,
-                )
-            })
+            add(
+                "release" to {
+                    ModuleInfoLink(
+                        stringResource(R.string.repo_release_page),
+                        release.tagCommit.takeIf(String::isNotBlank)?.let { stringResource(R.string.repo_source_commit, it.take(12)) },
+                        releaseUrl,
+                    )
+                },
+            )
         }
         release.attestationUrl?.takeIf(String::isNotBlank)?.let { url ->
             add("attestation" to { ModuleInfoLink(stringResource(R.string.repo_attestation), null, url) })
@@ -669,7 +675,6 @@ private fun ReleaseNotes(module: CatalogModule, release: ModuleRelease, state: R
         if (documentLoading || (document != null && !documentFailed && htmlLoading.value)) LoadingIndicator()
     }
 }
-
 
 @Composable
 @Preview

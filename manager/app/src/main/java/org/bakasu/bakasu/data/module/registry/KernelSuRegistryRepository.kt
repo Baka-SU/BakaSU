@@ -31,6 +31,7 @@ class KernelSuRegistryRepository(
     private val commitMutex = Mutex()
     private val details = ConcurrentHashMap<String, ApiModuleDetail>()
     private val diskCache = FileRegistryCache(File(application.filesDir, "module_registry"))
+
     @Volatile
     private var publishedCatalog: RegistryCatalog? = null
 

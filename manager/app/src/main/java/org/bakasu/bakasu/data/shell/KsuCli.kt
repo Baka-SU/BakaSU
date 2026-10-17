@@ -18,11 +18,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.Natives
-import org.bakasu.bakasu.domain.model.LkmSelection
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.data.module.registry.RegistryDownloadStore
 import org.bakasu.bakasu.data.module.registry.DownloadVerificationException
+import org.bakasu.bakasu.data.module.registry.RegistryDownloadStore
 import org.bakasu.bakasu.data.module.registry.copyForInstall
+import org.bakasu.bakasu.domain.model.LkmSelection
 import org.json.JSONArray
 import org.json.JSONObject
 

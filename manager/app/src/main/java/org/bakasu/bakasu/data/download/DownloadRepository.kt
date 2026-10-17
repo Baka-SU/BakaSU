@@ -8,12 +8,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import org.bakasu.bakasu.data.module.registry.RegistryUrls
+import org.bakasu.bakasu.data.module.registry.canShareDownload
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
 import org.bakasu.bakasu.domain.model.ExpectedFile
-import org.bakasu.bakasu.data.module.registry.RegistryUrls
-import org.bakasu.bakasu.data.module.registry.canShareDownload
 import org.bakasu.bakasu.domain.model.ManagerApkSource
 import org.bakasu.bakasu.domain.model.ManagerUpdateInfo
 

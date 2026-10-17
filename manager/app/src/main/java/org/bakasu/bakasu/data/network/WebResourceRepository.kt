@@ -1,13 +1,13 @@
 package org.bakasu.bakasu.data.network
 
+import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import org.bakasu.bakasu.domain.model.WebResource
 import org.bakasu.bakasu.data.module.registry.RegistryUrls
-import java.io.IOException
-import java.util.concurrent.ConcurrentHashMap
+import org.bakasu.bakasu.domain.model.WebResource
 
 class WebResourceRepository(
     private val httpClient: OkHttpClient,
@@ -20,11 +20,15 @@ class WebResourceRepository(
         requestHeaders: Map<String, String>,
         restrictedOrigin: String? = null,
     ): WebResource? = runCatching {
-        val client = if (restrictedOrigin == null) httpClient else restrictedClients.getOrPut(restrictedOrigin) {
-            httpClient.newBuilder().followRedirects(false).followSslRedirects(false).addNetworkInterceptor { chain ->
-                if (!RegistryUrls.isAllowedRestrictedResource(chain.request().url.toString(), restrictedOrigin)) throw IOException("Blocked resource")
-                chain.proceed(chain.request())
-            }.build()
+        val client = if (restrictedOrigin == null) {
+            httpClient
+        } else {
+            restrictedClients.getOrPut(restrictedOrigin) {
+                httpClient.newBuilder().followRedirects(false).followSslRedirects(false).addNetworkInterceptor { chain ->
+                    if (!RegistryUrls.isAllowedRestrictedResource(chain.request().url.toString(), restrictedOrigin)) throw IOException("Blocked resource")
+                    chain.proceed(chain.request())
+                }.build()
+            }
         }
         if (restrictedOrigin != null && (method != "GET" || !RegistryUrls.isAllowedRestrictedResource(url, restrictedOrigin))) return null
         val request =
@@ -33,8 +37,11 @@ class WebResourceRepository(
                 .method(method, null)
                 .headers(requestHeaders.toHeaders())
                 .build()
-        val response = if (restrictedOrigin == null) client.newCall(request).execute()
-            else restrictedResponse(client, request, restrictedOrigin) ?: return null
+        val response = if (restrictedOrigin == null) {
+            client.newCall(request).execute()
+        } else {
+            restrictedResponse(client, request, restrictedOrigin) ?: return null
+        }
         if (restrictedOrigin != null && !response.isSuccessful) {
             response.close()
             return null
@@ -47,7 +54,10 @@ class WebResourceRepository(
             ?.split("=\\s*".toRegex())
             ?.getOrNull(1)
             ?: "utf-8"
-        val body = response.body ?: run { response.close(); return null }
+        val body = response.body ?: run {
+            response.close()
+            return null
+        }
         WebResource(mimeType, charset, body.byteStream())
     }.getOrNull()
 

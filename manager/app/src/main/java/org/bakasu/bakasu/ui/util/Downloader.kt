@@ -11,10 +11,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.DownloadState
-import org.bakasu.bakasu.domain.model.ExpectedFile
+import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
+import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.domain.model.ManagerUpdateInfo
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.EnqueueManagerUpdateUseCase

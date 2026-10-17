@@ -123,13 +123,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
-import org.bakasu.bakasu.domain.model.InstalledModule
-import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
-import org.bakasu.bakasu.domain.model.ModuleReadme
 import org.bakasu.bakasu.domain.model.DocumentFormat
-import org.bakasu.bakasu.domain.model.RepositorySource
-import org.bakasu.bakasu.ui.util.downloader.downloadFailureMessage
+import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.MetaModuleStatus
+import org.bakasu.bakasu.domain.model.ModuleReadme
+import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
+import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleNameUseCase
 import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
@@ -162,6 +161,7 @@ import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.Shortcut
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.downloader.download
+import org.bakasu.bakasu.ui.util.downloader.downloadFailureMessage
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
 import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiAction
@@ -794,9 +794,17 @@ private fun ModuleList(
         val registry = verification as? ModuleUpdateVerification.Registry
         val canInstall = { registry == null || viewModel.isUpdateCurrent(module, registry) }
         val changelogResult = if (registry != null) {
-            Result.success(ModuleReadme(registry.release.descriptionHTML.ifBlank { module.description }, RepositorySource.KERNEL_SU_URL,
-                if (registry.release.descriptionHTML.isNotBlank()) DocumentFormat.HTML else DocumentFormat.MARKDOWN, RepositorySource.KERNEL_SU_URL))
-        } else loadingDialog.withLoading { viewModel.loadUpdateChangelog(changelogUrl) }
+            Result.success(
+                ModuleReadme(
+                    registry.release.descriptionHTML.ifBlank { module.description },
+                    RepositorySource.KERNEL_SU_URL,
+                    if (registry.release.descriptionHTML.isNotBlank()) DocumentFormat.HTML else DocumentFormat.MARKDOWN,
+                    RepositorySource.KERNEL_SU_URL,
+                ),
+            )
+        } else {
+            loadingDialog.withLoading { viewModel.loadUpdateChangelog(changelogUrl) }
+        }
         val changelog = changelogResult.getOrElse {
             showToast(context.getString(R.string.repo_document_error))
             return

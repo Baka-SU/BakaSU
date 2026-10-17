@@ -1,17 +1,17 @@
 package org.bakasu.bakasu.domain.usecase
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.firstOrNull
 import org.bakasu.bakasu.data.module.ModuleCatalogRepository
-import org.bakasu.bakasu.data.module.ModuleReleaseRepository
 import org.bakasu.bakasu.data.module.ModuleIconRepository
+import org.bakasu.bakasu.data.module.ModuleReleaseRepository
 import org.bakasu.bakasu.data.module.registry.KernelSuRegistryRepository
+import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.domain.model.CatalogModule
-import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.model.ModuleReadme
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
-import org.bakasu.bakasu.data.network.NetworkRequestRepository
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.firstOrNull
+import org.bakasu.bakasu.domain.model.RepositorySource
 
 class ObserveCatalogModulesUseCase(private val repository: ModuleCatalogRepository) {
     operator fun invoke() = repository.modules
@@ -59,8 +59,11 @@ class GetModuleUpdateChangelogUseCase(
     private val network: NetworkRequestRepository,
 ) {
     suspend operator fun invoke(url: String): Result<ModuleReadme> = try {
-        if (registry.isRegistryDocument(url)) Result.success(registry.changelog(url) ?: error("No changelog"))
-        else network.fetch(url).map { ModuleReadme(it, url) }
+        if (registry.isRegistryDocument(url)) {
+            Result.success(registry.changelog(url) ?: error("No changelog"))
+        } else {
+            network.fetch(url).map { ModuleReadme(it, url) }
+        }
     } catch (error: CancellationException) {
         throw error
     } catch (error: Exception) {

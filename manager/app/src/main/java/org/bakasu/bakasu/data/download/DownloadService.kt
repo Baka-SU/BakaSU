@@ -26,8 +26,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
 import okhttp3.Call
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.R
@@ -35,12 +35,12 @@ import org.bakasu.bakasu.data.module.registry.DownloadVerificationException
 import org.bakasu.bakasu.data.module.registry.DownloadVerifier
 import org.bakasu.bakasu.data.module.registry.RegistryDownloadStore
 import org.bakasu.bakasu.data.module.registry.RegistryUrls
-import org.bakasu.bakasu.domain.model.ExpectedFile
-import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
-import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
 import org.bakasu.bakasu.data.update.ManagerUpdateRepository
 import org.bakasu.bakasu.data.update.ZipRangeArchive
+import org.bakasu.bakasu.domain.model.DownloadStatus
+import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
+import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.ui.MainActivity
 import org.koin.android.ext.android.inject
 
@@ -107,7 +107,9 @@ class DownloadService : Service() {
 
                 val expected = if (intent.hasExtra(EXTRA_EXPECTED_SIZE) || intent.hasExtra(EXTRA_EXPECTED_SHA256)) {
                     ExpectedFile(intent.getLongExtra(EXTRA_EXPECTED_SIZE, -1L), intent.getStringExtra(EXTRA_EXPECTED_SHA256).orEmpty())
-                } else null
+                } else {
+                    null
+                }
                 if (expected != null && runCatching { DownloadVerifier(expected) }.isFailure) {
                     val reason = if (expected.size <= 0) DownloadVerificationFailure.SIZE_MISMATCH else DownloadVerificationFailure.SHA256_MISMATCH
                     downloadRepository.markFailed(downloadId, "Invalid verification metadata", reason)
@@ -168,7 +170,9 @@ class DownloadService : Service() {
                     val file = File(filePath)
                     if (RegistryDownloadStore.expectedFor(registryStoreRoot(), file) != null) {
                         RegistryDownloadStore.delete(registryStoreRoot(), file)
-                    } else file.delete()
+                    } else {
+                        file.delete()
+                    }
                 }
             }
         }
@@ -233,7 +237,10 @@ class DownloadService : Service() {
                     if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
                     val body = response.body ?: throw IOException("Empty body")
                     RegistryDownloadStore.download(
-                        input = body.byteStream(), root = root, expected = expected, fileName = fileName,
+                        input = body.byteStream(),
+                        root = root,
+                        expected = expected,
+                        fileName = fileName,
                         onProgress = { bytes -> reportProgress(id, fileName, ((bytes * 100L) / expected.size).toInt().coerceIn(0, 100)) },
                         checkActive = { ensureActive() },
                     )
@@ -525,11 +532,13 @@ class DownloadService : Service() {
 
     private fun buildFailureNotification(fileName: String, verificationFailure: DownloadVerificationFailure? = null) = NotificationCompat.Builder(this, CHANNEL_ID)
         .setContentTitle(getString(R.string.download_failed_title))
-        .setContentText(when (verificationFailure) {
-            DownloadVerificationFailure.URL_NOT_ALLOWED -> getString(R.string.repo_download_url_blocked)
-            DownloadVerificationFailure.SIZE_MISMATCH, DownloadVerificationFailure.SHA256_MISMATCH -> getString(R.string.repo_download_verify_failed, fileName)
-            null -> getString(R.string.download_failed_content, fileName)
-        })
+        .setContentText(
+            when (verificationFailure) {
+                DownloadVerificationFailure.URL_NOT_ALLOWED -> getString(R.string.repo_download_url_blocked)
+                DownloadVerificationFailure.SIZE_MISMATCH, DownloadVerificationFailure.SHA256_MISMATCH -> getString(R.string.repo_download_verify_failed, fileName)
+                null -> getString(R.string.download_failed_content, fileName)
+            },
+        )
         .setSmallIcon(android.R.drawable.stat_notify_error)
         .setAutoCancel(true)
         .build()

@@ -56,7 +56,9 @@ class ModuleCatalogRepository(
     fun isCurrent(module: CatalogModule): Boolean = if (module.repositoryUrl == RepositorySource.KERNEL_SU_URL) {
         val catalog = registry.currentCatalog()
         module.detailLoaded && module.registryMetadata?.buildId == catalog?.buildId && catalog?.find(module.moduleId) != null
-    } else true
+    } else {
+        true
+    }
 
     suspend fun refresh(sourceUrl: String? = null, force: Boolean = true): ModuleCatalogResult<List<CatalogModule>> {
         val targets = stateMutex.withLock {
@@ -104,26 +106,34 @@ class ModuleCatalogRepository(
                                     return@commit false
                                 }
                                 val currentDetails = cachedModules[url].orEmpty().associateBy { it.moduleId }
-                                cachedModules[url] = if (feed.registryBuildId == null) feed.modules else feed.modules.map { incoming ->
-                                    val detail = currentDetails[incoming.moduleId]?.takeIf {
-                                        it.detailLoaded && it.registryMetadata?.buildId == feed.registryBuildId
+                                cachedModules[url] = if (feed.registryBuildId == null) {
+                                    feed.modules
+                                } else {
+                                    feed.modules.map { incoming ->
+                                        val detail = currentDetails[incoming.moduleId]?.takeIf {
+                                            it.detailLoaded && it.registryMetadata?.buildId == feed.registryBuildId
+                                        }
+                                        if (detail == null) {
+                                            incoming
+                                        } else {
+                                            incoming.copy(
+                                                sourceUrl = detail.sourceUrl,
+                                                readmeUrl = detail.readmeUrl,
+                                                releases = detail.releases,
+                                                latestAsset = detail.latestAsset,
+                                                detailLoaded = true,
+                                                registryMetadata = incoming.registryMetadata?.copy(
+                                                    sourceCommit = detail.registryMetadata?.sourceCommit.orEmpty(),
+                                                    sourceFullName = detail.registryMetadata?.sourceFullName.orEmpty(),
+                                                    license = detail.registryMetadata?.license,
+                                                    homepage = detail.registryMetadata?.homepage,
+                                                    support = detail.registryMetadata?.support,
+                                                    healthStale = detail.registryMetadata?.healthStale == true,
+                                                    fromCache = incoming.registryMetadata.fromCache || detail.registryMetadata?.fromCache == true,
+                                                ),
+                                            )
+                                        }
                                     }
-                                    if (detail == null) incoming else incoming.copy(
-                                        sourceUrl = detail.sourceUrl,
-                                        readmeUrl = detail.readmeUrl,
-                                        releases = detail.releases,
-                                        latestAsset = detail.latestAsset,
-                                        detailLoaded = true,
-                                        registryMetadata = incoming.registryMetadata?.copy(
-                                            sourceCommit = detail.registryMetadata?.sourceCommit.orEmpty(),
-                                            sourceFullName = detail.registryMetadata?.sourceFullName.orEmpty(),
-                                            license = detail.registryMetadata?.license,
-                                            homepage = detail.registryMetadata?.homepage,
-                                            support = detail.registryMetadata?.support,
-                                            healthStale = detail.registryMetadata?.healthStale == true,
-                                            fromCache = incoming.registryMetadata.fromCache || detail.registryMetadata?.fromCache == true,
-                                        ),
-                                    )
                                 }
                                 mutableSources.value = updated
                                 mutableFailures.value = feed.error?.let { mutableFailures.value + (url to it) } ?: (mutableFailures.value - url)

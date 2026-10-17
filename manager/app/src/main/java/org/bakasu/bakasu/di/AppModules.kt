@@ -25,9 +25,9 @@ import org.bakasu.bakasu.data.logging.BugreportRepository
 import org.bakasu.bakasu.data.logging.SulogRepository
 import org.bakasu.bakasu.data.module.ModuleActionRepository
 import org.bakasu.bakasu.data.module.ModuleCatalogRepository
-import org.bakasu.bakasu.data.module.ModuleReleaseRepository
 import org.bakasu.bakasu.data.module.ModuleIconRepository
 import org.bakasu.bakasu.data.module.ModulePreferencesRepository
+import org.bakasu.bakasu.data.module.ModuleReleaseRepository
 import org.bakasu.bakasu.data.module.ModuleRepository
 import org.bakasu.bakasu.data.module.RepositorySourceStore
 import org.bakasu.bakasu.data.module.registry.KernelSuRegistryRepository
@@ -86,7 +86,6 @@ import org.bakasu.bakasu.domain.usecase.GetAppProfileUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppSepolicyUseCase
 import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetCatalogModuleUseCase
-import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
 import org.bakasu.bakasu.domain.usecase.GetDefaultUmountModulesUseCase
 import org.bakasu.bakasu.domain.usecase.GetHomeBasicInfoUseCase
 import org.bakasu.bakasu.domain.usecase.GetInstallEnvironmentUseCase
@@ -95,7 +94,7 @@ import org.bakasu.bakasu.domain.usecase.GetKernelStatusUseCase
 import org.bakasu.bakasu.domain.usecase.GetManagerRuntimeInfoUseCase
 import org.bakasu.bakasu.domain.usecase.GetModuleReadmeUseCase
 import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
-import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleUpdateChangelogUseCase
 import org.bakasu.bakasu.domain.usecase.GetPlatformFeatureStatusUseCase
 import org.bakasu.bakasu.domain.usecase.GetProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
@@ -105,16 +104,18 @@ import org.bakasu.bakasu.domain.usecase.GetSuperUserAppGroupUseCase
 import org.bakasu.bakasu.domain.usecase.ImportAllowlistUseCase
 import org.bakasu.bakasu.domain.usecase.ImportProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.InitializeApplicationUseCase
+import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
 import org.bakasu.bakasu.domain.usecase.IsLateLoadModeUseCase
 import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
 import org.bakasu.bakasu.domain.usecase.IsNetworkAvailableUseCase
 import org.bakasu.bakasu.domain.usecase.IsSoftRebootPreferredUseCase
 import org.bakasu.bakasu.domain.usecase.IsSystemLanguageSettingsUseCase
 import org.bakasu.bakasu.domain.usecase.LaunchSystemLanguageSettingsUseCase
+import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
 import org.bakasu.bakasu.domain.usecase.LoadSettingsPlatformUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
-import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDynamicManagerStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveInstalledModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveKernelFlashUseCase
@@ -140,7 +141,6 @@ import org.bakasu.bakasu.domain.usecase.RemovePreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveUmountPathUseCase
 import org.bakasu.bakasu.domain.usecase.RenameModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.ResolveModuleUpdateUseCase
-import org.bakasu.bakasu.domain.usecase.GetModuleUpdateChangelogUseCase
 import org.bakasu.bakasu.domain.usecase.SaveModuleActionLogUseCase
 import org.bakasu.bakasu.domain.usecase.SaveProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.SelectDynamicManagerUseCase

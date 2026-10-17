@@ -55,12 +55,14 @@ private fun renderMarkdownDocument(content: String, restricted: Boolean): String
     val parser = Parser.builder().extensions(extensions).build()
     val renderer = HtmlRenderer.builder().extensions(extensions).escapeHtml(restricted)
     // CommonMark 0.13 lacks sanitizeUrls.
-    if (restricted) renderer.attributeProviderFactory {
-        AttributeProvider { _, _, attributes ->
-            for (name in listOf("href", "src")) {
-                val value = attributes[name] ?: continue
-                val scheme = value.toUri().scheme
-                if (scheme != null && scheme.lowercase() !in setOf("https", "http")) attributes.remove(name)
+    if (restricted) {
+        renderer.attributeProviderFactory {
+            AttributeProvider { _, _, attributes ->
+                for (name in listOf("href", "src")) {
+                    val value = attributes[name] ?: continue
+                    val scheme = value.toUri().scheme
+                    if (scheme != null && scheme.lowercase() !in setOf("https", "http")) attributes.remove(name)
+                }
             }
         }
     }
@@ -99,7 +101,9 @@ fun GithubMarkdown(
     // Match upstream's blue light/dark link palette only for the README surface.
     val fgLink = if (readmeLinks) {
         if (isDark) "#85beff" else "#0366d6"
-    } else cssColorFromArgb(MaterialTheme.colorScheme.primary.toArgb())
+    } else {
+        cssColorFromArgb(MaterialTheme.colorScheme.primary.toArgb())
+    }
     val linkStyles = if (readmeLinks) {
         """
         .markdown-body a[href] {
@@ -109,7 +113,9 @@ fun GithubMarkdown(
           word-break: break-word;
         }
         """.trimIndent()
-    } else ""
+    } else {
+        ""
+    }
 
     val cssHref = "https://appassets.androidplatform.net/assets/github-markdown.css"
     val rendered = remember(content, renderMarkdown, restrictedBaseUrl) {
@@ -323,51 +329,54 @@ private fun GithubMarkdownWebView(
                             loading.value = false
                         }
                     }
-                    if (restrictedBaseUrl != null) setOnTouchListener(RestrictedTouchHandler(this as EdgeAwareWebView))
-                    else setOnTouchListener(object : View.OnTouchListener {
-                        private var isHorizontalScrollLocked = false
-                        private var initialDownX = 0f
-                        private var initialDownY = 0f
+                    if (restrictedBaseUrl != null) {
+                        setOnTouchListener(RestrictedTouchHandler(this as EdgeAwareWebView))
+                    } else {
+                        setOnTouchListener(object : View.OnTouchListener {
+                            private var isHorizontalScrollLocked = false
+                            private var initialDownX = 0f
+                            private var initialDownY = 0f
 
-                        override fun onTouch(v: View, event: MotionEvent): Boolean {
-                            when (event.action) {
-                                MotionEvent.ACTION_DOWN -> {
-                                    initialDownX = event.x
-                                    initialDownY = event.y
-                                    isHorizontalScrollLocked = false
-                                    v.parent.requestDisallowInterceptTouchEvent(true)
-                                }
-
-                                MotionEvent.ACTION_MOVE -> {
-                                    if (isHorizontalScrollLocked) {
+                            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                                when (event.action) {
+                                    MotionEvent.ACTION_DOWN -> {
+                                        initialDownX = event.x
+                                        initialDownY = event.y
+                                        isHorizontalScrollLocked = false
                                         v.parent.requestDisallowInterceptTouchEvent(true)
-                                    } else {
-                                        val dx = event.x - initialDownX
-                                        val dy = event.y - initialDownY
-                                        if (abs(dx) > abs(dy)) {
-                                            // Untrusted documents keep horizontal scrolling without a JavaScript bridge.
-                                            val canScroll = scriptsOff || if (dx < 0) scrollInterface.canScrollRight else scrollInterface.canScrollLeft
-                                            if (canScroll) {
-                                                isHorizontalScrollLocked = true
-                                                v.parent.requestDisallowInterceptTouchEvent(true)
+                                    }
+
+                                    MotionEvent.ACTION_MOVE -> {
+                                        if (isHorizontalScrollLocked) {
+                                            v.parent.requestDisallowInterceptTouchEvent(true)
+                                        } else {
+                                            val dx = event.x - initialDownX
+                                            val dy = event.y - initialDownY
+                                            if (abs(dx) > abs(dy)) {
+                                                // Untrusted documents keep horizontal scrolling without a JavaScript bridge.
+                                                val canScroll = scriptsOff || if (dx < 0) scrollInterface.canScrollRight else scrollInterface.canScrollLeft
+                                                if (canScroll) {
+                                                    isHorizontalScrollLocked = true
+                                                    v.parent.requestDisallowInterceptTouchEvent(true)
+                                                } else {
+                                                    v.parent.requestDisallowInterceptTouchEvent(false)
+                                                }
                                             } else {
                                                 v.parent.requestDisallowInterceptTouchEvent(false)
+                                                return true
                                             }
-                                        } else {
-                                            v.parent.requestDisallowInterceptTouchEvent(false)
-                                            return true
                                         }
                                     }
-                                }
 
-                                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                    v.parent.requestDisallowInterceptTouchEvent(false)
-                                    isHorizontalScrollLocked = false
+                                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                        v.parent.requestDisallowInterceptTouchEvent(false)
+                                        isHorizontalScrollLocked = false
+                                    }
                                 }
+                                return false
                             }
-                            return false
-                        }
-                    })
+                        })
+                    }
                     loadDataWithBaseURL(
                         baseUrl,
                         html,
@@ -424,15 +433,21 @@ private class RestrictedTouchHandler(private val webView: EdgeAwareWebView) : Vi
                 webView.horizontalEdgeReached = false
                 v.parent.requestDisallowInterceptTouchEvent(true)
             }
+
             MotionEvent.ACTION_MOVE -> {
                 val dx = event.x - downX
                 val dy = event.y - downY
                 if (direction == 0 && (abs(dx) > touchSlop || abs(dy) > touchSlop)) direction = if (abs(dx) > abs(dy)) 1 else 2
                 when (direction) {
                     1 -> if (webView.horizontalEdgeReached) v.parent.requestDisallowInterceptTouchEvent(false)
-                    2 -> { v.parent.requestDisallowInterceptTouchEvent(false); return true }
+
+                    2 -> {
+                        v.parent.requestDisallowInterceptTouchEvent(false)
+                        return true
+                    }
                 }
             }
+
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 v.parent.requestDisallowInterceptTouchEvent(false)
                 direction = 0

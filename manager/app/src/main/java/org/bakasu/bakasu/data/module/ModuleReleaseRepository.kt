@@ -42,18 +42,19 @@ class ModuleReleaseRepository(
     private val requests = Semaphore(3)
     private val pending = mutableMapOf<String, Deferred<Result<NetworkResponse>>>()
     private val cache = object : LruCache<String, Cached>(4 * 1024 * 1024) {
-        override fun sizeOf(key: String, value: Cached): Int =
-            ((key.length.toLong() + (value.result.getOrNull()?.body?.length ?: 0)) * 2 + 1)
-                .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        override fun sizeOf(key: String, value: Cached): Int = ((key.length.toLong() + (value.result.getOrNull()?.body?.length ?: 0)) * 2 + 1)
+            .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     }
 
     fun observe(module: CatalogModule, release: ModuleRelease, retry: Boolean = false): Flow<ModuleReleaseDetails> = channelFlow {
         if (module.registryMetadata != null || module.repositoryUrl == RepositorySource.KERNEL_SU_URL) {
-            send(ModuleReleaseDetails(
-                notes = release.descriptionHTML.takeIf(String::isNotBlank)?.let {
-                    ModuleReadme(it, RepositorySource.KERNEL_SU_URL, DocumentFormat.HTML, RepositorySource.KERNEL_SU_URL)
-                },
-            ))
+            send(
+                ModuleReleaseDetails(
+                    notes = release.descriptionHTML.takeIf(String::isNotBlank)?.let {
+                        ModuleReadme(it, RepositorySource.KERNEL_SU_URL, DocumentFormat.HTML, RepositorySource.KERNEL_SU_URL)
+                    },
+                ),
+            )
             return@channelFlow
         }
         val primary = async {
@@ -63,7 +64,9 @@ class ModuleReleaseRepository(
         val fallback = async {
             if (primary.await() == null) {
                 update?.let { attempt { document(it.changelog, retry) } }?.also { send(ModuleReleaseDetails(notes = it)) }
-            } else null
+            } else {
+                null
+            }
         }
         val reference = release.assets.firstNotNullOfOrNull { githubDownload(it.downloadUrl) }
             ?: update?.let { githubDownload(it.zipUrl) }
@@ -74,13 +77,15 @@ class ModuleReleaseRepository(
         val notes = primaryNotes ?: updateNotes ?: github?.text("body")?.takeIf(String::isNotBlank)?.let {
             githubPage?.let { page -> ModuleReadme(it, page) }
         }
-        send(ModuleReleaseDetails(
-            title = github?.text("name")?.takeIf(String::isNotBlank),
-            publishedAt = github?.text("published_at")?.takeIf(String::isNotBlank),
-            releaseUrl = githubPage,
-            notes = notes,
-            notesFailed = notes == null && (release.changelogUrl.isNotBlank() || update?.changelog?.isNotBlank() == true),
-        ))
+        send(
+            ModuleReleaseDetails(
+                title = github?.text("name")?.takeIf(String::isNotBlank),
+                publishedAt = github?.text("published_at")?.takeIf(String::isNotBlank),
+                releaseUrl = githubPage,
+                notes = notes,
+                notesFailed = notes == null && (release.changelogUrl.isNotBlank() || update?.changelog?.isNotBlank() == true),
+            ),
+        )
     }.flowOn(Dispatchers.IO)
 
     private suspend fun document(url: String, retry: Boolean): ModuleReadme? {

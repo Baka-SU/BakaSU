@@ -3,27 +3,27 @@ package org.bakasu.bakasu.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Job
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
 import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
 import org.bakasu.bakasu.domain.model.ModuleCatalogResult
 import org.bakasu.bakasu.domain.model.ModuleReadme
 import org.bakasu.bakasu.domain.model.ModuleRelease
-import org.bakasu.bakasu.domain.model.ModuleReleaseDetails
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
+import org.bakasu.bakasu.domain.model.ModuleReleaseDetails
 import org.bakasu.bakasu.domain.model.RepositoryFailure
-import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
 import org.bakasu.bakasu.domain.usecase.GetCatalogModuleUseCase
-import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
 import org.bakasu.bakasu.domain.usecase.GetModuleReadmeUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
+import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
@@ -138,8 +138,11 @@ class ModuleDetailViewModel(
 
                 is ModuleCatalogResult.Failure -> {
                     mutableState.update {
-                        if (result.reason == ModuleCatalogFailure.NotFound) ModuleDetailUiState(loading = false, error = result.reason)
-                        else it.copy(loading = false, error = result.reason)
+                        if (result.reason == ModuleCatalogFailure.NotFound) {
+                            ModuleDetailUiState(loading = false, error = result.reason)
+                        } else {
+                            it.copy(loading = false, error = result.reason)
+                        }
                     }
                 }
             }
@@ -168,7 +171,9 @@ class ModuleDetailViewModel(
                 val current = it.releaseDetails[release] ?: return@update it
                 if (it.module != module || current.requestToken !== pending.requestToken ||
                     observeSources.sources.value.none { source -> source.url == repositoryUrl }
-                ) return@update it
+                ) {
+                    return@update it
+                }
                 it.copy(releaseDetails = it.releaseDetails + (release to transform(current)))
             }
         }
