@@ -179,6 +179,7 @@ fun ScriptRunScreen(route: Route.ScriptRun) {
         } else {
             val prepared = state.prepared
             val failure = state.failure
+            val paramsTitle = if (prepared?.params?.params.isNullOrEmpty()) null else stringResource(R.string.script_params)
             LazyColumn(
                 modifier = Modifier.fillMaxSize().imePadding().nestedScroll(scrollBehavior.nestedScrollConnection).blurSource(),
                 contentPadding = padding,
@@ -208,7 +209,7 @@ fun ScriptRunScreen(route: Route.ScriptRun) {
                     lazySegmentColumn(items = listOf(state.lastRun)) { _, last ->
                         SettingsBaseWidget(title = stringResource(R.string.script_notice), titleStyle = MaterialTheme.typography.bodyMedium, description = scriptLastRunText(last), iconPlaceholder = false)
                     }
-                    lazySegmentColumn(items = prepared.params.params, title = if (prepared.params.params.isEmpty()) null else stringResource(R.string.script_params), key = { _, param -> param.key }) { _, param ->
+                    lazySegmentColumn(items = prepared.params.params, title = paramsTitle, key = { _, param -> param.key }) { _, param ->
                         ScriptParamField(param, state, viewModel::setValue)
                     }
                     item { ScriptSource(prepared) }
