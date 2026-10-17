@@ -64,7 +64,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     val viewModel = koinViewModel<SuSFSViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    var page by rememberSaveable { mutableStateOf("") }
+    var page by rememberSaveable { mutableStateOf<SuSFSSubPage?>(null) }
     var sectionName by rememberSaveable { mutableStateOf(WearSuSFSSection.Standard.name) }
     val section = WearSuSFSSection.valueOf(sectionName)
     var selectedPath by rememberSaveable { mutableStateOf("") }
@@ -121,7 +121,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                     },
                     success = failCount == 0,
                 )
-                if (failCount == 0) page = "section"
+                if (failCount == 0) page = SuSFSSubPage.Section
             } finally {
                 busy = false
             }
@@ -139,7 +139,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
         viewModel.events.collect { if (it is SuSFSUiEvent.Error) result = WearResult(it.message.ifBlank { failed }, success = false) }
     }
     LaunchedEffect(config?.enabled) {
-        if (config?.enabled == false && page in setOf("section", "add", "detail")) page = ""
+        if (config?.enabled == false && page?.needsEnabled == true) page = null
     }
     val confirmImport = rememberWearConfirmDialog(
         stringResource(R.string.susfs_backup_import_confirm_title),
@@ -171,7 +171,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
         }.onFailure { result = WearResult(failed, success = false, brief = true) }
     }
     val statusContent: @Composable () -> Unit = {
-        WearList(isLoading = state.isLoading || busy, onBack = { page = "" }) { spec ->
+        WearList(isLoading = state.isLoading || busy, onBack = { page = null }) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.susfs_tab_status)) }
             item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_status_controls)) }
             item {
@@ -192,7 +192,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
             }
             item { WearInfoCard(spec) { WearDetailField(R.drawable.wear_symbol_info, stringResource(R.string.susfs_status_version), state.statusInfo?.version?.ifBlank { noData } ?: noData) } }
             item { WearInfoCard(spec) { WearDetailField(R.drawable.wear_symbol_tune, stringResource(R.string.susfs_status_variant), state.statusInfo?.variant?.ifBlank { noData } ?: noData) } }
-            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_status_enabled_features), { page = "capabilities" }, icon = R.drawable.wear_symbol_info) }
+            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_status_enabled_features), { page = SuSFSSubPage.Capabilities }, icon = R.drawable.wear_symbol_info) }
             item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_backup_restore)) }
             SegmentedColumn(listOf("export", "import", "reset"), { it }) { action ->
                 when (action) {
@@ -225,31 +225,23 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
         }
     }
     val route = page
-    if (route.isNotEmpty()) {
-        WearSubPage({
-            page = if (page in setOf("add", "detail")) {
-                "section"
-            } else if (page == "capabilities") {
-                "status"
-            } else {
-                ""
-            }
-        }) {
+    if (route != null) {
+        WearSubPage({ page = page?.parent }) {
             when (route) {
-                "status" -> statusContent()
+                SuSFSSubPage.Status -> statusContent()
 
-                "capabilities" -> WearList(onBack = { page = "status" }) { spec ->
+                SuSFSSubPage.Capabilities -> WearList(onBack = { page = SuSFSSubPage.Status }) { spec ->
                     item { WearPageHeader(spec, stringResource(R.string.susfs_status_enabled_features)) }
                     item { WearInfoCard(spec) { Text(state.statusInfo?.enabledFeatures?.ifBlank { noData } ?: noData) } }
                 }
 
-                "section" -> if (config != null && config.enabled) {
+                SuSFSSubPage.Section -> if (config != null && config.enabled) {
                     if (section == WearSuSFSSection.Standard) {
                         WearSuSFSStandardPage(
                             config,
                             busy,
                             viewModel,
-                            onBack = { page = "" },
+                            onBack = { page = null },
                             onCommand = { command, onSuccess -> submit(command, onSuccess = onSuccess) },
                         )
                     } else {
@@ -257,46 +249,46 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                             section,
                             config,
                             busy,
-                            onBack = { page = "" },
-                            onAdd = { page = "add" },
+                            onBack = { page = null },
+                            onAdd = { page = SuSFSSubPage.Add },
                             onSelect = {
                                 selectedPath = it
-                                page = "detail"
+                                page = SuSFSSubPage.Detail
                             },
                         )
                     }
                 }
 
-                "add" -> WearSuSFSAddPage(
+                SuSFSSubPage.Add -> WearSuSFSAddPage(
                     section,
                     busy,
                     viewModel,
-                    onBack = { page = "section" },
+                    onBack = { page = SuSFSSubPage.Section },
                     onCommand = ::addEntries,
                 )
 
-                "detail" -> if (config != null) {
+                SuSFSSubPage.Detail -> if (config != null) {
                     WearSuSFSDetailPage(
                         section,
                         config,
                         selectedPath,
                         busy,
-                        onBack = { page = "section" },
-                    ) { command -> submit(command) { page = "section" } }
+                        onBack = { page = SuSFSSubPage.Section },
+                    ) { command -> submit(command) { page = SuSFSSubPage.Section } }
                 }
             }
         }
     } else {
         WearList(isLoading = state.isLoading || busy, onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.susfs_config_title)) }
-            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_tab_status), { page = "status" }, icon = R.drawable.wear_symbol_info) }
+            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_tab_status), { page = SuSFSSubPage.Status }, icon = R.drawable.wear_symbol_info) }
             LazySegmentedColumn(WearSuSFSSection.entries, { it.name }) { entry ->
                 WearSettingsJumpPageWidget(
                     spec,
                     stringResource(entry.title),
                     {
                         sectionName = entry.name
-                        page = "section"
+                        page = SuSFSSubPage.Section
                     },
                     icon = entry.icon,
                     enabled = config?.enabled == true,
@@ -304,4 +296,13 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
             }
         }
     }
+}
+
+/** The pages nested in the SUSFS page: Back goes to [parent], and [needsEnabled] pages close when SUSFS is turned off. */
+private enum class SuSFSSubPage(val parent: SuSFSSubPage? = null, val needsEnabled: Boolean = false) {
+    Status,
+    Capabilities(Status),
+    Section(needsEnabled = true),
+    Add(Section, needsEnabled = true),
+    Detail(Section, needsEnabled = true),
 }
