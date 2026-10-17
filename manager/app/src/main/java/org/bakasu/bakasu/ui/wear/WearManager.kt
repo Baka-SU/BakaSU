@@ -48,6 +48,8 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.navigationevent.NavigationEvent
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.rememberPagerState
+import androidx.wear.compose.material3.AlertDialog
+import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AnimatedPage
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.CircularProgressIndicator
@@ -68,6 +70,7 @@ import org.bakasu.bakasu.domain.model.FlashOperation
 import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.LkmSelection
+import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
 import org.bakasu.bakasu.ui.viewmodel.HomeUiEvent
@@ -171,6 +174,17 @@ fun WearManagerScreen() {
         openFailed = true
     }
     val operationFailedText = stringResource(R.string.operation_failed)
+    val loadFailedText = stringResource(R.string.wear_load_failed)
+    // Shown only after a list load confirmed that root was refused, not for other load failures.
+    val rootDeniedDialog = rememberCustomDialog { dismiss ->
+        AlertDialog(
+            visible = true,
+            onDismissRequest = dismiss,
+            title = { Text(stringResource(R.string.wear_warning_root)) },
+            text = { Text(stringResource(R.string.grant_root_failed)) },
+            edgeButton = { AlertDialogDefaults.EdgeButton(onClick = dismiss) },
+        )
+    }
 
     // Settings feedback belongs to the page that caused it; navigating clears it.
     fun clearSettingsFeedback() {
@@ -264,8 +278,17 @@ fun WearManagerScreen() {
     LaunchedEffect(homeViewModel) {
         homeViewModel.events.collect { event -> if (event is HomeUiEvent.Error) homeError = event.message }
     }
-    LaunchedEffect(superUserViewModel) {
-        superUserViewModel.events.collect { event -> if (event is SuperUserUiEvent.Error) superuserError = event.message }
+    LaunchedEffect(superUserViewModel, loadFailedText) {
+        superUserViewModel.events.collect { event ->
+            when (event) {
+                // A list that failed for another reason is not reported as missing root.
+                is SuperUserUiEvent.Error -> superuserError = loadFailedText
+
+                SuperUserUiEvent.RootDenied -> rootDeniedDialog.show()
+
+                else -> Unit
+            }
+        }
     }
     LaunchedEffect(moduleViewModel, operationFailedText) {
         moduleViewModel.events.collect { event ->
