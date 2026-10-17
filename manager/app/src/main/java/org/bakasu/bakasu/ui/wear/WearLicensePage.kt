@@ -2,6 +2,8 @@ package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.twotone.Copyright
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -47,7 +49,7 @@ internal fun WearLicensePage(onBack: () -> Unit, onOpenLibrary: (Int) -> Unit) {
         item { WearPageHeader(spec, stringResource(R.string.open_source_license)) }
         libraries?.libraries?.forEachIndexed { index, library ->
             item(key = "library-$index") {
-                WearActionButton(spec, R.drawable.wear_symbol_copyright, library.name, { onOpenLibrary(index) })
+                WearActionButton(spec, Icons.TwoTone.Copyright, library.name, { onOpenLibrary(index) })
             }
         }
     }

@@ -1,12 +1,13 @@
 package org.bakasu.bakasu.ui.wear.component
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.twotone.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
@@ -22,7 +23,6 @@ import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import androidx.wear.compose.material3.rememberRevealState
 import kotlinx.coroutines.launch
-import org.bakasu.bakasu.R
 
 /**
  * A list row that reveals a Delete action when swiped from right to left, with the official
@@ -62,7 +62,7 @@ fun TransformingLazyColumnItemScope.WearSwipeToDelete(
         primaryAction = {
             PrimaryActionButton(
                 onClick = ::requestDelete,
-                icon = { Icon(painterResource(R.drawable.wear_symbol_delete), contentDescription = deleteLabel) },
+                icon = { Icon(Icons.TwoTone.Delete, contentDescription = deleteLabel) },
                 text = { Text(deleteLabel) },
             )
         },

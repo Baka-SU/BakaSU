@@ -3,6 +3,12 @@ package org.bakasu.bakasu.ui.wear
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.twotone.Article
+import androidx.compose.material.icons.twotone.Archive
+import androidx.compose.material.icons.twotone.Backup
+import androidx.compose.material.icons.twotone.Error
+import androidx.compose.material.icons.twotone.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -69,20 +75,20 @@ internal fun WearSuperUserPage(
             WearIconButtonGroup(
                 spec,
                 listOf(
-                    WearIconAction(R.drawable.wear_symbol_search, stringResource(R.string.search_apps), onSearch),
-                    WearIconAction(R.drawable.wear_symbol_article, stringResource(R.string.sulog), onLogs),
-                    WearIconAction(R.drawable.wear_symbol_backup, stringResource(R.string.wear_allowlist_backup), onBackup),
+                    WearIconAction(Icons.TwoTone.Search, stringResource(R.string.search_apps), onSearch),
+                    WearIconAction(Icons.AutoMirrored.TwoTone.Article, stringResource(R.string.sulog), onLogs),
+                    WearIconAction(Icons.TwoTone.Backup, stringResource(R.string.wear_allowlist_backup), onBackup),
                 ),
             )
         }
         // The app list follows the actions directly, separated by the 8dp group gap of the Wear list guidance.
         wearGroupGap("apps-gap")
         if (!error.isNullOrBlank()) {
-            item { WearStatusItem(spec, R.drawable.wear_symbol_error_fill1, error, tone = WearStatusTone.ERROR) }
+            item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR) }
         }
         if (state.appGroupList.isEmpty() && error.isNullOrBlank()) {
             item {
-                WearEmptyState(spec, R.drawable.wear_symbol_archive, stringResource(R.string.no_apps_found))
+                WearEmptyState(spec, Icons.TwoTone.Archive, stringResource(R.string.no_apps_found))
             }
         }
         // An app button list: 32dp app icon, the app name and the phone's status labels.

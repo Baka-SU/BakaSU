@@ -3,7 +3,7 @@ package org.bakasu.bakasu.ui.wear.component.settings
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
@@ -22,7 +22,7 @@ fun WearChoicePage(
     selected: String,
     onBack: () -> Unit,
     enabled: Boolean = true,
-    icon: ((String) -> Int)? = null,
+    icon: ((String) -> ImageVector)? = null,
     onChoose: (String) -> Unit,
 ) {
     WearList(onBack = onBack, snap = true) { spec ->
@@ -35,7 +35,7 @@ fun WearChoicePage(
                     .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
                 enabled = enabled,
                 transformation = SurfaceTransformation(spec),
-                icon = icon?.let { { Icon(painterResource(it(value)), contentDescription = null) } },
+                icon = icon?.let { { Icon(it(value), contentDescription = null) } },
                 label = { Text(label, maxLines = 3, overflow = TextOverflow.Ellipsis) },
             )
         }

@@ -1,5 +1,12 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.twotone.Article
+import androidx.compose.material.icons.twotone.CheckCircle
+import androidx.compose.material.icons.twotone.Download
+import androidx.compose.material.icons.twotone.Error
+import androidx.compose.material.icons.twotone.Refresh
+import androidx.compose.material.icons.twotone.Save
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -101,13 +108,13 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
                         spec,
                         stringResource(if (isModule) R.string.wear_installing_module else R.string.flashing),
                         secondaryLabel = currentStep,
-                        icon = R.drawable.wear_symbol_download,
+                        icon = Icons.TwoTone.Download,
                     )
                 }
                 item {
                     WearActionButton(
                         spec,
-                        R.drawable.wear_symbol_article,
+                        Icons.AutoMirrored.TwoTone.Article,
                         logTitle,
                         { showLog = true },
                         secondaryText = stringResource(R.string.wear_install_log_summary),
@@ -122,13 +129,13 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
                         spec,
                         stringResource(R.string.flash_success),
                         secondaryLabel = currentStep,
-                        icon = R.drawable.wear_symbol_check_circle_fill1,
+                        icon = Icons.TwoTone.CheckCircle,
                     )
                 }
                 item {
                     WearActionButton(
                         spec,
-                        R.drawable.wear_symbol_save,
+                        Icons.TwoTone.Save,
                         stringResource(R.string.save_log),
                         saveLog,
                         secondaryText = stringResource(R.string.wear_save_log_summary),
@@ -138,7 +145,7 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
                     item {
                         WearActionButton(
                             spec,
-                            R.drawable.wear_symbol_refresh,
+                            Icons.TwoTone.Refresh,
                             stringResource(R.string.wear_reboot_device),
                             { viewModel.dispatch(FlashUiAction.Reboot(allowSoftReboot = isModule)) },
                             secondaryText = if (isModule) stringResource(R.string.wear_reboot_apply_module) else null,
@@ -157,7 +164,7 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
                         secondaryLabel = state.exitCode?.takeIf { !fileError }?.let {
                             stringResource(R.string.wear_labeled_value, stringResource(R.string.error_code), it.toString())
                         },
-                        icon = R.drawable.wear_symbol_error_fill1,
+                        icon = Icons.TwoTone.Error,
                     )
                 }
                 // An unreadable ZIP never reaches the installer, so there is no log to check or save.
@@ -165,7 +172,7 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
                     item {
                         WearActionButton(
                             spec,
-                            R.drawable.wear_symbol_article,
+                            Icons.AutoMirrored.TwoTone.Article,
                             stringResource(R.string.wear_check_log),
                             { showLog = true },
                             secondaryText = stringResource(R.string.wear_check_log_summary),
@@ -174,7 +181,7 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
                     item {
                         WearActionButton(
                             spec,
-                            R.drawable.wear_symbol_save,
+                            Icons.TwoTone.Save,
                             stringResource(R.string.save_log),
                             saveLog,
                             secondaryText = stringResource(R.string.wear_save_log_summary),

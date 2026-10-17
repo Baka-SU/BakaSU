@@ -1,6 +1,5 @@
 package org.bakasu.bakasu.ui.wear.component
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -29,8 +28,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -64,7 +63,7 @@ import kotlin.math.roundToInt
 @Composable
 fun TransformingLazyColumnItemScope.WearSliderCard(
     transformationSpec: TransformationSpec,
-    @DrawableRes icon: Int,
+    icon: ImageVector,
     label: String,
     valueText: String,
     value: Float,
@@ -79,7 +78,7 @@ fun TransformingLazyColumnItemScope.WearSliderCard(
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
             Text(
                 label,

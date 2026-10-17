@@ -1,13 +1,31 @@
 package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.twotone.Android
+import androidx.compose.material.icons.twotone.Block
+import androidx.compose.material.icons.twotone.CheckCircle
+import androidx.compose.material.icons.twotone.DeveloperBoard
+import androidx.compose.material.icons.twotone.Error
+import androidx.compose.material.icons.twotone.Extension
+import androidx.compose.material.icons.twotone.FilterList
+import androidx.compose.material.icons.twotone.Group
+import androidx.compose.material.icons.twotone.Info
+import androidx.compose.material.icons.twotone.Memory
+import androidx.compose.material.icons.twotone.Security
+import androidx.compose.material.icons.twotone.Settings
+import androidx.compose.material.icons.twotone.Tag
+import androidx.compose.material.icons.twotone.TaskAlt
+import androidx.compose.material.icons.twotone.Tune
+import androidx.compose.material.icons.twotone.Warning
+import androidx.compose.material.icons.twotone.Watch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
@@ -117,7 +135,7 @@ internal fun WearHomePage(
         val action = warning.onAction
         val icon: @Composable () -> Unit = {
             Icon(
-                painterResource(if (warning.tone == WearStatusTone.ERROR) R.drawable.wear_symbol_error_fill1 else R.drawable.wear_symbol_warning_fill1),
+                if (warning.tone == WearStatusTone.ERROR) Icons.TwoTone.Error else Icons.TwoTone.Warning,
                 contentDescription = null,
             )
         }
@@ -201,9 +219,9 @@ internal fun WearHomePage(
                     // The superuser and module counts fit one line in the theme's smallest body style.
                     secondaryLabelStyle = if (working) MaterialTheme.typography.bodyExtraSmall else null,
                     icon = when {
-                        working -> R.drawable.wear_symbol_task_alt
-                        status.kernelVersion.isGKI() -> R.drawable.wear_symbol_warning_fill1
-                        else -> R.drawable.wear_symbol_block
+                        working -> Icons.TwoTone.TaskAlt
+                        status.kernelVersion.isGKI() -> Icons.TwoTone.Warning
+                        else -> Icons.TwoTone.Block
                     },
                     // Not installed or unsupported is an error state, shown in red.
                     emphasis = if (working) WearChipEmphasis.HIGH else WearChipEmphasis.ERROR,
@@ -221,7 +239,7 @@ internal fun WearHomePage(
                         stringResource(R.string.home_version_info),
                         secondaryLabel = listOf(info.deviceModel, info.kernelRelease).filter { it.isNotBlank() }
                             .joinToString(" · ").ifBlank { unknown },
-                        icon = R.drawable.wear_symbol_info,
+                        icon = Icons.TwoTone.Info,
                         onClick = onVersionInfo,
                     )
                 }
@@ -230,7 +248,7 @@ internal fun WearHomePage(
                         spec,
                         stringResource(R.string.home_status_info),
                         secondaryLabel = listOf(info.selinuxStatus.ifBlank { unknown }, seccomp).joinToString(" · "),
-                        icon = R.drawable.wear_symbol_check_circle,
+                        icon = Icons.TwoTone.CheckCircle,
                         onClick = onStatusInfo,
                     )
                 }
@@ -241,7 +259,7 @@ internal fun WearHomePage(
                 wearStatusInfoItems(spec, state, unknown, seccomp, managers)
             }
         }
-        if (!error.isNullOrBlank()) item { WearStatusItem(spec, R.drawable.wear_symbol_error_fill1, error, tone = WearStatusTone.ERROR, centered = false) }
+        if (!error.isNullOrBlank()) item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR, centered = false) }
     }
 }
 
@@ -284,7 +302,7 @@ private fun TransformingLazyColumnItemScope.WearWarningBar(
             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
         icon = {
             Icon(
-                painterResource(if (warning.tone == WearStatusTone.ERROR) R.drawable.wear_symbol_error_fill1 else R.drawable.wear_symbol_warning_fill1),
+                if (warning.tone == WearStatusTone.ERROR) Icons.TwoTone.Error else Icons.TwoTone.Warning,
                 contentDescription = null,
             )
         },
@@ -335,20 +353,20 @@ private fun managerSignatures(state: HomeDashboardState): String? {
 private fun TransformingLazyColumnScope.wearVersionInfoItems(spec: TransformationSpec, state: HomeDashboardState, unknown: String) {
     val status = state.systemStatus
     val info = state.systemInfo
-    val fields = buildList<Triple<Int, Int, String>> {
-        add(Triple(R.drawable.wear_symbol_watch, R.string.home_device_model, info.deviceModel))
-        add(Triple(R.drawable.wear_symbol_developer_board, R.string.home_kernel, info.kernelRelease))
-        add(Triple(R.drawable.wear_symbol_android, R.string.home_android_version, info.androidVersion))
-        if (status.isManager) add(Triple(R.drawable.wear_symbol_memory, R.string.home_kernel_version, status.ksuFullVersion.orEmpty()))
+    val fields = buildList<Triple<ImageVector, Int, String>> {
+        add(Triple(Icons.TwoTone.Watch, R.string.home_device_model, info.deviceModel))
+        add(Triple(Icons.TwoTone.DeveloperBoard, R.string.home_kernel, info.kernelRelease))
+        add(Triple(Icons.TwoTone.Android, R.string.home_android_version, info.androidVersion))
+        if (status.isManager) add(Triple(Icons.TwoTone.Memory, R.string.home_kernel_version, status.ksuFullVersion.orEmpty()))
         add(
             Triple(
-                R.drawable.wear_symbol_tag,
+                Icons.TwoTone.Tag,
                 R.string.home_manager_version,
                 info.managerVersion.let { (name, code, build) -> "$name ($code/$build)" },
             ),
         )
         if (info.susfsEnabled && info.susfsVersion.isNotEmpty()) {
-            add(Triple(R.drawable.wear_symbol_settings, R.string.home_susfs_version, info.susfsVersion))
+            add(Triple(Icons.TwoTone.Settings, R.string.home_susfs_version, info.susfsVersion))
         }
     }
     fields.forEach { (icon, label, value) ->
@@ -370,20 +388,20 @@ private fun TransformingLazyColumnScope.wearStatusInfoItems(
             spec,
             stringResource(R.string.home_selinux_status),
             secondaryLabel = info.selinuxStatus.ifBlank { unknown },
-            icon = R.drawable.wear_symbol_security,
+            icon = Icons.TwoTone.Security,
         )
     }
-    item { WearChip(spec, stringResource(R.string.home_seccomp_status), secondaryLabel = seccomp, icon = R.drawable.wear_symbol_filter_list) }
+    item { WearChip(spec, stringResource(R.string.home_seccomp_status), secondaryLabel = seccomp, icon = Icons.TwoTone.FilterList) }
     if (managers != null) {
-        item { WearChip(spec, stringResource(R.string.multi_manager_list), secondaryLabel = managers, icon = R.drawable.wear_symbol_group) }
+        item { WearChip(spec, stringResource(R.string.multi_manager_list), secondaryLabel = managers, icon = Icons.TwoTone.Group) }
     }
-    val extras = buildList<Triple<Int, Int, String>> {
-        if (status.isFullFeatured) add(Triple(R.drawable.wear_symbol_tune, R.string.home_hook_type, status.hookType))
+    val extras = buildList<Triple<ImageVector, Int, String>> {
+        if (status.isFullFeatured) add(Triple(Icons.TwoTone.Tune, R.string.home_hook_type, status.hookType))
         if (info.zygiskImplement.isNotEmpty() && info.zygiskImplement != "None") {
-            add(Triple(R.drawable.wear_symbol_extension, R.string.home_zygisk_implement, info.zygiskImplement))
+            add(Triple(Icons.TwoTone.Extension, R.string.home_zygisk_implement, info.zygiskImplement))
         }
         if (info.metaModuleImplement.isNotEmpty() && info.metaModuleImplement != "None") {
-            add(Triple(R.drawable.wear_symbol_extension, R.string.home_meta_module_implement, info.metaModuleImplement))
+            add(Triple(Icons.TwoTone.Extension, R.string.home_meta_module_implement, info.metaModuleImplement))
         }
     }
     extras.forEach { (icon, label, value) ->

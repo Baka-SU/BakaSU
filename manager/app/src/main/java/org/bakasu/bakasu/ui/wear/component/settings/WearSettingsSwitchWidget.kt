@@ -1,10 +1,9 @@
 package org.bakasu.bakasu.ui.wear.component.settings
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.ButtonDefaults
@@ -30,7 +29,7 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true,
-    @DrawableRes icon: Int? = null,
+    icon: ImageVector? = null,
     secondaryLabel: String? = null,
     compact: Boolean = false,
 ) {
@@ -44,7 +43,7 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
         checked = checked,
         onCheckedChange = onCheckedChange,
         enabled = enabled,
-        icon = icon?.let { { Icon(painterResource(it), contentDescription = null) } },
+        icon = icon?.let { { Icon(it, contentDescription = null) } },
         secondaryLabel = secondaryLabel?.let { text -> { Text(text, maxLines = 2, overflow = TextOverflow.Ellipsis) } },
         label = { Text(label, maxLines = 3, overflow = TextOverflow.Ellipsis) },
     )

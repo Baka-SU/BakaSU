@@ -1,6 +1,5 @@
 package org.bakasu.bakasu.ui.wear.component
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -15,8 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -102,7 +101,7 @@ fun Modifier.wearCompactRow(compact: Boolean): Modifier = if (compact) heightIn(
 @Composable
 fun TransformingLazyColumnItemScope.WearActionButton(
     transformationSpec: TransformationSpec,
-    @DrawableRes icon: Int?,
+    icon: ImageVector?,
     label: String,
     onClick: () -> Unit,
     enabled: Boolean = true,
@@ -118,7 +117,7 @@ fun TransformingLazyColumnItemScope.WearActionButton(
             .wearCompactRow(compact),
         transformation = SurfaceTransformation(transformationSpec),
         colors = colors,
-        icon = icon?.let { { Icon(painterResource(it), contentDescription = null) } },
+        icon = icon?.let { { Icon(it, contentDescription = null) } },
         secondaryLabel = secondaryText?.let { text -> { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
     ) { Text(label, maxLines = if (secondaryText == null) 3 else 2, overflow = TextOverflow.Ellipsis) }
 }
@@ -150,10 +149,10 @@ fun WearBadge(
  * page's own header and buttons, which stay in place.
  */
 @Composable
-fun TransformingLazyColumnItemScope.WearEmptyState(transformationSpec: TransformationSpec, @DrawableRes icon: Int, text: String) {
+fun TransformingLazyColumnItemScope.WearEmptyState(transformationSpec: TransformationSpec, icon: ImageVector, text: String) {
     WearScaledItem(transformationSpec) {
         Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(ButtonDefaults.LargeIconSize))
+            Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.LargeIconSize))
             Text(
                 text,
                 modifier = Modifier.padding(top = 8.dp),

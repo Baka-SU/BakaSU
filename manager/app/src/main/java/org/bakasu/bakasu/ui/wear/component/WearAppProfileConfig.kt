@@ -1,5 +1,9 @@
 package org.bakasu.bakasu.ui.wear.component
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.twotone.Description
+import androidx.compose.material.icons.twotone.Save
+import androidx.compose.material.icons.twotone.Security
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -178,7 +182,7 @@ fun WearAppProfileConfig(
                                 }, description = if (field == R.string.profile_selinux_rules) rules else domain)
                             }
                             item {
-                                WearActionButton(spec, R.drawable.wear_symbol_save, stringResource(R.string.app_profile_template_save), {
+                                WearActionButton(spec, Icons.TwoTone.Save, stringResource(R.string.app_profile_template_save), {
                                     onProfileChange(profile.copy(context = domain, rules = rules, rootUseDefault = false))
                                     back()
                                 }, enabled = domain.matches(Regex("^[a-z_]+:[a-z0-9_]+:[a-z0-9_]+(:[a-z0-9_]+)?$")) && sepolicyValid)
@@ -237,7 +241,7 @@ fun WearAppProfileConfig(
                     stringResource(R.string.profile),
                     { page = R.string.profile },
                     description = stringResource(mode),
-                    icon = R.drawable.wear_symbol_security,
+                    icon = Icons.TwoTone.Security,
                 )
             }
             if (!profile.allowSu) {
@@ -266,7 +270,7 @@ fun WearAppProfileConfig(
                             spec,
                             stringResource(R.string.app_profile_template_view),
                             { onViewTemplate(profile.rootTemplate) },
-                            icon = R.drawable.wear_symbol_description,
+                            icon = Icons.TwoTone.Description,
                         )
                     }
                 }
@@ -275,7 +279,7 @@ fun WearAppProfileConfig(
                         spec,
                         stringResource(R.string.manage_app_profile),
                         onManageTemplates,
-                        icon = R.drawable.wear_symbol_description,
+                        icon = Icons.TwoTone.Description,
                     )
                 }
             } else if (mode == R.string.profile_custom) {

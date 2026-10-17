@@ -3,11 +3,14 @@ package org.bakasu.bakasu.ui.wear
 import android.os.Build
 import android.os.PowerManager
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.twotone.Sort
+import androidx.compose.material.icons.twotone.Cloud
+import androidx.compose.material.icons.twotone.RestartAlt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.LocalScreenIsActive
@@ -56,7 +59,7 @@ internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onA
                 modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
                     .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
                 transformation = SurfaceTransformation(spec),
-                icon = { Icon(painterResource(R.drawable.wear_symbol_sort), contentDescription = null) },
+                icon = { Icon(Icons.AutoMirrored.TwoTone.Sort, contentDescription = null) },
                 label = { Text(stringResource(sort.displayNameRes), maxLines = 3, overflow = TextOverflow.Ellipsis) },
             )
         }
@@ -97,7 +100,7 @@ internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction:
         item {
             WearActionButton(
                 spec,
-                R.drawable.wear_symbol_cloud,
+                Icons.TwoTone.Cloud,
                 stringResource(R.string.module_repo),
                 onRepo,
                 secondaryText = stringResource(R.string.wear_module_repo_summary),
@@ -131,7 +134,7 @@ internal fun WearRebootPanel(rootAvailable: Boolean, onBack: () -> Unit, onReboo
             item {
                 WearActionButton(
                     spec,
-                    R.drawable.wear_symbol_restart_alt,
+                    Icons.TwoTone.RestartAlt,
                     stringResource(label),
                     { onReboot(reason) },
                     rootAvailable,

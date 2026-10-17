@@ -12,6 +12,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.twotone.Article
+import androidx.compose.material.icons.twotone.Cloud
+import androidx.compose.material.icons.twotone.Code
+import androidx.compose.material.icons.twotone.Download
+import androidx.compose.material.icons.twotone.Extension
+import androidx.compose.material.icons.twotone.Info
+import androidx.compose.material.icons.twotone.Person
+import androidx.compose.material.icons.twotone.Refresh
+import androidx.compose.material.icons.twotone.Search
+import androidx.compose.material.icons.twotone.Tag
+import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -99,7 +110,7 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
         AlertDialog(
             visible = true,
             onDismissRequest = leave,
-            icon = { Icon(painterResource(R.drawable.wear_symbol_info), contentDescription = null) },
+            icon = { Icon(Icons.TwoTone.Info, contentDescription = null) },
             title = { Text(stringResource(R.string.wear_repo_connect_failed)) },
             text = { Text(failureReason, color = MaterialTheme.colorScheme.error) },
             confirmButton = {
@@ -129,7 +140,7 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(
-                    painterResource(R.drawable.wear_symbol_warning_fill1),
+                    Icons.TwoTone.Warning,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.error,
@@ -161,7 +172,7 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
         onBack = onBack,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
-        item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_modules), onSearch, icon = R.drawable.wear_symbol_search, description = state.search.ifBlank { null }) }
+        item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_modules), onSearch, icon = Icons.TwoTone.Search, description = state.search.ifBlank { null }) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_star_first), state.sortStargazerCountFirst, { viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it)) }) }
         if (state.modules.isEmpty() && !state.isRefreshing && failure == null) item { WearInfoCard(spec) { Text(stringResource(R.string.wear_catalog_empty)) } }
         LazySegmentedColumn(state.modules, { it.moduleId }) { module ->
@@ -169,7 +180,7 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
                 spec,
                 module.moduleName,
                 { onOpen(module.moduleId) },
-                icon = R.drawable.wear_symbol_cloud,
+                icon = Icons.TwoTone.Cloud,
                 description = module.summary.ifBlank { module.moduleId },
             )
         }
@@ -210,7 +221,7 @@ private fun rememberModuleDownload(moduleName: String, installer: WearModuleInst
         AlertDialog(
             visible = true,
             onDismissRequest = dismiss,
-            icon = { Icon(painterResource(R.drawable.wear_symbol_download), contentDescription = null) },
+            icon = { Icon(Icons.TwoTone.Download, contentDescription = null) },
             title = { Text(stringResource(R.string.wear_download_confirm_title)) },
             text = {
                 if (asset != null) {
@@ -250,7 +261,7 @@ internal fun WearOnlineModulePage(
     val requestDownload = rememberModuleDownload(module?.moduleName.orEmpty(), installer)
     WearList(isLoading = state.loading, onBack = onBack) { spec ->
         if (module == null) item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
-        if (state.error != null) item { WearActionButton(spec, R.drawable.wear_symbol_cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
+        if (state.error != null) item { WearActionButton(spec, Icons.TwoTone.Cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
         if (module != null) {
             // As in the design: the module icon, name and authors, then its main actions. As the
             // first item the icon takes the card's minimum list padding, a share of the screen
@@ -299,18 +310,18 @@ internal fun WearOnlineModulePage(
                 WearIconButtonGroup(
                     spec,
                     listOfNotNull(
-                        WearIconAction(R.drawable.wear_symbol_download, stringResource(R.string.wear_download), { if (latestRelease != null && latest != null) requestDownload(latestRelease, latest) }, latest != null, primary = true),
+                        WearIconAction(Icons.TwoTone.Download, stringResource(R.string.wear_download), { if (latestRelease != null && latest != null) requestDownload(latestRelease, latest) }, latest != null, primary = true),
                         module.sourceUrl.takeIf { it.isNotBlank() }?.let { url ->
-                            WearIconAction(R.drawable.wear_symbol_code, stringResource(R.string.source_code), { onLink(url) })
+                            WearIconAction(Icons.TwoTone.Code, stringResource(R.string.source_code), { onLink(url) })
                         },
                     ),
                 )
             }
             item { WearSectionHeader(spec, stringResource(R.string.wear_module_data)) }
             val sections = listOf(
-                Triple("readme", R.string.readme, R.string.wear_readme_summary) to R.drawable.wear_symbol_article,
-                Triple("releases", R.string.release, R.string.wear_release_summary) to R.drawable.wear_symbol_tag,
-                Triple("info", R.string.info, R.string.wear_info_summary) to R.drawable.wear_symbol_info,
+                Triple("readme", R.string.readme, R.string.wear_readme_summary) to Icons.AutoMirrored.TwoTone.Article,
+                Triple("releases", R.string.release, R.string.wear_release_summary) to Icons.TwoTone.Tag,
+                Triple("info", R.string.info, R.string.wear_info_summary) to Icons.TwoTone.Info,
             )
             SegmentedColumn(sections, { it.first.first }) { (section, icon) ->
                 val (target, label, summary) = section
@@ -322,7 +333,7 @@ internal fun WearOnlineModulePage(
                     spec,
                     author.name,
                     { onLink(author.link) },
-                    icon = R.drawable.wear_symbol_person,
+                    icon = Icons.TwoTone.Person,
                     description = stringResource(R.string.wear_author_link_summary),
                 )
             }
@@ -339,7 +350,7 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, section: String, onBa
     val requestDownload = rememberModuleDownload(module?.moduleName.orEmpty(), installer)
     WearList(isLoading = state.loading, onBack = onBack) { spec ->
         item { WearPageHeader(spec, module?.moduleName ?: stringResource(R.string.module_repo)) }
-        if (state.error != null) item { WearActionButton(spec, R.drawable.wear_symbol_cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
+        if (state.error != null) item { WearActionButton(spec, Icons.TwoTone.Cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
         if (module != null) {
             when (section) {
                 "readme" -> {
@@ -365,7 +376,7 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, section: String, onBa
                         items(release.assets, key = { it.downloadUrl }) { asset ->
                             WearActionButton(
                                 spec,
-                                R.drawable.wear_symbol_download,
+                                Icons.TwoTone.Download,
                                 asset.name,
                                 { requestDownload(release, asset) },
                                 secondaryText = formatFileSize(asset.size),
@@ -420,12 +431,12 @@ private fun WearModuleIcon(size: Dp) {
         Modifier.size(size).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        // The Material Symbols puzzle piece spans x 120-900 and y 60-840 of its 960 viewport, so its
-        // bounds sit 30/960 of its size up and to the right; moving it back centers it on the tile.
+        // The puzzle piece's body sits lower left in its 24dp grid (x 2-19, y 5-22), with only thin
+        // tabs to the top and right, so it is moved by 1.2/24 of its size to look centered on the tile.
         Icon(
-            painterResource(R.drawable.wear_symbol_extension),
+            Icons.TwoTone.Extension,
             contentDescription = null,
-            modifier = Modifier.offset(x = -glyph / 32, y = glyph / 32).size(glyph),
+            modifier = Modifier.offset(x = glyph * 0.05f, y = -glyph * 0.05f).size(glyph),
             tint = MaterialTheme.colorScheme.onPrimaryContainer,
         )
     }
@@ -489,7 +500,7 @@ private fun WearModuleDownloadScreen(name: String, version: String, state: Modul
                         CompactButton(
                             onClick = onRetry,
                             modifier = Modifier.padding(top = 6.dp),
-                            icon = { Icon(painterResource(R.drawable.wear_symbol_refresh), contentDescription = null) },
+                            icon = { Icon(Icons.TwoTone.Refresh, contentDescription = null) },
                             label = { Text(stringResource(R.string.network_retry)) },
                         )
                     }

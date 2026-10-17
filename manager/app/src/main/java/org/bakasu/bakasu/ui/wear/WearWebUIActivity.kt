@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -36,7 +38,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -211,7 +212,7 @@ private fun WearWebContent(state: WebUIState, onBack: () -> Unit) {
     val configuration = LocalConfiguration.current
     ScreenScaffold(scrollInfoProvider = provider, edgeButton = {
         EdgeButton(onClick = onBack) {
-            Icon(painterResource(R.drawable.wear_symbol_arrow_back), stringResource(R.string.back))
+            Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back))
         }
     }) { padding ->
         BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {

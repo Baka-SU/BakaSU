@@ -6,6 +6,8 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.twotone.SystemUpdate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -15,7 +17,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.material3.AlertDialog
@@ -69,7 +70,7 @@ fun WearManagerUpdateDialog(update: ManagerUpdateInfo?) {
         AlertDialog(
             visible = true,
             onDismissRequest = dismiss,
-            icon = { Icon(painterResource(R.drawable.wear_symbol_system_update_alt), contentDescription = null) },
+            icon = { Icon(Icons.TwoTone.SystemUpdate, contentDescription = null) },
             title = { Text(stringResource(if (stable) R.string.manager_update_stable else R.string.manager_update_beta)) },
             text = {
                 Text(
