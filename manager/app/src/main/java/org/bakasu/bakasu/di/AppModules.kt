@@ -57,6 +57,7 @@ import org.bakasu.bakasu.data.theme.ThemeRepository
 import org.bakasu.bakasu.data.update.ManagerUpdateRepository
 import org.bakasu.bakasu.data.webui.WebUiRepository
 import org.bakasu.bakasu.domain.text.TextTransliterator
+import org.bakasu.bakasu.domain.usecase.AddOnlineProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.AddUmountPathUseCase
 import org.bakasu.bakasu.domain.usecase.ApplyLanguageUseCase
 import org.bakasu.bakasu.domain.usecase.BackupAllowlistUseCase
@@ -77,6 +78,7 @@ import org.bakasu.bakasu.domain.usecase.ExecuteModuleActionUseCase
 import org.bakasu.bakasu.domain.usecase.ExportProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleIdUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleNameUseCase
+import org.bakasu.bakasu.domain.usecase.FetchOnlineProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
 import org.bakasu.bakasu.domain.usecase.GenerateBugreportUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppProfileUseCase
@@ -169,6 +171,7 @@ import org.bakasu.bakasu.ui.viewmodel.MainIntentViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
+import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.SulogViewModel
@@ -352,6 +355,8 @@ val useCaseModule = module {
     factoryOf(::ObserveProfileTemplateRefreshingUseCase)
     factoryOf(::ObserveProfileTemplateOfflineUseCase)
     factoryOf(::RefreshProfileTemplatesUseCase)
+    factoryOf(::FetchOnlineProfileTemplatesUseCase)
+    factoryOf(::AddOnlineProfileTemplateUseCase)
     factoryOf(::GetProfileTemplateUseCase)
     factoryOf(::SaveProfileTemplateUseCase)
     factoryOf(::DeleteProfileTemplateUseCase)
@@ -426,6 +431,7 @@ val viewModelModule = module {
     viewModelOf(::ModuleRepoViewModel)
     viewModel { parameters -> ModuleDetailViewModel(parameters[0], get()) }
     viewModelOf(::TemplateViewModel)
+    viewModelOf(::OnlineTemplateViewModel)
     viewModel { parameters ->
         TemplateEditorViewModel(
             templateId = parameters[0],

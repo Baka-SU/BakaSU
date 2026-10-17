@@ -96,6 +96,9 @@ sealed interface WearRoute : NavKey {
     data object Templates : WearRoute
 
     @Serializable
+    data object OnlineTemplates : WearRoute
+
+    @Serializable
     data class TemplateEditor(val id: String, val readOnly: Boolean, val creation: Boolean) : WearRoute
 
     @Serializable

@@ -5,6 +5,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Add
+import androidx.compose.material.icons.twotone.CheckCircle
+import androidx.compose.material.icons.twotone.Cloud
 import androidx.compose.material.icons.twotone.ContentCopy
 import androidx.compose.material.icons.twotone.ContentPaste
 import androidx.compose.material.icons.twotone.Delete
@@ -13,13 +15,13 @@ import androidx.compose.material.icons.twotone.Edit
 import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Flag
 import androidx.compose.material.icons.twotone.Group
+import androidx.compose.material.icons.twotone.Info
 import androidx.compose.material.icons.twotone.Numbers
 import androidx.compose.material.icons.twotone.Person
 import androidx.compose.material.icons.twotone.Save
 import androidx.compose.material.icons.twotone.Security
 import androidx.compose.material.icons.twotone.SignalWifiOff
 import androidx.compose.material.icons.twotone.Storage
-import androidx.compose.material.icons.twotone.Sync
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,9 +33,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.material3.AlertDialog
+import androidx.wear.compose.material3.AlertDialogDefaults
+import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.ProfileTemplate
+import org.bakasu.bakasu.domain.model.ProfileTemplateFailure
+import org.bakasu.bakasu.domain.usecase.IsNetworkAvailableUseCase
+import org.bakasu.bakasu.ui.component.rememberCustomDialog
+import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiAction
+import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiEvent
+import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateEditorUiAction
 import org.bakasu.bakasu.ui.viewmodel.TemplateEditorUiEvent
 import org.bakasu.bakasu.ui.viewmodel.TemplateEditorViewModel
@@ -41,8 +52,7 @@ import org.bakasu.bakasu.ui.viewmodel.TemplateUiAction
 import org.bakasu.bakasu.ui.viewmodel.TemplateUiEvent
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
-import org.bakasu.bakasu.ui.wear.component.WearChip
-import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
+import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -56,6 +66,7 @@ import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -66,8 +77,15 @@ import org.koin.core.parameter.parametersOf
 
 /** The phone template list: local and synchronized templates, import, export and synchronization. */
 @Composable
-internal fun WearTemplatePage(onBack: () -> Unit, onOpenTemplate: (id: String, readOnly: Boolean, creation: Boolean) -> Unit) {
+internal fun WearTemplatePage(
+    onBack: () -> Unit,
+    onOpenOnline: () -> Unit,
+    onOpenTemplate: (id: String, readOnly: Boolean, creation: Boolean) -> Unit,
+) {
     val viewModel = koinViewModel<TemplateViewModel>()
+    val isNetworkAvailable = koinInject<IsNetworkAvailableUseCase>()
+    // Without a network the online templates are not requested; the dialog says why.
+    val offlineDialog = rememberWearOfflineDialog()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -100,17 +118,6 @@ internal fun WearTemplatePage(onBack: () -> Unit, onOpenTemplate: (id: String, r
     }
     WearList(isLoading = state.isRefreshing && state.templateList.isEmpty(), onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.settings_profile_template)) }
-        if (state.isOffline) {
-            item {
-                WearChip(
-                    spec,
-                    stringResource(R.string.wear_template_offline),
-                    secondaryLabel = stringResource(R.string.wear_template_offline_local),
-                    icon = Icons.TwoTone.SignalWifiOff,
-                    emphasis = WearChipEmphasis.HIGH,
-                )
-            }
-        }
         item {
             WearActionButton(
                 spec,
@@ -120,10 +127,9 @@ internal fun WearTemplatePage(onBack: () -> Unit, onOpenTemplate: (id: String, r
             )
         }
         item {
-            WearActionButton(spec, Icons.TwoTone.Sync, stringResource(R.string.app_profile_template_sync), {
-                result = null
-                viewModel.dispatch(TemplateUiAction.Refresh(synchronize = true))
-            }, enabled = !state.isRefreshing)
+            WearActionButton(spec, Icons.TwoTone.Cloud, stringResource(R.string.wear_template_view_online), {
+                if (isNetworkAvailable()) onOpenOnline() else offlineDialog.show()
+            })
         }
         item {
             WearActionButton(spec, Icons.TwoTone.ContentPaste, stringResource(R.string.app_profile_import_from_clipboard), {
@@ -138,6 +144,124 @@ internal fun WearTemplatePage(onBack: () -> Unit, onOpenTemplate: (id: String, r
                 template.name.ifBlank { template.id },
                 { onOpenTemplate(template.id, !template.local, false) },
                 icon = Icons.TwoTone.Description,
+                description = template.description.ifBlank { null },
+            )
+        }
+    }
+}
+
+/** The no-network AlertDialog; it only closes, as nothing can be loaded without a network. */
+@Composable
+private fun rememberWearOfflineDialog(onDismissed: () -> Unit = {}) = rememberCustomDialog { dismiss ->
+    val close = {
+        dismiss()
+        onDismissed()
+    }
+    AlertDialog(
+        visible = true,
+        onDismissRequest = close,
+        icon = { Icon(Icons.TwoTone.SignalWifiOff, contentDescription = null) },
+        title = { Text(stringResource(R.string.wear_template_offline)) },
+        text = { Text(stringResource(R.string.wear_no_internet)) },
+        edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
+    )
+}
+
+/**
+ * Online templates for browsing. Loading or viewing them stores nothing; only Add stores the chosen
+ * template as a local one, which App Profile can then select.
+ */
+@Composable
+internal fun WearOnlineTemplatePage(onBack: () -> Unit) {
+    val viewModel = koinViewModel<OnlineTemplateViewModel>()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<WearResult?>(null) }
+    var failure by remember { mutableStateOf<ProfileTemplateFailure?>(null) }
+    WearResultDialog(result) { result = null }
+    val added = stringResource(R.string.wear_template_added)
+    val alreadyAdded = stringResource(R.string.wear_template_already_added)
+    val failed = stringResource(R.string.operation_failed)
+    val offlineDialog = rememberWearOfflineDialog(onBack)
+    // A request or parsing failure leaves nothing to browse, so it asks to retry or leave.
+    val failureDialog = rememberCustomDialog { dismiss ->
+        val leave = {
+            dismiss()
+            onBack()
+        }
+        AlertDialog(
+            visible = true,
+            onDismissRequest = leave,
+            icon = { Icon(Icons.TwoTone.Info, contentDescription = null) },
+            title = { Text(stringResource(R.string.wear_repo_connect_failed)) },
+            text = {
+                Text(
+                    stringResource(
+                        if (failure == ProfileTemplateFailure.Invalid) R.string.wear_template_online_invalid else R.string.wear_template_online_failed,
+                    ),
+                )
+            },
+            confirmButton = {
+                AlertDialogDefaults.ConfirmButton(
+                    onClick = {
+                        dismiss()
+                        viewModel.dispatch(OnlineTemplateUiAction.Load)
+                    },
+                )
+            },
+            dismissButton = { AlertDialogDefaults.DismissButton(onClick = leave) },
+        )
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is OnlineTemplateUiEvent.LoadFailed -> {
+                    failure = event.reason
+                    if (event.reason == ProfileTemplateFailure.Offline) offlineDialog.show() else failureDialog.show()
+                }
+
+                OnlineTemplateUiEvent.Added -> result = WearResult(added, success = true)
+
+                is OnlineTemplateUiEvent.AddFailed -> result = WearResult(
+                    if (event.reason == ProfileTemplateFailure.Conflict) alreadyAdded else failed,
+                    success = false,
+                )
+            }
+        }
+    }
+    val selected = state.templates.firstOrNull { it.id == selectedId }
+    if (selected != null) {
+        WearSubPage({ selectedId = null }) {
+            WearList(onBack = { selectedId = null }) { spec ->
+                item { WearPageHeader(spec, selected.name.ifBlank { selected.id }) }
+                TEMPLATE_FIELDS.filter { selected.field(it).isNotEmpty() }.forEach { field ->
+                    item { WearInfoCard(spec) { WearDetailField(templateFieldIcon(field), stringResource(field), selected.field(field)) } }
+                }
+                item {
+                    val isAdded = selected.id in state.addedIds
+                    WearActionButton(
+                        spec,
+                        if (isAdded) Icons.TwoTone.CheckCircle else Icons.TwoTone.Add,
+                        stringResource(if (isAdded) R.string.wear_template_added else R.string.wear_template_add),
+                        { viewModel.dispatch(OnlineTemplateUiAction.Add(selected)) },
+                        enabled = !isAdded && !state.adding,
+                    )
+                }
+            }
+        }
+        return
+    }
+    WearList(isLoading = state.loading, onBack = onBack, onRefresh = { viewModel.dispatch(OnlineTemplateUiAction.Load) }) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.wear_template_online)) }
+        if (state.templates.isEmpty()) {
+            item { WearStatusItem(spec, Icons.TwoTone.Cloud, stringResource(R.string.wear_template_online_empty)) }
+        }
+        LazySegmentedColumn(state.templates, { it.id }) { template ->
+            WearSettingsJumpPageWidget(
+                spec,
+                template.name.ifBlank { template.id },
+                { selectedId = template.id },
+                icon = if (template.id in state.addedIds) Icons.TwoTone.CheckCircle else Icons.TwoTone.Description,
                 description = template.description.ifBlank { null },
             )
         }
@@ -160,12 +284,7 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
         }
     }
     val template = state.template
-    val fields = listOf(
-        R.string.app_profile_template_id, R.string.app_profile_template_name,
-        R.string.app_profile_template_description, R.string.module_author, R.string.wear_uid, R.string.wear_gid,
-        R.string.profile_namespace, R.string.profile_groups, R.string.profile_capabilities,
-        R.string.profile_selinux_context, R.string.profile_selinux_rules, R.string.profile_flags,
-    )
+    val fields = TEMPLATE_FIELDS
     var input by rememberSaveable { mutableIntStateOf(0) }
     val delete = rememberWearConfirmDialog(stringResource(R.string.app_profile_template_delete), stringResource(R.string.confirm_delete)) {
         viewModel.dispatch(TemplateEditorUiAction.Delete)
@@ -210,6 +329,13 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
         }
     }
 }
+
+private val TEMPLATE_FIELDS = listOf(
+    R.string.app_profile_template_id, R.string.app_profile_template_name,
+    R.string.app_profile_template_description, R.string.module_author, R.string.wear_uid, R.string.wear_gid,
+    R.string.profile_namespace, R.string.profile_groups, R.string.profile_capabilities,
+    R.string.profile_selinux_context, R.string.profile_selinux_rules, R.string.profile_flags,
+)
 
 private fun templateFieldIcon(field: Int) = when (field) {
     R.string.app_profile_template_id, R.string.wear_uid, R.string.wear_gid -> Icons.TwoTone.Numbers

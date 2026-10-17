@@ -633,7 +633,14 @@
     <string name="wear_filter_sort">筛选与排序</string>
     <string name="wear_sort">排序</string>
     <string name="wear_template_offline">无网络连接</string>
-    <string name="wear_template_offline_local">仅显示本地模板</string>
+    <string name="wear_template_view_online">查看线上范本</string>
+    <string name="wear_template_online">线上范本</string>
+    <string name="wear_template_online_empty">暂无线上范本</string>
+    <string name="wear_template_online_failed">无法加载线上范本</string>
+    <string name="wear_template_online_invalid">无法解析线上范本</string>
+    <string name="wear_template_add">加入 App Profile</string>
+    <string name="wear_template_added">已加入 App Profile</string>
+    <string name="wear_template_already_added">已存在相同 ID 的本地模版</string>
     <string name="wear_settings_selinux_hide_summary">阻止应用检测</string>
     <string name="wear_palette_tonal_spot">色调点缀</string>
     <string name="wear_palette_neutral">中性</string>

@@ -123,7 +123,7 @@ private fun WearRoute.needsRoot() = when (this) {
     WearRoute.ModuleSort, WearRoute.ModuleSearch, WearRoute.ModuleSearchResults, WearRoute.ModuleRepo, is WearRoute.OnlineModule,
     is WearRoute.App, WearRoute.AppFilter, WearRoute.AppSearch, WearRoute.AppSearchResults,
     WearRoute.Logs, WearRoute.LogOptions, WearRoute.AllowlistBackup, is WearRoute.LogEntry, WearRoute.LogSearch,
-    WearRoute.Templates, is WearRoute.TemplateEditor, WearRoute.SuSFS, WearRoute.DynamicManager,
+    WearRoute.Templates, WearRoute.OnlineTemplates, is WearRoute.TemplateEditor, WearRoute.SuSFS, WearRoute.DynamicManager,
     WearRoute.Umount, WearRoute.Uninstall, WearRoute.Reboot,
     -> true
 
@@ -597,10 +597,11 @@ fun WearManagerScreen() {
                                 }
                             }
                             entry<WearRoute.Templates> {
-                                WearTemplatePage(::back) { id, readOnly, creation ->
+                                WearTemplatePage(::back, { open(WearRoute.OnlineTemplates) }) { id, readOnly, creation ->
                                     open(WearRoute.TemplateEditor(id, readOnly, creation))
                                 }
                             }
+                            entry<WearRoute.OnlineTemplates> { WearOnlineTemplatePage(::back) }
                             entry<WearRoute.TemplateEditor> { route ->
                                 WearTemplateEditor(route.id, route.readOnly, route.creation, ::back)
                             }

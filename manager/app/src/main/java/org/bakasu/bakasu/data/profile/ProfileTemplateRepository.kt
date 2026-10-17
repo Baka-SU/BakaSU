@@ -65,10 +65,9 @@ class ProfileTemplateRepository(
         try {
             withContext(Dispatchers.IO) {
                 runCatching {
-                    val localIds = ksuCliRepository.listAppProfileTemplates()
-                    val shouldSynchronize = localIds.isEmpty() || synchronize
-                    val synchronized = !shouldSynchronize || fetchRemoteTemplates()
-                    mutableOffline.value = shouldSynchronize && !synchronized
+                    // Online templates are stored only when the user asks for it, never on a plain refresh.
+                    val synchronized = !synchronize || fetchRemoteTemplates()
+                    mutableOffline.value = synchronize && !synchronized
                     mutableTemplates.value = ksuCliRepository.listAppProfileTemplates()
                         .mapNotNull(::readTemplate)
                         .sortedWith(
@@ -154,6 +153,41 @@ class ProfileTemplateRepository(
             client.close(channel)
         }
     }.onFailure { Log.w(TAG, "Phone template fetch failed", it) }.getOrNull()
+
+    /**
+     * The official templates for browsing. Nothing is stored; [addOnline] adds a chosen one. Without
+     * a network nothing is requested; a failed direct download is retried through the paired phone.
+     */
+    suspend fun fetchOnline(): Result<List<ProfileTemplate>> = withContext(Dispatchers.IO) {
+        if (!networkStatusRepository.isAvailable()) {
+            return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.Offline))
+        }
+        val bodies = fetchRemoteBodies() ?: fetchBodiesFromPhone()
+            ?: return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.RequestFailed))
+        val templates = bodies.values.mapNotNull { body ->
+            runCatching { JSONObject(body).toTemplate() }.getOrNull()?.copy(local = false)
+        }
+        if (templates.isEmpty() && bodies.isNotEmpty()) {
+            Result.failure(ProfileTemplateException(ProfileTemplateFailure.Invalid))
+        } else {
+            Result.success(templates.sortedWith(compareBy(Collator.getInstance(Locale.getDefault()), ProfileTemplate::name)))
+        }
+    }
+
+    /**
+     * Stores an online template as a local one, which App Profile can select. A local template
+     * with the same ID is kept, not overwritten; a copy saved by an earlier synchronization is.
+     */
+    suspend fun addOnline(template: ProfileTemplate): Result<Unit> = withContext(Dispatchers.IO) {
+        if (readTemplate(template.id)?.local == true) {
+            return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.Conflict))
+        }
+        if (!ksuCliRepository.setAppProfileTemplate(template.id, template.copy(local = true).toJson().toString())) {
+            return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.Command("add failed")))
+        }
+        refreshLocalCache()
+        Result.success(Unit)
+    }
 
     suspend fun get(id: String): Result<ProfileTemplate> = withContext(Dispatchers.IO) {
         mutableTemplates.value.firstOrNull { it.id == id }
