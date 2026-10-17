@@ -18,32 +18,44 @@ sealed interface WearRoute : NavKey {
     data object Main : WearRoute
 
     @Serializable
-    data class Module(val id: String) : WearRoute
+    data class Module(val id: String) :
+        WearRoute,
+        NeedsRoot
 
     @Serializable
-    data class ModuleAction(val id: String) : WearRoute
+    data class ModuleAction(val id: String) :
+        WearRoute,
+        NeedsRoot
 
     @Serializable
-    data class ModuleUpdate(val id: String) : WearRoute
+    data class ModuleUpdate(val id: String) :
+        WearRoute,
+        NeedsRoot
 
     @Serializable
-    data class ModuleInstall(val uri: String) : WearRoute
+    data class ModuleInstall(val uri: String) :
+        WearRoute,
+        NeedsRoot
 
     @Serializable
-    data object ModuleSort : WearRoute
+    data object ModuleSort : WearRoute, NeedsRoot
 
     @Serializable
-    data object ModuleRepo : WearRoute
+    data object ModuleRepo : WearRoute, NeedsRoot
 
     @Serializable
-    data object ModuleRepoSearch : WearRoute
+    data object ModuleRepoSearch : WearRoute, NeedsRoot
 
     @Serializable
-    data class OnlineModule(val id: String) : WearRoute
+    data class OnlineModule(val id: String) :
+        WearRoute,
+        NeedsRoot
 
     /** The README, releases or information of a repository module. */
     @Serializable
-    data class OnlineModuleSection(val id: String, val section: String) : WearRoute
+    data class OnlineModuleSection(val id: String, val section: String) :
+        WearRoute,
+        NeedsRoot
 
     /**
      * The download of one module file, with what the file must match. Repository downloads and
@@ -58,28 +70,31 @@ sealed interface WearRoute : NavKey {
         val sha256: String,
         val version: String = "",
         val update: Boolean = false,
-    ) : WearRoute
+    ) : WearRoute,
+        NeedsRoot
 
     @Serializable
-    data object ModuleSearch : WearRoute
+    data object ModuleSearch : WearRoute, NeedsRoot
 
     @Serializable
-    data object ModuleSearchResults : WearRoute
+    data object ModuleSearchResults : WearRoute, NeedsRoot
 
     @Serializable
-    data class App(val uid: Int, val packageName: String) : WearRoute
+    data class App(val uid: Int, val packageName: String) :
+        WearRoute,
+        NeedsRoot
 
     @Serializable
-    data object AppFilter : WearRoute
+    data object AppFilter : WearRoute, NeedsRoot
 
     @Serializable
-    data object AppSearch : WearRoute
+    data object AppSearch : WearRoute, NeedsRoot
 
     @Serializable
-    data object AppSearchResults : WearRoute
+    data object AppSearchResults : WearRoute, NeedsRoot
 
     @Serializable
-    data object Logs : WearRoute
+    data object Logs : WearRoute, NeedsRoot
 
     @Serializable
     data object HomeVersionInfo : WearRoute
@@ -88,16 +103,18 @@ sealed interface WearRoute : NavKey {
     data object HomeStatusInfo : WearRoute
 
     @Serializable
-    data object AllowlistBackup : WearRoute
+    data object AllowlistBackup : WearRoute, NeedsRoot
 
     @Serializable
-    data object LogOptions : WearRoute
+    data object LogOptions : WearRoute, NeedsRoot
 
     @Serializable
-    data class LogEntry(val key: String) : WearRoute
+    data class LogEntry(val key: String) :
+        WearRoute,
+        NeedsRoot
 
     @Serializable
-    data object LogSearch : WearRoute
+    data object LogSearch : WearRoute, NeedsRoot
 
     @Serializable
     data class Settings(val category: WearSettingsCategory) : WearRoute
@@ -112,25 +129,27 @@ sealed interface WearRoute : NavKey {
     data object Dpi : WearRoute
 
     @Serializable
-    data object Templates : WearRoute
+    data object Templates : WearRoute, NeedsRoot
 
     @Serializable
-    data object OnlineTemplates : WearRoute
+    data object OnlineTemplates : WearRoute, NeedsRoot
 
     @Serializable
-    data class TemplateEditor(val id: String, val readOnly: Boolean, val creation: Boolean) : WearRoute
+    data class TemplateEditor(val id: String, val readOnly: Boolean, val creation: Boolean) :
+        WearRoute,
+        NeedsRoot
 
     @Serializable
-    data object SuSFS : WearRoute
+    data object SuSFS : WearRoute, NeedsRoot
 
     @Serializable
-    data object DynamicManager : WearRoute
+    data object DynamicManager : WearRoute, NeedsRoot
 
     @Serializable
-    data object Umount : WearRoute
+    data object Umount : WearRoute, NeedsRoot
 
     @Serializable
-    data object Uninstall : WearRoute
+    data object Uninstall : WearRoute, NeedsRoot
 
     /** Restoring the stock image or uninstalling permanently. */
     @Serializable
@@ -162,7 +181,7 @@ sealed interface WearRoute : NavKey {
     data class KernelFlash(val uri: String, val slot: String?, val skipKsud: Boolean) : WearRoute
 
     @Serializable
-    data object Reboot : WearRoute
+    data object Reboot : WearRoute, NeedsRoot
 
     @Serializable
     data object Bugreport : WearRoute
@@ -178,6 +197,15 @@ sealed interface WearRoute : NavKey {
 
     @Serializable
     data class Browser(val url: String) : WearRoute
-
-    /** A link that could not be opened, with the reason as a string resource. */
 }
+
+/** A destination that needs a full-featured root manager; it closes when root goes away. */
+interface NeedsRoot
+
+val WearRoute.needsRoot: Boolean
+    get() = when (this) {
+        is NeedsRoot -> true
+        is WearRoute.Settings -> category == WearSettingsCategory.Security || category == WearSettingsCategory.Advanced
+        is WearRoute.Selection -> selection == WearSelection.SuCompat
+        else -> false
+    }

@@ -117,27 +117,8 @@ private const val SUPERUSER = 1
 private const val MODULES = 2
 private const val SETTINGS = 3
 
-/** Destinations that need a full-featured root manager; they close when root goes away. */
-private fun WearRoute.needsRoot() = when (this) {
-    is WearRoute.Module, is WearRoute.ModuleAction, is WearRoute.ModuleUpdate, is WearRoute.ModuleInstall,
-    WearRoute.ModuleSort, WearRoute.ModuleSearch, WearRoute.ModuleSearchResults, WearRoute.ModuleRepo, WearRoute.ModuleRepoSearch, is WearRoute.OnlineModule, is WearRoute.OnlineModuleSection,
-    is WearRoute.OnlineModuleDownload,
-    is WearRoute.App, WearRoute.AppFilter, WearRoute.AppSearch, WearRoute.AppSearchResults,
-    WearRoute.Logs, WearRoute.LogOptions, WearRoute.AllowlistBackup, is WearRoute.LogEntry, WearRoute.LogSearch,
-    WearRoute.Templates, WearRoute.OnlineTemplates, is WearRoute.TemplateEditor, WearRoute.SuSFS, WearRoute.DynamicManager,
-    WearRoute.Umount, WearRoute.Uninstall, WearRoute.Reboot,
-    -> true
-
-    is WearRoute.Settings -> category == WearSettingsCategory.Security || category == WearSettingsCategory.Advanced
-
-    is WearRoute.Selection -> selection == WearSelection.SuCompat
-
-    else -> false
-}
-
 @Composable
 fun WearManagerScreen() {
-    val context = LocalContext.current
     val activity = LocalActivity.current
     // The shared models belong to the activity, outside the back stack, as on the phone.
     val homeViewModel = koinViewModel<HomeViewModel>()
@@ -150,14 +131,11 @@ fun WearManagerScreen() {
     val preferenceViewModel = koinViewModel<WearPreferencesViewModel>()
     val linkViewModel = koinViewModel<WearLinkViewModel>()
     val preferences by preferenceViewModel.state.collectAsStateWithLifecycle()
-    val linkLoading by linkViewModel.loading.collectAsStateWithLifecycle()
     val home by homeViewModel.uiState.collectAsStateWithLifecycle()
     val superuser by superUserViewModel.uiState.collectAsStateWithLifecycle()
     val modules by moduleViewModel.uiState.collectAsStateWithLifecycle()
     val logs by sulogViewModel.uiState.collectAsStateWithLifecycle()
     val settings by settingsViewModel.uiState.collectAsStateWithLifecycle()
-
-    val backStack = rememberNavBackStack(WearRoute.Main)
 
     var settingsError by remember { mutableStateOf<String?>(null) }
     var settingsMessageResource by remember { mutableStateOf<Pair<Int, Int?>?>(null) }
@@ -165,17 +143,6 @@ fun WearManagerScreen() {
     var superuserError by remember { mutableStateOf<String?>(null) }
     var homeError by remember { mutableStateOf<String?>(null) }
     var logError by remember { mutableStateOf<String?>(null) }
-    // Results of opening a module WebUI on the phone, shown as confirmation dialogs.
-    // Links and module WebUI share the official result overlays: open on phone, or a failure.
-    var openedOnPhone by remember { mutableStateOf(false) }
-    var openFailure by remember { mutableStateOf<WearLinkFailure?>(null) }
-    var openFailureFallback by remember { mutableIntStateOf(R.string.wear_link_open_failed) }
-    var openFailed by remember { mutableStateOf(false) }
-    fun showOpenFailure(reason: WearLinkFailure?, fallback: Int) {
-        openFailure = reason
-        openFailureFallback = fallback
-        openFailed = true
-    }
     val operationFailedText = stringResource(R.string.operation_failed)
     val loadFailedText = stringResource(R.string.wear_load_failed)
     // Shown only after a list load confirmed that root was refused, not for other load failures.
@@ -194,30 +161,21 @@ fun WearManagerScreen() {
         settingsError = null
         settingsMessageResource = null
     }
-    fun open(route: WearRoute) {
-        clearSettingsFeedback()
-        if (backStack.lastOrNull() != route) backStack.add(route)
-    }
-    fun back() {
-        clearSettingsFeedback()
-        // Search results live on their own page; leaving it clears the query of the main list.
-        when (backStack.lastOrNull()) {
-            WearRoute.AppSearchResults -> superUserViewModel.dispatch(SuperUserUiAction.Search(""))
-            WearRoute.ModuleSearchResults -> moduleViewModel.dispatch(ModuleUiAction.Search(""))
-            WearRoute.ModuleRepo -> moduleRepoViewModel.dispatch(ModuleRepoUiAction.Search(""))
-            else -> Unit
-        }
-        if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) else activity?.finish()
-    }
-
-    // A query submitted on an in-app input page leaves it for the results page, or updates the
-    // results page it was opened from; a blank query only closes the input.
-    fun showSearchResults(results: WearRoute, query: String, search: (String) -> Unit) {
-        back()
-        if (query.isBlank()) return
-        search(query.trim())
-        open(results)
-    }
+    val navigator = rememberWearNavigator(
+        onChange = ::clearSettingsFeedback,
+        // Search results live on their own page; leaving it clears the query of its list.
+        onLeave = { route ->
+            when (route) {
+                WearRoute.AppSearchResults -> superUserViewModel.dispatch(SuperUserUiAction.Search(""))
+                WearRoute.ModuleSearchResults -> moduleViewModel.dispatch(ModuleUiAction.Search(""))
+                WearRoute.ModuleRepo -> moduleRepoViewModel.dispatch(ModuleRepoUiAction.Search(""))
+                else -> Unit
+            }
+        },
+        onExit = { activity?.finish() },
+    )
+    fun open(route: WearRoute) = navigator.open(route)
+    fun back() = navigator.back()
     // Searches use the system Wear input; the in-app input pages are only the fallback.
     val appSearchInput = rememberWearRemoteInput(
         stringResource(R.string.search_apps),
@@ -242,14 +200,10 @@ fun WearManagerScreen() {
         onUnavailable = { open(WearRoute.LogSearch) },
     ) { sulogViewModel.dispatch(SulogUiAction.Search(it.trim())) }
 
-    // As on the phone, a selected module ZIP is installed only after the user confirms it.
-    // A ZIP to install waits for the install confirmation dialog, shown over the current page.
-    var installConfirmUri by rememberSaveable { mutableStateOf<String?>(null) }
-    fun confirmModule(uri: String) {
-        installConfirmUri = uri
-    }
-    val selectModuleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) confirmModule(uri.toString())
+    val installer = rememberWearModuleInstaller(navigator, onPickFailed = { moduleError = operationFailedText }) {
+        moduleViewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
+        moduleViewModel.dispatch(ModuleUiAction.Refresh())
+        homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
     }
     val selectImageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) settingsViewModel.dispatch(SettingsUiAction.SetCustomBackground(uri.toString()))
@@ -268,14 +222,7 @@ fun WearManagerScreen() {
         }
 
     LaunchedEffect(home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled) {
-        val lost = backStack.any {
-            (it as WearRoute).needsRoot() && !home.systemStatus.isFullFeatured ||
-                it == WearRoute.SuSFS && !home.systemInfo.susfsEnabled
-        }
-        if (lost) {
-            clearSettingsFeedback()
-            backStack.retainAll { it == WearRoute.Main }
-        }
+        navigator.closeUnavailable(home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled)
     }
     ActivityResumeEffect(homeViewModel) {
         homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = true))
@@ -340,38 +287,11 @@ fun WearManagerScreen() {
             }
         }
     }
-    LaunchedEffect(linkViewModel) {
-        linkViewModel.events.collect { event ->
-            when (event) {
-                is WearLinkEvent.WebView -> open(WearRoute.Browser(event.url))
-
-                is WearLinkEvent.WebUi -> runCatching {
-                    context.startActivity(
-                        Intent(context, WearWebUIActivity::class.java)
-                            .setData("kernelsu://webui/${event.moduleId}".toUri())
-                            .putExtra("id", event.moduleId).putExtra("name", event.moduleName),
-                    )
-                }.onFailure { moduleError = operationFailedText }
-
-                WearLinkEvent.SentToPhone -> openedOnPhone = true
-
-                is WearLinkEvent.Failed -> showOpenFailure(event.reason, R.string.wear_link_open_failed)
-
-                WearLinkEvent.WebUiOnPhone -> openedOnPhone = true
-
-                is WearLinkEvent.WebUiPhoneFailed -> showOpenFailure(event.reason, R.string.wear_phone_open_failed)
-            }
-        }
-    }
-    BackHandler(linkLoading) { linkViewModel.cancel() }
 
     // A found manager update is offered in a dialog, the stable channel first as on the phone's Home.
     WearManagerUpdateDialog(home.stableManagerUpdate ?: home.betaManagerUpdate)
     WearResultDialog(settingsResult) { clearSettingsFeedback() }
-    WearModuleInstallConfirmDialog(installConfirmUri, { installConfirmUri = null }) { open(WearRoute.ModuleInstall(it)) }
-    WearOpenResultDialogs(openedOnPhone, { openedOnPhone = false }, openFailure, openFailureFallback, openFailed) {
-        openFailed = false
-    }
+    WearModuleInstallConfirmDialog(installer)
     AppScaffold(
         timeText = { WearTimeText() },
         containerColor = Color.Transparent,
@@ -390,7 +310,7 @@ fun WearManagerScreen() {
             val transparentScheme = remember(hostScheme) { hostScheme.copy(background = Color.Transparent) }
             MaterialTheme(colorScheme = transparentScheme) {
                 NavDisplay(
-                    backStack = backStack,
+                    backStack = navigator.backStack,
                     onBack = { back() },
                     sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss)),
                     entryDecorators = listOf(
@@ -427,11 +347,8 @@ fun WearManagerScreen() {
                                     onOpen = ::open,
                                     onSearchApps = appSearchInput,
                                     onSearchModules = moduleSearchInput,
-                                    onInstallModule = {
-                                        runCatching { selectModuleLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }
-                                            .onFailure { moduleError = operationFailedText }
-                                    },
-                                    onWebUi = { linkViewModel.openWebUi(it.id, it.name, preferences.link) },
+                                    onInstallModule = installer::pickFile,
+                                    onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
                                 )
                             }
                             entry<WearRoute.Module> { route ->
@@ -441,7 +358,7 @@ fun WearManagerScreen() {
                                     onBack = ::back,
                                     onEnabledChange = { id, enabled -> moduleViewModel.dispatch(ModuleUiAction.SetEnabled(id, enabled)) },
                                     onRemove = { id, removed -> moduleViewModel.dispatch(ModuleUiAction.SetRemoved(id, removed)) },
-                                    onWebUi = { linkViewModel.openWebUi(it.id, it.name, preferences.link) },
+                                    onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
                                     onExecute = { open(WearRoute.ModuleAction(it.id)) },
                                     onUpdate = { open(WearRoute.ModuleUpdate(it.id)) },
                                     onErrorShown = { moduleError = null },
@@ -451,27 +368,10 @@ fun WearManagerScreen() {
                                 WearExecuteModulePage(route.id, ::back) { moduleViewModel.dispatch(ModuleUiAction.Refresh()) }
                             }
                             entry<WearRoute.ModuleUpdate> { route ->
-                                // The update downloads on the shared module download page.
-                                WearModuleUpdatePage(modules.moduleList.firstOrNull { it.id == route.id }, ::back) { module, update ->
-                                    open(
-                                        WearRoute.OnlineModuleDownload(
-                                            name = module.name,
-                                            fileName = "${module.name}-${update.version}.zip",
-                                            url = update.zipUrl,
-                                            size = 0L,
-                                            sha256 = "",
-                                            version = update.version,
-                                            update = true,
-                                        ),
-                                    )
-                                }
+                                WearModuleUpdatePage(modules.moduleList.firstOrNull { it.id == route.id }, ::back, installer::update)
                             }
                             entry<WearRoute.ModuleInstall> { route ->
-                                WearFlashPage(FlashOperation.Module(route.uri), ::back) {
-                                    moduleViewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
-                                    moduleViewModel.dispatch(ModuleUiAction.Refresh())
-                                    homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
-                                }
+                                WearFlashPage(FlashOperation.Module(route.uri), ::back, installer.onInstalled)
                             }
                             entry<WearRoute.ModuleRepo> {
                                 WearModuleRepoPage(moduleRepoViewModel, ::back, { open(WearRoute.ModuleRepoSearch) }) { open(WearRoute.OnlineModule(it)) }
@@ -483,37 +383,24 @@ fun WearManagerScreen() {
                                 WearOnlineModulePage(
                                     route.id,
                                     ::back,
-                                    { linkViewModel.open(it, preferences.link) },
+                                    linkViewModel::open,
                                     { open(WearRoute.OnlineModuleSection(route.id, it)) },
-                                    ::open,
+                                    installer,
                                 )
                             }
                             entry<WearRoute.OnlineModuleSection> { route ->
-                                WearOnlineModuleSectionPage(route.id, route.section, ::back, ::open)
+                                WearOnlineModuleSectionPage(route.id, route.section, ::back, installer)
                             }
                             entry<WearRoute.OnlineModuleDownload> { route ->
-                                // A repository file goes on to the install confirmation; an update, whose
-                                // page was the confirmation, leaves that page too and installs, as before.
-                                WearModuleDownloadPage(route) { uri ->
-                                    back()
-                                    if (route.update) {
-                                        if (backStack.lastOrNull() is WearRoute.ModuleUpdate) back()
-                                        open(WearRoute.ModuleInstall(uri))
-                                    } else {
-                                        confirmModule(uri)
-                                    }
-                                }
+                                WearModuleDownloadPage(route) { installer.downloaded(route, it) }
                             }
                             entry<WearRoute.ModuleSort> {
-                                WearModulePanel(modules, ::back, moduleViewModel::dispatch) {
-                                    // The repository replaces the panel, so Back returns to the module list.
-                                    back()
-                                    open(WearRoute.ModuleRepo)
-                                }
+                                // The repository replaces the panel, so Back returns to the module list.
+                                WearModulePanel(modules, ::back, moduleViewModel::dispatch) { navigator.replace(WearRoute.ModuleRepo) }
                             }
                             entry<WearRoute.ModuleSearch> {
                                 WearTextInputPage(stringResource(R.string.search_modules), modules.search) {
-                                    showSearchResults(WearRoute.ModuleSearchResults, it) { query ->
+                                    navigator.submitSearch(WearRoute.ModuleSearchResults, it) { query ->
                                         moduleViewModel.dispatch(ModuleUiAction.Search(query))
                                     }
                                 }
@@ -544,7 +431,7 @@ fun WearManagerScreen() {
                             }
                             entry<WearRoute.AppSearch> {
                                 WearTextInputPage(stringResource(R.string.search_apps), superuser.search) {
-                                    showSearchResults(WearRoute.AppSearchResults, it) { query ->
+                                    navigator.submitSearch(WearRoute.AppSearchResults, it) { query ->
                                         superUserViewModel.dispatch(SuperUserUiAction.Search(query))
                                     }
                                 }
@@ -692,7 +579,7 @@ fun WearManagerScreen() {
                             entry<WearRoute.About> {
                                 WearAboutDetail(
                                     onBack = ::back,
-                                    onOpenLink = { linkViewModel.open(it, preferences.link) },
+                                    onOpenLink = linkViewModel::open,
                                     onLicenses = { open(WearRoute.Licenses) },
                                 )
                             }
@@ -700,30 +587,20 @@ fun WearManagerScreen() {
                                 WearLicensePage(::back) { open(WearRoute.LicenseDetail(it)) }
                             }
                             entry<WearRoute.LicenseDetail> { route ->
-                                WearLicenseDetailPage(route.index, ::back) { linkViewModel.open(it, preferences.link) }
+                                WearLicenseDetailPage(route.index, ::back, linkViewModel::open)
                             }
                             entry<WearRoute.Browser> { route ->
                                 WearBrowserPage(route.url, ::back) {
                                     back()
-                                    // In automatic mode a WebView that cannot be created falls back to the phone.
-                                    if (preferences.link == "auto") {
-                                        linkViewModel.open(route.url, "phone")
-                                    } else {
-                                        showOpenFailure(WearLinkFailure.WEBVIEW_UNAVAILABLE, R.string.wear_link_open_failed)
-                                    }
+                                    linkViewModel.webViewFailed(route.url)
                                 }
                             }
                         },
                     ),
                 )
             }
-            // Waiting for a link to open; Back cancels it.
-            if (linkLoading) {
-                // A waiting spinner; the branded loading screen is only shown at app startup.
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
+            // Over the pages: waiting for a link to open, which Back cancels, and its result.
+            WearLinkHost(linkViewModel) { open(WearRoute.Browser(it)) }
         }
     }
 }
@@ -924,47 +801,3 @@ private fun WearRoute.BootFlash.toOperation() = FlashOperation.Boot(
     enableAdb = enableAdb,
     forceBackup = forceBackup,
 )
-
-/**
- * The official open-on-phone confirmation after a link or module WebUI was sent to the phone, and
- * the failure confirmation when it could not be opened: a disconnected phone shows the connection
- * failure icon. The curved text is short, so a failure without a phone-specific reason shows [fallback].
- */
-@Composable
-private fun WearOpenResultDialogs(
-    opened: Boolean,
-    onOpenedDismissed: () -> Unit,
-    failure: WearLinkFailure?,
-    fallback: Int,
-    failed: Boolean,
-    onFailureDismissed: () -> Unit,
-) {
-    val openText = OpenOnPhoneDialogDefaults.text
-    val openStyle = OpenOnPhoneDialogDefaults.curvedTextStyle
-    OpenOnPhoneDialog(
-        visible = opened,
-        onDismissRequest = onOpenedDismissed,
-        curvedText = { openOnPhoneDialogCurvedText(text = openText, style = openStyle) },
-    )
-    val failureText = stringResource(
-        when (failure) {
-            WearLinkFailure.PHONE_UNAVAILABLE -> R.string.wear_phone_disconnected
-            WearLinkFailure.PHONE_APP_MISSING -> R.string.wear_phone_app_missing
-            WearLinkFailure.PHONE_FAILED -> R.string.wear_phone_open_failed
-            WearLinkFailure.BROWSER_FAILED -> R.string.wear_browser_open_failed
-            else -> fallback
-        },
-    )
-    val failureStyle = ConfirmationDialogDefaults.curvedTextStyle
-    FailureConfirmationDialog(
-        visible = failed,
-        onDismissRequest = onFailureDismissed,
-        curvedText = { confirmationDialogCurvedText(text = failureText, style = failureStyle) },
-    ) {
-        if (failure == WearLinkFailure.PHONE_UNAVAILABLE) {
-            ConfirmationDialogDefaults.ConnectionFailureIcon()
-        } else {
-            ConfirmationDialogDefaults.FailureIcon()
-        }
-    }
-}

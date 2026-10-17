@@ -13,6 +13,7 @@ import org.bakasu.bakasu.ui.viewmodel.PredictiveBackAnimation
 import org.bakasu.bakasu.ui.viewmodel.PredictiveBackExitDirection
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
+import org.bakasu.bakasu.ui.viewmodel.WearPreference
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.settings.WearChoicePage
@@ -62,30 +63,27 @@ internal fun WearSelectionPage(
 
         WearSelection.PickerMode -> WearChoicePage(
             stringResource(R.string.wear_picker_mode),
-            PickerModes.map { it to pickerModeLabel(it) },
+            WearPreference.Picker.options.map { it to pickerModeLabel(it) },
             preferences.picker,
             onBack,
             icon = { selectionIcon(selection, it) },
-            onChoose = preferenceViewModel::setPicker,
-        )
+        ) { preferenceViewModel.set(WearPreference.Picker, it) }
 
         WearSelection.ScreenShape -> WearChoicePage(
             stringResource(R.string.wear_screen_shape),
-            ScreenShapes.map { it to screenShapeLabel(it) },
+            WearPreference.Shape.options.map { it to screenShapeLabel(it) },
             preferences.shape,
             onBack,
             icon = { selectionIcon(selection, it) },
-            onChoose = preferenceViewModel::setShape,
-        )
+        ) { preferenceViewModel.set(WearPreference.Shape, it) }
 
         WearSelection.LinkMode -> WearChoicePage(
             stringResource(R.string.wear_link_mode),
-            LinkModes.map { it to linkModeLabel(it) },
+            WearPreference.Link.options.map { it to linkModeLabel(it) },
             preferences.link,
             onBack,
             icon = { selectionIcon(selection, it) },
-            onChoose = preferenceViewModel::setLink,
-        )
+        ) { preferenceViewModel.set(WearPreference.Link, it) }
 
         WearSelection.Language -> {
             val tags = listOf(
@@ -165,10 +163,6 @@ internal fun backDirectionLabel(direction: PredictiveBackExitDirection) = string
 
 /** The `language` or `language_COUNTRY` form stored in `app_locale` and parsed by LocaleHelper, as on the phone. */
 private fun Locale.settingTag() = if (country.isEmpty()) language else "${language}_$country"
-
-private val PickerModes = listOf("auto", "builtin", "system")
-private val LinkModes = listOf("auto", "webview", "phone")
-private val ScreenShapes = listOf("auto", "round", "square")
 
 /** Labels shared by the choice pages and the current-value summaries in settings. */
 @Composable

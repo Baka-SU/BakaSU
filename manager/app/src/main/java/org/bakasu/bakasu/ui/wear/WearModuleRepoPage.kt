@@ -202,7 +202,7 @@ private fun catalogModuleViewModel(moduleId: String): ModuleDetailViewModel = ko
 
 /** The download confirmation; confirming opens the download route for the chosen file. */
 @Composable
-private fun rememberModuleDownload(moduleName: String, onOpen: (WearRoute) -> Unit): (ModuleRelease, ModuleReleaseAsset) -> Unit {
+private fun rememberModuleDownload(moduleName: String, installer: WearModuleInstaller): (ModuleRelease, ModuleReleaseAsset) -> Unit {
     var pendingRelease by remember { mutableStateOf<ModuleRelease?>(null) }
     var pendingAsset by remember { mutableStateOf<ModuleReleaseAsset?>(null) }
     val thenInstall = stringResource(R.string.wear_download_then_install)
@@ -222,8 +222,8 @@ private fun rememberModuleDownload(moduleName: String, onOpen: (WearRoute) -> Un
                 AlertDialogDefaults.ConfirmButton(
                     onClick = {
                         dismiss()
-                        val version = pendingRelease?.let { it.name.ifBlank { it.tagName } }.orEmpty()
-                        asset?.let { onOpen(WearRoute.OnlineModuleDownload(moduleName, it.name, it.downloadUrl, it.size, it.sha256, version)) }
+                        val release = pendingRelease
+                        if (release != null && asset != null) installer.download(moduleName, release, asset)
                     },
                 )
             },
@@ -243,12 +243,12 @@ internal fun WearOnlineModulePage(
     onBack: () -> Unit,
     onLink: (String) -> Unit,
     onSection: (String) -> Unit,
-    onOpen: (WearRoute) -> Unit,
+    installer: WearModuleInstaller,
 ) {
     val viewModel = catalogModuleViewModel(moduleId)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val module = state.module
-    val requestDownload = rememberModuleDownload(module?.moduleName.orEmpty(), onOpen)
+    val requestDownload = rememberModuleDownload(module?.moduleName.orEmpty(), installer)
     WearList(isLoading = state.loading, onBack = onBack) { spec ->
         if (module == null) item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
         if (state.error != null) item { WearActionButton(spec, R.drawable.wear_symbol_cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
@@ -333,11 +333,11 @@ internal fun WearOnlineModulePage(
 
 /** The README, releases or information of a repository module, each opened as its own route. */
 @Composable
-internal fun WearOnlineModuleSectionPage(moduleId: String, section: String, onBack: () -> Unit, onOpen: (WearRoute) -> Unit) {
+internal fun WearOnlineModuleSectionPage(moduleId: String, section: String, onBack: () -> Unit, installer: WearModuleInstaller) {
     val viewModel = catalogModuleViewModel(moduleId)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val module = state.module
-    val requestDownload = rememberModuleDownload(module?.moduleName.orEmpty(), onOpen)
+    val requestDownload = rememberModuleDownload(module?.moduleName.orEmpty(), installer)
     WearList(isLoading = state.loading, onBack = onBack) { spec ->
         item { WearPageHeader(spec, module?.moduleName ?: stringResource(R.string.module_repo)) }
         if (state.error != null) item { WearActionButton(spec, R.drawable.wear_symbol_cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
@@ -397,7 +397,7 @@ internal fun WearModuleDownloadPage(route: WearRoute.OnlineModuleDownload, onDow
     val viewModel = koinViewModel<ModuleDownloadViewModel>()
     val downloadState = viewModel.state.collectAsStateWithLifecycle()
     val download by downloadState
-    val asset = remember(route) { ModuleReleaseAsset(route.fileName, route.url, route.size, 0, route.sha256) }
+    val asset = remember(route) { route.asset() }
     LaunchedEffect(viewModel) {
         if (viewModel.state.value.phase == null) viewModel.start(asset)
     }

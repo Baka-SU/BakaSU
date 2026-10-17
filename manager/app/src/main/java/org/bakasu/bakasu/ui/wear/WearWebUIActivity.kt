@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -39,6 +40,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
 import androidx.wear.compose.foundation.ScrollInfoProvider
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
@@ -53,7 +55,6 @@ import org.bakasu.bakasu.data.AppSettingsRepository
 import org.bakasu.bakasu.data.packageinfo.AppIconDataSource
 import org.bakasu.bakasu.data.packageinfo.InstalledPackageRepository
 import org.bakasu.bakasu.data.webui.WebUiRepository
-import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.wear.component.WearBackground
@@ -67,32 +68,31 @@ import org.bakasu.bakasu.ui.webui.MonetColorsProvider
 import org.bakasu.bakasu.ui.webui.WebUIEvent
 import org.bakasu.bakasu.ui.webui.WebUIState
 import org.bakasu.bakasu.ui.webui.prepareWebView
-import org.koin.android.ext.android.inject
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
+private const val EXTRA_ID = "id"
+
 /** A module WebUI on the watch: the phone's WebView setup and `ksu` bridge in a watch surface. */
 class WearWebUIActivity : WearActivity() {
-    private val getPreference: GetStringPreferenceUseCase by inject()
-
-    // Standard SAF requests fall back to the app's own picker where the device has no usable one.
-    @Deprecated("Deprecated in Java")
-    @Suppress("DEPRECATION")
-    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
-        super.startActivityForResult(withDocumentPickerFallback(intent, getPreference("wear_file_picker")), requestCode, options)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             WearManagerTheme { WearWebUIContent(this) { finish() } }
         }
     }
+
+    companion object {
+        /** Opens the WebUI of [moduleId] on the watch; the data URI keeps one task per module. */
+        fun intent(context: Context, moduleId: String): Intent = Intent(context, WearWebUIActivity::class.java)
+            .setData("kernelsu://webui/$moduleId".toUri())
+            .putExtra(EXTRA_ID, moduleId)
+    }
 }
 
 @Composable
 private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) {
-    val moduleId = remember { activity.intent.getStringExtra("id") }
+    val moduleId = remember { activity.intent.getStringExtra(EXTRA_ID) }
     val webUIState = remember { WebUIState() }
     val superUserViewModel = koinViewModel<SuperUserViewModel>()
     val settingsRepository = koinInject<AppSettingsRepository>()

@@ -47,6 +47,7 @@ import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
 import org.bakasu.bakasu.ui.viewmodel.PredictiveBackAnimation
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
+import org.bakasu.bakasu.ui.viewmodel.WearPreference
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
@@ -336,9 +337,9 @@ internal fun WearDpiPage(
                 checked,
                 { value ->
                     when (label) {
-                        R.string.wear_long_press_haptics -> preferenceViewModel.setLongPressHaptics(value)
-                        R.string.wear_keep_screen_on -> preferenceViewModel.setKeepScreenOn(value)
-                        R.string.wear_block_back_key -> preferenceViewModel.setBlockBackKey(value)
+                        R.string.wear_long_press_haptics -> preferenceViewModel.set(WearPreference.LongPressHaptics, value)
+                        R.string.wear_keep_screen_on -> preferenceViewModel.set(WearPreference.KeepScreenOn, value)
+                        R.string.wear_block_back_key -> preferenceViewModel.set(WearPreference.BlockBackKey, value)
                         R.string.wear_disable_swipe_back -> onAction(SettingsUiAction.SetSwipeDismiss(!value))
                         else -> onSimpleMode(value)
                     }

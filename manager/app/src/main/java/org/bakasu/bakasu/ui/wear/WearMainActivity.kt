@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -10,7 +9,6 @@ import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.StartupState
 import org.bakasu.bakasu.domain.usecase.ApplyLanguageUseCase
 import org.bakasu.bakasu.domain.usecase.EnsureManagerInstalledUseCase
-import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveStartupStateUseCase
 import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
 import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
@@ -26,17 +24,9 @@ class WearMainActivity : WearActivity() {
     private val observeStartupState: ObserveStartupStateUseCase by inject()
     private val ensureManagerInstalled: EnsureManagerInstalledUseCase by inject()
     private val applyLanguage: ApplyLanguageUseCase by inject()
-    private val getPreference: GetStringPreferenceUseCase by inject()
 
     override fun attachBaseContext(newBase: Context?) {
         super.attachBaseContext(newBase?.let(applyLanguage::invoke))
-    }
-
-    // Standard SAF requests fall back to the app's own picker where the device has no usable one.
-    @Deprecated("Deprecated in Java")
-    @Suppress("DEPRECATION")
-    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
-        super.startActivityForResult(withDocumentPickerFallback(intent, getPreference("wear_file_picker")), requestCode, options)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

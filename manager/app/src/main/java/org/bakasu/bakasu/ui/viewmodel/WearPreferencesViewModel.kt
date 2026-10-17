@@ -14,10 +14,29 @@ import org.bakasu.bakasu.domain.usecase.SetXiaomiWatch5ModeUseCase
  * @author Hanhan_awa
  * @date 2026/10/1.
  */
+
+/**
+ * The watch-only preferences, each with its saved key, default and, for a choice, its [options]. A
+ * saved value that is no longer an option, such as the removed "browser" link mode, reads as the
+ * default.
+ */
+enum class WearPreference(val key: String, val default: String, val options: List<String> = emptyList()) {
+    Picker("wear_file_picker", "auto", listOf("auto", "builtin", "system")),
+    Link("wear_link_mode", "auto", listOf("auto", "webview", "phone")),
+    Shape("wear_screen_shape", "auto", listOf("auto", "round", "square")),
+    LongPressHaptics("wear_long_press_haptics", "true"),
+    KeepScreenOn("wear_keep_screen_on", "false"),
+    BlockBackKey("wear_block_back_key", "false"),
+}
+
+/** Reads a Wear preference, falling back to its default. */
+fun GetStringPreferenceUseCase.wear(preference: WearPreference): String = invoke(preference.key, preference.default)
+    ?.takeIf { preference.options.isEmpty() || it in preference.options } ?: preference.default
+
 data class WearPreferences(
-    val picker: String = "auto",
-    val link: String = "auto",
-    val shape: String = "auto",
+    val picker: String = WearPreference.Picker.default,
+    val link: String = WearPreference.Link.default,
+    val shape: String = WearPreference.Shape.default,
     val longPressHaptics: Boolean = true,
     val keepScreenOn: Boolean = false,
     val blockBackKey: Boolean = false,
@@ -25,50 +44,34 @@ data class WearPreferences(
     val xiaomiWatch5Detected: Boolean = false,
     val xiaomiWatch5Mode: Boolean = false,
 )
+
 class WearPreferencesViewModel(
-    getPreference: GetStringPreferenceUseCase,
+    private val getPreference: GetStringPreferenceUseCase,
     private val setPreference: SetStringPreferenceUseCase,
     isXiaomiWatch5: IsXiaomiWatch5UseCase,
     getXiaomiWatch5Mode: GetXiaomiWatch5ModeUseCase,
     private val setXiaomiWatch5Mode: SetXiaomiWatch5ModeUseCase,
 ) : ViewModel() {
-    private val mutableState = MutableStateFlow(
-        WearPreferences(
-            getPreference("wear_file_picker", "auto").orEmpty(),
-            getPreference("wear_link_mode", "auto").orEmpty().let { if (it in LinkModes) it else "auto" },
-            getPreference("wear_screen_shape", "auto").orEmpty(),
-            getPreference("wear_long_press_haptics", "true").toBoolean(),
-            getPreference("wear_keep_screen_on", "false").toBoolean(),
-            getPreference("wear_block_back_key", "false").toBoolean(),
-            isXiaomiWatch5(),
-            getXiaomiWatch5Mode(),
-        ),
-    )
+    private val mutableState = MutableStateFlow(read(isXiaomiWatch5(), getXiaomiWatch5Mode()))
     val state = mutableState.asStateFlow()
-    fun setPicker(mode: String) {
-        setPreference("wear_file_picker", mode)
-        mutableState.update { it.copy(picker = mode) }
+
+    private fun read(xiaomiWatch5Detected: Boolean, xiaomiWatch5Mode: Boolean) = WearPreferences(
+        getPreference.wear(WearPreference.Picker),
+        getPreference.wear(WearPreference.Link),
+        getPreference.wear(WearPreference.Shape),
+        getPreference.wear(WearPreference.LongPressHaptics).toBoolean(),
+        getPreference.wear(WearPreference.KeepScreenOn).toBoolean(),
+        getPreference.wear(WearPreference.BlockBackKey).toBoolean(),
+        xiaomiWatch5Detected,
+        xiaomiWatch5Mode,
+    )
+
+    fun set(preference: WearPreference, value: String) {
+        setPreference(preference.key, value)
+        mutableState.update { read(it.xiaomiWatch5Detected, it.xiaomiWatch5Mode) }
     }
-    fun setLink(mode: String) {
-        setPreference("wear_link_mode", mode)
-        mutableState.update { it.copy(link = mode) }
-    }
-    fun setShape(shape: String) {
-        setPreference("wear_screen_shape", shape)
-        mutableState.update { it.copy(shape = shape) }
-    }
-    fun setLongPressHaptics(enabled: Boolean) {
-        setPreference("wear_long_press_haptics", enabled.toString())
-        mutableState.update { it.copy(longPressHaptics = enabled) }
-    }
-    fun setKeepScreenOn(enabled: Boolean) {
-        setPreference("wear_keep_screen_on", enabled.toString())
-        mutableState.update { it.copy(keepScreenOn = enabled) }
-    }
-    fun setBlockBackKey(enabled: Boolean) {
-        setPreference("wear_block_back_key", enabled.toString())
-        mutableState.update { it.copy(blockBackKey = enabled) }
-    }
+
+    fun set(preference: WearPreference, enabled: Boolean) = set(preference, enabled.toString())
 
     /** Saved now; the crown haptics follow it after the app restarts. */
     fun setXiaomiWatch5Mode(enabled: Boolean) {
@@ -76,6 +79,3 @@ class WearPreferencesViewModel(
         mutableState.update { it.copy(xiaomiWatch5Mode = enabled) }
     }
 }
-
-/** The saved link modes; the former "browser" mode was removed and falls back to automatic. */
-private val LinkModes = setOf("auto", "webview", "phone")
