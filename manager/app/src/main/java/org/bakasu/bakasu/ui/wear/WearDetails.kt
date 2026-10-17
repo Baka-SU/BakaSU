@@ -12,9 +12,11 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.twotone.AccountCircle
 import androidx.compose.material.icons.twotone.Apps
 import androidx.compose.material.icons.twotone.Delete
+import androidx.compose.material.icons.twotone.Description
 import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Extension
 import androidx.compose.material.icons.twotone.Language
+import androidx.compose.material.icons.twotone.Person
 import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.PowerSettingsNew
 import androidx.compose.material.icons.twotone.Security
@@ -30,11 +32,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
@@ -125,18 +129,16 @@ internal fun WearModuleDetail(
             }
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_module_information)) }
-        item { WearModuleInfoCard(spec) { WearLabelValue(stringResource(R.string.module_author), module.author.ifBlank { unknown }) } }
-        item {
-            WearModuleInfoCard(spec) {
-                Text(stringResource(R.string.wear_details), style = MaterialTheme.typography.titleMedium)
-                Text(module.id, style = MaterialTheme.typography.labelSmall)
-            }
-        }
+        // Information rows read like the operation buttons below (icon, label, secondary label), but
+        // stay cards, as nothing happens on a tap.
+        item { WearModuleInfoCard(spec) { WearInfoRow(Icons.TwoTone.Person, stringResource(R.string.module_author), module.author.ifBlank { unknown }) } }
+        item { WearModuleInfoCard(spec) { WearInfoRow(Icons.TwoTone.Tag, stringResource(R.string.wear_details), module.id) } }
         if (module.description.isNotBlank()) {
-            item { WearModuleInfoCard(spec) { WearLabelValue(stringResource(R.string.wear_description), module.description) } }
+            item { WearModuleInfoCard(spec) { WearInfoRow(Icons.TwoTone.Description, stringResource(R.string.wear_description), module.description) } }
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_module_operations)) }
-        // Every operation is a full-width button with an icon and a label, so none relies on its icon alone.
+        // Every operation uses the button's icon, label and secondary label slots: the label names the
+        // operation and the secondary label gives its state or what it does.
         item {
             WearSettingsSwitchWidget(
                 spec,
@@ -145,16 +147,44 @@ internal fun WearModuleDetail(
                 { onEnabledChange(module.id, it) },
                 enabled = !module.remove && !module.update,
                 icon = Icons.TwoTone.PowerSettingsNew,
+                secondaryLabel = stringResource(if (module.enabled) R.string.wear_enabled else R.string.wear_disabled),
             )
         }
         if (module.hasWebUi) {
-            item { WearActionButton(spec, Icons.TwoTone.Language, stringResource(R.string.wear_webui), { onWebUi(module) }, enabled = module.enabled && !module.remove) }
+            item {
+                WearActionButton(
+                    spec,
+                    Icons.TwoTone.Language,
+                    stringResource(R.string.wear_webui),
+                    { onWebUi(module) },
+                    enabled = module.enabled && !module.remove,
+                    secondaryText = stringResource(R.string.wear_webui_summary),
+                )
+            }
         }
         if (module.hasActionScript) {
-            item { WearActionButton(spec, Icons.TwoTone.PlayArrow, stringResource(R.string.action), { onExecute(module) }, enabled = module.enabled && !module.remove) }
+            item {
+                WearActionButton(
+                    spec,
+                    Icons.TwoTone.PlayArrow,
+                    stringResource(R.string.action),
+                    { onExecute(module) },
+                    enabled = module.enabled && !module.remove,
+                    secondaryText = stringResource(R.string.wear_action_summary),
+                )
+            }
         }
-        if (module.moduleUpdate?.zipUrl?.isNotBlank() == true) {
-            item { WearActionButton(spec, Icons.TwoTone.Update, stringResource(R.string.module_update), { onUpdate(module) }, enabled = !module.remove) }
+        module.moduleUpdate?.takeIf { it.zipUrl.isNotBlank() }?.let { update ->
+            item {
+                WearActionButton(
+                    spec,
+                    Icons.TwoTone.Update,
+                    stringResource(R.string.module_update),
+                    { onUpdate(module) },
+                    enabled = !module.remove,
+                    secondaryText = stringResource(R.string.wear_update_to, update.version),
+                )
+            }
         }
         item {
             WearActionButton(
@@ -163,17 +193,27 @@ internal fun WearModuleDetail(
                 stringResource(R.string.uninstall),
                 removeDialog::show,
                 enabled = !module.remove,
+                secondaryText = stringResource(if (module.remove) R.string.wear_pending_removal else R.string.wear_uninstall_summary),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
             )
         }
     }
 }
 
-/** A read-only label above its value, in the label sizes of a Wear button. */
+/**
+ * A read-only row in the layout and type sizes of a Wear button: the icon centered beside its label
+ * and a quieter secondary label, which wraps rather than running into the icon.
+ */
 @Composable
-private fun WearLabelValue(label: String, value: String) {
-    Text(label, style = MaterialTheme.typography.labelMedium)
-    Text(value, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun WearInfoRow(icon: ImageVector, label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.labelMedium)
+            Text(value, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }
 
 @Composable

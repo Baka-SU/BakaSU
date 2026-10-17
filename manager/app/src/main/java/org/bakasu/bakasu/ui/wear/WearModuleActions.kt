@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.os.Build
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.Article
@@ -11,7 +12,6 @@ import androidx.compose.material.icons.twotone.Folder
 import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.Save
 import androidx.compose.material.icons.twotone.Smartphone
-import androidx.compose.material.icons.twotone.Update
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,19 +20,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.ConfirmationDialogDefaults
 import androidx.wear.compose.material3.FailureConfirmationDialog
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.LocalContentColor
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.SuccessConfirmationDialog
+import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.confirmationDialogCurvedText
+import androidx.wear.compose.material3.lazy.transformedHeight
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -55,6 +65,7 @@ import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLogPage
+import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
@@ -92,10 +103,21 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_update)) }
         if (module != null && update != null) {
+            // The module and its version change lead; the changelog follows as quieter body text.
             item {
-                WearInfoCard(spec) {
-                    Text(module.name)
-                    Text(update.version)
+                WearModuleInfoCard(spec) {
+                    Text(
+                        module.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        stringResource(R.string.wear_update_version, module.version.ifBlank { stringResource(R.string.unknown) }, update.version),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
             item { WearSectionHeader(spec, stringResource(R.string.module_changelog)) }
@@ -109,35 +131,99 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
                     )
                 }
 
-                changelog == null -> item { WearScaledItem(spec) { CircularProgressIndicator(Modifier.size(24.dp)) } }
+                changelog == null -> item {
+                    WearScaledItem(spec) {
+                        CircularProgressIndicator(Modifier.align(Alignment.Center).size(ButtonDefaults.IconSize))
+                    }
+                }
 
-                else -> changelog.orEmpty().chunked(350).forEach { chunk -> item { WearInfoCard(spec) { Text(chunk) } } }
-            }
-            progress?.let { percent ->
-                item {
-                    WearInfoCard(spec) {
-                        CircularProgressIndicator(progress = { percent / 100f }, modifier = Modifier.size(24.dp))
-                        Text(stringResource(R.string.module_downloading, module.name))
+                // The whole changelog, split only at line breaks so each list item stays short.
+                else -> changelogChunks(changelog.orEmpty()).forEach { chunk ->
+                    item {
+                        WearInfoCard(spec) {
+                            Text(chunk, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }
-            if (failed) item { WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
-            // Like the phone, the update is offered only after its changelog has been read.
+            // Like the phone, the update is offered only after its changelog has been read. The
+            // button shows its own progress while the ZIP downloads, and ignores taps meanwhile.
             item {
-                WearActionButton(spec, Icons.TwoTone.Update, stringResource(R.string.module_update), {
-                    failed = false
-                    progress = 0
-                    scope.launch {
-                        val id = enqueueDownload(update.zipUrl, "${module.name}-${update.version}.zip")
-                        val result = observeDownload(id).filterNotNull().onEach { progress = it.progress }
-                            .first { it.status == DownloadStatus.COMPLETED || it.status == DownloadStatus.FAILED }
-                        progress = null
-                        result.resultUri?.let(onReady) ?: run { failed = true }
-                    }
-                }, progress == null && changelog != null)
+                val downloading = progress != null
+                Button(
+                    onClick = {
+                        if (progress != null) return@Button
+                        failed = false
+                        progress = 0
+                        scope.launch {
+                            val id = enqueueDownload(update.zipUrl, "${module.name}-${update.version}.zip")
+                            val result = observeDownload(id).filterNotNull().onEach { progress = it.progress }
+                                .first { it.status == DownloadStatus.COMPLETED || it.status == DownloadStatus.FAILED }
+                            progress = null
+                            result.resultUri?.let(onReady) ?: run { failed = true }
+                        }
+                    },
+                    enabled = changelog != null,
+                    modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
+                        .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
+                    transformation = SurfaceTransformation(spec),
+                    icon = {
+                        if (downloading) {
+                            // The ring reads the progress state when it draws, so it follows the download.
+                            CircularProgressIndicator(
+                                progress = { (progress ?: 0) / 100f },
+                                modifier = Modifier.size(ButtonDefaults.IconSize),
+                                colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current),
+                                strokeWidth = CircularProgressIndicatorDefaults.smallStrokeWidth,
+                            )
+                        } else {
+                            Icon(Icons.TwoTone.Download, contentDescription = null)
+                        }
+                    },
+                    secondaryLabel = {
+                        Text(
+                            when {
+                                downloading -> stringResource(R.string.wear_download_percent, progress ?: 0)
+                                failed -> stringResource(R.string.wear_update_retry)
+                                changelogError != null -> stringResource(R.string.wear_update_changelog_unavailable)
+                                changelog == null -> stringResource(R.string.wear_update_reading_changelog)
+                                else -> stringResource(R.string.wear_update_to, update.version)
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                ) {
+                    Text(
+                        stringResource(if (downloading) R.string.wear_update_downloading else R.string.wear_update_download),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
+}
+
+/**
+ * Splits a changelog into list items at line breaks, so no line is cut and the original line
+ * structure stays; only a single line longer than [limit] is split within itself.
+ */
+private fun changelogChunks(text: String, limit: Int = 600): List<String> {
+    val chunks = mutableListOf<String>()
+    val current = StringBuilder()
+    text.trim().lines().forEach { line ->
+        line.chunked(limit).ifEmpty { listOf("") }.forEach { part ->
+            if (current.isNotEmpty() && current.length + part.length + 1 > limit) {
+                chunks += current.toString()
+                current.clear()
+            }
+            if (current.isNotEmpty()) current.append('\n')
+            current.append(part)
+        }
+    }
+    chunks += current.toString()
+    return chunks.map { it.trim('\n') }.filter(String::isNotBlank)
 }
 
 /**
