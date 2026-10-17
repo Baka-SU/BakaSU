@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.component.miuix.animation
 
 import android.annotation.SuppressLint
 import android.graphics.RuntimeShader
+import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.VisibilityThreshold
@@ -41,9 +42,8 @@ class InteractiveHighlight(
     val offset: Offset get() = positionAnimation.value - startPosition
 
     @Language("AGSL")
-    private val shader =
-        RuntimeShader(
-            """
+    private val shaderSource =
+        """
     uniform float2 size;
     layout(color) uniform half4 color;
     uniform float radius;
@@ -53,8 +53,11 @@ class InteractiveHighlight(
         float dist = distance(coord, position);
         float intensity = smoothstep(radius, radius * 0.5, dist);
         return color * intensity;
-    }""",
-        )
+    }"""
+
+    private val shader: RuntimeShader? by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) RuntimeShader(shaderSource) else null
+    }
 
     val modifier: Modifier =
         Modifier.drawWithContent {
@@ -64,7 +67,7 @@ class InteractiveHighlight(
                     Color.White.copy(0.06f * progress),
                     blendMode = BlendMode.Plus,
                 )
-                shader.apply {
+                shader?.apply {
                     val position = position(size, positionAnimation.value)
                     setFloatUniform("size", size.width, size.height)
                     setColorUniform("color", Color.White.copy(0.12f * progress).toArgb())
@@ -74,11 +77,11 @@ class InteractiveHighlight(
                         position.x.fastCoerceIn(0f, size.width),
                         position.y.fastCoerceIn(0f, size.height),
                     )
+                    drawRect(
+                        ShaderBrush(this),
+                        blendMode = BlendMode.Plus,
+                    )
                 }
-                drawRect(
-                    ShaderBrush(shader),
-                    blendMode = BlendMode.Plus,
-                )
             }
 
             drawContent()
