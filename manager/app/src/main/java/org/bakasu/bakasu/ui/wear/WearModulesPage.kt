@@ -98,8 +98,8 @@ internal fun WearModulesPage(
 /**
  * One module row: the row opens the module details. The whole container takes the active color
  * while the module is enabled and the neutral tonal surface otherwise. The title is the module name
- * with its metamodule label, and the version and any pending removal follow in the quieter
- * secondary style.
+ * alone; the version, any pending removal and the metamodule label follow in the quieter secondary
+ * line.
  */
 @Composable
 internal fun TransformingLazyColumnItemScope.WearModuleItem(
@@ -150,29 +150,37 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             transformation = if (actions.isEmpty()) SurfaceTransformation(spec) else null,
             colors = if (module.enabled) ButtonDefaults.filledVariantButtonColors() else ButtonDefaults.filledTonalButtonColors(),
             icon = { Icon(painterResource(R.drawable.wear_symbol_extension), contentDescription = null) },
-            secondaryLabel = details.ifBlank { null }?.let { text ->
+            // The metamodule label follows the version on its baseline; a long version is cut so the
+            // label always shows whole.
+            secondaryLabel = if (details.isNotBlank() || module.metamodule) {
                 {
-                    Text(
-                        text,
-                        color = if (module.remove) MaterialTheme.colorScheme.error else LocalContentColor.current,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (details.isNotBlank()) {
+                        Text(
+                            details,
+                            Modifier.weight(1f, fill = false).alignByBaseline(),
+                            color = if (module.remove) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (module.metamodule) {
+                        WearBadge(
+                            stringResource(R.string.wear_meta_badge),
+                            Modifier.padding(start = if (details.isNotBlank()) 4.dp else 0.dp).alignByBaseline(),
+                        )
+                    }
                 }
+            } else {
+                null
             },
         ) {
-            // Long names wrap with balanced lines rather than leaving one character on the last line;
-            // the metamodule label follows the first line on its baseline.
+            // Long names wrap with balanced lines rather than leaving one character on the last line.
             Text(
                 module.name,
-                Modifier.weight(1f, fill = false).alignByBaseline(),
                 style = LocalTextStyle.current.merge(TextStyle(lineBreak = LineBreak.Heading)),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (module.metamodule) {
-                WearBadge(stringResource(R.string.wear_meta_badge), Modifier.padding(start = 4.dp).alignByBaseline())
-            }
         }
     }
     if (actions.isEmpty()) {

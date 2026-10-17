@@ -5,6 +5,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -12,9 +13,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.Icon
@@ -84,9 +87,10 @@ fun WearManagerUpdateDialog(update: ManagerUpdateInfo?) {
             },
             dismissButton = { AlertDialogDefaults.DismissButton(onClick = dismiss) },
         ) {
-            item { Text(details, style = MaterialTheme.typography.bodySmall) }
+            // Extra items do not take the centered alignment of the title and text slots, so they set it.
+            item { Text(details, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center) }
             info.changelog.takeIf { it.isNotBlank() }?.chunked(350)?.forEach { chunk ->
-                item { Text(chunk, style = MaterialTheme.typography.bodySmall) }
+                item { Text(chunk, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center) }
             }
         }
     }

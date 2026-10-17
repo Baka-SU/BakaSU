@@ -30,7 +30,7 @@ fun wearEmphasizedBodyStyle(): TextStyle = MaterialTheme.typography.bodyLarge.co
  * A confirmation as the official Wear [AlertDialog]: the operation [title], then Confirm and Cancel.
  * Without a [subject] the [message] sits in the dialog's text slot. With one, the subject (such as
  * the module to uninstall) takes the text slot in the emphasized body style, and the message follows
- * in the body style, start-aligned so a long explanation reads naturally; it scrolls when long.
+ * in the body style, centered across the content width like the slots above; it scrolls when long.
  * Cancel, swiping away and Back only close it; [onConfirm] runs once, after the dialog has closed. A
  * [destructive] operation, such as deleting or uninstalling, takes the error colors on its icon and
  * Confirm button.
@@ -96,7 +96,7 @@ fun rememberWearConfirmDialog(
                         message,
                         modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Start,
+                        textAlign = TextAlign.Center,
                     )
                 }
             }

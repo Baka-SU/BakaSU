@@ -421,12 +421,12 @@ private fun WearModuleIcon(size: Dp) {
         Modifier.size(size).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        // The puzzle piece's body sits lower left in its 24dp grid (x 2-19, y 5-22), with only thin
-        // tabs to the top and right, so it is moved by 1.2/24 of its size to look centered on the tile.
+        // The Material Symbols puzzle piece spans x 120-900 and y 60-840 of its 960 viewport, so its
+        // bounds sit 30/960 of its size up and to the right; moving it back centers it on the tile.
         Icon(
             painterResource(R.drawable.wear_symbol_extension),
             contentDescription = null,
-            modifier = Modifier.offset(x = glyph * 0.05f, y = -glyph * 0.05f).size(glyph),
+            modifier = Modifier.offset(x = -glyph / 32, y = glyph / 32).size(glyph),
             tint = MaterialTheme.colorScheme.onPrimaryContainer,
         )
     }

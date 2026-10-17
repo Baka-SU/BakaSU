@@ -277,7 +277,8 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
  * Confirms installing a module ZIP with the official Wear [AlertDialog], as the phone does before
  * flashing. The type follows the Wear roles: the dialog title in the title slot's own style, the
  * module name in an emphasized body style (wrapping, never cut), the metadata in quieter body styles
- * and the description in the body text style, start-aligned for reading. Missing `module.prop`
+ * and the description in the body text style, all centered like the dialog's own slots; a long
+ * description wraps and scrolls with the dialog. Missing `module.prop`
  * fields are left out, and an unreadable one falls back to the file name. Only Confirm calls
  * [onConfirm]; Cancel, swiping away and Back call [onDismiss]. Nothing shows while [uri] is null or
  * its details are still read.
@@ -339,23 +340,27 @@ internal fun WearModuleInstallConfirmDialog(uri: String?, onDismiss: () -> Unit,
                     description,
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                     style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Start,
+                    textAlign = TextAlign.Center,
                 )
             }
         }
     }
 }
 
-/** One metadata field of a dialog: a quiet small label above its value, both start-aligned. */
+/**
+ * One metadata field of a dialog: a quiet small label above its value. Both span the content width
+ * and are centered, like the dialog's own title and text slots.
+ */
 @Composable
 private fun WearDialogField(label: String, value: String) {
-    Column(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             label,
+            modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Start,
+            textAlign = TextAlign.Center,
         )
-        Text(value, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
+        Text(value, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
     }
 }
