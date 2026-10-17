@@ -33,6 +33,7 @@ fun CatalogCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     shape: Shape = RoundedCornerShape(16.dp),
+    containerColor: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val themeConfig = koinInject<ThemeConfig>()
@@ -41,7 +42,7 @@ fun CatalogCard(
         color = if (themeConfig.isEnableBlurExp) {
             Color.Transparent
         } else {
-            MaterialTheme.colorScheme.surfaceBright.copy(cardConfig.cardAlpha)
+            (containerColor ?: MaterialTheme.colorScheme.surfaceBright).copy(cardConfig.cardAlpha)
         },
         modifier = modifier.clip(shape)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)

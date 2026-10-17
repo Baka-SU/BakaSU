@@ -1,7 +1,9 @@
 package org.bakasu.bakasu.ui.screen.moduleRepo
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,18 +16,27 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Add
-import androidx.compose.material.icons.twotone.ArrowDropDown
+import androidx.compose.material.icons.automirrored.twotone.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.twotone.Sort
+import androidx.compose.material.icons.twotone.Check
 import androidx.compose.material.icons.twotone.Download
+import androidx.compose.material.icons.twotone.ExpandLess
+import androidx.compose.material.icons.twotone.ExpandMore
 import androidx.compose.material.icons.twotone.PlayArrow
+import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.material.icons.twotone.Star
 import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.material3.AlertDialog
@@ -36,7 +47,6 @@ import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,7 +54,6 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SelectableDropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -60,6 +69,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,8 +81,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -88,6 +101,7 @@ import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.model.RepositoryError
+import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
 import org.bakasu.bakasu.ui.component.CatalogCard
@@ -139,8 +153,10 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState),
     )
-    val moduleListState = rememberLazyListState()
-    var showDropdown by remember { mutableStateOf(false) }
+    val moduleListState = key(uiState.repositoryUrl, uiState.sortStargazerCountFirst, uiState.search) {
+        rememberLazyListState()
+    }
+    var showSortDropdown by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullToRefreshState()
     val refreshModules = { viewModel.dispatch(ModuleRepoUiAction.Refresh) }
     val context = LocalContext.current
@@ -207,34 +223,39 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
 
     LaunchedEffect(viewModel, uiState.repositoryUrl) {
         viewModel.refresh(force = false)
-        moduleListState.scrollToItem(0)
     }
 
     Scaffold(
         topBar = {
             SearchAppBar(
-                title = uiState.sources.firstOrNull { it.url == uiState.repositoryUrl }?.displayName ?: stringResource(R.string.module_repo),
+                title = stringResource(R.string.module_repo),
                 searchText = uiState.search,
                 onSearchTextChange = { query ->
                     viewModel.dispatch(ModuleRepoUiAction.Search(query))
                 },
+                searchHeaderContent = {
+                    ModuleRepositorySelector(
+                        sources = uiState.sources,
+                        selectedRepository = uiState.repositoryUrl,
+                        onSelect = viewModel::selectRepository,
+                        onManage = { navigator.push(Route.AddRepository) },
+                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp),
+                    )
+                },
                 dropdownContent = {
                     Box {
-                        IconButton(
-                            onClick = { showDropdown = true },
-                        ) {
+                        IconButton(onClick = { showSortDropdown = true }) {
                             Icon(
-                                imageVector = Icons.TwoTone.ArrowDropDown,
-                                contentDescription = stringResource(id = R.string.repo_configured_sources),
-                            )
-
-                            ModuleRepoDropdown(
-                                expanded = showDropdown,
-                                onDismissRequest = { showDropdown = false },
-                                viewModel = viewModel,
-                                uiState = uiState,
+                                imageVector = Icons.AutoMirrored.TwoTone.Sort,
+                                contentDescription = stringResource(R.string.repo_sort),
                             )
                         }
+                        ModuleRepoSortDropdown(
+                            expanded = showSortDropdown,
+                            onDismissRequest = { showSortDropdown = false },
+                            viewModel = viewModel,
+                            uiState = uiState,
+                        )
                     }
                 },
                 onBackClick = {
@@ -242,21 +263,14 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                 },
                 scrollBehavior = scrollBehavior,
                 searchBarPlaceHolderText = stringResource(R.string.search_modules),
-                preserveSearchOnNavigation = true,
-                expandOnActivation = true,
+                preserveStateOnNavigation = true,
+                searchContext = uiState.repositoryUrl,
             )
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { navigator.push(Route.AddRepository) },
-                icon = { Icon(Icons.TwoTone.Add, contentDescription = null) },
-                text = { Text(stringResource(R.string.repo_configure)) },
-            )
-        },
     ) { innerPadding ->
         PullToRefreshBox(
             modifier = Modifier.fillMaxSize().blurSource(),
@@ -283,7 +297,7 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                         start = innerPadding.calculateStartPadding(layoutDirection) + 16.dp,
                         top = innerPadding.calculateTopPadding(),
                         end = innerPadding.calculateEndPadding(layoutDirection) + 16.dp,
-                        bottom = innerPadding.calculateBottomPadding() + 88.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 16.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -297,8 +311,6 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                     items(uiState.modules, key = { it.catalogId }) { module ->
                         OnlineModuleItem(
                             module = module,
-                            installedVersionCode = uiState.installedVersions[module.moduleId],
-                            showSource = false,
                             onQuickInstall = { quickInstall(module) },
                             quickInstallLoading = resolvingModule == module.catalogId,
                             quickInstallEnabled = resolvingModule == null,
@@ -387,42 +399,143 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ModuleRepoDropdown(
+private fun ModuleRepositorySelector(
+    sources: List<RepositorySource>,
+    selectedRepository: String?,
+    onSelect: (String) -> Unit,
+    onManage: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val selectedSource = sources.firstOrNull { it.url == selectedRepository }
+    val selectedCount = selectedSource?.moduleCount
+    val selectedCountDescription = selectedCount?.let { pluralStringResource(R.plurals.repo_module_count, it, it) }
+    CatalogCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(role = Role.Button) { expanded = !expanded }
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = selectedSource?.displayName ?: stringResource(R.string.repo_configured_sources),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (selectedCount != null) {
+                Text(
+                    text = selectedCount.toString(),
+                    modifier = Modifier.semantics { contentDescription = selectedCountDescription.orEmpty() },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                imageVector = if (expanded) Icons.TwoTone.ExpandLess else Icons.TwoTone.ExpandMore,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column {
+                Column(
+                    modifier = Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()).selectableGroup(),
+                ) {
+                    sources.forEach { source ->
+                        val selected = source.url == selectedRepository
+                        val countDescription = source.moduleCount?.let { pluralStringResource(R.plurals.repo_module_count, it, it) }
+                        val contentColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 64.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                                .selectable(selected = selected, role = Role.RadioButton) {
+                                    onSelect(source.url)
+                                    expanded = false
+                                }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = source.displayName,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                                    color = contentColor,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                if (countDescription != null) {
+                                    Text(
+                                        text = countDescription,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (selected) contentColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            if (selected) {
+                                Icon(
+                                    imageVector = Icons.TwoTone.Check,
+                                    contentDescription = null,
+                                    tint = contentColor,
+                                    modifier = Modifier.size(MenuDefaults.LeadingIconSize),
+                                )
+                            } else {
+                                Spacer(Modifier.size(MenuDefaults.LeadingIconSize))
+                            }
+                        }
+                    }
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = Dp.Hairline)
+                TextButton(
+                    onClick = {
+                        expanded = false
+                        onManage()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.TwoTone.Settings, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Text(
+                        text = stringResource(R.string.repo_manage),
+                        modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                        textAlign = TextAlign.Start,
+                    )
+                    Icon(Icons.AutoMirrored.TwoTone.KeyboardArrowRight, contentDescription = null)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ModuleRepoSortDropdown(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     viewModel: ModuleRepoViewModel,
     uiState: ModuleRepoUiState,
 ) {
-    DropdownMenuPopup(
-        expanded = expanded,
-        onDismissRequest = onDismissRequest,
-    ) {
+    DropdownMenuPopup(expanded = expanded, onDismissRequest = onDismissRequest) {
         DropdownMenuGroup(shapes = MenuDefaults.groupShapes()) {
-            uiState.sources.forEachIndexed { index, source ->
-                val count = source.moduleCount
-                SelectableDropdownMenuItem(
-                    selected = source.url == uiState.repositoryUrl,
-                    onClick = {
-                        viewModel.selectRepository(source.url)
-                        onDismissRequest()
-                    },
-                    text = { Text(source.displayName) },
-                    supportingText = if (count == null) {
-                        null
-                    } else {
-                        { Text(pluralStringResource(R.plurals.repo_module_count, count, count)) }
-                    },
-                    shapes = MenuDefaults.itemShape(index = index, count = uiState.sources.size),
-                )
-            }
-        }
-        DropdownMenuGroup(
-            shapes = MenuDefaults.groupShapes(),
-        ) {
             CheckableDropdownMenuItem(
                 checked = uiState.sortStargazerCountFirst,
                 onCheckedChange = {
                     viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it))
+                    onDismissRequest()
                 },
                 text = { Text(stringResource(R.string.module_sort_star_first)) },
                 shapes = MenuDefaults.itemShape(
@@ -438,14 +551,10 @@ private fun ModuleRepoDropdown(
 fun OnlineModuleItem(
     module: CatalogModule,
     onOpen: () -> Unit,
-    showSource: Boolean = true,
-    installedVersionCode: Int? = null,
     onQuickInstall: (() -> Unit)? = null,
     quickInstallLoading: Boolean = false,
     quickInstallEnabled: Boolean = true,
 ) {
-    val installed = !module.isScript && (module.installed || installedVersionCode != null)
-    val updatable = !module.isScript && installedVersionCode != null && module.latestVersionCode > installedVersionCode
     val metadataColor = MaterialTheme.colorScheme.onSurfaceVariant
     val locale = LocalConfiguration.current.locales[0]
     CatalogCard(onClick = onOpen) {
@@ -477,15 +586,6 @@ fun OnlineModuleItem(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                if (showSource) {
-                    Text(
-                        text = stringResource(R.string.repo_source_label, module.repositoryName),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = metadataColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
             if (onQuickInstall != null && (!module.detailLoaded || module.latestAsset?.assets?.isNotEmpty() == true)) {
                 key(module.latestAsset?.assets) {
@@ -504,7 +604,7 @@ fun OnlineModuleItem(
                 maxLines = 4,
             )
         }
-        if (module.isScript || module.metamodule || installed) {
+        if (module.isScript || module.metamodule) {
             FlowRow(
                 modifier = Modifier.padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -518,13 +618,6 @@ fun OnlineModuleItem(
                     LabelText(
                         label = stringResource(R.string.module_meta_label),
                         containerColor = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                if (installed) {
-                    Text(
-                        text = stringResource(if (updatable) R.string.repo_update_available else R.string.installed),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (updatable) MaterialTheme.colorScheme.primary else metadataColor,
                     )
                 }
             }
@@ -653,7 +746,6 @@ fun initFakeRepoModuleForPreview(): CatalogModule = CatalogModule(
             )
         },
     ),
-    installed = true,
     sourceUrl = "Source URL",
     releases = emptyList(),
     repositoryUrl = "https://example.com/",

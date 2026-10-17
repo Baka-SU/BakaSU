@@ -71,6 +71,10 @@ class RepositorySourcesViewModel(
         local.update { it.copy(added = null) }
     }
 
+    fun clearError() {
+        local.update { it.copy(error = null) }
+    }
+
     fun loadDiscovery(force: Boolean = false) {
         if (local.value.discovering || (!force && discoveryLoaded)) return
         local.update { it.copy(discovering = true, discoveryError = null) }

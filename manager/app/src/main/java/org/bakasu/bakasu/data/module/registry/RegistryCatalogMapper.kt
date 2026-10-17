@@ -26,7 +26,6 @@ object RegistryCatalogMapper {
             latestReleaseTime = item.stable.publishedAt,
             latestVersionCode = item.stable.versionCode,
             latestAsset = null,
-            installed = false,
             sourceUrl = "",
             releases = emptyList(),
             repositoryUrl = source.url,

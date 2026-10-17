@@ -3,6 +3,9 @@ package org.bakasu.bakasu.ui.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LargeFlexibleTopAppBar
@@ -13,13 +16,12 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.compose.ui.unit.dp
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.theme.CardConfig
@@ -35,6 +37,7 @@ fun RepositoryPageScaffold(
     title: String,
     topBarContent: @Composable () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null,
+    actions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val navigator = LocalNavigator.current
@@ -53,6 +56,8 @@ fun RepositoryPageScaffold(
                 LargeFlexibleTopAppBar(
                     title = { Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                     navigationIcon = { AppBackButton(onClick = { navigator.pop() }) },
+                    actions = actions,
+                    windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
                     scrollBehavior = scroll,
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
@@ -73,15 +78,8 @@ fun RepositoryPageScaffold(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun rememberRepositoryScrollBehavior(
-    activationKey: Any? = Unit,
+    activationKey: Int = 0,
 ): TopAppBarScrollBehavior {
-    val state = rememberTopAppBarState()
-    val behavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(state)
-    fun restore() {
-        state.heightOffset = 0f
-        state.contentOffset = 0f
-    }
-    LaunchedEffect(activationKey) { restore() }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { restore() }
-    return behavior
+    val state = key(activationKey) { rememberTopAppBarState() }
+    return TopAppBarDefaults.exitUntilCollapsedScrollBehavior(state)
 }

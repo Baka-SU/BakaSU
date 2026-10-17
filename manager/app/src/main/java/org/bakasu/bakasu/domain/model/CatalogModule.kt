@@ -47,7 +47,6 @@ data class CatalogModule(
     val latestReleaseTime: String,
     val latestVersionCode: Int,
     val latestAsset: ModuleRelease?,
-    val installed: Boolean,
     val sourceUrl: String,
     val releases: List<ModuleRelease>,
     val repositoryUrl: String,

@@ -53,13 +53,16 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -108,8 +111,9 @@ private val SearchBarExpandedHeight = 77.dp
 class SearchAppBarScrollBehavior internal constructor(
     private val topAppBarScrollBehavior: TopAppBarScrollBehavior,
     private val searchBarHeight: Float,
+    searchBarHeightOffsetState: MutableFloatState,
 ) : TopAppBarScrollBehavior {
-    private var searchBarHeightOffset by mutableFloatStateOf(0f)
+    private var searchBarHeightOffset by searchBarHeightOffsetState
     private var lastSearchBarScrollDelta = 0f
     private var isUserScrollInProgress = false
     private var ignoreCurrentScroll = false
@@ -137,15 +141,11 @@ class SearchAppBarScrollBehavior internal constructor(
         ignoreCurrentScroll = false
     }
 
-    fun reset(expandTopAppBar: Boolean = false) {
+    fun reset() {
         searchBarHeightOffset = 0f
         lastSearchBarScrollDelta = 0f
         isUserScrollInProgress = false
         ignoreCurrentScroll = false
-        if (expandTopAppBar) {
-            state.heightOffset = 0f
-            state.contentOffset = 0f
-        }
     }
 
     private fun consumeSearchBarScroll(delta: Float): Float {
@@ -282,10 +282,12 @@ fun rememberSearchAppBarScrollBehavior(
     topAppBarScrollBehavior: TopAppBarScrollBehavior,
 ): SearchAppBarScrollBehavior {
     val density = LocalDensity.current
+    val searchBarHeightOffset = rememberSaveable(density) { mutableFloatStateOf(0f) }
     return remember(topAppBarScrollBehavior, density) {
         SearchAppBarScrollBehavior(
             topAppBarScrollBehavior = topAppBarScrollBehavior,
             searchBarHeight = with(density) { SearchBarExpandedHeight.toPx() },
+            searchBarHeightOffsetState = searchBarHeightOffset,
         )
     }
 }
@@ -464,12 +466,13 @@ fun SearchAppBar(
     navigationContent: @Composable (() -> Unit)? = null,
     scrollBehavior: TopAppBarScrollBehavior? = null,
     searchBarPlaceHolderText: String,
-    preserveSearchOnNavigation: Boolean = false,
-    expandOnActivation: Boolean = false,
+    preserveStateOnNavigation: Boolean = false,
+    searchContext: String? = null,
+    searchHeaderContent: (@Composable () -> Unit)? = null,
 ) {
     val themeConfig: ThemeConfig = koinInject()
     val cardConfig: CardConfig = koinInject()
-    val textFieldState = rememberTextFieldState(initialText = searchText)
+    val textFieldState = key(searchContext) { rememberTextFieldState(initialText = searchText) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -487,20 +490,18 @@ fun SearchAppBar(
     val currentOnSearchTextChange by rememberUpdatedState(onSearchTextChange)
     val resetSearch by rememberUpdatedState {
         requestSearchFocus = false
-        if (!preserveSearchOnNavigation) textFieldState.clearText()
+        if (!preserveStateOnNavigation) textFieldState.clearText()
         focusManager.clearFocus(force = true)
         keyboardController?.hide()
-        if (!preserveSearchOnNavigation) currentOnSearchTextChange("")
+        if (!preserveStateOnNavigation) currentOnSearchTextChange("")
     }
 
     LaunchedEffect(textFieldState.text) {
         currentOnSearchTextChange(textFieldState.text.toString())
     }
 
-    LaunchedEffect(isPageActive, expandOnActivation) {
-        if (isPageActive && expandOnActivation) {
-            searchAppBarScrollBehavior?.reset(expandTopAppBar = true)
-        } else if (!expandOnActivation && !isPageActive && scrollBehavior?.state?.collapsedFraction?.toDouble() == 1.0) {
+    LaunchedEffect(isPageActive, preserveStateOnNavigation) {
+        if (!preserveStateOnNavigation && !isPageActive && scrollBehavior?.state?.collapsedFraction?.toDouble() == 1.0) {
             searchAppBarScrollBehavior?.collapseSearchBar()
         }
     }
@@ -519,17 +520,17 @@ fun SearchAppBar(
         }
     }
 
-    DisposableEffect(isPageActive, searchAppBarScrollBehavior) {
+    DisposableEffect(isPageActive, searchAppBarScrollBehavior, preserveStateOnNavigation) {
         onDispose {
-            if (isPageActive) searchAppBarScrollBehavior?.reset()
+            if (isPageActive && !preserveStateOnNavigation) searchAppBarScrollBehavior?.reset()
         }
     }
 
-    DisposableEffect(lifecycleOwner, searchAppBarScrollBehavior) {
+    DisposableEffect(lifecycleOwner, searchAppBarScrollBehavior, preserveStateOnNavigation) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE && currentIsCurrentPage) {
                 resetSearch()
-                searchAppBarScrollBehavior?.reset()
+                if (!preserveStateOnNavigation) searchAppBarScrollBehavior?.reset()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -543,9 +544,7 @@ fun SearchAppBar(
             modifier = Modifier.blurEffect(),
             scrollBehavior = scrollBehavior,
             title = {
-                Text(
-                    text = title,
-                )
+                Text(text = title)
             },
             navigationIcon = {
                 if (onBackClick != null) {
@@ -605,6 +604,7 @@ fun SearchAppBar(
                 .collapseWithTopAppBar(searchBarExpansionFraction),
         ) {
             Column {
+                searchHeaderContent?.invoke()
                 CompactSearchBar(
                     modifier = Modifier
                         .fillMaxWidth()

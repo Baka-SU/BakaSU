@@ -15,9 +15,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.twotone.Add
 import androidx.compose.material.icons.twotone.DeleteOutline
 import androidx.compose.material.icons.twotone.Edit
 import androidx.compose.material.icons.twotone.MoreVert
@@ -26,6 +29,10 @@ import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExposedDropdownMenu
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -74,11 +81,6 @@ import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.component.rememberRepositoryScrollBehavior
 import org.bakasu.bakasu.ui.component.repositoryErrorText
-import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
-import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
-import org.bakasu.bakasu.ui.component.settings.SettingsDropdownWidget
-import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
-import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -92,7 +94,6 @@ internal fun RepositorySource.shortUrl() = url.toHttpUrlOrNull()?.let {
 fun AddRepositoryScreen() {
     val viewModel = koinViewModel<RepositorySourcesViewModel>(key = "add-repository")
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val navigator = LocalNavigator.current
     val pager = rememberPagerState(initialPage = 1) { 2 }
     val discoverScroll = rememberLazyListState()
     val customScroll = rememberLazyListState()
@@ -101,12 +102,112 @@ fun AddRepositoryScreen() {
     val titles = listOf(stringResource(R.string.repo_discover), stringResource(R.string.repo_server_settings))
     val apiTypes = listOf(RepositoryApiType.KERNEL_SU, RepositoryApiType.MMRL)
     val apiTypeLabels = listOf(stringResource(R.string.repo_api_kernel_su), stringResource(R.string.repo_api_mmrl))
-    val configuredSourcesTitle = stringResource(R.string.repo_configured_sources)
+    val addForm = rememberCustomDialog { dismiss ->
+        var apiTypeExpanded by remember { mutableStateOf(false) }
+        val dismissAddForm = {
+            if (!state.busy) {
+                viewModel.clearError()
+                dismiss()
+            }
+        }
+        AlertDialog(
+            onDismissRequest = dismissAddForm,
+            title = { Text(stringResource(R.string.repo_add_repository)) },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    ExposedDropdownMenuBox(
+                        expanded = apiTypeExpanded && !state.busy,
+                        onExpandedChange = { apiTypeExpanded = it && !state.busy },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        OutlinedTextField(
+                            value = apiTypeLabels[apiTypes.indexOf(state.apiType)],
+                            onValueChange = {},
+                            readOnly = true,
+                            singleLine = true,
+                            enabled = !state.busy,
+                            label = { Text(stringResource(R.string.repo_api_type)) },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = apiTypeExpanded && !state.busy)
+                            },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = !state.busy),
+                        )
+                        ExposedDropdownMenu(
+                            expanded = apiTypeExpanded && !state.busy,
+                            onDismissRequest = { apiTypeExpanded = false },
+                            containerColor = MenuDefaults.groupStandardContainerColor,
+                            shape = MenuDefaults.standaloneGroupShape,
+                        ) {
+                            apiTypes.forEachIndexed { index, type ->
+                                SelectableDropdownMenuItem(
+                                    selected = state.apiType == type,
+                                    onClick = {
+                                        viewModel.setApiType(type)
+                                        apiTypeExpanded = false
+                                    },
+                                    text = { Text(apiTypeLabels[index]) },
+                                    shapes = MenuDefaults.itemShape(index = index, count = apiTypes.size),
+                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                                )
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = state.url,
+                        onValueChange = viewModel::setUrl,
+                        label = { Text(stringResource(R.string.repo_server_url)) },
+                        placeholder = {
+                            Text(
+                                stringResource(
+                                    if (state.apiType == RepositoryApiType.KERNEL_SU) {
+                                        R.string.repo_url_kernel_su_hint
+                                    } else {
+                                        R.string.repo_url_mmrl_hint
+                                    },
+                                ),
+                            )
+                        },
+                        singleLine = true,
+                        enabled = !state.busy,
+                        isError = state.error != null,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            if (state.url.isNotBlank() && !state.busy) viewModel.add()
+                        }),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    state.error?.let { Text(repositoryErrorText(it), color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = {
+                FilledTonalLoadingButton(
+                    text = stringResource(R.string.add),
+                    loading = state.addingUrl == state.url,
+                    onClick = { viewModel.add() },
+                    enabled = state.url.isNotBlank() && !state.busy,
+                )
+            },
+            dismissButton = {
+                TextButton(onClick = dismissAddForm, enabled = !state.busy) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
     LaunchedEffect(Unit) { viewModel.loadDiscovery() }
     LaunchedEffect(state.added?.url) {
         if (state.added != null) {
             viewModel.consumeAdded()
-            navigator.pop()
+            if (addForm.isShown) {
+                addForm.hide()
+                viewModel.setUrl("")
+            }
         }
     }
     RepositoryPageScaffold(
@@ -233,63 +334,27 @@ fun AddRepositoryScreen() {
                     modifier = Modifier.fillMaxSize(),
                     state = customScroll,
                     contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
-                                item {
-                                    SettingsDropdownWidget(
-                                        title = stringResource(R.string.repo_api_type),
-                                        description = apiTypeLabels[apiTypes.indexOf(state.apiType)],
-                                        iconPlaceholder = false,
-                                        enabled = !state.busy,
-                                        choice = apiTypes.indexOf(state.apiType),
-                                        data = apiTypeLabels,
-                                        onChoiceChange = { viewModel.setApiType(apiTypes[it]) },
-                                    )
-                                }
-                            }
-                            OutlinedTextField(
-                                value = state.url,
-                                onValueChange = viewModel::setUrl,
-                                label = { Text(stringResource(R.string.repo_server_url)) },
-                                placeholder = {
-                                    Text(
-                                        stringResource(
-                                            if (state.apiType == RepositoryApiType.KERNEL_SU) {
-                                                R.string.repo_url_kernel_su_hint
-                                            } else {
-                                                R.string.repo_url_mmrl_hint
-                                            },
-                                        ),
-                                    )
-                                },
-                                singleLine = true,
-                                enabled = !state.busy,
-                                isError = state.error != null,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = {
-                                    if (state.url.isNotBlank() && !state.busy) viewModel.add()
-                                }),
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            state.error?.let { Text(repositoryErrorText(it), color = MaterialTheme.colorScheme.error) }
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                FilledTonalLoadingButton(
-                                    text = stringResource(R.string.add),
-                                    loading = state.addingUrl == state.url,
-                                    onClick = { viewModel.add() },
-                                    enabled = state.url.isNotBlank() && !state.busy,
-                                )
+                    item(key = "add-repository") {
+                        if (!addForm.isShown) {
+                            state.error?.let { error ->
+                                Text(repositoryErrorText(error), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 12.dp))
                             }
                         }
+                        FilledTonalButton(
+                            onClick = {
+                                viewModel.clearError()
+                                addForm.show()
+                            },
+                            enabled = !state.busy,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(Icons.TwoTone.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Text(stringResource(R.string.repo_add_repository), modifier = Modifier.padding(start = 8.dp))
+                        }
                     }
-                    lazySegmentColumn(
-                        state.sources,
-                        title = configuredSourcesTitle,
-                        noHorizontalPadding = true,
-                        key = { _, source -> source.url },
-                    ) { _, source ->
+                    items(state.sources, key = { it.url }) { source ->
                         RepositorySourceItem(
                             source = source,
                             busy = state.busy,
@@ -309,76 +374,67 @@ internal fun RepositorySourceItem(
     source: RepositorySource,
     busy: Boolean,
     failed: Boolean,
-    onOpen: (() -> Unit)? = null,
     onRename: (String, () -> Unit) -> Unit,
     onRemove: () -> Unit,
 ) {
-    SettingsBaseWidget(
-        title = null,
-        iconPlaceholder = false,
-        onClick = onOpen?.let { open -> { _ -> open() } },
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        foreContent = {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Column(Modifier.weight(1f)) {
-                    CatalogCardHeading(source.displayName)
-                    Text(
-                        source.shortUrl(),
-                        modifier = Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                if (!source.isBuiltIn) {
-                    RepositoryActions(source, busy, onRename, onRemove)
-                }
-            }
-        },
-        descriptionColumnContent = {
-            if (source.description.isNotBlank()) {
-                Spacer(Modifier.height(8.dp))
+    CatalogCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f)) {
+                CatalogCardHeading(source.displayName)
                 Text(
-                    source.description,
-                    style = MaterialTheme.typography.bodyMedium,
+                    source.shortUrl(),
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (failed) {
-                Spacer(Modifier.height(8.dp))
-                Text(stringResource(R.string.repo_refresh_failed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            if (!source.isBuiltIn) {
+                RepositoryActions(source, busy, onRename, onRemove)
             }
-            if (source.moduleCount != null || source.isBuiltIn) {
-                Spacer(Modifier.height(8.dp))
-                HorizontalDivider(thickness = Dp.Hairline)
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        source.moduleCount?.let { count ->
-                            Text(
-                                pluralStringResource(R.plurals.repo_module_count, count, count),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    if (source.isBuiltIn) {
+        }
+        if (source.description.isNotBlank()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                source.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (failed) {
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.repo_refresh_failed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+        if (source.moduleCount != null || source.isBuiltIn) {
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(thickness = Dp.Hairline)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    source.moduleCount?.let { count ->
                         Text(
-                            stringResource(R.string.repo_built_in),
-                            style = MaterialTheme.typography.labelSmall,
+                            pluralStringResource(R.plurals.repo_module_count, count, count),
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
+                if (source.isBuiltIn) {
+                    Text(
+                        stringResource(R.string.repo_built_in),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-        },
-    )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)

@@ -1,6 +1,5 @@
 package org.bakasu.bakasu.data.module
 
-import com.topjohnwu.superuser.io.SuFile
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -311,13 +310,10 @@ class ModuleCatalogRepository(
         publishModules()
     }
 
-    private suspend fun publishModules() = withContext(Dispatchers.IO) {
+    private fun publishModules() {
         mutableModules.value = mutableSources.value.flatMap { source ->
             cachedModules[source.url].orEmpty().map { module ->
-                val installed = !module.isScript && runCatching {
-                    SuFile.open("/data/adb/modules/${module.moduleId}/module.prop").exists()
-                }.getOrDefault(false)
-                module.copy(installed = installed, repositoryName = source.displayName)
+                module.copy(repositoryName = source.displayName)
             }
         }
     }

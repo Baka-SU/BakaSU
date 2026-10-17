@@ -113,7 +113,6 @@ object MmrlRepositoryParser {
             latestReleaseTime = latestTime,
             latestVersionCode = latest?.versionCode ?: versionCode,
             latestAsset = latest,
-            installed = false,
             sourceUrl = resourceUrl(source.url, item.track?.source.orEmpty()),
             releases = releases,
             repositoryUrl = source.url,

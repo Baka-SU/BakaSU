@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.defaultMinSize
@@ -36,15 +34,12 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -98,25 +93,18 @@ import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
 import org.bakasu.bakasu.ui.component.GithubMarkdown
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
 import org.bakasu.bakasu.ui.component.RepositoryPageScaffold
-import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.moduleAssetDetails
 import org.bakasu.bakasu.ui.component.rememberRepositoryInstallDialog
 import org.bakasu.bakasu.ui.component.rememberRepositoryScrollBehavior
 import org.bakasu.bakasu.ui.component.repositoryErrorText
 import org.bakasu.bakasu.ui.component.scriptLastRunText
-import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
 import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Navigator
 import org.bakasu.bakasu.ui.navigation.Route
-import org.bakasu.bakasu.ui.theme.CardConfig
-import org.bakasu.bakasu.ui.theme.ThemeConfig
-import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
-import org.bakasu.bakasu.ui.util.LocalSnackbarHost
-import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
@@ -178,10 +166,6 @@ fun OnlineModuleDetailScreen(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun OnlineModuleDetailContent(module: CatalogModule, viewModel: ModuleDetailViewModel) {
-    val themeConfig: ThemeConfig = koinInject()
-    val cardConfig: CardConfig = koinInject()
-    val navigator = LocalNavigator.current
-    val snackBarHost = LocalSnackbarHost.current
     val coroutineScope = rememberCoroutineScope()
 
     val tabTitles = listOf(stringResource(R.string.readme), stringResource(R.string.release), stringResource(R.string.info))
@@ -189,113 +173,53 @@ private fun OnlineModuleDetailContent(module: CatalogModule, viewModel: ModuleDe
     val pagerState = rememberPagerState(pageCount = { tabTitles.size })
     val scrollBehavior = rememberRepositoryScrollBehavior(pagerState.currentPage)
 
-    Scaffold(
-        topBar = {
-            Column(
-                modifier = Modifier.blurEffect(),
-            ) {
-                LargeFlexibleTopAppBar(
-                    title = {
-                        Text(module.moduleName, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    },
-                    scrollBehavior = scrollBehavior,
-                    navigationIcon = {
-                        AppBackButton(
-                            onClick = {
-                                navigator.pop()
-                            },
-                        )
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = {
-                                uriHandler.openUri(module.pageUrl)
-                            },
-                        ) {
-                            Icon(
-                                imageVector = Icons.TwoTone.OpenInBrowser,
-                                contentDescription = stringResource(R.string.open_module_home_page),
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors().copy(
-                        containerColor =
-                            if (themeConfig.isEnableBlur) {
-                                Color.Transparent
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                            },
-                        scrolledContainerColor =
-                            if (themeConfig.isEnableBlur) {
-                                Color.Transparent
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                            },
-                    ),
-                    windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
+    BackHandler(pagerState.currentPage != 0) {
+        coroutineScope.launch { pagerState.animateScrollToPage(0) }
+    }
+    RepositoryPageScaffold(
+        title = module.moduleName,
+        scrollBehavior = scrollBehavior,
+        actions = {
+            IconButton(onClick = { uriHandler.openUri(module.pageUrl) }) {
+                Icon(
+                    imageVector = Icons.TwoTone.OpenInBrowser,
+                    contentDescription = stringResource(R.string.open_module_home_page),
                 )
-
-                PrimaryTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    containerColor =
-                        if (themeConfig.isEnableBlur) {
-                            Color.Transparent
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                        },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    tabTitles.forEachIndexed { index, title ->
-                        Tab(
-                            selected = pagerState.currentPage == index,
-                            onClick = {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(index)
-                                }
-                            },
-                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            text = { Text(title) },
-                        )
-                    }
-                }
-
-                BackHandler(
-                    pagerState.currentPage != 0,
-                ) {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
+            }
+        },
+        topBarContent = {
+            PrimaryTabRow(
+                selectedTabIndex = pagerState.currentPage,
+                containerColor = Color.Transparent,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                tabTitles.forEachIndexed { index, title ->
+                    Tab(
+                        selected = pagerState.currentPage == index,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = { Text(title) },
+                    )
                 }
             }
         },
-        containerColor = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        contentWindowInsets = adaptiveScaffoldWindowInsets(),
-        snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) },
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .blurSource(),
-        ) {
-            HorizontalPagerWithInteraction(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                beyondViewportPageCount = 2,
-            ) { page ->
-                when (page) {
-                    0 -> ReadmeTab(module, scrollBehavior.nestedScrollConnection, innerPadding, viewModel)
+        HorizontalPagerWithInteraction(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize().blurSource(),
+            beyondViewportPageCount = 2,
+        ) { page ->
+            when (page) {
+                0 -> ReadmeTab(module, scrollBehavior.nestedScrollConnection, innerPadding, viewModel)
 
-                    1 -> ReleasesTab(
-                        module,
-                        scrollBehavior.nestedScrollConnection,
-                        innerPadding,
-                        viewModel,
-                    )
+                1 -> ReleasesTab(
+                    module,
+                    scrollBehavior.nestedScrollConnection,
+                    innerPadding,
+                    viewModel,
+                )
 
-                    2 -> InfoTab(module, scrollBehavior.nestedScrollConnection, innerPadding, viewModel)
-                }
+                2 -> InfoTab(module, scrollBehavior.nestedScrollConnection, innerPadding, viewModel)
             }
         }
     }

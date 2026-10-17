@@ -20,7 +20,6 @@ import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetCatalogModuleUseCase
 import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
-import org.bakasu.bakasu.domain.usecase.ObserveInstalledModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveModuleCatalogRefreshingUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
@@ -38,7 +37,6 @@ data class ModuleRepoUiState(
     val sources: List<RepositorySource> = emptyList(),
     val repositoryUrl: String? = null,
     val failures: Map<String, RepositoryFailure> = emptyMap(),
-    val installedVersions: Map<String, Int> = emptyMap(),
 ) {
     val content: CatalogContent get() = when {
         repositoryUrl != null && sources.none { it.url == repositoryUrl } -> CatalogContent.SOURCE_UNAVAILABLE
@@ -67,11 +65,10 @@ class ModuleRepoViewModel(
     private val observeSources: ObserveRepositorySourcesUseCase,
     private val getModule: GetCatalogModuleUseCase,
     private val isCurrent: IsCatalogModuleCurrentUseCase,
-    private val observeInstalledModules: ObserveInstalledModulesUseCase,
     private val savedState: SavedStateHandle,
     repositoryUrl: String? = null,
 ) : ViewModel() {
-    private val search = MutableStateFlow("")
+    private val search = MutableStateFlow(savedState.get<String>("repository-search") ?: "")
     private val selectedRepository = MutableStateFlow<String?>(savedState["selected-repository"] ?: repositoryUrl)
     private val selectedSources = combine(observeSources.sources, selectedRepository) { sources, selected ->
         val url = sources.firstOrNull { it.url == selected }?.url ?: sources.firstOrNull()?.url
@@ -87,7 +84,7 @@ class ModuleRepoViewModel(
         val changed = activeRepository() != url
         savedState["selected-repository"] = url
         selectedRepository.value = url
-        if (changed) search.value = ""
+        if (changed) updateSearch("")
     }
     private val sortStarsFirst = MutableStateFlow(
         getBooleanPreference("module_repo_sort_star_first", false),
@@ -103,15 +100,13 @@ class ModuleRepoViewModel(
         selectedSources,
         search,
         sortStarsFirst,
-        observeInstalledModules(),
-    ) { modules, selection, query, starsFirst, installed ->
+    ) { modules, selection, query, starsFirst ->
         visibleState(
             ModuleRepoUiState(
                 modules = modules,
                 sortStargazerCountFirst = starsFirst,
                 search = query,
                 repositoryUrl = selection.second,
-                installedVersions = installed.modules.associate { it.id to it.versionCode },
             ),
             selection.first,
         )
@@ -129,6 +124,7 @@ class ModuleRepoViewModel(
         SharingStarted.WhileSubscribed(),
         ModuleRepoUiState(
             sortStargazerCountFirst = sortStarsFirst.value,
+            search = search.value,
             isRefreshing = true,
             sources = observeSources.sources.value,
             repositoryUrl = activeRepository(),
@@ -147,10 +143,7 @@ class ModuleRepoViewModel(
                         module.moduleId.contains(catalog.search, true) || module.moduleName.contains(catalog.search, true) ||
                             transliterateText(module.moduleName).contains(catalog.search, true)
                         )
-            }.sortedWith(
-                compareByDescending<CatalogModule> { it.installed }
-                    .thenByDescending { if (catalog.sortStargazerCountFirst) it.stargazerCount else 0 },
-            ),
+            }.sortedByDescending { if (catalog.sortStargazerCountFirst) it.stargazerCount else 0 },
             sources = sources,
         )
         visibleCatalogCache = VisibleCatalogCache(catalog, sources, result)
@@ -173,6 +166,7 @@ class ModuleRepoViewModel(
     }
 
     fun updateSearch(value: String) {
+        savedState["repository-search"] = value
         search.value = value
     }
 
