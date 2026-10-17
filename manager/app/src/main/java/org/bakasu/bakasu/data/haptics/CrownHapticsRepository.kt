@@ -12,10 +12,17 @@ import org.bakasu.bakasu.data.AppSettingsRepository
 class CrownHapticsRepository(
     private val settings: AppSettingsRepository,
 ) {
-    /** A Xiaomi watch whose model name reads "Watch 5", with or without spaces. */
+    /**
+     * A Xiaomi watch whose model or device name is one of the Xiaomi Watch 5 names, or whose model
+     * name reads "Watch 5", with or without spaces.
+     */
     val isXiaomiWatch5: Boolean =
         Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true) &&
-            Build.MODEL.orEmpty().replace(" ", "").contains("watch5", ignoreCase = true)
+            (
+                Build.MODEL in XIAOMI_WATCH_5_MODELS ||
+                    Build.DEVICE in XIAOMI_WATCH_5_DEVICES ||
+                    Build.MODEL.orEmpty().replace(" ", "").contains("watch5", ignoreCase = true)
+                )
 
     fun isXiaomiWatch5ModeEnabled(): Boolean = settings.getBoolean(KEY_XIAOMI_WATCH_5_MODE, false)
 
@@ -36,5 +43,13 @@ class CrownHapticsRepository(
 
     private companion object {
         const val KEY_XIAOMI_WATCH_5_MODE = "wear_xiaomi_watch5_mode"
+
+        /**
+         * The Xiaomi Watch 5 (O61) names from MobileModels (brands/xiaomi-wear): the Bluetooth
+         * version is grass / M2501W1, the LTE version grasslte / M2505W1 and the global version
+         * blenny / M2501W1.
+         */
+        val XIAOMI_WATCH_5_MODELS = setOf("M2501W1", "M2505W1")
+        val XIAOMI_WATCH_5_DEVICES = setOf("grass", "grasslte", "blenny")
     }
 }
