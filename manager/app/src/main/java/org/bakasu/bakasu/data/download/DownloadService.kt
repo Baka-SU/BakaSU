@@ -60,6 +60,7 @@ class DownloadService : Service() {
         const val SOURCE_NIGHTLY_ARTIFACT = "nightly_artifact"
 
         private const val COMPLETION_NOTIFICATION_ID_BASE = 100000
+        private const val PROGRESS_STEP_BYTES = 64L * 1024L
     }
 
     private val activeJobs = ConcurrentHashMap<Int, Job>()
@@ -259,27 +260,31 @@ class DownloadService : Service() {
                 FileOutputStream(target).use { output ->
                     val buffer = ByteArray(8 * 1024)
                     var copied = 0L
+                    var reported = 0L
+                    // The bytes are published as they arrive, also without a known size; every
+                    // 64 KiB is often enough for the UI and keeps the state updates few.
+                    reportProgress(id, target.name, 0, copied, total)
                     while (true) {
                         val read = source.read(buffer)
                         if (read == -1) break
                         output.write(buffer, 0, read)
                         copied += read
-                        if (total > 0L) {
-                            reportProgress(
-                                id,
-                                target.name,
-                                ((copied * 100L) / total).toInt().coerceIn(0, 100),
-                            )
+                        if (copied - reported >= PROGRESS_STEP_BYTES) {
+                            reported = copied
+                            reportProgress(id, target.name, percentOf(copied, total), copied, total)
                         }
                     }
                     output.flush()
+                    reportProgress(id, target.name, percentOf(copied, total), copied, total)
                 }
             }
         }
     }
 
-    private fun reportProgress(id: Int, fileName: String, progress: Int) {
-        downloadRepository.updateProgress(id, progress)
+    private fun percentOf(copied: Long, total: Long) = if (total > 0L) ((copied * 100L) / total).toInt().coerceIn(0, 100) else 0
+
+    private fun reportProgress(id: Int, fileName: String, progress: Int, downloadedBytes: Long = 0L, totalBytes: Long = -1L) {
+        downloadRepository.updateProgress(id, progress, downloadedBytes, totalBytes)
         val previous = lastNotifiedProgress[id] ?: -1
         if (progress - previous >= 2 || progress == 100) {
             notificationManager.notify(id, buildProgressNotification(id, fileName, progress))

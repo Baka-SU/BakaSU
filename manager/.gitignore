@@ -8,3 +8,7 @@ captures
 .cxx
 local.properties
 key.jks
+
+
+.claude/
+.agents/

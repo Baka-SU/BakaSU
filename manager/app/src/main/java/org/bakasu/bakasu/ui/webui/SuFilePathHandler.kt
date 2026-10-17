@@ -11,7 +11,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.util.zip.GZIPInputStream
-import org.bakasu.bakasu.data.webui.WebUiRepository
+import org.bakasu.bakasu.data.webui.WebUiBackend
 import org.bakasu.bakasu.ui.webui.SuFilePathHandler.Companion.DEFAULT_MIME_TYPE
 
 /**
@@ -35,7 +35,7 @@ import org.bakasu.bakasu.ui.webui.SuFilePathHandler.Companion.DEFAULT_MIME_TYPE
  */
 class SuFilePathHandler(
     directory: File,
-    private val webUiRepository: WebUiRepository,
+    private val backend: WebUiBackend,
     private val insetsSupplier: InsetsSupplier,
     private val onInsetsRequestedListener: ((Boolean) -> Unit)?,
     private val colorsCssProvider: () -> String,
@@ -113,7 +113,7 @@ class SuFilePathHandler(
         try {
             val file = getCanonicalFileIfChild(directory, path)
             if (file != null) {
-                val inputStream = webUiRepository.openFile(file.absolutePath)
+                val inputStream = backend.openFile(file.absolutePath)
                     ?: return WebResourceResponse(null, null, null)
                 val mimeType = guessMimeType(path)
                 return WebResourceResponse(mimeType, null, handleSvgzStream(path, inputStream))

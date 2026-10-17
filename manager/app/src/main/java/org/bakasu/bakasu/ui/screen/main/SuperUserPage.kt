@@ -120,6 +120,7 @@ fun SuperUserPage(bottomPadding: Dp) {
     val restoreConfirmMessage = stringResource(R.string.allowlist_restore_confirm_message)
     val confirmText = stringResource(R.string.confirm)
     val cancelText = stringResource(R.string.cancel)
+    val rootDeniedText = stringResource(R.string.grant_root_failed)
 
     LaunchedEffect(viewModel) {
         viewModel.events.collectLatest { event ->
@@ -127,6 +128,8 @@ fun SuperUserPage(bottomPadding: Dp) {
                 is SuperUserUiEvent.Error -> if (event.message.isNotBlank()) {
                     snackBarHostState.showReplacingSnackbar(event.message)
                 }
+
+                SuperUserUiEvent.RootDenied -> snackBarHostState.showReplacingSnackbar(rootDeniedText)
 
                 is SuperUserUiEvent.AllowlistOperationFinished -> {
                     val successMessage = if (event.restore) {

@@ -13,7 +13,6 @@ import kotlin.coroutines.resume
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -21,20 +20,22 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.bakasu.rootService.IKsuInterface
 
+/** The root service could not start because the root shell was refused. */
+class RootAccessDeniedException : IllegalStateException("Root access denied")
+
 class RootServiceRepository(
     private val application: Application,
 ) {
     private val requestMutex = Mutex()
 
-    suspend fun getInstalledPackages(): List<PackageInfo> = requestMutex.withLock {
-        val intent = Intent(application, KsuService::class.java)
-        try {
-            val binder = withTimeoutOrNull(10000.milliseconds) {
-                connectService(intent)
-            } ?: throw IllegalStateException("Root service unavailable")
+    // The service stays bound for the life of the app. Stopping it after each request let the next
+    // bind reach the exiting root process (libsu's stop is oneway), so that request failed.
+    private var binder: IBinder? = null
 
+    suspend fun getInstalledPackages(): List<PackageInfo> = requestMutex.withLock {
+        val service = IKsuInterface.Stub.asInterface(connectedBinder())
+        try {
             withContext(Dispatchers.IO) {
-                val service = IKsuInterface.Stub.asInterface(binder)
                 val total = service.packageCount
                 buildList {
                     var start = 0
@@ -49,10 +50,24 @@ class RootServiceRepository(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            throw IllegalStateException("Root service unavailable", error)
-        } finally {
-            stopService(intent)
+            binder = null
+            throw IllegalStateException("Root service request failed", error)
         }
+    }
+
+    private suspend fun connectedBinder(): IBinder {
+        binder?.takeIf { it.isBinderAlive }?.let { return it }
+        val intent = Intent(application, KsuService::class.java)
+        val connected = withTimeoutOrNull(10000.milliseconds) { connectService(intent) }
+        if (connected == null) {
+            // libsu starts the service from the main shell; only a shell that is not root means
+            // root was refused. Other failures, or a check that cannot finish, stay generic errors.
+            val granted = withContext(Dispatchers.IO) { runCatching { Shell.getShell().isRoot }.getOrNull() }
+            if (granted == false) throw RootAccessDeniedException()
+            throw IllegalStateException("Root service unavailable")
+        }
+        binder = connected
+        return connected
     }
 
     private suspend fun connectService(intent: Intent): IBinder? = withContext(Dispatchers.Main.immediate) {
@@ -86,10 +101,6 @@ class RootServiceRepository(
                 if (continuation.isActive) continuation.resume(null)
             }
         }
-    }
-
-    private suspend fun stopService(intent: Intent) = withContext(NonCancellable + Dispatchers.Main.immediate) {
-        runCatching { RootService.stop(intent) }
     }
 
     private fun stopServiceOnMain(intent: Intent) {

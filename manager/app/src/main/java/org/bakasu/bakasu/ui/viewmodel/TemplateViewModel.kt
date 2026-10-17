@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.ProfileTemplate
+import org.bakasu.bakasu.domain.usecase.DeleteProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.ExportProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.ImportProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplateOfflineUseCase
@@ -30,6 +31,7 @@ sealed interface TemplateUiAction {
     data class Refresh(val synchronize: Boolean = false) : TemplateUiAction
     data class Import(val json: String) : TemplateUiAction
     data object Export : TemplateUiAction
+    data class Delete(val id: String) : TemplateUiAction
 }
 
 sealed interface TemplateUiEvent {
@@ -46,6 +48,7 @@ class TemplateViewModel(
     private val refreshTemplates: RefreshProfileTemplatesUseCase,
     private val importTemplatesUseCase: ImportProfileTemplatesUseCase,
     private val exportTemplatesUseCase: ExportProfileTemplatesUseCase,
+    private val deleteTemplateUseCase: DeleteProfileTemplateUseCase,
 ) : ViewModel() {
     private val mutableEvents = MutableSharedFlow<TemplateUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<TemplateUiEvent> = mutableEvents.asSharedFlow()
@@ -86,6 +89,11 @@ class TemplateViewModel(
                     onSuccess = { mutableEvents.emit(TemplateUiEvent.ImportCompleted) },
                     onFailure = { mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty())) },
                 )
+            }
+
+            // The repository removes the template from ksud and refreshes the list App Profile reads.
+            is TemplateUiAction.Delete -> viewModelScope.launch {
+                deleteTemplateUseCase(action.id).onFailure { mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty())) }
             }
 
             TemplateUiAction.Export -> viewModelScope.launch {

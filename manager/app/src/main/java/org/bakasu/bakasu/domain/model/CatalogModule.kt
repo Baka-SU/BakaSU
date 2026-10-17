@@ -5,11 +5,13 @@ data class CatalogAuthor(
     val link: String,
 )
 
+/** [sha256] is the digest the repository publishes for the file; empty when none is known. */
 data class ModuleReleaseAsset(
     val name: String,
     val downloadUrl: String,
     val size: Long,
     val downloadCount: Int,
+    val sha256: String = "",
 )
 
 data class ModuleRelease(

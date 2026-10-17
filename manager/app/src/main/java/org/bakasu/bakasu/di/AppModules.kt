@@ -18,7 +18,10 @@ import org.bakasu.bakasu.data.application.DynamicManagerRepository
 import org.bakasu.bakasu.data.count.CountRepository
 import org.bakasu.bakasu.data.download.DownloadRepository
 import org.bakasu.bakasu.data.file.ModuleFileRepository
+import org.bakasu.bakasu.data.file.WearFileRepository
+import org.bakasu.bakasu.data.file.ZipFileDetector
 import org.bakasu.bakasu.data.flash.FlashRepository
+import org.bakasu.bakasu.data.haptics.CrownHapticsRepository
 import org.bakasu.bakasu.data.kernel.KernelRepository
 import org.bakasu.bakasu.data.kernel.UmountRepository
 import org.bakasu.bakasu.data.logging.BugreportRepository
@@ -29,6 +32,7 @@ import org.bakasu.bakasu.data.module.ModulePreferencesRepository
 import org.bakasu.bakasu.data.module.ModuleRepository
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
+import org.bakasu.bakasu.data.network.WearLinkRepository
 import org.bakasu.bakasu.data.network.WebResourceRepository
 import org.bakasu.bakasu.data.packageinfo.AppIconDataSource
 import org.bakasu.bakasu.data.packageinfo.InstalledPackageCache
@@ -54,10 +58,12 @@ import org.bakasu.bakasu.data.theme.ThemeRepository
 import org.bakasu.bakasu.data.update.ManagerUpdateRepository
 import org.bakasu.bakasu.data.webui.WebUiRepository
 import org.bakasu.bakasu.domain.text.TextTransliterator
+import org.bakasu.bakasu.domain.usecase.AddOnlineProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.AddUmountPathUseCase
 import org.bakasu.bakasu.domain.usecase.ApplyLanguageUseCase
 import org.bakasu.bakasu.domain.usecase.BackupAllowlistUseCase
 import org.bakasu.bakasu.domain.usecase.CalculateInstalledModuleSizeUseCase
+import org.bakasu.bakasu.domain.usecase.CancelDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.CheckFlashModuleMountUseCase
 import org.bakasu.bakasu.domain.usecase.CheckManagerUpdateUseCase
 import org.bakasu.bakasu.domain.usecase.CleanSulogUseCase
@@ -74,6 +80,7 @@ import org.bakasu.bakasu.domain.usecase.ExecuteModuleActionUseCase
 import org.bakasu.bakasu.domain.usecase.ExportProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleIdUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleNameUseCase
+import org.bakasu.bakasu.domain.usecase.FetchOnlineProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
 import org.bakasu.bakasu.domain.usecase.GenerateBugreportUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppProfileUseCase
@@ -92,6 +99,7 @@ import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetStringSetPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetSuSFSStatusUseCase
 import org.bakasu.bakasu.domain.usecase.GetSuperUserAppGroupUseCase
+import org.bakasu.bakasu.domain.usecase.GetXiaomiWatch5ModeUseCase
 import org.bakasu.bakasu.domain.usecase.ImportAllowlistUseCase
 import org.bakasu.bakasu.domain.usecase.ImportProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.InitializeApplicationUseCase
@@ -100,6 +108,7 @@ import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
 import org.bakasu.bakasu.domain.usecase.IsNetworkAvailableUseCase
 import org.bakasu.bakasu.domain.usecase.IsSoftRebootPreferredUseCase
 import org.bakasu.bakasu.domain.usecase.IsSystemLanguageSettingsUseCase
+import org.bakasu.bakasu.domain.usecase.IsXiaomiWatch5UseCase
 import org.bakasu.bakasu.domain.usecase.LaunchSystemLanguageSettingsUseCase
 import org.bakasu.bakasu.domain.usecase.LoadSettingsPlatformUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
@@ -141,6 +150,7 @@ import org.bakasu.bakasu.domain.usecase.SetSelinuxHideEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetStringPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.SetStringSetPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.SetSuEnabledUseCase
+import org.bakasu.bakasu.domain.usecase.SetXiaomiWatch5ModeUseCase
 import org.bakasu.bakasu.domain.usecase.StartKernelFlashUseCase
 import org.bakasu.bakasu.domain.usecase.SuSFSConfigUseCase
 import org.bakasu.bakasu.domain.usecase.TakeModuleUriPermissionUseCase
@@ -149,8 +159,8 @@ import org.bakasu.bakasu.domain.usecase.UpdateAppearanceUseCase
 import org.bakasu.bakasu.domain.usecase.UpdateCachedModuleEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.UpdatePlatformSettingUseCase
 import org.bakasu.bakasu.domain.usecase.ValidateSepolicyUseCase
+import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
 import org.bakasu.bakasu.ui.activity.util.ThemeUtils
-import org.bakasu.bakasu.ui.component.ZipFileDetector
 import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
@@ -164,8 +174,10 @@ import org.bakasu.bakasu.ui.viewmodel.InstallViewModel
 import org.bakasu.bakasu.ui.viewmodel.KernelFlashViewModel
 import org.bakasu.bakasu.ui.viewmodel.MainIntentViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
+import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
+import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.SulogViewModel
@@ -173,6 +185,9 @@ import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateEditorViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerScreenViewModel
+import org.bakasu.bakasu.ui.viewmodel.WearFileViewModel
+import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
+import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.webui.MonetColorsProvider
 import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.factoryOf
@@ -248,8 +263,10 @@ val repositoryModule = module {
             flashRepository = get(),
             ksuCliRepository = get(),
             monetCompatColorSource = get(),
+            crownHapticsRepository = get(),
         )
     }
+    singleOf(::CrownHapticsRepository)
     singleOf(::ManagerUpdateRepository)
     singleOf(::ApplicationControlRepository)
     singleOf(::DownloadRepository)
@@ -276,6 +293,8 @@ val repositoryModule = module {
     singleOf(::SuSFSRepository)
     singleOf(::MonetCompatColorSource)
     singleOf(::ThemeRepository)
+    singleOf(::WearFileRepository)
+    singleOf(::WearLinkRepository)
     single {
         val themeRepository = get<ThemeRepository>()
         ThemeConfig(themeRepository::defaultSeedColor)
@@ -308,6 +327,7 @@ val useCaseModule = module {
     factoryOf(::EnqueueDownloadUseCase)
     factoryOf(::EnqueueManagerUpdateUseCase)
     factoryOf(::ObserveDownloadUseCase)
+    factoryOf(::CancelDownloadUseCase)
     factoryOf(::GetKernelStatusUseCase)
     factoryOf(::GetInstallEnvironmentUseCase)
     factoryOf(::ExecuteFlashOperationUseCase)
@@ -344,6 +364,8 @@ val useCaseModule = module {
     factoryOf(::ObserveProfileTemplateRefreshingUseCase)
     factoryOf(::ObserveProfileTemplateOfflineUseCase)
     factoryOf(::RefreshProfileTemplatesUseCase)
+    factoryOf(::FetchOnlineProfileTemplatesUseCase)
+    factoryOf(::AddOnlineProfileTemplateUseCase)
     factoryOf(::GetProfileTemplateUseCase)
     factoryOf(::SaveProfileTemplateUseCase)
     factoryOf(::DeleteProfileTemplateUseCase)
@@ -352,6 +374,9 @@ val useCaseModule = module {
     factoryOf(::GetBooleanPreferenceUseCase)
     factoryOf(::SetBooleanPreferenceUseCase)
     factoryOf(::GetStringPreferenceUseCase)
+    factoryOf(::IsXiaomiWatch5UseCase)
+    factoryOf(::GetXiaomiWatch5ModeUseCase)
+    factoryOf(::SetXiaomiWatch5ModeUseCase)
     factoryOf(::SetStringPreferenceUseCase)
     factoryOf(::GetStringSetPreferenceUseCase)
     factoryOf(::SetStringSetPreferenceUseCase)
@@ -380,6 +405,7 @@ val useCaseModule = module {
     factoryOf(::TakeModuleUriPermissionUseCase)
     factoryOf(::ExtractModuleNameUseCase)
     factoryOf(::ExtractModuleIdUseCase)
+    factoryOf(::VerifyModuleDownloadUseCase)
     factoryOf(::ObserveInstalledModulesUseCase)
     factoryOf(::RefreshInstalledModulesUseCase)
     factoryOf(::CalculateInstalledModuleSizeUseCase)
@@ -416,7 +442,9 @@ val viewModelModule = module {
     viewModelOf(::SuSFSViewModel)
     viewModelOf(::ModuleRepoViewModel)
     viewModel { parameters -> ModuleDetailViewModel(parameters[0], get()) }
+    viewModelOf(::ModuleDownloadViewModel)
     viewModelOf(::TemplateViewModel)
+    viewModelOf(::OnlineTemplateViewModel)
     viewModel { parameters ->
         TemplateEditorViewModel(
             templateId = parameters[0],
@@ -431,6 +459,9 @@ val viewModelModule = module {
     viewModelOf(::DynamicManagerViewModel)
     viewModelOf(::FlashViewModel)
     viewModelOf(::UmountManagerScreenViewModel)
+    viewModelOf(::WearFileViewModel)
+    viewModelOf(::WearLinkViewModel)
+    viewModelOf(::WearPreferencesViewModel)
     viewModel { parameters ->
         ExecuteModuleActionViewModel(
             moduleId = parameters[0],
