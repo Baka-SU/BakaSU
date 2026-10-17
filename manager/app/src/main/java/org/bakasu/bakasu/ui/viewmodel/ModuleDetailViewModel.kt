@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.CatalogModule
-import org.bakasu.bakasu.domain.model.DocumentFormat
 import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
 import org.bakasu.bakasu.domain.model.ModuleCatalogResult
 import org.bakasu.bakasu.domain.model.ModuleReadme
@@ -44,12 +43,9 @@ data class ReleaseDetailsState(
 )
 
 data class ModuleDocumentState(
-    val text: String? = null,
+    val document: ModuleReadme? = null,
     val loading: Boolean = true,
     val failed: Boolean = false,
-    val baseUrl: String = "",
-    val format: DocumentFormat = DocumentFormat.MARKDOWN,
-    val registryOrigin: String? = null,
 )
 
 sealed interface ModuleDetailUiAction {
@@ -203,12 +199,9 @@ class ModuleDetailViewModel(
                 it.copy(
                     documents = it.documents + (
                         url to ModuleDocumentState(
-                            text = result.getOrNull()?.content,
+                            document = result.getOrNull(),
                             loading = false,
                             failed = result.isFailure,
-                            baseUrl = result.getOrNull()?.baseUrl.orEmpty(),
-                            format = result.getOrNull()?.format ?: DocumentFormat.MARKDOWN,
-                            registryOrigin = result.getOrNull()?.registryOrigin,
                         )
                         ),
                 )

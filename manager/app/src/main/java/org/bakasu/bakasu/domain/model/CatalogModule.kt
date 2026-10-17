@@ -86,8 +86,8 @@ data class ModuleReadme(
     val content: String,
     val baseUrl: String,
     val format: DocumentFormat = DocumentFormat.MARKDOWN,
-    val registryOrigin: String? = null,
-)
+    val policy: DocumentPolicy = DocumentPolicy.PublicHttps(),
+) : java.io.Serializable
 
 /** Presentation data only. The selected repository still owns the release assets and verification. */
 data class ModuleReleaseDetails(

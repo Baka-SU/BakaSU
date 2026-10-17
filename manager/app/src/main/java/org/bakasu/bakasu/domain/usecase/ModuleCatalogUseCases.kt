@@ -6,8 +6,11 @@ import org.bakasu.bakasu.data.module.ModuleCatalogRepository
 import org.bakasu.bakasu.data.module.ModuleIconRepository
 import org.bakasu.bakasu.data.module.ModuleReleaseRepository
 import org.bakasu.bakasu.data.module.registry.KernelSuRegistryRepository
+import org.bakasu.bakasu.data.module.registry.RegistryUrls
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
+import org.bakasu.bakasu.data.network.toDocument
 import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.DocumentPolicy
 import org.bakasu.bakasu.domain.model.ModuleReadme
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
@@ -58,11 +61,12 @@ class GetModuleUpdateChangelogUseCase(
     private val registry: KernelSuRegistryRepository,
     private val network: NetworkRequestRepository,
 ) {
-    suspend operator fun invoke(url: String): Result<ModuleReadme> = try {
+    suspend operator fun invoke(url: String, configuredSource: String? = null): Result<ModuleReadme> = try {
         if (registry.isRegistryDocument(url)) {
             Result.success(registry.changelog(url) ?: error("No changelog"))
         } else {
-            network.fetch(url).map { ModuleReadme(it, url) }
+            val policy = DocumentPolicy.PublicHttps(configuredSource?.takeIf(RegistryUrls::isHttpsUrl))
+            network.request(url, documentPolicy = policy).map { it.toDocument(policy) }
         }
     } catch (error: CancellationException) {
         throw error

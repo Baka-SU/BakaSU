@@ -7,6 +7,7 @@ import okhttp3.CacheControl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.Buffer
+import org.bakasu.bakasu.domain.model.DocumentPolicy
 
 data class NetworkResponse(
     val body: String?,
@@ -43,6 +44,7 @@ class NetworkRequestRepository(
         forceNetwork: Boolean = false,
         callTimeoutSeconds: Long? = null,
         maxResponseBytes: Long? = null,
+        documentPolicy: DocumentPolicy? = null,
     ): Result<NetworkResponse> = withContext(Dispatchers.IO) {
         if (!networkStatusRepository.isAvailable()) {
             return@withContext Result.failure(IllegalStateException("offline"))
@@ -56,11 +58,14 @@ class NetworkRequestRepository(
                     if (forceNetwork) cacheControl(CacheControl.FORCE_NETWORK)
                 }
                 .build()
-            val call = httpClient.newCall(request)
-            callTimeoutSeconds?.let {
-                call.timeout().timeout(it, TimeUnit.SECONDS)
+            val response = if (documentPolicy != null) {
+                httpClient.documentResponse(request, documentPolicy, callTimeoutSeconds)
+            } else {
+                val call = httpClient.newCall(request)
+                callTimeoutSeconds?.let { call.timeout().timeout(it, TimeUnit.SECONDS) }
+                call.execute()
             }
-            call.execute().use { response ->
+            response.use {
                 check(response.isSuccessful) { "HTTP ${response.code}" }
                 NetworkResponse(
                     body = response.body?.let { body ->

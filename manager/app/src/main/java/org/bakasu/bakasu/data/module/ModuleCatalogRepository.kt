@@ -19,7 +19,9 @@ import org.bakasu.bakasu.data.module.registry.ModuleNotInIndexException
 import org.bakasu.bakasu.data.module.registry.RegistryCatalogMapper
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
+import org.bakasu.bakasu.data.network.toDocument
 import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.DocumentPolicy
 import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
 import org.bakasu.bakasu.domain.model.ModuleCatalogResult
 import org.bakasu.bakasu.domain.model.ModuleReadme
@@ -27,6 +29,7 @@ import org.bakasu.bakasu.domain.model.RepositoryError
 import org.bakasu.bakasu.domain.model.RepositoryException
 import org.bakasu.bakasu.domain.model.RepositoryFailure
 import org.bakasu.bakasu.domain.model.RepositorySource
+import org.bakasu.bakasu.domain.model.documentPolicy
 import org.json.JSONObject
 
 data class RepositoryFeed(val source: RepositorySource, val modules: List<CatalogModule>, val error: RepositoryFailure? = null, val registryBuildId: String? = null)
@@ -223,7 +226,8 @@ class ModuleCatalogRepository(
 
     suspend fun readme(module: CatalogModule): Result<ModuleReadme?> = attempt {
         if (module.repositoryUrl == RepositorySource.KERNEL_SU_URL) return@attempt registry.readme(module)
-        if (module.readmeUrl.isNotBlank()) return@attempt fetchReadme(module.readmeUrl)
+        val policy = module.documentPolicy()
+        if (module.readmeUrl.isNotBlank()) return@attempt fetchReadme(module.readmeUrl, policy)
         val source = module.sourceUrl.toHttpUrlOrNull()
             ?.takeIf { it.scheme == "https" && it.host == "github.com" && it.username.isEmpty() && it.password.isEmpty() }
             ?: return@attempt null
@@ -231,22 +235,22 @@ class ModuleCatalogRepository(
         val repo = source.pathSegments.getOrNull(1).orEmpty().removeSuffix(".git")
         if (!owner.matches(Regex("[A-Za-z0-9_.-]+")) || !repo.matches(Regex("[A-Za-z0-9_.-]+"))) return@attempt null
         val apiUrl = "https://api.github.com/repos/$owner/$repo/readme"
-        val response = networkRequestRepository.request(apiUrl).getOrElse { error ->
+        val response = networkRequestRepository.request(apiUrl, documentPolicy = policy).getOrElse { error ->
             if (error is IllegalStateException && error.message == "HTTP 404") return@attempt null
             throw error
         }
         val url = MmrlRepositoryParser.resourceUrl(apiUrl, JSONObject(response.body.orEmpty()).optString("download_url"))
         if (url.isBlank()) throw RepositoryException(RepositoryError.INVALID_FEED)
-        fetchReadme(url)
+        fetchReadme(url, policy)
     }
 
-    private suspend fun fetchReadme(url: String): ModuleReadme {
+    private suspend fun fetchReadme(url: String, policy: DocumentPolicy): ModuleReadme {
         val safeUrl = MmrlRepositoryParser.resourceUrl(url, url)
         if (safeUrl.isBlank()) throw RepositoryException(RepositoryError.INVALID_URL)
-        val response = networkRequestRepository.request(safeUrl).getOrThrow()
+        val response = networkRequestRepository.request(safeUrl, documentPolicy = policy).getOrThrow()
         val baseUrl = MmrlRepositoryParser.resourceUrl(safeUrl, response.url)
         if (baseUrl.isBlank()) throw RepositoryException(RepositoryError.INVALID_URL)
-        return ModuleReadme(response.body ?: error("Empty response"), baseUrl)
+        return response.copy(url = baseUrl).toDocument(policy)
     }
 
     suspend fun add(url: String, metadata: RepositorySource? = null): Result<RepositorySource> = attempt {

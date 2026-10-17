@@ -37,11 +37,16 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.webkit.WebViewAssetLoader
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.util.Base64
 import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bakasu.bakasu.data.module.registry.RegistryUrls
 import org.bakasu.bakasu.data.network.WebResourceRepository
+import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.model.DocumentNavigation
+import org.bakasu.bakasu.domain.model.ModuleReadme
+import org.bakasu.bakasu.domain.model.navigation
 import org.bakasu.bakasu.ui.activity.util.adjustLightnessArgb
 import org.bakasu.bakasu.ui.activity.util.cssColorFromArgb
 import org.bakasu.bakasu.ui.activity.util.ensureVisibleByMix
@@ -53,6 +58,55 @@ import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
 import org.koin.compose.koinInject
+
+private val documentScrollScript = """
+    (function() {
+        var target = null;
+        var lastLeft = null;
+        var lastRight = null;
+
+        function update() {
+            var left = false;
+            var right = false;
+            if (target) {
+                var maximum = target.scrollWidth - target.clientWidth;
+                var offset = getComputedStyle(target).direction === 'rtl'
+                    ? maximum + target.scrollLeft : target.scrollLeft;
+                left = offset > 1;
+                right = offset < maximum - 1;
+            }
+            if (left !== lastLeft || right !== lastRight) {
+                AndroidScroll.updateScrollState(left, right);
+                lastLeft = left;
+                lastRight = right;
+            }
+        }
+
+        document.addEventListener('touchstart', function(event) {
+            target = null;
+            lastLeft = lastRight = null;
+            var element = event.target;
+            while (element && element !== document.documentElement) {
+                if (element.nodeType === 1) {
+                    var overflow = getComputedStyle(element).overflowX;
+                    if ((overflow === 'auto' || overflow === 'scroll') && element.scrollWidth > element.clientWidth) {
+                        target = element;
+                        break;
+                    }
+                }
+                element = element.parentElement;
+            }
+            update();
+        }, {passive: true, capture: true});
+        document.addEventListener('touchmove', update, {passive: true, capture: true});
+        document.addEventListener('scroll', update, {passive: true, capture: true});
+    })();
+""".trimIndent()
+
+// Permit this exact app-owned script, without allowing publisher scripts or event handlers.
+private val documentScrollHash = Base64.getEncoder().encodeToString(
+    MessageDigest.getInstance("SHA-256").digest(documentScrollScript.toByteArray(StandardCharsets.UTF_8)),
+)
 
 private val renderedMarkdownCache = object : LruCache<Pair<String, Boolean>, String>(2 * 1024 * 1024) {
     override fun sizeOf(key: Pair<String, Boolean>, value: String): Int = ((key.first.length.toLong() + value.length) * 2).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
@@ -82,15 +136,17 @@ private fun renderMarkdownDocument(content: String, restricted: Boolean): String
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun GithubMarkdown(
-    content: String,
+    document: ModuleReadme,
     backgroundColor: androidx.compose.ui.graphics.Color,
     loading: MutableState<Boolean> = remember { mutableStateOf(true) },
     callerProvideLoadingIndicator: Boolean = false,
-    renderMarkdown: Boolean = false,
-    baseUrl: String = "https://appassets.androidplatform.net",
-    restrictedBaseUrl: String? = null,
     readmeLinks: Boolean = false,
 ) {
+    val content = document.content
+    val renderMarkdown = document.format == DocumentFormat.MARKDOWN
+    val baseUrl = document.baseUrl
+    val policy = document.policy
+    val escapeHtml = policy.escapeEmbeddedHtml
     val themeConfig: ThemeConfig = koinInject()
     val isDark = isInDarkTheme(themeConfig.forceDarkMode)
     val dir = if (LocalLayoutDirection.current == LayoutDirection.Rtl) "rtl" else "ltr"
@@ -128,23 +184,19 @@ fun GithubMarkdown(
     }
 
     val cssHref = "https://appassets.androidplatform.net/assets/github-markdown.css"
-    val renderedState = remember(content, renderMarkdown, restrictedBaseUrl) {
-        mutableStateOf(if (renderMarkdown) renderedMarkdownCache.get(content to (restrictedBaseUrl != null)) else content)
+    val renderedState = remember(content, renderMarkdown, escapeHtml) {
+        mutableStateOf(if (renderMarkdown) renderedMarkdownCache.get(content to escapeHtml) else content)
     }
-    LaunchedEffect(content, renderMarkdown, restrictedBaseUrl) {
+    LaunchedEffect(content, renderMarkdown, escapeHtml) {
         if (renderMarkdown && renderedState.value == null) {
             loading.value = true
             renderedState.value = withContext(Dispatchers.Default) {
-                renderMarkdownDocument(content, restrictedBaseUrl != null)
+                renderMarkdownDocument(content, escapeHtml)
             }
         }
     }
     val rendered = renderedState.value
-    val contentPolicy = if (renderMarkdown || restrictedBaseUrl != null) {
-        """<meta http-equiv="Content-Security-Policy" content="script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; img-src https: data:" />"""
-    } else {
-        ""
-    }
+    val contentPolicy = """<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-$documentScrollHash'; script-src-attr 'none'; connect-src 'none'; worker-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; img-src https: data:" />"""
     val html = remember(rendered, contentPolicy, dir, isDark, bgDefault, bgMuted, bgNeutralMuted, bgAttentionMuted, fgLink, linkStyles) {
         if (rendered == null) {
             null
@@ -170,18 +222,19 @@ fun GithubMarkdown(
             }
             $linkStyles
           </style>
+          <script>$documentScrollScript</script>
         </head>
         <body dir='$dir'>
           <article class='markdown-body' data-theme='${if (isDark) "dark" else "light"}'>$rendered</article>
         </body>
         </html>
-            """.trimIndent()
+            """.trim() // Preserve the script's exact bytes for its CSP hash.
         }
     }
 
     if (html != null) {
-        key(html, baseUrl, renderMarkdown, restrictedBaseUrl) {
-            GithubMarkdownWebView(loading, html, baseUrl, renderMarkdown, restrictedBaseUrl)
+        key(html, baseUrl, policy) {
+            GithubMarkdownWebView(loading, html, document)
         }
     }
 
@@ -196,33 +249,31 @@ fun GithubMarkdown(
     }
 }
 
-@SuppressLint("ClickableViewAccessibility", "JavascriptInterface", "SetJavaScriptEnabled")
+@SuppressLint("ClickableViewAccessibility", "SetJavaScriptEnabled")
 @Suppress("DEPRECATION")
 @Composable
 private fun GithubMarkdownWebView(
     loading: MutableState<Boolean>,
     html: String,
-    baseUrl: String,
-    renderMarkdown: Boolean,
-    restrictedBaseUrl: String?,
+    document: ModuleReadme,
 ) {
-    val scriptsOff = renderMarkdown || restrictedBaseUrl != null
-    val scrollInterface = remember { MarkdownScrollInterface() }
+    val policy = document.policy
     val resourceRepository = koinInject<WebResourceRepository>()
 
     AndroidView(
         factory = { context ->
             val frameLayout = FrameLayout(context)
-            val webView = (if (restrictedBaseUrl != null) EdgeAwareWebView(context) else WebView(context)).apply {
+            val scrollBridge = DocumentScrollBridge()
+            val webView = WebView(context).apply {
                 try {
                     setBackgroundColor(Color.TRANSPARENT)
                     isVerticalScrollBarEnabled = false
                     isHorizontalScrollBarEnabled = false
                     settings.apply {
                         offscreenPreRaster = true
-                        javaScriptEnabled = !scriptsOff
-                        domStorageEnabled = !scriptsOff
-                        mixedContentMode = if (scriptsOff) WebSettings.MIXED_CONTENT_NEVER_ALLOW else WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        javaScriptEnabled = true
+                        domStorageEnabled = false
+                        mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                         javaScriptCanOpenWindowsAutomatically = false
                         setSupportMultipleWindows(false)
                         allowContentAccess = false
@@ -233,95 +284,26 @@ private fun GithubMarkdownWebView(
                         setSupportZoom(false)
                         setGeolocationEnabled(false)
                     }
-                    if (!scriptsOff) addJavascriptInterface(scrollInterface, "AndroidScroll")
+                    addJavascriptInterface(scrollBridge, "AndroidScroll")
                     webViewClient = object : WebViewClient() {
                         private val assetLoader = WebViewAssetLoader.Builder()
                             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(context))
                             .build()
 
-                        override fun onPageFinished(view: WebView, url: String) {
-                            super.onPageFinished(view, url)
-                            if (scriptsOff) return
-
-                            val js = """
-                                (function() {
-                                    if (window.androidScrollInjected) return;
-                                    window.androidScrollInjected = true;
-                                
-                                    function checkScroll(target) {
-                                        if (!target || target === document.body || target === document.documentElement) return {l: false, r: false};
-                                        var style = window.getComputedStyle(target);
-                                        if (style.overflowX !== 'auto' && style.overflowX !== 'scroll') return {l: false, r: false};
-                                        if (target.scrollWidth <= target.clientWidth) return {l: false, r: false};
-                                        
-                                        var atLeft = target.scrollLeft <= 0;
-                                        var atRight = Math.ceil(target.scrollLeft + target.clientWidth) >= target.scrollWidth;
-                                        
-                                        return {l: !atLeft, r: !atRight};
-                                    }
-                                
-                                    var lastTarget = null;
-                                    var lastState = {l: false, r: false};
-                                    
-                                    function update(l, r) {
-                                        if (lastState.l !== l || lastState.r !== r) {
-                                            lastState = {l: l, r: r};
-                                            AndroidScroll.updateScrollState(l, r);
-                                        }
-                                    }
-                                
-                                    document.addEventListener('touchstart', function(e) {
-                                        var t = e.target;
-                                        var found = false;
-                                        while(t && t !== document.body) {
-                                            var s = checkScroll(t);
-                                            if (s.l || s.r) { 
-                                                 lastTarget = t;
-                                                 update(s.l, s.r);
-                                                 found = true;
-                                                 break;
-                                            }
-                                            t = t.parentElement;
-                                        }
-                                        if (!found) {
-                                            lastTarget = null;
-                                            update(false, false);
-                                        }
-                                    }, {passive: true});
-                                
-                                    document.addEventListener('touchmove', function(e) {
-                                        if (lastTarget) {
-                                             var s = checkScroll(lastTarget);
-                                             update(s.l, s.r);
-                                        }
-                                    }, {passive: true});
-                                    
-                                    document.addEventListener('scroll', function(e) {
-                                        if (lastTarget && (e.target === lastTarget || e.target.contains(lastTarget))) {
-                                              var s = checkScroll(lastTarget);
-                                              update(s.l, s.r);
-                                        }
-                                    }, {passive: true, capture: true});
-                                })();
-                            """.trimIndent()
-                            view.evaluateJavascript(js, null)
-                        }
-
                         override fun shouldOverrideUrlLoading(
                             view: WebView,
                             request: WebResourceRequest,
-                        ): Boolean {
-                            val url = request.url.toString()
-                            if (scriptsOff) {
-                                if (restrictedBaseUrl != null && RegistryUrls.isInPageAnchor(url, restrictedBaseUrl)) return true
-                                if (request.url.scheme !in (if (restrictedBaseUrl != null) setOf("https", "http") else setOf("https", "http", "mailto"))) return true
-                                if (!request.hasGesture() || !request.isForMainFrame) return true
-                                if (request.url.fragment != null && url.substringBefore('#') == baseUrl.substringBefore('#')) return false
+                        ): Boolean = when (document.navigation(request.url.toString(), request.hasGesture(), request.isForMainFrame)) {
+                            DocumentNavigation.ANCHOR -> false
+
+                            DocumentNavigation.BLOCK -> true
+
+                            DocumentNavigation.EXTERNAL -> {
+                                runCatching {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, request.url).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                }
+                                true
                             }
-                            val intent = Intent(Intent.ACTION_VIEW, url.toUri())
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            if (scriptsOff) runCatching { context.startActivity(intent) } else context.startActivity(intent)
-                            return true
                         }
 
                         override fun shouldInterceptRequest(
@@ -329,83 +311,26 @@ private fun GithubMarkdownWebView(
                             request: WebResourceRequest,
                         ): WebResourceResponse? {
                             assetLoader.shouldInterceptRequest(request.url)?.let { return it }
-                            if (restrictedBaseUrl != null) {
-                                if (request.isForMainFrame && request.url.scheme == "data") return null
-                                if (request.method != "GET" || !RegistryUrls.isAllowedRestrictedResource(request.url.toString(), restrictedBaseUrl)) return blockedDocumentResource()
-                            }
-                            val scheme = request.url.scheme ?: return null
-                            if (scriptsOff && scheme !in setOf("https", "data")) {
-                                return WebResourceResponse("text/plain", "utf-8", "".byteInputStream())
-                            }
-                            if (!scheme.startsWith("http")) return null
+                            // The initial loadDataWithBaseURL document and inline images are data URLs.
+                            if (request.url.scheme == "data") return null
+                            if (!policy.allowsRequest(request.url.toString(), request.method)) return blockedDocumentResource()
                             return resourceRepository.load(
                                 url = request.url.toString(),
                                 method = request.method,
                                 requestHeaders = request.requestHeaders,
-                                restrictedOrigin = restrictedBaseUrl,
+                                policy = policy,
                             )?.let { resource ->
-                                WebResourceResponse(
-                                    resource.mimeType,
-                                    resource.encoding,
-                                    resource.body,
-                                )
-                            } ?: if (restrictedBaseUrl != null) blockedDocumentResource() else null
+                                WebResourceResponse(resource.mimeType, resource.encoding, resource.body)
+                            } ?: blockedDocumentResource()
                         }
 
                         override fun onPageCommitVisible(view: WebView?, url: String?) {
                             loading.value = false
                         }
                     }
-                    if (restrictedBaseUrl != null) {
-                        setOnTouchListener(RestrictedTouchHandler(this as EdgeAwareWebView))
-                    } else {
-                        setOnTouchListener(object : View.OnTouchListener {
-                            private var isHorizontalScrollLocked = false
-                            private var initialDownX = 0f
-                            private var initialDownY = 0f
-
-                            override fun onTouch(v: View, event: MotionEvent): Boolean {
-                                when (event.action) {
-                                    MotionEvent.ACTION_DOWN -> {
-                                        initialDownX = event.x
-                                        initialDownY = event.y
-                                        isHorizontalScrollLocked = false
-                                        v.parent.requestDisallowInterceptTouchEvent(true)
-                                    }
-
-                                    MotionEvent.ACTION_MOVE -> {
-                                        if (isHorizontalScrollLocked) {
-                                            v.parent.requestDisallowInterceptTouchEvent(true)
-                                        } else {
-                                            val dx = event.x - initialDownX
-                                            val dy = event.y - initialDownY
-                                            if (abs(dx) > abs(dy)) {
-                                                // Untrusted documents keep horizontal scrolling without a JavaScript bridge.
-                                                val canScroll = scriptsOff || if (dx < 0) scrollInterface.canScrollRight else scrollInterface.canScrollLeft
-                                                if (canScroll) {
-                                                    isHorizontalScrollLocked = true
-                                                    v.parent.requestDisallowInterceptTouchEvent(true)
-                                                } else {
-                                                    v.parent.requestDisallowInterceptTouchEvent(false)
-                                                }
-                                            } else {
-                                                v.parent.requestDisallowInterceptTouchEvent(false)
-                                                return true
-                                            }
-                                        }
-                                    }
-
-                                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                        v.parent.requestDisallowInterceptTouchEvent(false)
-                                        isHorizontalScrollLocked = false
-                                    }
-                                }
-                                return false
-                            }
-                        })
-                    }
+                    setOnTouchListener(DocumentTouchHandler(this, scrollBridge))
                     loadDataWithBaseURL(
-                        baseUrl,
+                        document.baseUrl,
                         html,
                         "text/html",
                         StandardCharsets.UTF_8.name(),
@@ -435,19 +360,29 @@ private fun GithubMarkdownWebView(
 
 private fun blockedDocumentResource() = WebResourceResponse("text/plain", "utf-8", 403, "Blocked", emptyMap(), "".byteInputStream())
 
-private class EdgeAwareWebView(context: android.content.Context) : WebView(context) {
-    var horizontalEdgeReached = false
+private class DocumentScrollBridge {
+    @Volatile
+    private var directions = 0
 
-    override fun onOverScrolled(scrollX: Int, scrollY: Int, clampedX: Boolean, clampedY: Boolean) {
-        super.onOverScrolled(scrollX, scrollY, clampedX, clampedY)
-        if (clampedX) horizontalEdgeReached = true
+    @JavascriptInterface
+    @Suppress("unused")
+    fun updateScrollState(left: Boolean, right: Boolean) {
+        directions = (if (left) 1 else 0) or (if (right) 2 else 0)
     }
+
+    fun reset() {
+        // Keep the initial gesture until the document reports the touched element.
+        directions = 3
+    }
+
+    fun canScroll(dx: Float): Boolean = (directions and (if (dx > 0) 1 else 2)) != 0
 }
 
-private class RestrictedTouchHandler(private val webView: EdgeAwareWebView) : View.OnTouchListener {
-    private val touchSlop = android.view.ViewConfiguration.get(webView.context).scaledTouchSlop
+private class DocumentTouchHandler(view: View, private val scrollBridge: DocumentScrollBridge) : View.OnTouchListener {
+    private val touchSlop = android.view.ViewConfiguration.get(view.context).scaledTouchSlop
     private var downX = 0f
     private var downY = 0f
+    private var lastX = 0f
     private var direction = 0
 
     @SuppressLint("ClickableViewAccessibility")
@@ -456,8 +391,9 @@ private class RestrictedTouchHandler(private val webView: EdgeAwareWebView) : Vi
             MotionEvent.ACTION_DOWN -> {
                 downX = event.x
                 downY = event.y
+                lastX = event.x
                 direction = 0
-                webView.horizontalEdgeReached = false
+                scrollBridge.reset()
                 v.parent.requestDisallowInterceptTouchEvent(true)
             }
 
@@ -466,13 +402,17 @@ private class RestrictedTouchHandler(private val webView: EdgeAwareWebView) : Vi
                 val dy = event.y - downY
                 if (direction == 0 && (abs(dx) > touchSlop || abs(dy) > touchSlop)) direction = if (abs(dx) > abs(dy)) 1 else 2
                 when (direction) {
-                    1 -> if (webView.horizontalEdgeReached) v.parent.requestDisallowInterceptTouchEvent(false)
+                    1 -> {
+                        val step = event.x - lastX
+                        if (step != 0f) v.parent.requestDisallowInterceptTouchEvent(scrollBridge.canScroll(step))
+                    }
 
                     2 -> {
                         v.parent.requestDisallowInterceptTouchEvent(false)
                         return true
                     }
                 }
+                lastX = event.x
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -481,20 +421,5 @@ private class RestrictedTouchHandler(private val webView: EdgeAwareWebView) : Vi
             }
         }
         return false
-    }
-}
-
-class MarkdownScrollInterface {
-    @Volatile
-    var canScrollLeft = false
-
-    @Volatile
-    var canScrollRight = false
-
-    @JavascriptInterface
-    @Suppress("unused")
-    fun updateScrollState(left: Boolean, right: Boolean) {
-        canScrollLeft = left
-        canScrollRight = right
     }
 }

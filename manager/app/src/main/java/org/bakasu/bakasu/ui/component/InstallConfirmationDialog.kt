@@ -51,7 +51,6 @@ import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.file.withInstallArchive
 import org.bakasu.bakasu.domain.model.CatalogModule
-import org.bakasu.bakasu.domain.model.DocumentFormat
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.model.RepositorySource
@@ -108,16 +107,12 @@ fun rememberRepositoryInstallDialog(): (CatalogModule, ModuleReleaseAsset, () ->
                     val release = module.releases.firstOrNull { release -> release.assets.any { it.hasSameIdentity(asset) } }
                         ?: return@launch
                     val notes = loading.withLoading { getReleaseDetails.notes(module, release) }
-                    val html = notes?.format == DocumentFormat.HTML
                     val content = notes?.content ?: module.summary
                     if (!canEnqueue()) return@launch
                     dialog.awaitConfirm(
                         title = title.format(module.moduleName),
                         content = content,
-                        markdown = notes != null && !html,
-                        html = html,
-                        restrictedBaseUrl = notes?.registryOrigin,
-                        documentBaseUrl = notes?.baseUrl,
+                        document = notes,
                     ) == ConfirmResult.Confirmed
                 }
             } finally {

@@ -5,6 +5,7 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.DisposableHandle
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -15,8 +16,10 @@ import okhttp3.CacheControl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
+import org.bakasu.bakasu.data.network.documentResponse
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.model.DocumentPolicy
 import org.bakasu.bakasu.domain.model.ModuleReadme
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
 import org.bakasu.bakasu.domain.model.RepositoryError
@@ -39,10 +42,13 @@ class KernelSuRegistryRepository(
         owner.ensureActive()
         if (!networkStatus.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)
         val request = Request.Builder().url(url).cacheControl(CacheControl.Builder().noCache().build()).build()
-        val call = httpClient.newCall(request)
-        val cancellation = owner.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
+        var cancellation: DisposableHandle? = null
         try {
-            call.execute().use { response ->
+            httpClient.documentResponse(request, DocumentPolicy.SameOrigin(RegistryUrls.DEFAULT_BASE_URL)) { call ->
+                cancellation?.dispose()
+                owner.ensureActive()
+                cancellation = owner.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
+            }.use { response ->
                 owner.ensureActive()
                 check(response.isSuccessful) { "HTTP ${response.code}" }
                 val body = response.body ?: error("Empty response")
@@ -52,7 +58,7 @@ class KernelSuRegistryRepository(
                 return source.readUtf8().also { owner.ensureActive() }
             }
         } finally {
-            cancellation.dispose()
+            cancellation?.dispose()
         }
     }
     private inner class Operation(val baseCatalog: RegistryCatalog?, val owner: Job) {
@@ -150,10 +156,10 @@ class KernelSuRegistryRepository(
             if (parts.size != 2) return@withClient null
             val detail = client.loadDetail(parts[0]).detail
             val release = detail.releases.firstOrNull { !it.prerelease && (it.tag == parts[1] || it.version == parts[1]) }
-            release?.changelogHtml?.takeIf { it.isNotBlank() }?.let { ModuleReadme(it, client.baseUrl, DocumentFormat.HTML, client.baseUrl) }
+            release?.changelogHtml?.takeIf { it.isNotBlank() }?.let { ModuleReadme(it, client.baseUrl, DocumentFormat.HTML, DocumentPolicy.SameOrigin(client.baseUrl)) }
         } else {
             if (!RegistryUrls.isSameOrigin(url, client.baseUrl) || !RegistryUrls.isHttpsUrl(url)) return@withClient null
-            ModuleReadme(fetcher.fetch(url), client.baseUrl, DocumentFormat.MARKDOWN, client.baseUrl)
+            ModuleReadme(fetcher.fetch(url), client.baseUrl, DocumentFormat.MARKDOWN, DocumentPolicy.SameOrigin(client.baseUrl))
         }
     }
 
@@ -163,7 +169,7 @@ class KernelSuRegistryRepository(
         val detail = details[module.moduleId]?.takeIf { it.buildId == catalog.buildId }
             ?: client.loadDetail(module.moduleId).detail.also { rememberDetail(it) }
         if (module.registryMetadata?.buildId != detail.buildId) throw BuildMismatchException("README build changed")
-        client.loadReadme(detail)?.let { ModuleReadme(it.html, client.baseUrl, DocumentFormat.HTML, client.baseUrl) }
+        client.loadReadme(detail)?.let { ModuleReadme(it.html, client.baseUrl, DocumentFormat.HTML, DocumentPolicy.SameOrigin(client.baseUrl)) }
     }
 
     suspend fun resolveUpdate(moduleId: String, updateJsonUrl: String, zipUrl: String, versionCode: Int): ModuleUpdateVerification {

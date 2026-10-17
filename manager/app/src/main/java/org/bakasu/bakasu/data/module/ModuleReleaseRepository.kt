@@ -20,12 +20,15 @@ import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkResponse
+import org.bakasu.bakasu.data.network.toDocument
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.model.DocumentPolicy
 import org.bakasu.bakasu.domain.model.ModuleReadme
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseDetails
 import org.bakasu.bakasu.domain.model.RepositorySource
+import org.bakasu.bakasu.domain.model.documentPolicy
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -40,9 +43,10 @@ class ModuleReleaseRepository(
 
     private val mutex = Mutex()
     private val requests = Semaphore(3)
-    private val pending = mutableMapOf<String, Deferred<Result<NetworkResponse>>>()
-    private val cache = object : LruCache<String, Cached>(4 * 1024 * 1024) {
-        override fun sizeOf(key: String, value: Cached): Int = ((key.length.toLong() + (value.result.getOrNull()?.body?.length ?: 0)) * 2 + 1)
+    private data class RequestKey(val url: String, val policy: DocumentPolicy)
+    private val pending = mutableMapOf<RequestKey, Deferred<Result<NetworkResponse>>>()
+    private val cache = object : LruCache<RequestKey, Cached>(4 * 1024 * 1024) {
+        override fun sizeOf(key: RequestKey, value: Cached): Int = ((key.url.length.toLong() + (value.result.getOrNull()?.body?.length ?: 0)) * 2 + 1)
             .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     }
 
@@ -51,19 +55,20 @@ class ModuleReleaseRepository(
             send(
                 ModuleReleaseDetails(
                     notes = release.descriptionHTML.takeIf(String::isNotBlank)?.let {
-                        ModuleReadme(it, RepositorySource.KERNEL_SU_URL, DocumentFormat.HTML, RepositorySource.KERNEL_SU_URL)
+                        ModuleReadme(it, RepositorySource.KERNEL_SU_URL, DocumentFormat.HTML, module.documentPolicy())
                     },
                 ),
             )
             return@channelFlow
         }
+        val policy = module.documentPolicy()
         val primary = async {
-            attempt { document(release.changelogUrl, retry) }?.also { send(ModuleReleaseDetails(notes = it)) }
+            attempt { document(release.changelogUrl, retry, policy) }?.also { send(ModuleReleaseDetails(notes = it)) }
         }
         val update = attempt { update(module, release, retry) }
         val fallback = async {
             if (primary.await() == null) {
-                update?.let { attempt { document(it.changelog, retry) } }?.also { send(ModuleReleaseDetails(notes = it)) }
+                update?.let { attempt { document(it.changelog, retry, policy) } }?.also { send(ModuleReleaseDetails(notes = it)) }
             } else {
                 null
             }
@@ -75,7 +80,7 @@ class ModuleReleaseRepository(
         val updateNotes = fallback.await()
         val githubPage = github?.text("html_url")?.let(::safeUrl)?.takeIf { githubDownloadPage(it) != null }
         val notes = primaryNotes ?: updateNotes ?: github?.text("body")?.takeIf(String::isNotBlank)?.let {
-            githubPage?.let { page -> ModuleReadme(it, page) }
+            githubPage?.let { page -> ModuleReadme(it, page, policy = policy) }
         }
         send(
             ModuleReleaseDetails(
@@ -88,17 +93,17 @@ class ModuleReleaseRepository(
         )
     }.flowOn(Dispatchers.IO)
 
-    private suspend fun document(url: String, retry: Boolean): ModuleReadme? {
+    private suspend fun document(url: String, retry: Boolean, policy: DocumentPolicy): ModuleReadme? {
         if (url.isBlank()) return null
-        val response = response(url, retry)
+        val response = response(url, retry, policy)
         val content = response.body?.takeIf(String::isNotBlank) ?: return null
-        return ModuleReadme(content, response.url)
+        return response.copy(body = content).toDocument(policy)
     }
 
     private suspend fun update(module: CatalogModule, release: ModuleRelease, retry: Boolean): Update? {
         val code = release.versionCode ?: return null
         if (module.releaseMetadataUrl.isBlank() || module.releases.count { it.versionCode == code } != 1) return null
-        val track = response(module.releaseMetadataUrl, retry)
+        val track = response(module.releaseMetadataUrl, retry, module.documentPolicy())
         val body = track.body.orEmpty()
         val declared = if (body.trimStart().startsWith("{")) {
             JSONObject(body).optString("update_to")
@@ -111,7 +116,7 @@ class ModuleReleaseRepository(
         }
         val updateUrl = MmrlRepositoryParser.resourceUrl(track.url, declared)
         if (updateUrl.isBlank()) return null
-        val response = response(updateUrl, retry)
+        val response = response(updateUrl, retry, module.documentPolicy())
         val json = JSONObject(response.body.orEmpty())
         val updateCode = json.opt("versionCode") as? Number ?: return null
         if (updateCode.toDouble() != code.toDouble()) return null
@@ -182,9 +187,9 @@ class ModuleReleaseRepository(
     private fun safeUrl(value: String): String? = value.toHttpUrlOrNull()
         ?.takeIf { it.isHttps && it.username.isEmpty() && it.password.isEmpty() }?.toString()
 
-    private suspend fun response(url: String, retry: Boolean): NetworkResponse {
+    private suspend fun response(url: String, retry: Boolean, policy: DocumentPolicy = DocumentPolicy.PublicHttps()): NetworkResponse {
         val safe = safeUrl(url) ?: error("Invalid release metadata URL")
-        val response = request(safe, retry).getOrThrow()
+        val response = request(safe, retry, policy).getOrThrow()
         check(safeUrl(response.url) != null) { "Invalid release metadata redirect" }
         if (safe.toHttpUrlOrNull()?.host == "api.github.com") {
             check(response.url.toHttpUrlOrNull()?.host == "api.github.com") { "Invalid GitHub API redirect" }
@@ -192,29 +197,31 @@ class ModuleReleaseRepository(
         return response
     }
 
-    private suspend fun request(url: String, retry: Boolean): Result<NetworkResponse> {
+    private suspend fun request(url: String, retry: Boolean, policy: DocumentPolicy): Result<NetworkResponse> {
+        val key = RequestKey(url, policy)
         val task = mutex.withLock {
-            if (!retry) cache.get(url)?.takeIf { it.expiresAt > SystemClock.elapsedRealtime() }?.let { return it.result }
-            pending[url] ?: applicationScope.async(start = CoroutineStart.LAZY) {
+            if (!retry) cache.get(key)?.takeIf { it.expiresAt > SystemClock.elapsedRealtime() }?.let { return it.result }
+            pending[key] ?: applicationScope.async(start = CoroutineStart.LAZY) {
                 try {
                     val result = requests.withPermit {
                         network.request(
                             url,
                             headers = if (url.toHttpUrlOrNull()?.host == "api.github.com") mapOf("Accept" to "application/vnd.github+json") else emptyMap(),
                             forceNetwork = retry,
+                            documentPolicy = policy,
                             callTimeoutSeconds = 10,
                             maxResponseBytes = 1024L * 1024,
                         )
                     }
                     result.exceptionOrNull()?.let { if (it is CancellationException) throw it }
                     mutex.withLock {
-                        cache.put(url, Cached(result, SystemClock.elapsedRealtime() + if (result.isSuccess) 30 * 60_000 else 60_000))
+                        cache.put(key, Cached(result, SystemClock.elapsedRealtime() + if (result.isSuccess) 30 * 60_000 else 60_000))
                     }
                     result
                 } finally {
-                    withContext(NonCancellable) { mutex.withLock { pending.remove(url) } }
+                    withContext(NonCancellable) { mutex.withLock { pending.remove(key) } }
                 }
-            }.also { pending[url] = it }
+            }.also { pending[key] = it }
         }
         task.start()
         return task.await()

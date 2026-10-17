@@ -124,6 +124,7 @@ import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
 import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.model.DocumentPolicy
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.MetaModuleStatus
 import org.bakasu.bakasu.domain.model.ModuleReadme
@@ -812,11 +813,11 @@ private fun ModuleList(
                     registry.release.descriptionHTML.ifBlank { module.description },
                     RepositorySource.KERNEL_SU_URL,
                     if (registry.release.descriptionHTML.isNotBlank()) DocumentFormat.HTML else DocumentFormat.MARKDOWN,
-                    RepositorySource.KERNEL_SU_URL,
+                    DocumentPolicy.SameOrigin(RepositorySource.KERNEL_SU_URL),
                 ),
             )
         } else {
-            loadingDialog.withLoading { viewModel.loadUpdateChangelog(changelogUrl) }
+            loadingDialog.withLoading { viewModel.loadUpdateChangelog(changelogUrl, module.updateJson) }
         }
         val changelog = changelogResult.getOrElse {
             showToast(context.getString(R.string.repo_document_error))
@@ -826,9 +827,7 @@ private fun ModuleList(
         val confirmResult = confirmDialog.awaitConfirm(
             changelogText,
             content = changelog.content,
-            markdown = changelog.format == DocumentFormat.MARKDOWN,
-            html = changelog.format == DocumentFormat.HTML,
-            restrictedBaseUrl = changelog.registryOrigin,
+            document = changelog,
             confirm = updateText,
         )
 

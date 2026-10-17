@@ -131,7 +131,7 @@ class ModuleViewModel(
         return resolveModuleUpdate(module.id, module.updateJson, update.zipUrl, update.versionCode)
     }
 
-    suspend fun loadUpdateChangelog(url: String) = getModuleUpdateChangelog(url)
+    suspend fun loadUpdateChangelog(url: String, configuredSource: String) = getModuleUpdateChangelog(url, configuredSource)
 
     fun isUpdateCurrent(module: InstalledModule, update: ModuleUpdateVerification.Registry): Boolean = resolveModuleUpdate.isCurrent(update) && observeInstalledModules().value.modules.any {
         it.id == module.id && !it.remove && it.versionCode == module.versionCode &&

@@ -91,6 +91,7 @@ import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.model.ModuleReleaseDetails
 import org.bakasu.bakasu.domain.model.RepositorySource
+import org.bakasu.bakasu.domain.model.documentPolicy
 import org.bakasu.bakasu.domain.usecase.GetLastScriptRunUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
@@ -518,7 +519,8 @@ fun ReadmeTab(
     LaunchedEffect(module.catalogId, documentUrl, module.detailLoaded, module.registryMetadata?.buildId) {
         if (remote && module.detailLoaded) viewModel?.loadReadme()
     }
-    val content = (if (remote) document?.text else module.readme).orEmpty()
+    val readme = if (remote) document?.document else ModuleReadme(module.readme, "https://appassets.androidplatform.net/", DocumentFormat.HTML, module.documentPolicy())
+    val content = readme?.content.orEmpty()
     val htmlLoading = remember(content) { mutableStateOf(true) }
     val detailFailed = remote && !module.detailLoaded && state?.error != null
     val documentLoading = remote && !detailFailed && (!module.detailLoaded || document == null || document.loading)
@@ -547,14 +549,11 @@ fun ReadmeTab(
                     ) {
                         item(key = "document") {
                             GithubMarkdown(
-                                content = content,
+                                document = requireNotNull(readme),
                                 backgroundColor = Color.Transparent,
                                 loading = htmlLoading,
                                 readmeLinks = true,
                                 callerProvideLoadingIndicator = true,
-                                renderMarkdown = remote && document?.format != DocumentFormat.HTML,
-                                baseUrl = if (remote) document?.baseUrl.orEmpty() else "https://appassets.androidplatform.net",
-                                restrictedBaseUrl = document?.registryOrigin,
                             )
                         }
                     }
@@ -670,9 +669,9 @@ internal fun releaseDate(value: String, locale: Locale): String = runCatching {
 @Composable
 private fun ReleaseNotes(module: CatalogModule, release: ModuleRelease, state: ReleaseDetailsState?, viewModel: ModuleDetailViewModel?) {
     LaunchedEffect(module, release) { viewModel?.loadReleaseDetails(release) }
-    val registryOrigin = release.assets.firstOrNull()?.takeIf { it.verificationRequired }?.let { RepositorySource.KERNEL_SU_URL }
+    val policy = module.documentPolicy()
     val document = state?.details?.notes ?: release.descriptionHTML.takeIf(String::isNotBlank)?.let {
-        ModuleReadme(it, registryOrigin ?: "https://appassets.androidplatform.net", DocumentFormat.HTML, registryOrigin)
+        ModuleReadme(it, module.repositoryUrl, DocumentFormat.HTML, policy)
     }
     var expanded by rememberSaveable(module.catalogId, release.tagName, release.versionCode) { mutableStateOf(false) }
     val previewState = remember(document) { mutableStateOf<ReleaseNotesPreview?>(null) }
@@ -721,13 +720,10 @@ private fun ReleaseNotes(module: CatalogModule, release: ModuleRelease, state: R
                         )
                     } else {
                         GithubMarkdown(
-                            content = document.content,
+                            document = document,
                             backgroundColor = Color.Transparent,
                             loading = htmlLoading,
                             callerProvideLoadingIndicator = true,
-                            renderMarkdown = document.format != DocumentFormat.HTML,
-                            baseUrl = document.baseUrl,
-                            restrictedBaseUrl = document.registryOrigin,
                         )
                     }
                 }

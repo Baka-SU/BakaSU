@@ -56,6 +56,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
+import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.model.ModuleReadme
 
 private const val TAG = "DialogComponent"
 
@@ -66,8 +68,7 @@ interface ConfirmDialogVisuals : Parcelable {
     val isHtml: Boolean
     val confirm: String?
     val dismiss: String?
-    val restrictedBaseUrl: String?
-    val documentBaseUrl: String?
+    val document: ModuleReadme?
 }
 
 @Parcelize
@@ -78,8 +79,7 @@ private data class ConfirmDialogVisualsImpl(
     override val isHtml: Boolean,
     override val confirm: String?,
     override val dismiss: String?,
-    override val restrictedBaseUrl: String? = null,
-    override val documentBaseUrl: String? = null,
+    override val document: ModuleReadme? = null,
 ) : ConfirmDialogVisuals {
     companion object {
         val Empty: ConfirmDialogVisuals = ConfirmDialogVisualsImpl(
@@ -120,8 +120,7 @@ interface ConfirmDialogHandle : DialogHandle {
         html: Boolean = false,
         confirm: String? = null,
         dismiss: String? = null,
-        restrictedBaseUrl: String? = null,
-        documentBaseUrl: String? = null,
+        document: ModuleReadme? = null,
     )
 
     suspend fun awaitConfirm(
@@ -131,8 +130,7 @@ interface ConfirmDialogHandle : DialogHandle {
         html: Boolean = false,
         confirm: String? = null,
         dismiss: String? = null,
-        restrictedBaseUrl: String? = null,
-        documentBaseUrl: String? = null,
+        document: ModuleReadme? = null,
     ): ConfirmResult
 }
 
@@ -286,11 +284,10 @@ private class ConfirmDialogHandleImpl(
         html: Boolean,
         confirm: String?,
         dismiss: String?,
-        restrictedBaseUrl: String?,
-        documentBaseUrl: String?,
+        document: ModuleReadme?,
     ) {
         coroutineScope.launch {
-            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss, restrictedBaseUrl, documentBaseUrl))
+            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss, document))
             show()
         }
     }
@@ -302,11 +299,10 @@ private class ConfirmDialogHandleImpl(
         html: Boolean,
         confirm: String?,
         dismiss: String?,
-        restrictedBaseUrl: String?,
-        documentBaseUrl: String?,
+        document: ModuleReadme?,
     ): ConfirmResult {
         coroutineScope.launch {
-            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss, restrictedBaseUrl, documentBaseUrl))
+            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss, document))
             show()
         }
         return awaitResult()
@@ -449,19 +445,17 @@ private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, di
                     .heightIn(max = 325.dp),
             ) {
                 item {
-                    if (visuals.restrictedBaseUrl != null || visuals.documentBaseUrl != null) {
+                    val document = visuals.document
+                    if (document != null) {
                         GithubMarkdown(
-                            content = visuals.content,
+                            document = document,
                             backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            renderMarkdown = visuals.isMarkdown,
-                            baseUrl = visuals.documentBaseUrl ?: visuals.restrictedBaseUrl.orEmpty(),
-                            restrictedBaseUrl = visuals.restrictedBaseUrl,
                         )
                     } else if (visuals.isMarkdown) {
                         MarkdownContent(content = visuals.content)
                     } else if (visuals.isHtml) {
                         GithubMarkdown(
-                            content = visuals.content,
+                            document = ModuleReadme(visuals.content, "https://appassets.androidplatform.net/", DocumentFormat.HTML),
                             backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         )
                     } else {
