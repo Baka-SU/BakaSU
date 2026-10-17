@@ -604,6 +604,9 @@
     <string name="wear_same_uid_apps">Apps sharing this UID</string>
     <string name="wear_app_operations_summary">Launch · Force stop</string>
     <string name="wear_template_delete_message">Delete the template “%1$s”? App Profile can no longer use it.</string>
+    <string name="wear_uninstall_module">Uninstall module</string>
+    <string name="wear_uninstall_message">The module is removed after a reboot.</string>
+    <string name="wear_metamodule_uninstall_message">This affects all modules: features the metamodule provides, such as mounting, will stop working.</string>
     <string name="wear_template_view_online">View online templates</string>
     <string name="wear_template_online">Online templates</string>
     <string name="wear_template_online_empty">No online templates</string>

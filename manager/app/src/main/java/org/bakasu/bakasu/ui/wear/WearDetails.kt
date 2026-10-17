@@ -102,17 +102,12 @@ internal fun WearModuleDetail(
     }
 
     val unknown = stringResource(R.string.unknown)
+    // The module name stands out on its own; the risk follows it, without repeating the name.
     val removeDialog = rememberWearConfirmDialog(
-        title = stringResource(R.string.uninstall),
-        message = stringResource(
-            if (module.metamodule) {
-                R.string.metamodule_uninstall_confirm
-            } else {
-                R.string.module_uninstall_confirm
-            },
-            module.name,
-        ),
+        title = stringResource(R.string.wear_uninstall_module),
+        message = stringResource(if (module.metamodule) R.string.wear_metamodule_uninstall_message else R.string.wear_uninstall_message),
         destructive = true,
+        subject = module.name,
         onConfirm = { onRemove(module.id, true) },
     )
     WearResultDialog(error?.takeIf { it.isNotBlank() }?.let { WearResult(it, success = false) }, onErrorShown)

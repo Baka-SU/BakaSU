@@ -638,6 +638,9 @@
     <string name="wear_same_uid_apps">相同 UID 的应用组</string>
     <string name="wear_app_operations_summary">启动 · 强制停止</string>
     <string name="wear_template_delete_message">删除模版“%1$s”？删除后 App Profile 将无法再使用它。</string>
+    <string name="wear_uninstall_module">卸载模块</string>
+    <string name="wear_uninstall_message">模块将在重启后移除。</string>
+    <string name="wear_metamodule_uninstall_message">这会影响所有模块，元模块提供的功能（如挂载）将不再工作。</string>
     <string name="wear_template_view_online">查看线上范本</string>
     <string name="wear_template_online">线上范本</string>
     <string name="wear_template_online_empty">暂无线上范本</string>

@@ -168,16 +168,17 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                 }
             },
         ) {
-            // Long names wrap with balanced lines rather than leaving one character on the last line.
+            // Long names wrap with balanced lines rather than leaving one character on the last line;
+            // the metamodule label follows the first line on its baseline.
             Text(
                 module.name,
-                Modifier.weight(1f, fill = false),
+                Modifier.weight(1f, fill = false).alignByBaseline(),
                 style = LocalTextStyle.current.merge(TextStyle(lineBreak = LineBreak.Heading)),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
             if (module.metamodule) {
-                WearBadge(stringResource(R.string.wear_meta_badge), Modifier.padding(start = 4.dp))
+                WearBadge(stringResource(R.string.wear_meta_badge), Modifier.padding(start = 4.dp).alignByBaseline())
             }
         }
     }

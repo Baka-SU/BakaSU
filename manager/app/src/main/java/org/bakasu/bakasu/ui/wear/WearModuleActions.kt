@@ -1,7 +1,9 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.os.Build
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.Article
@@ -9,11 +11,8 @@ import androidx.compose.material.icons.twotone.CheckCircle
 import androidx.compose.material.icons.twotone.Download
 import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Extension
-import androidx.compose.material.icons.twotone.Folder
-import androidx.compose.material.icons.twotone.Person
 import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.Save
-import androidx.compose.material.icons.twotone.Smartphone
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,7 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.material3.AlertDialog
@@ -56,7 +57,6 @@ import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearChip
-import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLogPage
@@ -67,6 +67,7 @@ import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.toLogLines
+import org.bakasu.bakasu.ui.wear.component.wearEmphasizedBodyStyle
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -281,10 +282,12 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
 
 /**
  * Confirms installing a module ZIP with the official Wear [AlertDialog], as the phone does before
- * flashing: the module and its `module.prop` details, the file and the target device, in a list
- * that scrolls when the description is long. Missing `module.prop` fields are left out, and an
- * unreadable one falls back to the file name. Only Confirm calls [onConfirm]; Cancel, swiping away
- * and Back call [onDismiss]. Nothing shows while [uri] is null or its details are still read.
+ * flashing. The type follows the Wear roles: the dialog title in the title slot's own style, the
+ * module name in an emphasized body style (wrapping, never cut), the metadata in quieter body styles
+ * and the description in the body text style, start-aligned for reading. Missing `module.prop`
+ * fields are left out, and an unreadable one falls back to the file name. Only Confirm calls
+ * [onConfirm]; Cancel, swiping away and Back call [onDismiss]. Nothing shows while [uri] is null or
+ * its details are still read.
  */
 @Composable
 internal fun WearModuleInstallConfirmDialog(uri: String?, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
@@ -312,9 +315,12 @@ internal fun WearModuleInstallConfirmDialog(uri: String?, onDismiss: () -> Unit,
                 tint = MaterialTheme.colorScheme.primary,
             )
         },
-        title = { Text(module?.name?.ifBlank { null } ?: fileName.ifBlank { stringResource(R.string.unknown_module) }) },
-        text = version.ifBlank { null }?.let {
-            { Text(stringResource(R.string.wear_labeled_value, stringResource(R.string.module_version), it)) }
+        title = { Text(stringResource(R.string.confirm_installation)) },
+        text = {
+            Text(
+                module?.name?.ifBlank { null } ?: fileName.ifBlank { stringResource(R.string.unknown_module) },
+                style = wearEmphasizedBodyStyle(),
+            )
         },
         confirmButton = {
             AlertDialogDefaults.ConfirmButton(
@@ -328,22 +334,35 @@ internal fun WearModuleInstallConfirmDialog(uri: String?, onDismiss: () -> Unit,
         },
         dismissButton = { AlertDialogDefaults.DismissButton(onClick = onDismiss) },
     ) {
-        module?.author?.ifBlank { null }?.let { author ->
-            item { WearDetailField(Icons.TwoTone.Person, stringResource(R.string.module_author), author, Modifier.fillMaxWidth()) }
-        }
-        if (fileName.isNotBlank()) {
-            item { WearDetailField(Icons.TwoTone.Folder, stringResource(R.string.wear_file_name), fileName, Modifier.fillMaxWidth()) }
-        }
-        item { WearDetailField(Icons.TwoTone.Smartphone, stringResource(R.string.wear_install_target), Build.MODEL, Modifier.fillMaxWidth()) }
+        // The metadata, one field per item at the list's 4dp spacing.
+        if (version.isNotBlank()) item { WearDialogField(stringResource(R.string.module_version), version) }
+        module?.author?.ifBlank { null }?.let { author -> item { WearDialogField(stringResource(R.string.module_author), author) } }
+        if (fileName.isNotBlank()) item { WearDialogField(stringResource(R.string.wear_file_name), fileName) }
+        item { WearDialogField(stringResource(R.string.wear_install_target), Build.MODEL) }
+        // The description is its own group: 4dp more above it gives the dialog's 8dp group spacing.
         module?.description?.ifBlank { null }?.let { description ->
             item {
                 Text(
                     description,
-                    modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Start,
                 )
             }
         }
+    }
+}
+
+/** One metadata field of a dialog: a quiet small label above its value, both start-aligned. */
+@Composable
+private fun WearDialogField(label: String, value: String) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Start,
+        )
+        Text(value, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
     }
 }
