@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.screen.moduleRepo
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,11 +23,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Add
+import androidx.compose.material.icons.twotone.Download
 import androidx.compose.material.icons.twotone.MoreVert
 import androidx.compose.material.icons.twotone.Star
 import androidx.compose.material.icons.twotone.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CheckableDropdownMenuItem
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,8 +53,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,19 +64,27 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogAuthor
 import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.model.RepositoryError
+import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
 import org.bakasu.bakasu.ui.component.CatalogCard
 import org.bakasu.bakasu.ui.component.CatalogCardHeading
@@ -79,6 +93,9 @@ import org.bakasu.bakasu.ui.component.NetworkRefreshContent
 import org.bakasu.bakasu.ui.component.RepositoryEmptyContent
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.moduleAssetDetails
+import org.bakasu.bakasu.ui.component.rememberCustomDialog
+import org.bakasu.bakasu.ui.component.rememberRepositoryInstallDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
 import org.bakasu.bakasu.ui.component.repositoryErrorText
 import org.bakasu.bakasu.ui.component.settings.LocalSegmentedItemShape
@@ -97,6 +114,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -127,6 +145,67 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
     var showDropdown by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullToRefreshState()
     val refreshModules = { viewModel.dispatch(ModuleRepoUiAction.Refresh) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val confirmInstall = rememberRepositoryInstallDialog()
+    var resolvingModule by remember { mutableStateOf<String?>(null) }
+    var assetSelection by remember { mutableStateOf<CatalogModule?>(null) }
+    val selectAsset = rememberCustomDialog { dismiss ->
+        val module = assetSelection
+        if (module != null) {
+            AlertDialog(
+                onDismissRequest = dismiss,
+                title = { Text(stringResource(R.string.repo_select_install_asset)) },
+                text = {
+                    LazyColumn {
+                        items(module.latestAsset?.assets.orEmpty()) { asset ->
+                            TextButton(
+                                onClick = {
+                                    dismiss()
+                                    confirmInstall(module, asset) { viewModel.resolveAsset(module.catalogId, asset) != null }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(Modifier.fillMaxWidth()) {
+                                    Text(asset.name)
+                                    moduleAssetDetails(asset)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = { TextButton(onClick = dismiss) { Text(stringResource(R.string.cancel)) } },
+            )
+        }
+    }
+    val quickInstall: (CatalogModule) -> Unit = { module ->
+        if (resolvingModule == null) {
+            resolvingModule = module.catalogId
+            scope.launch {
+                try {
+                    val current = viewModel.resolveModuleForInstall(module.catalogId)
+                    val assets = current?.latestAsset?.assets.orEmpty()
+                    when {
+                        current == null -> Toast.makeText(context, R.string.repo_detail_error, Toast.LENGTH_LONG).show()
+
+                        assets.isEmpty() -> Toast.makeText(context, R.string.repo_no_releases, Toast.LENGTH_LONG).show()
+
+                        assets.size == 1 -> confirmInstall(current, assets.single()) {
+                            viewModel.resolveAsset(current.catalogId, assets.single()) != null
+                        }
+
+                        else -> {
+                            assetSelection = current
+                            selectAsset.show()
+                        }
+                    }
+                } finally {
+                    resolvingModule = null
+                }
+            }
+        }
+    }
 
     LaunchedEffect(viewModel) { viewModel.refresh(force = false) }
 
@@ -250,6 +329,9 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                             module = module,
                             installedVersionCode = uiState.installedVersions[module.moduleId],
                             showSource = repositoryUrl == null,
+                            onQuickInstall = { quickInstall(module) },
+                            quickInstallLoading = resolvingModule == module.catalogId,
+                            quickInstallEnabled = resolvingModule == null,
                             onOpen = {
                                 viewModel.resolveModule(module.catalogId)?.let {
                                     navigator.push(Route.ModuleRepoDetail(it.moduleId, it.repositoryUrl))
@@ -369,46 +451,58 @@ fun OnlineModuleItem(
     onOpen: () -> Unit,
     showSource: Boolean = true,
     installedVersionCode: Int? = null,
+    onQuickInstall: (() -> Unit)? = null,
+    quickInstallLoading: Boolean = false,
+    quickInstallEnabled: Boolean = true,
 ) {
     val installed = module.installed || installedVersionCode != null
     val updatable = installedVersionCode != null && module.latestVersionCode > installedVersionCode
     val metadataColor = MaterialTheme.colorScheme.onSurfaceVariant
     val locale = LocalConfiguration.current.locales[0]
     CatalogCard(onClick = onOpen) {
-        CatalogCardHeading(
-            title = module.moduleName,
-            leadingContent = {
-                CatalogModuleIcon(
-                    url = module.registryMetadata?.iconUrl ?: module.iconUrl,
-                    origin = module.registryMetadata?.let { module.repositoryUrl },
-                    modifier = Modifier.padding(end = 8.dp),
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f)) {
+                CatalogCardHeading(
+                    title = module.moduleName,
+                    leadingContent = {
+                        CatalogModuleIcon(
+                            url = module.registryMetadata?.iconUrl ?: module.iconUrl,
+                            origin = module.registryMetadata?.let { module.repositoryUrl },
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
+                    },
                 )
-            },
-        )
-        Text(
-            text = stringResource(R.string.repo_module_id_value, module.moduleId),
-            style = MaterialTheme.typography.bodySmall,
-            color = metadataColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        if (module.authors.isNotBlank()) {
-            Text(
-                text = "${stringResource(R.string.module_author)}: ${module.authors}",
-                style = MaterialTheme.typography.bodySmall,
-                color = metadataColor,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        if (showSource) {
-            Text(
-                text = stringResource(R.string.repo_source_label, module.repositoryName),
-                style = MaterialTheme.typography.bodySmall,
-                color = metadataColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+                Text(
+                    text = stringResource(R.string.repo_module_id_value, module.moduleId),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = metadataColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (module.authors.isNotBlank()) {
+                    Text(
+                        text = "${stringResource(R.string.module_author)}: ${module.authors}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = metadataColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (showSource) {
+                    Text(
+                        text = stringResource(R.string.repo_source_label, module.repositoryName),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = metadataColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            if (onQuickInstall != null && (!module.detailLoaded || module.latestAsset?.assets?.isNotEmpty() == true)) {
+                key(module.latestAsset?.assets) {
+                    QuickInstallButton(module, quickInstallLoading, quickInstallEnabled, onQuickInstall)
+                }
+            }
         }
         if (module.summary.isNotBlank()) {
             Spacer(Modifier.height(8.dp))
@@ -484,6 +578,39 @@ fun OnlineModuleItem(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun QuickInstallButton(module: CatalogModule, loading: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val observeDownload = koinInject<ObserveAssetDownloadUseCase>()
+    val assets = module.latestAsset?.assets.orEmpty()
+    val activeDownload = remember(assets) {
+        if (assets.isEmpty()) {
+            flowOf(null)
+        } else {
+            combine(assets.map { observeDownload(it) }) { downloads ->
+                downloads.firstOrNull { it?.status == DownloadStatus.PENDING || it?.status == DownloadStatus.DOWNLOADING }
+            }
+        }
+    }
+    val download by activeDownload.collectAsStateWithLifecycle(
+        initialValue = assets.mapNotNull { observeDownload.current(it) }
+            .firstOrNull { it.status == DownloadStatus.PENDING || it.status == DownloadStatus.DOWNLOADING },
+    )
+    val downloading = download != null
+    val progress = (download?.progress ?: 0).coerceIn(0, 100)
+    val description = if (downloading) {
+        stringResource(R.string.repo_download_progress, download?.fileName.orEmpty(), progress)
+    } else {
+        stringResource(R.string.repo_install_latest)
+    }
+    IconButton(onClick = onClick, enabled = enabled && !loading && !downloading, modifier = Modifier.size(48.dp).semantics { contentDescription = description }) {
+        when {
+            loading -> CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            downloading -> CircularProgressIndicator(progress = { progress / 100f }, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            else -> Icon(Icons.TwoTone.Download, contentDescription = null, modifier = Modifier.size(24.dp))
         }
     }
 }

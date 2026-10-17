@@ -631,4 +631,10 @@
     <plurals name="repo_module_count">
         <item quantity="other">%1$d 个模块</item>
     </plurals>
+    <string name="repo_googlers">Googlers Magisk Repo</string>
+    <string name="repo_googlers_description">Googlers Repo 提供的 Magisk 模块</string>
+    <string name="repo_install_latest">安装最新版本</string>
+    <string name="repo_expand_changelog">展开更新日志</string>
+    <string name="repo_collapse_changelog">收起更新日志</string>
+    <string name="repo_select_install_asset">选择要安装的文件</string>
 </resources>

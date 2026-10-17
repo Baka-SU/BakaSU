@@ -635,4 +635,10 @@
         <item quantity="one">%1$d module</item>
         <item quantity="other">%1$d modules</item>
     </plurals>
+    <string name="repo_googlers">Googlers Magisk Repo</string>
+    <string name="repo_googlers_description">Magisk modules from Googlers Repo</string>
+    <string name="repo_install_latest">Install latest</string>
+    <string name="repo_expand_changelog">Expand changelog</string>
+    <string name="repo_collapse_changelog">Collapse changelog</string>
+    <string name="repo_select_install_asset">Choose a file to install</string>
 </resources>

@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.data.module
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
@@ -17,28 +18,44 @@ class RepositorySourceStore(
     private val settings: AppSettingsRepository,
     private val context: Context,
 ) {
-    fun load(): List<RepositorySource> = listOf(
-        RepositorySource(
-            RepositorySource.KERNEL_SU_URL,
-            context.getString(R.string.repo_kernel_su),
-            description = context.getString(R.string.repo_kernel_su_description),
-        ),
-    ) + runCatching {
-        JsonParser.parseString(settings.getString(KEY) ?: "[]").asJsonArray.mapNotNull { item ->
-            runCatching {
-                val fields = item.asJsonObject
+    fun load(): List<RepositorySource> {
+        val builtIn = listOf(
+            RepositorySource(
+                RepositorySource.KERNEL_SU_URL,
+                context.getString(R.string.repo_kernel_su),
+                description = context.getString(R.string.repo_kernel_su_description),
+            ),
+        )
+        val saved = runCatching {
+            JsonParser.parseString(settings.getString(KEY) ?: "[]").asJsonArray.mapNotNull { item ->
+                runCatching {
+                    val fields = item.asJsonObject
+                    RepositorySource(
+                        url = MmrlRepositoryParser.canonicalUrl(fields.text("url")),
+                        name = fields.text("name"),
+                        id = fields.text("id"),
+                        description = fields.text("description"),
+                        customName = fields.text("customName").trim().take(100),
+                        moduleCount = fields.get("moduleCount")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isNumber }
+                            ?.asString?.toIntOrNull()?.takeIf { it >= 0 },
+                    ).takeIf { !it.isBuiltIn && it.name.isNotBlank() }
+                }.getOrNull()
+            }.distinctBy { it.url }
+        }.getOrDefault(emptyList())
+        val defaults = if (settings.getBoolean(DEFAULTS_INITIALIZED, false)) {
+            emptyList()
+        } else {
+            listOf(
                 RepositorySource(
-                    url = MmrlRepositoryParser.canonicalUrl(fields.text("url")),
-                    name = fields.text("name"),
-                    id = fields.text("id"),
-                    description = fields.text("description"),
-                    customName = fields.text("customName").trim().take(100),
-                    moduleCount = fields.get("moduleCount")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isNumber }
-                        ?.asString?.toIntOrNull()?.takeIf { it >= 0 },
-                ).takeIf { !it.isBuiltIn && it.name.isNotBlank() }
-            }.getOrNull()
-        }.distinctBy { it.url }
-    }.getOrDefault(emptyList())
+                    url = "https://gr.dergoogler.com/gmr/",
+                    name = context.getString(R.string.repo_googlers),
+                    id = "grdoglgmr",
+                    description = context.getString(R.string.repo_googlers_description),
+                ),
+            )
+        }
+        return builtIn + (saved + defaults).distinctBy { it.url }
+    }
 
     suspend fun save(sources: List<RepositorySource>) {
         try {
@@ -55,7 +72,10 @@ class RepositorySourceStore(
                     },
                 )
             }
-            settings.editBlocking { it[stringPreferencesKey(KEY)] = array.toString() }
+            settings.editBlocking {
+                it[stringPreferencesKey(KEY)] = array.toString()
+                it[booleanPreferencesKey(DEFAULTS_INITIALIZED)] = true
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -70,5 +90,6 @@ class RepositorySourceStore(
 
     private companion object {
         const val KEY = "module_repository_sources"
+        const val DEFAULTS_INITIALIZED = "module_repository_defaults_initialized"
     }
 }

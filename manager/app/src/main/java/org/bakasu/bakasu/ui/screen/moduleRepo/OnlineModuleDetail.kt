@@ -24,6 +24,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material.icons.twotone.Download
+import androidx.compose.material.icons.twotone.ExpandLess
+import androidx.compose.material.icons.twotone.ExpandMore
 import androidx.compose.material.icons.twotone.Link
 import androidx.compose.material.icons.twotone.OpenInBrowser
 import androidx.compose.material3.ButtonDefaults
@@ -49,6 +51,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,6 +68,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.text.HtmlCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.text.NumberFormat
 import java.time.Instant
@@ -71,7 +76,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogModule
@@ -110,6 +117,9 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
 import org.bakasu.bakasu.ui.viewmodel.ReleaseDetailsState
+import org.commonmark.ext.gfm.tables.TablesExtension
+import org.commonmark.parser.Parser
+import org.commonmark.renderer.html.HtmlRenderer
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
@@ -647,34 +657,87 @@ private fun ReleaseNotes(module: CatalogModule, release: ModuleRelease, state: R
     val document = state?.details?.notes ?: release.descriptionHTML.takeIf(String::isNotBlank)?.let {
         ModuleReadme(it, registryOrigin ?: "https://appassets.androidplatform.net", DocumentFormat.HTML, registryOrigin)
     }
-    val content = document?.content.orEmpty()
-    val htmlLoading = remember(content) { mutableStateOf(true) }
+    var expanded by rememberSaveable(module.catalogId, release.tagName, release.versionCode) { mutableStateOf(false) }
+    val previewState = remember(document) { mutableStateOf<ReleaseNotesPreview?>(null) }
+    LaunchedEffect(document) {
+        if (document != null) {
+            previewState.value = withContext(Dispatchers.Default) { releaseNotesPreview(document) }
+        }
+    }
+    val preview = previewState.value
+    val htmlLoading = remember(document) { mutableStateOf(true) }
     val documentLoading = document == null && release.changelogUrl.isNotBlank() && (state == null || state.loading)
     val documentFailed = state?.details?.notesFailed == true
-    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        when {
-            documentLoading -> Unit
+    Column(Modifier.fillMaxWidth()) {
+        if (preview?.collapsible == true) {
+            TextButton(onClick = {
+                if (!expanded) htmlLoading.value = true
+                expanded = !expanded
+            }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.module_changelog), modifier = Modifier.weight(1f))
+                Icon(
+                    imageVector = if (expanded) Icons.TwoTone.ExpandLess else Icons.TwoTone.ExpandMore,
+                    contentDescription = stringResource(if (expanded) R.string.repo_collapse_changelog else R.string.repo_expand_changelog),
+                )
+            }
+        }
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            when {
+                documentLoading -> Unit
 
-            documentFailed -> Column {
-                Text(stringResource(R.string.repo_changelog_error))
-                TextButton(onClick = { viewModel?.loadReleaseDetails(release, retry = true) }) {
-                    Text(stringResource(R.string.network_retry))
+                documentFailed -> Column {
+                    Text(stringResource(R.string.repo_changelog_error))
+                    TextButton(onClick = { viewModel?.loadReleaseDetails(release, retry = true) }) {
+                        Text(stringResource(R.string.network_retry))
+                    }
+                }
+
+                document != null && preview != null -> {
+                    if (preview.collapsible && !expanded) {
+                        Text(
+                            text = preview.text,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 6,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    } else {
+                        GithubMarkdown(
+                            content = document.content,
+                            backgroundColor = Color.Transparent,
+                            loading = htmlLoading,
+                            callerProvideLoadingIndicator = true,
+                            renderMarkdown = document.format != DocumentFormat.HTML,
+                            baseUrl = document.baseUrl,
+                            restrictedBaseUrl = document.registryOrigin,
+                        )
+                    }
                 }
             }
-
-            document != null -> GithubMarkdown(
-                content = content,
-                backgroundColor = Color.Transparent,
-                loading = htmlLoading,
-                callerProvideLoadingIndicator = true,
-                renderMarkdown = document.format != DocumentFormat.HTML,
-                baseUrl = document.baseUrl,
-                restrictedBaseUrl = document.registryOrigin,
-            )
+            val rendering = document != null && preview != null && (!preview.collapsible || expanded) && htmlLoading.value
+            if (documentLoading || (document != null && preview == null) || (!documentFailed && rendering)) LoadingIndicator()
         }
-        if (documentLoading || (document != null && !documentFailed && htmlLoading.value)) LoadingIndicator()
     }
 }
+
+private data class ReleaseNotesPreview(val text: String, val collapsible: Boolean)
+
+private fun releaseNotesPreview(document: ModuleReadme): ReleaseNotesPreview {
+    val html = if (document.format == DocumentFormat.HTML) {
+        document.content
+    } else {
+        val extensions = listOf(TablesExtension.create())
+        val parser = Parser.builder().extensions(extensions).build()
+        HtmlRenderer.builder().extensions(extensions).build().render(parser.parse(document.content))
+    }
+    val text = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
+    val collapsible = text.codePointCount(0, text.length) > RELEASE_NOTES_PREVIEW_LIMIT
+    val preview = if (collapsible) text.substring(0, text.offsetByCodePoints(0, RELEASE_NOTES_PREVIEW_LIMIT)).trimEnd() + "…" else text
+    return ReleaseNotesPreview(preview, collapsible)
+}
+
+private const val RELEASE_NOTES_PREVIEW_LIMIT = 500
 
 @Composable
 @Preview
