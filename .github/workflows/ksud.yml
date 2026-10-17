@@ -47,6 +47,7 @@ jobs:
           mv ksuinit-aarch64/ksuinit ./userspace/ksud/bin/aarch64/
           mv ksuinit-x86_64/ksuinit ./userspace/ksud/bin/x86_64/
           mv ksuinit-riscv64/ksuinit ./userspace/ksud/bin/riscv64/
+          mv ksuinit-armv7/ksuinit ./userspace/ksud/bin/arm/
 
       - name: Setup Rust toolchain
         if: ${{ inputs.target != 'riscv64-linux-android' }}
