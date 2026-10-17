@@ -62,6 +62,7 @@ import org.bakasu.bakasu.domain.usecase.AddUmountPathUseCase
 import org.bakasu.bakasu.domain.usecase.ApplyLanguageUseCase
 import org.bakasu.bakasu.domain.usecase.BackupAllowlistUseCase
 import org.bakasu.bakasu.domain.usecase.CalculateInstalledModuleSizeUseCase
+import org.bakasu.bakasu.domain.usecase.CancelDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.CheckFlashModuleMountUseCase
 import org.bakasu.bakasu.domain.usecase.CheckManagerUpdateUseCase
 import org.bakasu.bakasu.domain.usecase.CleanSulogUseCase
@@ -169,6 +170,7 @@ import org.bakasu.bakasu.ui.viewmodel.InstallViewModel
 import org.bakasu.bakasu.ui.viewmodel.KernelFlashViewModel
 import org.bakasu.bakasu.ui.viewmodel.MainIntentViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
+import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateViewModel
@@ -319,6 +321,7 @@ val useCaseModule = module {
     factoryOf(::EnqueueDownloadUseCase)
     factoryOf(::EnqueueManagerUpdateUseCase)
     factoryOf(::ObserveDownloadUseCase)
+    factoryOf(::CancelDownloadUseCase)
     factoryOf(::GetKernelStatusUseCase)
     factoryOf(::GetInstallEnvironmentUseCase)
     factoryOf(::ExecuteFlashOperationUseCase)
@@ -430,6 +433,7 @@ val viewModelModule = module {
     viewModelOf(::SuSFSViewModel)
     viewModelOf(::ModuleRepoViewModel)
     viewModel { parameters -> ModuleDetailViewModel(parameters[0], get()) }
+    viewModelOf(::ModuleDownloadViewModel)
     viewModelOf(::TemplateViewModel)
     viewModelOf(::OnlineTemplateViewModel)
     viewModel { parameters ->

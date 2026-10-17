@@ -1,7 +1,9 @@
 package org.bakasu.bakasu.ui.wear
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,8 +14,10 @@ import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.twotone.Cloud
 import androidx.compose.material.icons.twotone.Code
 import androidx.compose.material.icons.twotone.Download
+import androidx.compose.material.icons.twotone.Extension
 import androidx.compose.material.icons.twotone.Info
 import androidx.compose.material.icons.twotone.Person
+import androidx.compose.material.icons.twotone.Refresh
 import androidx.compose.material.icons.twotone.Search
 import androidx.compose.material.icons.twotone.Tag
 import androidx.compose.material.icons.twotone.Warning
@@ -27,8 +31,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,6 +44,8 @@ import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
+import androidx.wear.compose.material3.CompactButton
 import androidx.wear.compose.material3.ConfirmationDialogDefaults
 import androidx.wear.compose.material3.FailureConfirmationDialog
 import androidx.wear.compose.material3.Icon
@@ -57,11 +66,16 @@ import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
+import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
+import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadUiState
+import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.formatFileSize
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearIconAction
+import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -198,58 +212,63 @@ internal fun WearModuleRepoPage(onBack: () -> Unit, onOpen: (String) -> Unit) {
 internal fun WearOnlineModulePage(moduleId: String, onBack: () -> Unit, onLink: (String) -> Unit, onInstall: (String) -> Unit) {
     val viewModel = koinViewModel<ModuleDetailViewModel>(key = "wear-catalog-$moduleId", parameters = { parametersOf(moduleId) })
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val downloadViewModel = koinViewModel<ModuleDownloadViewModel>(key = "wear-download-$moduleId")
+    val download by downloadViewModel.state.collectAsStateWithLifecycle()
     val module = state.module
     var page by rememberSaveable { mutableStateOf("") }
-    val enqueue = koinInject<EnqueueDownloadUseCase>()
-    val observe = koinInject<ObserveDownloadUseCase>()
-    val verify = koinInject<VerifyModuleDownloadUseCase>()
-    val scope = rememberCoroutineScope()
-    var progress by remember { mutableStateOf<Int?>(null) }
-    var failed by remember { mutableStateOf(false) }
-    var verifyFailed by remember { mutableStateOf(false) }
-
-    // A repository ZIP installs only when it matches the size and SHA-256 the repository published.
-    fun download(asset: ModuleReleaseAsset) {
-        if (progress != null) return
-        progress = 0
-        failed = false
-        verifyFailed = false
-        scope.launch {
-            runCatching {
-                val id = enqueue(asset.downloadUrl, asset.name)
-                observe(id).filterNotNull().onEach { progress = it.progress }
-                    .first { it.status == DownloadStatus.COMPLETED || it.status == DownloadStatus.FAILED }
-            }.onSuccess { result ->
-                val uri = result.resultUri
-                when {
-                    uri == null -> failed = true
-
-                    verify(uri, asset.size, asset.sha256) -> onInstall(uri)
-
-                    else -> {
-                        verifyFailed = true
-                        failed = true
-                    }
-                }
-            }.onFailure { failed = true }
-            progress = null
+    var pendingAsset by remember { mutableStateOf<ModuleReleaseAsset?>(null) }
+    // A verified download continues to the install confirmation, as before.
+    LaunchedEffect(download.resultUri) {
+        download.resultUri?.let { uri ->
+            downloadViewModel.reset()
+            onInstall(uri)
         }
+    }
+    val thenInstall = stringResource(R.string.wear_download_then_install)
+    val confirmDialog = rememberCustomDialog { dismiss ->
+        val asset = pendingAsset
+        AlertDialog(
+            visible = true,
+            onDismissRequest = dismiss,
+            icon = { Icon(Icons.TwoTone.Download, contentDescription = null) },
+            title = { Text(stringResource(R.string.wear_download_confirm_title)) },
+            text = {
+                if (asset != null) {
+                    Text(stringResource(R.string.wear_catalog_summary, asset.name, formatFileSize(asset.size)) + "\n" + thenInstall)
+                }
+            },
+            confirmButton = {
+                AlertDialogDefaults.ConfirmButton(
+                    onClick = {
+                        dismiss()
+                        asset?.let(downloadViewModel::start)
+                    },
+                )
+            },
+            dismissButton = { AlertDialogDefaults.DismissButton(onClick = dismiss) },
+        )
+    }
+
+    // Only one download runs at a time; its screen replaces the page until it ends or is left.
+    fun requestDownload(asset: ModuleReleaseAsset) {
+        if (download.phase != null) return
+        pendingAsset = asset
+        confirmDialog.show()
+    }
+    if (download.phase != null) {
+        // Leaving the download screen cancels a running download.
+        WearSubPage(downloadViewModel::reset) {
+            WearModuleDownloadScreen(module?.moduleName.orEmpty(), download) { download.asset?.let(downloadViewModel::start) }
+        }
+        return
     }
     val close = { if (page.isNotEmpty()) page = "" else onBack() }
     val content: @Composable () -> Unit = {
         WearList(isLoading = state.loading, onBack = close) { spec ->
-            item { WearPageHeader(spec, module?.moduleName ?: stringResource(R.string.module_repo)) }
-            if (state.error != null) item { WearActionButton(spec, Icons.TwoTone.Cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
-            progress?.let { percent ->
-                item {
-                    WearScaledItem(spec) {
-                        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(progress = { percent / 100f }, modifier = Modifier.size(32.dp))
-                            Text(stringResource(R.string.wear_download_progress, percent), style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
+            if (module == null || page.isNotEmpty()) {
+                item { WearPageHeader(spec, module?.moduleName ?: stringResource(R.string.module_repo)) }
             }
+            if (state.error != null) item { WearActionButton(spec, Icons.TwoTone.Cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
             if (module != null) {
                 when (page) {
                     "readme" -> {
@@ -262,15 +281,14 @@ internal fun WearOnlineModulePage(moduleId: String, onBack: () -> Unit, onLink: 
                         }
                     }
 
-                    "releases", "install" -> {
+                    "releases" -> {
+                        // Each release keeps its own files, so an earlier version can still be downloaded.
                         module.releases.forEach { release ->
                             item { WearSectionHeader(spec, release.name.ifBlank { release.tagName }) }
-                            if (page == "releases") {
-                                item {
-                                    WearInfoCard(spec) {
-                                        Text(release.publishedAt, style = MaterialTheme.typography.labelSmall)
-                                        Text(HtmlCompat.fromHtml(release.descriptionHTML, HtmlCompat.FROM_HTML_MODE_COMPACT).toString(), style = MaterialTheme.typography.bodySmall)
-                                    }
+                            item {
+                                WearInfoCard(spec) {
+                                    Text(release.publishedAt, style = MaterialTheme.typography.labelSmall)
+                                    Text(HtmlCompat.fromHtml(release.descriptionHTML, HtmlCompat.FROM_HTML_MODE_COMPACT).toString(), style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                             items(release.assets, key = { it.downloadUrl }) { asset ->
@@ -278,8 +296,7 @@ internal fun WearOnlineModulePage(moduleId: String, onBack: () -> Unit, onLink: 
                                     spec,
                                     Icons.TwoTone.Download,
                                     asset.name,
-                                    { download(asset) },
-                                    enabled = progress == null,
+                                    { requestDownload(asset) },
                                     secondaryText = formatFileSize(asset.size),
                                 )
                             }
@@ -296,6 +313,47 @@ internal fun WearOnlineModulePage(moduleId: String, onBack: () -> Unit, onLink: 
                     }
 
                     else -> {
+                        // As in the design: the module icon, name and authors, then its main actions.
+                        item {
+                            WearScaledItem(spec) {
+                                Column(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    WearModuleIcon(52.dp)
+                                    Text(
+                                        module.moduleName,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    if (module.authors.isNotBlank()) {
+                                        Text(
+                                            module.authors,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        val latest = module.releases.firstOrNull { it.assets.isNotEmpty() }?.assets?.firstOrNull()
+                        item {
+                            WearIconButtonGroup(
+                                spec,
+                                listOfNotNull(
+                                    WearIconAction(Icons.TwoTone.Download, stringResource(R.string.wear_download), { latest?.let(::requestDownload) }, latest != null, primary = true),
+                                    module.sourceUrl.takeIf { it.isNotBlank() }?.let { url ->
+                                        WearIconAction(Icons.TwoTone.Code, stringResource(R.string.source_code), { onLink(url) })
+                                    },
+                                ),
+                            )
+                        }
                         item { WearSectionHeader(spec, stringResource(R.string.wear_module_data)) }
                         val sections = listOf(
                             Triple("readme", R.string.readme, R.string.wear_readme_summary) to Icons.AutoMirrored.TwoTone.Article,
@@ -316,40 +374,88 @@ internal fun WearOnlineModulePage(moduleId: String, onBack: () -> Unit, onLink: 
                                 description = stringResource(R.string.wear_author_link_summary),
                             )
                         }
-                        if (module.sourceUrl.isNotBlank()) {
-                            item {
-                                WearSettingsJumpPageWidget(
-                                    spec,
-                                    stringResource(R.string.source_code),
-                                    { onLink(module.sourceUrl) },
-                                    icon = Icons.TwoTone.Code,
-                                    description = stringResource(R.string.wear_source_summary),
-                                )
-                            }
-                        }
-                        item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
-                        item {
-                            WearActionButton(
-                                spec,
-                                Icons.TwoTone.Download,
-                                stringResource(R.string.wear_install_module),
-                                { page = "install" },
-                                enabled = module.releases.any { it.assets.isNotEmpty() },
-                                secondaryText = stringResource(R.string.wear_download_then_install),
-                                colors = ButtonDefaults.buttonColors(),
-                            )
-                        }
                     }
                 }
             }
         }
     }
     if (page.isNotEmpty()) WearSubPage(close, content) else content()
-    val downloadFailed = stringResource(if (verifyFailed) R.string.wear_download_verify_failed else R.string.operation_failed)
-    val downloadStyle = ConfirmationDialogDefaults.curvedTextStyle
-    FailureConfirmationDialog(
-        visible = failed,
-        onDismissRequest = { failed = false },
-        curvedText = { confirmationDialogCurvedText(downloadFailed, downloadStyle) },
-    )
+}
+
+/** The default module icon on a rounded tonal tile, standing in for a module's own icon. */
+@Composable
+private fun WearModuleIcon(size: Dp) {
+    Box(
+        Modifier.size(size).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            Icons.TwoTone.Extension,
+            contentDescription = null,
+            modifier = Modifier.size(size * 0.55f),
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+    }
+}
+
+/**
+ * A module download as in the design: the progress runs around the screen edge, leaving the time at
+ * the top, with the module, its state and the percentage in the center. A failure says why and
+ * offers to retry; swiping back leaves.
+ */
+@Composable
+private fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState, onRetry: () -> Unit) {
+    val failed = state.phase == ModuleDownloadPhase.FAILED || state.phase == ModuleDownloadPhase.VERIFY_FAILED
+    ScreenScaffold {
+        Box(Modifier.fillMaxSize()) {
+            if (!failed) {
+                CircularProgressIndicator(
+                    progress = { state.progress / 100f },
+                    modifier = Modifier.fillMaxSize().padding(CircularProgressIndicatorDefaults.FullScreenPadding),
+                    startAngle = 300f,
+                    endAngle = 240f,
+                )
+            }
+            Column(
+                Modifier.fillMaxSize().padding(horizontal = 28.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                WearModuleIcon(64.dp)
+                Text(
+                    name,
+                    modifier = Modifier.padding(top = 8.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (failed) {
+                    Text(
+                        stringResource(if (state.phase == ModuleDownloadPhase.VERIFY_FAILED) R.string.wear_download_verify_failed else R.string.download_failed_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                    )
+                    CompactButton(
+                        onClick = onRetry,
+                        modifier = Modifier.padding(top = 8.dp),
+                        icon = { Icon(Icons.TwoTone.Refresh, contentDescription = null) },
+                        label = { Text(stringResource(R.string.network_retry)) },
+                    )
+                } else {
+                    Text(
+                        stringResource(R.string.wear_downloading),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        stringResource(R.string.wear_download_percent, state.progress),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        }
+    }
 }

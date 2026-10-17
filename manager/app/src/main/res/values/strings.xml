@@ -701,7 +701,6 @@
     <string name="wear_catalog_summary">%1$s · %2$s</string>
     <string name="wear_labeled_value">%1$s: %2$s</string>
     <string name="wear_version_code">Version code</string>
-    <string name="wear_download_progress">Downloading: %1$d%%</string>
     <string name="wear_susfs_logging_hiding">Logging and hiding</string>
     <string name="wear_susfs_entries">Configured paths</string>
     <string name="wear_system_information">System information</string>
@@ -767,6 +766,10 @@
     <string name="wear_info_summary">ID · summary · authors</string>
     <string name="wear_author_link_summary">Open the author\'s page</string>
     <string name="wear_source_summary">Open the project page</string>
+    <string name="wear_download">Download</string>
+    <string name="wear_downloading">Downloading</string>
+    <string name="wear_download_percent" translatable="false">%1$d%%</string>
+    <string name="wear_download_confirm_title">Download this module?</string>
     <string name="wear_download_then_install">Download, then confirm installing</string>
     <string name="wear_browser_open_failed">Couldn\'t open the browser</string>
     <string name="wear_download_verify_failed">File verification failed</string>

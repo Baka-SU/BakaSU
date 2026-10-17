@@ -674,7 +674,6 @@
     <string name="wear_catalog_summary">%1$s · %2$s</string>
     <string name="wear_labeled_value">%1$s: %2$s</string>
     <string name="wear_version_code">版本代码</string>
-    <string name="wear_download_progress">下载中：%1$d%%</string>
     <string name="wear_susfs_logging_hiding">日志与隐藏</string>
     <string name="wear_susfs_entries">路径列表</string>
     <string name="wear_system_information">系统信息</string>
@@ -740,6 +739,9 @@
     <string name="wear_info_summary">ID · 简介 · 作者</string>
     <string name="wear_author_link_summary">打开作者链接</string>
     <string name="wear_source_summary">打开项目页面</string>
+    <string name="wear_download">下载</string>
+    <string name="wear_downloading">下载中</string>
+    <string name="wear_download_confirm_title">下载此模块？</string>
     <string name="wear_download_then_install">下载后确认安装</string>
     <string name="wear_browser_open_failed">无法打开浏览器</string>
     <string name="wear_download_verify_failed">文件校验失败</string>

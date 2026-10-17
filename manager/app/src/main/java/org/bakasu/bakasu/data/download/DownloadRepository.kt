@@ -93,6 +93,15 @@ class DownloadRepository(
         }
     }
 
+    /** Stops a running download; the service marks it failed as cancelled. */
+    fun cancel(id: Int) {
+        val intent = Intent(application, DownloadService::class.java).apply {
+            action = DownloadService.ACTION_CANCEL
+            putExtra(DownloadService.EXTRA_DOWNLOAD_ID, id)
+        }
+        application.startService(intent)
+    }
+
     fun updateProgress(id: Int, progress: Int) {
         _downloads.update { map ->
             val state = map[id] ?: return@update map
