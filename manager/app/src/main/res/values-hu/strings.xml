@@ -220,9 +220,9 @@
     <string name="custom_settings">További személyreszabhatóságok</string>
     <string name="theme_color">Téma szín</string>
     <string name="horizon_flash_complete">Telepítés befejeződött</string>
-    <string name="horizon_preparing">Előkészítés...</string>
-    <string name="horizon_copying_files">Fájlok másolása...</string>
-    <string name="horizon_flashing">Kernel telepítése...</string>
+    <string name="horizon_preparing">Előkészítés…</string>
+    <string name="horizon_copying_files">Fájlok másolása…</string>
+    <string name="horizon_flashing">Kernel telepítése…</string>
     <string name="horizon_flash_complete_status">Telepítés befejeződött</string>
     <string name="select_slot_title">Telepítendő Slot (A/B)</string>
     <string name="select_slot_description">Telepítendő célslot kiválasztása (boot partíció)</string>
@@ -560,4 +560,10 @@
     <string name="settings_enable_swipe_dismiss">Visszacsúsztató navigációs mozdulat</string>
     <string name="settings_enable_swipe_dismiss_summary">Csúsztasd az ujjad a képernyő szélétől befelé, hogy visszatérj az előző oldalra.</string>
     <string name="settings_pager_gesture_mode">Horizontális lapozás</string>
+    <string name="internal_server_error">Szerver oldali hiba</string>
+    <string name="module_shortcut_scheme_copied">Link kimásolva a vágólapra</string>
+    <string name="module_shortcut_copy_scheme">Link másolása a vágólapra</string>
+    <string name="both_kernel_and_module_files">Anykernel3 zip tartalmaz a kernel mellett modult is</string>
+    <string name="about_app_icon"><![CDATA[Az ikonokra MINDEN JOG FENNTARTVA, továbbá a szerzői jogok %1$s tulajdonát képezik]]></string>
+    <string name="more_than_one_kernel_file">Több anykernel3 fájl található a kiválasztásban</string>
 </resources>
