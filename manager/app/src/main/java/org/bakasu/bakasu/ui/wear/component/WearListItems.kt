@@ -1,9 +1,12 @@
 package org.bakasu.bakasu.ui.wear.component
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,8 +81,19 @@ fun TransformingLazyColumnItemScope.WearSectionHeader(
 }
 
 /**
+ * The minimum height of a compact row: Wear's 48dp minimum touch target instead of the 52dp
+ * default, so the container fits a label and a one-line secondary label more closely while the
+ * whole row stays tappable. Taller content still grows the row.
+ */
+val WearCompactRowHeight = 48.dp
+
+/** Applies [WearCompactRowHeight]; Wear buttons document Modifier.heightIn as their height override. */
+fun Modifier.wearCompactRow(compact: Boolean): Modifier = if (compact) heightIn(min = WearCompactRowHeight) else this
+
+/**
  * A full-width list button. A Wear button is sized for two lines and grows to at most three, so
- * the label takes up to three lines alone, or two above a one-line secondary label.
+ * the label takes up to three lines alone, or two above a one-line secondary label. A [compact]
+ * button keeps less room above and below its content; see [WearCompactRowHeight].
  */
 @Composable
 fun TransformingLazyColumnItemScope.WearActionButton(
@@ -90,17 +104,36 @@ fun TransformingLazyColumnItemScope.WearActionButton(
     enabled: Boolean = true,
     secondaryText: String? = null,
     colors: ButtonColors = wearButtonColors(),
+    compact: Boolean = false,
 ) {
     Button(
         onClick = onClick,
         enabled = enabled,
         modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec)
-            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
+            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)
+            .wearCompactRow(compact),
         transformation = SurfaceTransformation(transformationSpec),
         colors = colors,
         icon = icon?.let { { Icon(it, contentDescription = null) } },
         secondaryLabel = secondaryText?.let { text -> { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
     ) { Text(label, maxLines = if (secondaryText == null) 3 else 2, overflow = TextOverflow.Ellipsis) }
+}
+
+/**
+ * A small label beside a title that marks what kind of item it is, such as a metamodule. It sits on
+ * the tertiary container, so it reads apart from the title without taking its color.
+ */
+@Composable
+fun WearBadge(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.shapes.extraSmall)
+            .padding(horizontal = 4.dp),
+        color = MaterialTheme.colorScheme.onTertiaryContainer,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+    )
 }
 
 /**

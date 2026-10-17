@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui.wear
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -37,6 +38,7 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
+import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -172,7 +174,10 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                 }
             },
         ) {
-            Text(module.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(module.name, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (module.metamodule) {
+                WearBadge(stringResource(R.string.wear_meta_badge), Modifier.padding(start = 4.dp).align(Alignment.CenterVertically))
+            }
         }
     }
     if (actions.isEmpty()) {

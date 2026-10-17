@@ -10,9 +10,11 @@ import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.SwitchButton
+import androidx.wear.compose.material3.SwitchButtonDefaults
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
+import org.bakasu.bakasu.ui.wear.component.wearCompactRow
 
 /**
  * @author Hanhan_awa
@@ -29,10 +31,14 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
     enabled: Boolean = true,
     icon: ImageVector? = null,
     secondaryLabel: String? = null,
+    compact: Boolean = false,
 ) {
     SwitchButton(
         modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec)
-            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
+            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)
+            .wearCompactRow(compact),
+        // A compact switch uses the button's 6dp vertical padding instead of its own 8dp.
+        contentPadding = if (compact) ButtonDefaults.ContentPadding else SwitchButtonDefaults.ContentPadding,
         transformation = SurfaceTransformation(transformationSpec),
         checked = checked,
         onCheckedChange = onCheckedChange,

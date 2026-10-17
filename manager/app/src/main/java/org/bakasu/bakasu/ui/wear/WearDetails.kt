@@ -132,10 +132,10 @@ internal fun WearModuleDetail(
         item { WearSectionHeader(spec, stringResource(R.string.wear_module_information)) }
         // Information rows read like the operation buttons below (icon, label, secondary label), but
         // stay cards, as nothing happens on a tap.
-        item { WearModuleInfoCard(spec) { WearInfoRow(Icons.TwoTone.Person, stringResource(R.string.module_author), module.author.ifBlank { unknown }) } }
-        item { WearModuleInfoCard(spec) { WearInfoRow(Icons.TwoTone.Tag, stringResource(R.string.wear_details), module.id) } }
+        item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.TwoTone.Person, stringResource(R.string.module_author), module.author.ifBlank { unknown }) } }
+        item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.TwoTone.Tag, stringResource(R.string.wear_details), module.id) } }
         if (module.description.isNotBlank()) {
-            item { WearModuleInfoCard(spec) { WearInfoRow(Icons.TwoTone.Description, stringResource(R.string.wear_description), module.description) } }
+            item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.TwoTone.Description, stringResource(R.string.wear_description), module.description) } }
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_module_operations)) }
         // Every operation uses the button's icon, label and secondary label slots: the label names the
@@ -149,6 +149,7 @@ internal fun WearModuleDetail(
                 enabled = !module.remove && !module.update,
                 icon = Icons.TwoTone.PowerSettingsNew,
                 secondaryLabel = stringResource(if (module.enabled) R.string.wear_enabled else R.string.wear_disabled),
+                compact = true,
             )
         }
         if (module.hasWebUi) {
@@ -160,6 +161,7 @@ internal fun WearModuleDetail(
                     { onWebUi(module) },
                     enabled = module.enabled && !module.remove,
                     secondaryText = stringResource(R.string.wear_webui_summary),
+                    compact = true,
                 )
             }
         }
@@ -172,6 +174,7 @@ internal fun WearModuleDetail(
                     { onExecute(module) },
                     enabled = module.enabled && !module.remove,
                     secondaryText = stringResource(R.string.wear_action_summary),
+                    compact = true,
                 )
             }
         }
@@ -184,6 +187,7 @@ internal fun WearModuleDetail(
                     { onUpdate(module) },
                     enabled = !module.remove,
                     secondaryText = stringResource(R.string.wear_update_to, update.version),
+                    compact = true,
                 )
             }
         }
@@ -195,7 +199,15 @@ internal fun WearModuleDetail(
                 removeDialog::show,
                 enabled = !module.remove,
                 secondaryText = stringResource(if (module.remove) R.string.wear_pending_removal else R.string.wear_uninstall_summary),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
+                // Every part takes the error pair: left unset, the secondary label and icon would keep
+                // the filled button's onPrimary and follow the accent color.
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    iconColor = MaterialTheme.colorScheme.onErrorContainer,
+                ),
+                compact = true,
             )
         }
     }

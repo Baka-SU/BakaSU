@@ -689,7 +689,7 @@
     <string name="wear_module_information">Module information</string>
     <string name="wear_module_operations">Module actions</string>
     <string name="wear_description">Description</string>
-    <string name="wear_meta_badge">META</string>
+    <string name="wear_meta_badge">Metamodule</string>
     <string name="wear_authorization">Authorization</string>
     <string name="wear_app_operations">App actions</string>
     <string name="wear_operations">Actions</string>
