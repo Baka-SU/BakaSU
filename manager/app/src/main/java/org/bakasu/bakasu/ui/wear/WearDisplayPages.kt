@@ -19,6 +19,7 @@ import androidx.compose.material.icons.twotone.Opacity
 import androidx.compose.material.icons.twotone.Palette
 import androidx.compose.material.icons.twotone.Restore
 import androidx.compose.material.icons.twotone.Settings
+import androidx.compose.material.icons.twotone.Vibration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,6 +67,7 @@ import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSliderCard
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
+import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
@@ -318,6 +320,12 @@ internal fun WearDpiPage(
 ) {
     val systemDpi = state.systemDpi.coerceAtLeast(1)
     val pending = (state.tempDpi.toFloat() / systemDpi).coerceIn(0.75f, 1.5f)
+    // Turning the Xiaomi Watch 5 mode on asks first, as it may not suit the watch it runs on.
+    val xiaomiWatch5Dialog = rememberWearConfirmDialog(
+        stringResource(R.string.wear_xiaomi_watch5_mode),
+        stringResource(R.string.wear_xiaomi_watch5_warning),
+        destructive = true,
+    ) { preferenceViewModel.setXiaomiWatch5Mode(true) }
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_display_touch)) }
         SegmentedColumn(
@@ -351,6 +359,21 @@ internal fun WearDpiPage(
                     R.string.simple_mode -> stringResource(R.string.simple_mode_summary)
                     else -> null
                 },
+            )
+        }
+        // Recognized Xiaomi Watch 5 devices use the mode on their own; elsewhere it is a manual,
+        // confirmed choice. Either way the crown haptics follow it after the app restarts.
+        item {
+            WearSettingsSwitchWidget(
+                spec,
+                stringResource(R.string.wear_xiaomi_watch5_mode),
+                preferences.xiaomiWatch5Detected || preferences.xiaomiWatch5Mode,
+                { enabled -> if (enabled) xiaomiWatch5Dialog.show() else preferenceViewModel.setXiaomiWatch5Mode(false) },
+                enabled = !preferences.xiaomiWatch5Detected,
+                icon = Icons.TwoTone.Vibration,
+                secondaryLabel = stringResource(
+                    if (preferences.xiaomiWatch5Detected) R.string.wear_xiaomi_watch5_detected else R.string.wear_xiaomi_watch5_mode_summary,
+                ),
             )
         }
         item { WearSectionHeader(spec, stringResource(R.string.predictive_back_settings)) }

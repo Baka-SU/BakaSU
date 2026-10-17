@@ -641,6 +641,10 @@
     <string name="wear_uninstall_module">卸载模块</string>
     <string name="wear_uninstall_message">模块将在重启后移除。</string>
     <string name="wear_metamodule_uninstall_message">这会影响所有模块，元模块提供的功能（如挂载）将不再工作。</string>
+    <string name="wear_xiaomi_watch5_mode">启用 Xiaomi Watch 5 模式</string>
+    <string name="wear_xiaomi_watch5_mode_summary">使用小米手表 5 的表冠触感，重启应用后生效</string>
+    <string name="wear_xiaomi_watch5_detected">已识别为小米手表 5，自动启用</string>
+    <string name="wear_xiaomi_watch5_warning">表冠触感将改用小米手表 5 的接口。如果你的设备不是小米手表 5，触感可能异常或失效，请谨慎开启。重启应用后生效。</string>
     <string name="wear_template_view_online">查看线上范本</string>
     <string name="wear_template_online">线上范本</string>
     <string name="wear_template_online_empty">暂无线上范本</string>

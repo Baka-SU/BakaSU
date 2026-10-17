@@ -607,6 +607,10 @@
     <string name="wear_uninstall_module">Uninstall module</string>
     <string name="wear_uninstall_message">The module is removed after a reboot.</string>
     <string name="wear_metamodule_uninstall_message">This affects all modules: features the metamodule provides, such as mounting, will stop working.</string>
+    <string name="wear_xiaomi_watch5_mode">Enable Xiaomi Watch 5 mode</string>
+    <string name="wear_xiaomi_watch5_mode_summary">Xiaomi Watch 5 crown haptics; applies after a restart</string>
+    <string name="wear_xiaomi_watch5_detected">Xiaomi Watch 5 detected; on automatically</string>
+    <string name="wear_xiaomi_watch5_warning">Crown haptics will use the Xiaomi Watch 5 interface. On another watch they may feel wrong or stop working, so turn this on with care. It applies after the app restarts.</string>
     <string name="wear_template_view_online">View online templates</string>
     <string name="wear_template_online">Online templates</string>
     <string name="wear_template_online_empty">No online templates</string>
