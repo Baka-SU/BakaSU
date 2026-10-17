@@ -52,6 +52,51 @@ jobs:
         name: ksuinit-aarch64
         path: userspace/ksuinit/target/aarch64-linux-android/release/ksuinit
 
+  build-armv7:
+    runs-on: ${{ inputs.os }}
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+        
+    - name: Setup rustup
+      run: |
+        rustup update nightly
+        rustup target add armv7-linux-androideabi
+
+    - name: Setup NDK
+      uses: nttld/setup-ndk@v1
+      id: setup-ndk
+      with:
+        ndk-version: r29
+
+    - name: Setup armv7 rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: ksuinit-armv7
+        workspaces: userspace/ksuinit
+        cache-targets: true
+        add-job-id-key: false
+        add-rust-environment-hash-key: false
+        save-if: ${{ github.event_name != 'pull_request' }}
+
+    - name: Build ksuinit
+      env:
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+      run: |
+        source .github/scripts/setup-rust-build.sh armv7a-linux-androideabi 26 armv7-linux-androideabi
+        BUILTINS="$($CLANG_PATH --print-resource-dir)/lib/linux/libclang_rt.builtins-arm-android.a"
+        test -f "$BUILTINS"
+        export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-Wl,-z,max-page-size=16384 -C link-arg=-Wno-unused-command-line-argument -C link-arg=$BUILTINS"
+        cd userspace/ksuinit
+        cargo build --package ksuinit --target=armv7-linux-androideabi --release
+
+    - name: Upload ksuinit artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: ksuinit-armv7
+        path: userspace/ksuinit/target/armv7-linux-androideabi/release/ksuinit
+
   build-x86_64:
     runs-on: ${{ inputs.os }}
     steps:
@@ -131,7 +176,7 @@ jobs:
         BUILTINS="$($CLANG_PATH --print-resource-dir)/lib/linux/libclang_rt.builtins-riscv64-android.a"
         export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-Wl,-z,max-page-size=16384 -C link-arg=-Wno-unused-command-line-argument -C link-arg=$BUILTINS"
         cd userspace/ksuinit
-        cargo +nightly build -Z build-std=std,panic_abort --package ksuinit --target=riscv64-linux-android --release
+        cargo +nightly build -Z build-std=std,panic_abort --package ksuinit --target=riscv64-linux-android --release --config ../../.github/riscv64-cargo.toml
 
     - name: Upload ksuinit artifact
       uses: actions/upload-artifact@v7
