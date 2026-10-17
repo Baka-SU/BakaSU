@@ -95,6 +95,8 @@ class ScriptRepository(
         ksuVersionCode = BuildConfig.VERSION_CODE,
         kernelVersionCode = Natives.version,
         lateLoad = Natives.isLateLoadMode,
+        uapiVersion = Natives.managerUAPIVersion,
+        lkmMode = Natives.isLkmMode,
     )
 
     /** module.prop of [uri] if it is a one-shot script ZIP, otherwise (or when unreadable) null. */

@@ -6,6 +6,8 @@ data class ScriptHostInfo(
     val ksuVersionCode: Int,
     val kernelVersionCode: Int,
     val lateLoad: Boolean,
+    val uapiVersion: Int,
+    val lkmMode: Boolean,
 )
 
 /**
@@ -39,9 +41,16 @@ object ScriptCommand {
         val env = mutableListOf(
             "ASH_STANDALONE" to "1",
             "KSU" to "true",
-            "KSU_VER" to host.ksuVersion,
-            "KSU_VER_CODE" to host.ksuVersionCode.toString(),
+            "BAKASU" to "true",
             "KSU_KERNEL_VER_CODE" to host.kernelVersionCode.toString(),
+            "KSU_VER_CODE" to host.ksuVersionCode.toString(),
+            "KSU_VER" to host.ksuVersion,
+            "KSU_UAPI_VER" to host.uapiVersion.toString(),
+            "KSU_RUNTIME_MODE" to when {
+                host.lateLoad -> "late-load"
+                host.lkmMode -> "lkm"
+                else -> "built-in"
+            },
         )
         if (host.lateLoad) env += "KSU_LATE_LOAD" to "1"
         env += "KSU_MODULE" to moduleId

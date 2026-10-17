@@ -1,13 +1,13 @@
 package org.bakasu.bakasu.data.script
 
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonNull
+import com.google.gson.JsonObject
+import com.google.gson.JsonParseException
+import com.google.gson.JsonPrimitive
+import com.google.gson.Strictness
 
 /*
  * params.json (schemaVersion 1) of a one-shot script: the parameters the manager asks for
@@ -112,10 +112,13 @@ sealed class ScriptParam {
         override fun canonical(value: String): String = parseInteger(value)!!.toString()
 
         companion object {
-            private val INTEGER = Regex("^[+-]?[0-9]{1,10}$")
-
             /** Values are int32 like min / max / default; anything outside is not an integer. */
-            fun parseInteger(value: String): Int? = value.trim().takeIf(INTEGER::matches)?.toIntOrNull()
+            fun parseInteger(value: String): Int? {
+                val text = value.trim()
+                val digits = text.removePrefix("+").removePrefix("-")
+                if (digits.length !in 1..10 || digits.any { it !in '0'..'9' }) return null
+                return text.toIntOrNull()
+            }
         }
     }
 
@@ -144,30 +147,23 @@ object ScriptParamsParser {
     const val DEFAULT_MAX_LENGTH = 256
     const val MAX_MAX_LENGTH = 1024
 
-    private val KEY = Regex("^[A-Z][A-Z0-9_]{0,31}$")
-    private val JSON_NUMBER = Regex("^-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?$")
-    private val OPTION_VALUE = Regex("^[A-Za-z0-9._-]{1,64}$")
-    private val JSON = Json { isLenient = false }
-
     private fun fail(message: String): Nothing = throw ScriptParamsException(message)
 
     fun parse(source: String): ScriptParams {
         // The registry validator decodes params.json with a BOM-stripping TextDecoder.
         val text = source.removePrefix("\uFEFF")
         val root = try {
-            JSON.parseToJsonElement(text)
-        } catch (e: SerializationException) {
+            parseScriptJson(text)
+        } catch (e: JsonParseException) {
             fail("Malformed JSON: ${e.message}")
         } catch (e: IllegalArgumentException) {
             fail("Malformed JSON: ${e.message}")
         } as? JsonObject ?: fail("params.json must be an object")
-        // kotlinx keeps the last of duplicate keys; the registry rejects them, so do we.
-        findDuplicateKey(text)?.let { fail("Duplicate JSON key: $it") }
 
         val version = root["schemaVersion"]?.let(::integerOf)
         if (version != SCHEMA_VERSION) fail("Unsupported schemaVersion: ${root["schemaVersion"]}")
         val array = root["params"] as? JsonArray ?: fail("params must be an array")
-        if (array.size > MAX_PARAMS) fail("At most $MAX_PARAMS params are allowed")
+        if (array.size() > MAX_PARAMS) fail("At most $MAX_PARAMS params are allowed")
 
         val seen = HashSet<String>()
         val params = array.mapIndexed { index, element ->
@@ -179,7 +175,7 @@ object ScriptParamsParser {
 
     private fun parseParam(obj: JsonObject, index: Int): ScriptParam {
         val key = obj.string("key") ?: fail("params[$index].key is required")
-        if (!KEY.matches(key)) fail("Invalid key: $key")
+        if (key.length !in 1..32 || key[0] !in 'A'..'Z' || key.any { it !in 'A'..'Z' && it !in '0'..'9' && it != '_' }) fail("Invalid key: $key")
         val label = text(obj["label"], "$key.label") ?: fail("$key.label is required")
         val description = text(obj["description"], "$key.description")
         val default = obj["default"]?.takeIf { it !is JsonNull }
@@ -189,21 +185,23 @@ object ScriptParamsParser {
                 key,
                 label,
                 description,
-                default = default?.let { (it as? JsonPrimitive)?.takeIf { p -> !p.isString }?.booleanOrNull ?: fail("$key.default must be a boolean") }
+                default = default?.let { (it as? JsonPrimitive)?.takeIf { p -> p.isBoolean }?.asBoolean ?: fail("$key.default must be a boolean") }
                     ?: false,
             )
 
             "enum" -> {
                 val array = obj["options"] as? JsonArray ?: fail("$key.options must be an array")
-                if (array.size !in 1..MAX_OPTIONS) fail("$key.options must have 1..$MAX_OPTIONS entries")
+                if (array.size() !in 1..MAX_OPTIONS) fail("$key.options must have 1..$MAX_OPTIONS entries")
                 val values = HashSet<String>()
                 val options = array.map { e ->
                     val o = e as? JsonObject ?: fail("$key.options entries must be objects")
-                    val value = o.string("value")?.takeIf(OPTION_VALUE::matches) ?: fail("$key: invalid option value")
+                    val value = o.string("value")?.takeIf { v ->
+                        v.length in 1..64 && v.all { it in 'A'..'Z' || it in 'a'..'z' || it in '0'..'9' || it in "._-" }
+                    } ?: fail("$key: invalid option value")
                     if (!values.add(value)) fail("$key: duplicate option $value")
                     ScriptParam.EnumOption(value, text(o["label"], "$key.$value.label"))
                 }
-                val defaultValue = default?.let { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content ?: fail("$key.default must be a string") }
+                val defaultValue = default?.let { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.asString ?: fail("$key.default must be a string") }
                     ?: options.first().value
                 ScriptParam.Choice(key, label, description, options, defaultValue)
             }
@@ -213,9 +211,9 @@ object ScriptParamsParser {
                     if (it !in 1..MAX_MAX_LENGTH) fail("$key.maxLength must be 1..$MAX_MAX_LENGTH")
                 } ?: DEFAULT_MAX_LENGTH
                 val required = obj["required"]?.takeIf { it !is JsonNull }?.let {
-                    (it as? JsonPrimitive)?.takeIf { p -> !p.isString }?.booleanOrNull ?: fail("$key.required must be a boolean")
+                    (it as? JsonPrimitive)?.takeIf { p -> p.isBoolean }?.asBoolean ?: fail("$key.required must be a boolean")
                 } ?: false
-                val defaultValue = default?.let { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content ?: fail("$key.default must be a string") }
+                val defaultValue = default?.let { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.asString ?: fail("$key.default must be a string") }
                     ?: ""
                 // An empty default is always fine, even when required: the user has to fill it in.
                 ScriptParam.Text(key, label, description, defaultValue, maxLength, required)
@@ -235,9 +233,7 @@ object ScriptParamsParser {
         return param
     }
 
-    private fun JsonObject.string(name: String): String? = (this[name] as? JsonPrimitive)?.takeIf { it.isString }?.content
-
-    /** A plain JSON integer (no fraction or exponent) within int32. */
+    private fun JsonObject.string(name: String): String? = (this[name] as? JsonPrimitive)?.takeIf { it.isString }?.asString
 
     /**
      * A JSON number that is a 32-bit integer *as a double*, like JSON.parse + zod `.int()` in
@@ -245,8 +241,8 @@ object ScriptParamsParser {
      */
     private fun integerOf(element: JsonElement): Int? {
         val p = element as? JsonPrimitive ?: return null
-        if (p.isString || !JSON_NUMBER.matches(p.content)) return null
-        val d = p.content.toDoubleOrNull() ?: return null
+        if (!p.isNumber) return null
+        val d = p.asDouble
         if (d != Math.floor(d) || d < Int.MIN_VALUE || d > Int.MAX_VALUE) return null
         return d.toInt()
     }
@@ -254,67 +250,6 @@ object ScriptParamsParser {
     private fun JsonObject.integer(name: String, key: String): Int? {
         val e = this[name]?.takeIf { it !is JsonNull } ?: return null
         return integerOf(e) ?: fail("$key.$name must be a 32-bit integer")
-    }
-
-    /**
-     * First key that occurs twice in one object of the (already parsed, so valid) JSON
-     * [text], or null.
-     */
-    internal fun findDuplicateKey(text: String): String? {
-        class Frame(val keys: HashSet<String>?, var expectKey: Boolean)
-
-        val stack = ArrayDeque<Frame>()
-        var i = 0
-        while (i < text.length) {
-            when (text[i]) {
-                '{' -> stack.addLast(Frame(HashSet(), expectKey = true))
-
-                '[' -> stack.addLast(Frame(null, expectKey = false))
-
-                '}', ']' -> stack.removeLastOrNull()
-
-                ',' -> stack.lastOrNull()?.let { if (it.keys != null) it.expectKey = true }
-
-                '"' -> {
-                    val sb = StringBuilder()
-                    i++
-                    while (i < text.length && text[i] != '"') {
-                        if (text[i] == '\\' && i + 1 < text.length) {
-                            i++
-                            when (val e = text[i]) {
-                                'u' -> {
-                                    text.substring(i + 1, minOf(i + 5, text.length)).toIntOrNull(16)?.let { sb.append(it.toChar()) }
-                                    i += 4
-                                }
-
-                                'b' -> sb.append('\b')
-
-                                'f' -> sb.append('\u000C')
-
-                                'n' -> sb.append('\n')
-
-                                'r' -> sb.append('\r')
-
-                                't' -> sb.append('\t')
-
-                                else -> sb.append(e)
-                            }
-                        } else {
-                            sb.append(text[i])
-                        }
-                        i++
-                    }
-                    val top = stack.lastOrNull()
-                    if (top?.keys != null && top.expectKey) {
-                        val key = sb.toString()
-                        if (!top.keys.add(key)) return key
-                        top.expectKey = false
-                    }
-                }
-            }
-            i++
-        }
-        return null
     }
 
     /** Trimmed first, like the validator's zod `.trim().min(1).max(200)`. */
@@ -326,7 +261,11 @@ object ScriptParamsParser {
 
     private fun text(element: JsonElement?, what: String): String? = when (element) {
         null, is JsonNull -> null
-        is JsonPrimitive -> if (element.isString) checkText(element.content, what) else fail("$what must be a string")
+        is JsonPrimitive -> if (element.isString) checkText(element.asString, what) else fail("$what must be a string")
         else -> fail("$what must be a string")
     }
 }
+
+internal val scriptJson = GsonBuilder().setStrictness(Strictness.STRICT).create()
+
+internal fun parseScriptJson(text: String): JsonElement = scriptJson.fromJson(text, JsonElement::class.java) ?: JsonNull.INSTANCE

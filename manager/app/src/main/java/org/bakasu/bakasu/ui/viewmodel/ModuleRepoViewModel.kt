@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +27,7 @@ import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
 import org.bakasu.bakasu.domain.usecase.SetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.TransliterateTextUseCase
 
-enum class CatalogContent { REPOSITORIES, SOURCE_UNAVAILABLE, LOADING, MODULES, FAILED, SEARCH_EMPTY, SOURCE_EMPTY }
+enum class CatalogContent { SOURCE_UNAVAILABLE, LOADING, MODULES, FAILED, SEARCH_EMPTY, SOURCE_EMPTY }
 
 data class ModuleRepoUiState(
     val modules: List<CatalogModule> = emptyList(),
@@ -41,10 +42,9 @@ data class ModuleRepoUiState(
 ) {
     val content: CatalogContent get() = when {
         repositoryUrl != null && sources.none { it.url == repositoryUrl } -> CatalogContent.SOURCE_UNAVAILABLE
-        repositoryUrl == null && search.isBlank() -> CatalogContent.REPOSITORIES
         modules.isNotEmpty() -> CatalogContent.MODULES
         isRefreshing -> CatalogContent.LOADING
-        sources.any { (repositoryUrl == null || it.url == repositoryUrl) && it.url in failures } -> CatalogContent.FAILED
+        sources.any { it.url == repositoryUrl && it.url in failures } -> CatalogContent.FAILED
         search.isNotBlank() -> CatalogContent.SEARCH_EMPTY
         else -> CatalogContent.SOURCE_EMPTY
     }
@@ -68,9 +68,27 @@ class ModuleRepoViewModel(
     private val getModule: GetCatalogModuleUseCase,
     private val isCurrent: IsCatalogModuleCurrentUseCase,
     private val observeInstalledModules: ObserveInstalledModulesUseCase,
-    private val repositoryUrl: String? = null,
+    private val savedState: SavedStateHandle,
+    repositoryUrl: String? = null,
 ) : ViewModel() {
     private val search = MutableStateFlow("")
+    private val selectedRepository = MutableStateFlow<String?>(savedState["selected-repository"] ?: repositoryUrl)
+    private val selectedSources = combine(observeSources.sources, selectedRepository) { sources, selected ->
+        val url = sources.firstOrNull { it.url == selected }?.url ?: sources.firstOrNull()?.url
+        sources to url
+    }
+
+    private fun activeRepository(): String? = observeSources.sources.value.let { sources ->
+        sources.firstOrNull { it.url == selectedRepository.value }?.url ?: sources.firstOrNull()?.url
+    }
+
+    fun selectRepository(url: String) {
+        if (observeSources.sources.value.none { it.url == url }) return
+        val changed = activeRepository() != url
+        savedState["selected-repository"] = url
+        selectedRepository.value = url
+        if (changed) search.value = ""
+    }
     private val sortStarsFirst = MutableStateFlow(
         getBooleanPreference("module_repo_sort_star_first", false),
     )
@@ -82,19 +100,20 @@ class ModuleRepoViewModel(
 
     private val catalogState = combine(
         observeModules(),
-        observeSources.sources,
+        selectedSources,
         search,
         sortStarsFirst,
         observeInstalledModules(),
-    ) { modules, sources, query, starsFirst, installed ->
+    ) { modules, selection, query, starsFirst, installed ->
         visibleState(
             ModuleRepoUiState(
                 modules = modules,
                 sortStargazerCountFirst = starsFirst,
                 search = query,
+                repositoryUrl = selection.second,
                 installedVersions = installed.modules.associate { it.id to it.versionCode },
             ),
-            sources,
+            selection.first,
         )
     }.flowOn(Dispatchers.Default)
     val state: StateFlow<ModuleRepoUiState> = combine(
@@ -103,7 +122,7 @@ class ModuleRepoViewModel(
         observeSources.failures,
         pullRefreshing,
     ) { catalog, refreshingSources, failures, pulling ->
-        val refreshing = refreshingSources.any { repositoryUrl == null || it == repositoryUrl }
+        val refreshing = refreshingSources.any { it == catalog.repositoryUrl }
         catalog.copy(isRefreshing = refreshing, isPullRefreshing = pulling && refreshing, failures = failures)
     }.stateIn(
         viewModelScope,
@@ -112,7 +131,7 @@ class ModuleRepoViewModel(
             sortStargazerCountFirst = sortStarsFirst.value,
             isRefreshing = true,
             sources = observeSources.sources.value,
-            repositoryUrl = repositoryUrl,
+            repositoryUrl = activeRepository(),
             failures = observeSources.failures.value,
         ),
     )
@@ -123,7 +142,7 @@ class ModuleRepoViewModel(
         val sourceUrls = sources.map { it.url }.toSet()
         val result = catalog.copy(
             modules = catalog.modules.filter { module ->
-                module.repositoryUrl in sourceUrls && (repositoryUrl == null || module.repositoryUrl == repositoryUrl) &&
+                module.repositoryUrl in sourceUrls && module.repositoryUrl == catalog.repositoryUrl &&
                     (
                         module.moduleId.contains(catalog.search, true) || module.moduleName.contains(catalog.search, true) ||
                             transliterateText(module.moduleName).contains(catalog.search, true)
@@ -133,14 +152,13 @@ class ModuleRepoViewModel(
                     .thenByDescending { if (catalog.sortStargazerCountFirst) it.stargazerCount else 0 },
             ),
             sources = sources,
-            repositoryUrl = repositoryUrl,
         )
         visibleCatalogCache = VisibleCatalogCache(catalog, sources, result)
         return result
     }
 
     fun resolveModule(catalogId: String): CatalogModule? = observeModules().value.firstOrNull { module ->
-        module.catalogId == catalogId && (repositoryUrl == null || module.repositoryUrl == repositoryUrl) &&
+        module.catalogId == catalogId && module.repositoryUrl == activeRepository() &&
             observeSources.sources.value.any { it.url == module.repositoryUrl }
     }
 
@@ -168,7 +186,7 @@ class ModuleRepoViewModel(
             if (fromPull && pullRefreshing.value) return@launch
             if (fromPull) pullRefreshing.value = true
             try {
-                refreshCatalog(repositoryUrl, force)
+                activeRepository()?.let { refreshCatalog(it, force) }
             } finally {
                 if (fromPull) pullRefreshing.value = false
             }

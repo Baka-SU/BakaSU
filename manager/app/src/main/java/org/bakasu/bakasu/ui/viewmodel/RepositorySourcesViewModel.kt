@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.bakasu.bakasu.domain.model.RepositoryApiType
 import org.bakasu.bakasu.domain.model.RepositoryFailure
 import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.usecase.AddModuleRepositoryUseCase
@@ -23,6 +24,7 @@ data class RepositorySourcesUiState(
     val discovered: List<RepositorySource> = emptyList(),
     val failures: Map<String, RepositoryFailure> = emptyMap(),
     val url: String = "",
+    val apiType: RepositoryApiType = RepositoryApiType.KERNEL_SU,
     val discovering: Boolean = false,
     val busy: Boolean = false,
     val addingUrl: String? = null,
@@ -39,7 +41,13 @@ class RepositorySourcesViewModel(
     private val removeRepository: RemoveModuleRepositoryUseCase,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
-    private val local = MutableStateFlow(RepositorySourcesUiState(url = savedState["repository-url"] ?: ""))
+    private val local = MutableStateFlow(
+        RepositorySourcesUiState(
+            url = savedState["repository-url"] ?: "",
+            apiType = RepositoryApiType.entries.firstOrNull { it.name == savedState.get<String>("repository-api-type") }
+                ?: RepositoryApiType.KERNEL_SU,
+        ),
+    )
     private var discoveryLoaded = false
     val state = combine(local, observe.sources, observe.failures) { state, sources, failures ->
         state.copy(sources = sources, failures = failures)
@@ -53,6 +61,12 @@ class RepositorySourcesViewModel(
         savedState["repository-url"] = value
         local.update { it.copy(url = value, error = null, added = null) }
     }
+
+    fun setApiType(value: RepositoryApiType) {
+        savedState["repository-api-type"] = value.name
+        local.update { it.copy(apiType = value, error = null, added = null) }
+    }
+
     fun consumeAdded() {
         local.update { it.copy(added = null) }
     }
@@ -70,8 +84,12 @@ class RepositorySourcesViewModel(
         }
     }
 
-    fun add(url: String = local.value.url, metadata: RepositorySource? = null) = perform(addingUrl = url) {
-        addRepository(url, metadata).onSuccess { source -> local.update { it.copy(added = source) } }
+    fun add(
+        url: String = local.value.url,
+        metadata: RepositorySource? = null,
+        apiType: RepositoryApiType = metadata?.apiType ?: local.value.apiType,
+    ) = perform(addingUrl = url) {
+        addRepository(url, metadata, apiType).onSuccess { source -> local.update { it.copy(added = source) } }
             .onFailure { error -> local.update { it.copy(error = RepositoryFailure.from(error)) } }
     }
 

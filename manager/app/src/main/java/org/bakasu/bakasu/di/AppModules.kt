@@ -289,7 +289,7 @@ val repositoryModule = module {
     singleOf(::ModuleCatalogRepository)
     single { ModuleReleaseRepository(get(), get(applicationScopeQualifier)) }
     singleOf(::ModuleIconRepository)
-    singleOf(::KernelSuRegistryRepository)
+    single { KernelSuRegistryRepository(get(), get(), get(), get()) }
     singleOf(::RepositorySourceStore)
     singleOf(::ModuleRepository)
     singleOf(::ModulePreferencesRepository)
@@ -459,7 +459,7 @@ val viewModelModule = module {
     viewModelOf(::ModuleViewModel)
     viewModelOf(::SuperUserViewModel)
     viewModelOf(::SuSFSViewModel)
-    viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
+    viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
     viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get(), get()) }
     viewModelOf(::RepositorySourcesViewModel)
     viewModelOf(::TemplateViewModel)

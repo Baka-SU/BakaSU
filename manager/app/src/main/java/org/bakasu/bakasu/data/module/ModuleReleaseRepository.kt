@@ -55,7 +55,7 @@ class ModuleReleaseRepository(
             send(
                 ModuleReleaseDetails(
                     notes = release.descriptionHTML.takeIf(String::isNotBlank)?.let {
-                        ModuleReadme(it, RepositorySource.KERNEL_SU_URL, DocumentFormat.HTML, module.documentPolicy())
+                        ModuleReadme(it, module.repositoryUrl, DocumentFormat.HTML, module.documentPolicy())
                     },
                 ),
             )

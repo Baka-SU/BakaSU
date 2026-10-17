@@ -1,5 +1,9 @@
 package org.bakasu.bakasu.domain.model
 
+import java.io.IOException
+
+enum class RepositoryApiType { KERNEL_SU, MMRL }
+
 data class RepositorySource(
     val url: String,
     val name: String,
@@ -7,6 +11,7 @@ data class RepositorySource(
     val description: String = "",
     val customName: String = "",
     val moduleCount: Int? = null,
+    val apiType: RepositoryApiType = if (url == KERNEL_SU_URL) RepositoryApiType.KERNEL_SU else RepositoryApiType.MMRL,
 ) {
     val displayName: String get() = customName.ifBlank { name }
     val isBuiltIn: Boolean get() = url == KERNEL_SU_URL
@@ -18,15 +23,13 @@ data class RepositorySource(
 
 enum class RepositoryError { INVALID_URL, INVALID_FEED, UNSUPPORTED_FORMAT, NETWORK, OFFLINE, STORAGE }
 
+class HttpStatusException(val statusCode: Int) : IOException("HTTP $statusCode")
+
 data class RepositoryFailure(val reason: RepositoryError, val httpStatus: Int? = null) {
     companion object {
         fun from(error: Throwable): RepositoryFailure = RepositoryFailure(
             reason = (error as? RepositoryException)?.reason ?: RepositoryError.NETWORK,
-            httpStatus = if (error is IllegalStateException) {
-                Regex("HTTP ([1-5][0-9]{2})").matchEntire(error.message.orEmpty())?.groupValues?.get(1)?.toIntOrNull()
-            } else {
-                null
-            },
+            httpStatus = (error as? HttpStatusException)?.statusCode,
         )
     }
 }

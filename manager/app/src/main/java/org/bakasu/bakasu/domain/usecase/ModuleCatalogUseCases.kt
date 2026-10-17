@@ -14,6 +14,7 @@ import org.bakasu.bakasu.domain.model.DocumentPolicy
 import org.bakasu.bakasu.domain.model.ModuleReadme
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
+import org.bakasu.bakasu.domain.model.RepositoryApiType
 import org.bakasu.bakasu.domain.model.RepositorySource
 
 class ObserveCatalogModulesUseCase(private val repository: ModuleCatalogRepository) {
@@ -62,8 +63,8 @@ class GetModuleUpdateChangelogUseCase(
     private val network: NetworkRequestRepository,
 ) {
     suspend operator fun invoke(url: String, configuredSource: String? = null): Result<ModuleReadme> = try {
-        if (registry.isRegistryDocument(url)) {
-            Result.success(registry.changelog(url) ?: error("No changelog"))
+        if (registry.isRegistryDocument(url, configuredSource.orEmpty())) {
+            Result.success(registry.changelog(url, configuredSource.orEmpty()) ?: error("No changelog"))
         } else {
             val policy = DocumentPolicy.PublicHttps(configuredSource?.takeIf(RegistryUrls::isHttpsUrl))
             network.request(url, documentPolicy = policy).map { it.toDocument(policy) }
@@ -85,7 +86,7 @@ class DiscoverModuleRepositoriesUseCase(private val repository: ModuleCatalogRep
 }
 
 class AddModuleRepositoryUseCase(private val repository: ModuleCatalogRepository) {
-    suspend operator fun invoke(url: String, metadata: RepositorySource? = null) = repository.add(url, metadata)
+    suspend operator fun invoke(url: String, metadata: RepositorySource? = null, apiType: RepositoryApiType = metadata?.apiType ?: RepositoryApiType.MMRL) = repository.add(url, metadata, apiType)
 }
 
 class RenameModuleRepositoryUseCase(private val repository: ModuleCatalogRepository) {

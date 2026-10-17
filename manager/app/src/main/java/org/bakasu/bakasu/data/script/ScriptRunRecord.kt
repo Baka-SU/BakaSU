@@ -1,10 +1,12 @@
 package org.bakasu.bakasu.data.script
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import androidx.annotation.Keep
+import com.google.gson.JsonNull
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 
 /** The last run of a one-shot script; kept locally, scripts have no installed state. */
-@Serializable
+@Keep
 data class ScriptRunRecord(
     val id: String,
     val versionCode: Int? = null,
@@ -14,13 +16,24 @@ data class ScriptRunRecord(
 ) {
     val outcome: ScriptOutcome get() = ScriptOutcome.of(exitCode)
 
-    fun encode(): String = JSON.encodeToString(serializer(), this)
+    fun encode(): String = scriptJson.toJson(this)
 
     companion object {
-        private val JSON = Json { ignoreUnknownKeys = true }
-
         /** Null for missing or unreadable data, or a record of another id. */
-        fun decode(text: String?, id: String): ScriptRunRecord? = text?.let { runCatching { JSON.decodeFromString(serializer(), it) }.getOrNull() }?.takeIf { it.id == id }
+        fun decode(text: String?, id: String): ScriptRunRecord? {
+            if (text == null) return null
+            return runCatching {
+                val obj = parseScriptJson(text) as? JsonObject ?: return null
+                val storedId = (obj["id"] as? JsonPrimitive)?.takeIf { p -> p.isString }?.asString ?: return null
+                if (storedId != id) return null
+                val versionCode = obj["versionCode"]?.takeIf { value -> value !is JsonNull }?.let { value ->
+                    (value as? JsonPrimitive)?.takeIf { p -> p.isNumber }?.asString?.toIntOrNull() ?: return null
+                }
+                val time = (obj["time"] as? JsonPrimitive)?.takeIf { p -> p.isNumber }?.asString?.toLongOrNull() ?: return null
+                val exitCode = (obj["exitCode"] as? JsonPrimitive)?.takeIf { p -> p.isNumber }?.asString?.toIntOrNull() ?: return null
+                ScriptRunRecord(storedId, versionCode, time, exitCode)
+            }.getOrNull()
+        }
     }
 }
 

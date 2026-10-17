@@ -196,8 +196,7 @@ fun GithubMarkdown(
         }
     }
     val rendered = renderedState.value
-    val contentPolicy = """<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-$documentScrollHash'; script-src-attr 'none'; connect-src 'none'; worker-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; img-src https: data:" />"""
-    val html = remember(rendered, contentPolicy, dir, isDark, bgDefault, bgMuted, bgNeutralMuted, bgAttentionMuted, fgLink, linkStyles) {
+    val html = remember(rendered, dir, isDark, bgDefault, bgMuted, bgNeutralMuted, bgAttentionMuted, fgLink, linkStyles) {
         if (rendered == null) {
             null
         } else {
@@ -207,7 +206,7 @@ fun GithubMarkdown(
         <head>
           <meta charset='utf-8'/>
           <meta name='viewport' content='width=device-width, initial-scale=1'/>
-          $contentPolicy
+          <meta http-equiv="Content-Security-Policy" content="script-src 'sha256-$documentScrollHash'; script-src-attr 'none'; connect-src 'none'; worker-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; img-src https: data:" />
           <link rel="stylesheet" href="$cssHref" />
           <style>
             html, body { margin:0; padding:0; }

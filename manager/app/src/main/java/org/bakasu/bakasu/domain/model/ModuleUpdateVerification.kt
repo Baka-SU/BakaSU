@@ -8,6 +8,7 @@ sealed interface ModuleUpdateVerification {
         val release: ModuleRelease,
         val moduleId: String,
         val buildId: String,
+        val repositoryUrl: String = RepositorySource.KERNEL_SU_URL,
     ) : ModuleUpdateVerification
     data object Rejected : ModuleUpdateVerification
 }

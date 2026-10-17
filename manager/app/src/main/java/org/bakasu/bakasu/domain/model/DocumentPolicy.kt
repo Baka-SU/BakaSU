@@ -32,7 +32,10 @@ sealed class DocumentPolicy : Serializable {
     }
 
     fun allowsPrivateAddress(url: String): Boolean {
-        val origin = (this as? PublicHttps)?.privateOrigin ?: return false
+        val origin = when (this) {
+            is PublicHttps -> privateOrigin ?: return false
+            is SameOrigin -> this.origin
+        }
         val uri = httpsUri(url) ?: return false
         return sameOrigin(uri, httpsUri(origin)!!)
     }
@@ -49,7 +52,7 @@ sealed class DocumentPolicy : Serializable {
 }
 
 fun CatalogModule.documentPolicy(): DocumentPolicy = if (registryMetadata != null || repositoryUrl == RepositorySource.KERNEL_SU_URL) {
-    DocumentPolicy.SameOrigin(RepositorySource.KERNEL_SU_URL)
+    DocumentPolicy.SameOrigin(repositoryUrl)
 } else {
     DocumentPolicy.PublicHttps(repositoryUrl)
 }

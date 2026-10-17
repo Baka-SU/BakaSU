@@ -15,10 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.DeleteOutline
 import androidx.compose.material.icons.twotone.Edit
@@ -62,6 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.RepositoryApiType
 import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.ui.component.CatalogCard
 import org.bakasu.bakasu.ui.component.CatalogCardHeading
@@ -75,7 +74,10 @@ import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.component.rememberRepositoryScrollBehavior
 import org.bakasu.bakasu.ui.component.repositoryErrorText
+import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
+import org.bakasu.bakasu.ui.component.settings.SettingsDropdownWidget
+import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
@@ -91,12 +93,15 @@ fun AddRepositoryScreen() {
     val viewModel = koinViewModel<RepositorySourcesViewModel>(key = "add-repository")
     val state by viewModel.state.collectAsStateWithLifecycle()
     val navigator = LocalNavigator.current
-    val pager = rememberPagerState { 2 }
+    val pager = rememberPagerState(initialPage = 1) { 2 }
     val discoverScroll = rememberLazyListState()
-    val customScroll = rememberScrollState()
+    val customScroll = rememberLazyListState()
     val scrollBehavior = rememberRepositoryScrollBehavior(pager.currentPage)
     val scope = rememberCoroutineScope()
-    val titles = listOf(stringResource(R.string.repo_discover), stringResource(R.string.repo_custom_url))
+    val titles = listOf(stringResource(R.string.repo_discover), stringResource(R.string.repo_server_settings))
+    val apiTypes = listOf(RepositoryApiType.KERNEL_SU, RepositoryApiType.MMRL)
+    val apiTypeLabels = listOf(stringResource(R.string.repo_api_kernel_su), stringResource(R.string.repo_api_mmrl))
+    val configuredSourcesTitle = stringResource(R.string.repo_configured_sources)
     LaunchedEffect(Unit) { viewModel.loadDiscovery() }
     LaunchedEffect(state.added?.url) {
         if (state.added != null) {
@@ -105,7 +110,7 @@ fun AddRepositoryScreen() {
         }
     }
     RepositoryPageScaffold(
-        title = stringResource(R.string.repo_add_repository),
+        title = stringResource(R.string.repo_configure),
         scrollBehavior = scrollBehavior,
         topBarContent = {
             PrimaryTabRow(selectedTabIndex = pager.currentPage, containerColor = Color.Transparent) {
@@ -195,7 +200,7 @@ fun AddRepositoryScreen() {
                                     FilledTonalLoadingButton(
                                         text = stringResource(R.string.add),
                                         loading = adding,
-                                        onClick = { viewModel.add(source.url, source) },
+                                        onClick = { viewModel.add(source.url, source, RepositoryApiType.MMRL) },
                                         enabled = !state.busy,
                                     )
                                 }
@@ -224,31 +229,73 @@ fun AddRepositoryScreen() {
                     }
                 }
             } else {
-                Column(
-                    Modifier.fillMaxSize().verticalScroll(customScroll).padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = customScroll,
+                    contentPadding = PaddingValues(16.dp),
                 ) {
-                    OutlinedTextField(
-                        value = state.url,
-                        onValueChange = viewModel::setUrl,
-                        label = { Text(stringResource(R.string.repo_url)) },
-                        placeholder = { Text(stringResource(R.string.repo_url_hint)) },
-                        singleLine = true,
-                        enabled = !state.busy,
-                        isError = state.error != null,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = {
-                            if (state.url.isNotBlank() && !state.busy) viewModel.add()
-                        }),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    state.error?.let { Text(repositoryErrorText(it), color = MaterialTheme.colorScheme.error) }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        FilledTonalLoadingButton(
-                            text = stringResource(R.string.add),
-                            loading = state.addingUrl == state.url,
-                            onClick = { viewModel.add() },
-                            enabled = state.url.isNotBlank() && !state.busy,
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                                item {
+                                    SettingsDropdownWidget(
+                                        title = stringResource(R.string.repo_api_type),
+                                        description = apiTypeLabels[apiTypes.indexOf(state.apiType)],
+                                        iconPlaceholder = false,
+                                        enabled = !state.busy,
+                                        choice = apiTypes.indexOf(state.apiType),
+                                        data = apiTypeLabels,
+                                        onChoiceChange = { viewModel.setApiType(apiTypes[it]) },
+                                    )
+                                }
+                            }
+                            OutlinedTextField(
+                                value = state.url,
+                                onValueChange = viewModel::setUrl,
+                                label = { Text(stringResource(R.string.repo_server_url)) },
+                                placeholder = {
+                                    Text(
+                                        stringResource(
+                                            if (state.apiType == RepositoryApiType.KERNEL_SU) {
+                                                R.string.repo_url_kernel_su_hint
+                                            } else {
+                                                R.string.repo_url_mmrl_hint
+                                            },
+                                        ),
+                                    )
+                                },
+                                singleLine = true,
+                                enabled = !state.busy,
+                                isError = state.error != null,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = {
+                                    if (state.url.isNotBlank() && !state.busy) viewModel.add()
+                                }),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            state.error?.let { Text(repositoryErrorText(it), color = MaterialTheme.colorScheme.error) }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                FilledTonalLoadingButton(
+                                    text = stringResource(R.string.add),
+                                    loading = state.addingUrl == state.url,
+                                    onClick = { viewModel.add() },
+                                    enabled = state.url.isNotBlank() && !state.busy,
+                                )
+                            }
+                        }
+                    }
+                    lazySegmentColumn(
+                        state.sources,
+                        title = configuredSourcesTitle,
+                        noHorizontalPadding = true,
+                        key = { _, source -> source.url },
+                    ) { _, source ->
+                        RepositorySourceItem(
+                            source = source,
+                            busy = state.busy,
+                            failed = state.failures.containsKey(source.url),
+                            onRename = { name, onSaved -> viewModel.rename(source, name, onSaved) },
+                            onRemove = { viewModel.remove(source) },
                         )
                     }
                 }
@@ -262,14 +309,14 @@ internal fun RepositorySourceItem(
     source: RepositorySource,
     busy: Boolean,
     failed: Boolean,
-    onOpen: () -> Unit,
+    onOpen: (() -> Unit)? = null,
     onRename: (String, () -> Unit) -> Unit,
     onRemove: () -> Unit,
 ) {
     SettingsBaseWidget(
         title = null,
         iconPlaceholder = false,
-        onClick = { onOpen() },
+        onClick = onOpen?.let { open -> { _ -> open() } },
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         foreContent = {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

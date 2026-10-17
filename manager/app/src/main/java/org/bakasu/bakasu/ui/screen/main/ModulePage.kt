@@ -129,7 +129,6 @@ import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.MetaModuleStatus
 import org.bakasu.bakasu.domain.model.ModuleReadme
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
-import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleNameUseCase
 import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
@@ -811,9 +810,9 @@ private fun ModuleList(
             Result.success(
                 ModuleReadme(
                     registry.release.descriptionHTML.ifBlank { module.description },
-                    RepositorySource.KERNEL_SU_URL,
+                    registry.repositoryUrl,
                     if (registry.release.descriptionHTML.isNotBlank()) DocumentFormat.HTML else DocumentFormat.MARKDOWN,
-                    DocumentPolicy.SameOrigin(RepositorySource.KERNEL_SU_URL),
+                    DocumentPolicy.SameOrigin(registry.repositoryUrl),
                 ),
             )
         } else {

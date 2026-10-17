@@ -23,8 +23,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Add
+import androidx.compose.material.icons.twotone.ArrowDropDown
 import androidx.compose.material.icons.twotone.Download
-import androidx.compose.material.icons.twotone.MoreVert
 import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.Star
 import androidx.compose.material.icons.twotone.Warning
@@ -40,9 +40,11 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -67,6 +69,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -99,8 +102,6 @@ import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.component.rememberRepositoryInstallDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
 import org.bakasu.bakasu.ui.component.repositoryErrorText
-import org.bakasu.bakasu.ui.component.settings.LocalSegmentedItemShape
-import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Navigator
 import org.bakasu.bakasu.ui.navigation.Route
@@ -114,7 +115,6 @@ import org.bakasu.bakasu.ui.viewmodel.CatalogContent
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
-import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -133,15 +133,12 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
         parameters = { parametersOf(repositoryUrl) },
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val sourcesViewModel = koinViewModel<RepositorySourcesViewModel>(key = "repository-home-actions")
-    val sourcesState by sourcesViewModel.state.collectAsStateWithLifecycle()
     val layoutDirection = LocalLayoutDirection.current
     val snackBarHost = LocalSnackbarHost.current
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState),
     )
-    val repositoryListState = rememberLazyListState()
     val moduleListState = rememberLazyListState()
     var showDropdown by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullToRefreshState()
@@ -208,24 +205,27 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
         }
     }
 
-    LaunchedEffect(viewModel) { viewModel.refresh(force = false) }
+    LaunchedEffect(viewModel, uiState.repositoryUrl) {
+        viewModel.refresh(force = false)
+        moduleListState.scrollToItem(0)
+    }
 
     Scaffold(
         topBar = {
             SearchAppBar(
-                title = uiState.sources.firstOrNull { it.url == repositoryUrl }?.displayName ?: stringResource(R.string.module_repo),
+                title = uiState.sources.firstOrNull { it.url == uiState.repositoryUrl }?.displayName ?: stringResource(R.string.module_repo),
                 searchText = uiState.search,
                 onSearchTextChange = { query ->
                     viewModel.dispatch(ModuleRepoUiAction.Search(query))
                 },
                 dropdownContent = {
-                    if (repositoryUrl != null || uiState.search.isNotBlank()) {
+                    Box {
                         IconButton(
                             onClick = { showDropdown = true },
                         ) {
                             Icon(
-                                imageVector = Icons.TwoTone.MoreVert,
-                                contentDescription = stringResource(id = R.string.settings),
+                                imageVector = Icons.TwoTone.ArrowDropDown,
+                                contentDescription = stringResource(id = R.string.repo_configured_sources),
                             )
 
                             ModuleRepoDropdown(
@@ -251,13 +251,11 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) },
         floatingActionButton = {
-            if (repositoryUrl == null && uiState.search.isBlank()) {
-                ExtendedFloatingActionButton(
-                    onClick = { navigator.push(Route.AddRepository) },
-                    icon = { Icon(Icons.TwoTone.Add, contentDescription = null) },
-                    text = { Text(stringResource(R.string.repo_add_repository)) },
-                )
-            }
+            ExtendedFloatingActionButton(
+                onClick = { navigator.push(Route.AddRepository) },
+                icon = { Icon(Icons.TwoTone.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.repo_configure)) },
+            )
         },
     ) { innerPadding ->
         PullToRefreshBox(
@@ -278,35 +276,6 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
             },
         ) {
             when (uiState.content) {
-                CatalogContent.REPOSITORIES -> LazyColumn(
-                    state = repositoryListState,
-                    contentPadding = PaddingValues(
-                        start = innerPadding.calculateStartPadding(layoutDirection) + 16.dp,
-                        top = innerPadding.calculateTopPadding(),
-                        end = innerPadding.calculateEndPadding(layoutDirection) + 16.dp,
-                        bottom = innerPadding.calculateBottomPadding() + 88.dp,
-                    ),
-                    modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
-                ) {
-                    sourcesState.error?.let { error ->
-                        item {
-                            Text(repositoryErrorText(error), Modifier.padding(bottom = 12.dp), color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                    lazySegmentColumn(uiState.sources, noHorizontalPadding = true, itemSpacing = 12.dp, key = { _, source -> source.url }) { _, source ->
-                        CompositionLocalProvider(LocalSegmentedItemShape provides RoundedCornerShape(16.dp)) {
-                            RepositorySourceItem(
-                                source = source,
-                                busy = sourcesState.busy,
-                                failed = source.url in uiState.failures,
-                                onOpen = { navigator.push(Route.RepositoryModules(source.url)) },
-                                onRename = { name, onSaved -> sourcesViewModel.rename(source, name, onSaved) },
-                                onRemove = { sourcesViewModel.remove(source) },
-                            )
-                        }
-                    }
-                }
-
                 CatalogContent.MODULES -> LazyColumn(
                     state = moduleListState,
                     modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -314,13 +283,13 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                         start = innerPadding.calculateStartPadding(layoutDirection) + 16.dp,
                         top = innerPadding.calculateTopPadding(),
                         end = innerPadding.calculateEndPadding(layoutDirection) + 16.dp,
-                        bottom = innerPadding.calculateBottomPadding() + 16.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 88.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    val failures = uiState.sources.filter { repositoryUrl == null || it.url == repositoryUrl }
+                    val failures = uiState.sources.filter { it.url == uiState.repositoryUrl }
                         .mapNotNull { uiState.failures[it.url] }.distinct()
-                    if (repositoryUrl != null && failures.isNotEmpty() && !uiState.isRefreshing) {
+                    if (failures.isNotEmpty() && !uiState.isRefreshing) {
                         item {
                             TextButton(onClick = refreshModules) { Text(failures.map { repositoryErrorText(it) }.joinToString("\n")) }
                         }
@@ -329,7 +298,7 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                         OnlineModuleItem(
                             module = module,
                             installedVersionCode = uiState.installedVersions[module.moduleId],
-                            showSource = repositoryUrl == null,
+                            showSource = false,
                             onQuickInstall = { quickInstall(module) },
                             quickInstallLoading = resolvingModule == module.catalogId,
                             quickInstallEnabled = resolvingModule == null,
@@ -343,7 +312,7 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                 }
 
                 CatalogContent.FAILED -> Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                    val failures = uiState.sources.filter { repositoryUrl == null || it.url == repositoryUrl }
+                    val failures = uiState.sources.filter { it.url == uiState.repositoryUrl }
                         .mapNotNull { uiState.failures[it.url] }.distinct()
                     if (failures.all { it.reason == RepositoryError.OFFLINE }) {
                         NetworkRefreshContent(offline = true, onRetry = refreshModules, modifier = Modifier.fillMaxSize())
@@ -428,6 +397,25 @@ private fun ModuleRepoDropdown(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
     ) {
+        DropdownMenuGroup(shapes = MenuDefaults.groupShapes()) {
+            uiState.sources.forEachIndexed { index, source ->
+                val count = source.moduleCount
+                SelectableDropdownMenuItem(
+                    selected = source.url == uiState.repositoryUrl,
+                    onClick = {
+                        viewModel.selectRepository(source.url)
+                        onDismissRequest()
+                    },
+                    text = { Text(source.displayName) },
+                    supportingText = if (count == null) {
+                        null
+                    } else {
+                        { Text(pluralStringResource(R.plurals.repo_module_count, count, count)) }
+                    },
+                    shapes = MenuDefaults.itemShape(index = index, count = uiState.sources.size),
+                )
+            }
+        }
         DropdownMenuGroup(
             shapes = MenuDefaults.groupShapes(),
         ) {
@@ -586,6 +574,7 @@ fun OnlineModuleItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun QuickInstallButton(module: CatalogModule, loading: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val observeDownload = koinInject<ObserveAssetDownloadUseCase>()
@@ -612,7 +601,7 @@ private fun QuickInstallButton(module: CatalogModule, loading: Boolean, enabled:
     }
     IconButton(onClick = onClick, enabled = enabled && !loading && !downloading, modifier = Modifier.size(48.dp).semantics { contentDescription = description }) {
         when {
-            loading -> CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            loading -> LoadingIndicator(modifier = Modifier.size(24.dp))
             downloading -> CircularProgressIndicator(progress = { progress / 100f }, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
             else -> Icon(if (module.isScript) Icons.TwoTone.PlayArrow else Icons.TwoTone.Download, contentDescription = null, modifier = Modifier.size(24.dp))
         }

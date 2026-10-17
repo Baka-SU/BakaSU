@@ -78,11 +78,18 @@ class DownloadService : Service() {
     private val activeJobs = ConcurrentHashMap<Int, Job>()
     private val activeRegistryCalls = ConcurrentHashMap<Int, Call>()
     private val registryClient by lazy {
-        httpClient.newBuilder().cache(null).followSslRedirects(false).addNetworkInterceptor { chain ->
+        httpClient.newBuilder().followSslRedirects(true).addNetworkInterceptor { chain ->
             if (!RegistryUrls.isAllowedDownloadHop(chain.request().url.toString())) {
                 throw DownloadVerificationException(DownloadVerificationException.Reason.URL_NOT_ALLOWED, "Download redirect not allowed")
             }
             chain.proceed(chain.request())
+        }.addInterceptor { chain ->
+            val response = chain.proceed(chain.request())
+            if (!RegistryUrls.isAllowedDownloadHop(response.request.url.toString())) {
+                response.close()
+                throw DownloadVerificationException(DownloadVerificationException.Reason.URL_NOT_ALLOWED, "Download redirect not allowed")
+            }
+            response
         }.build()
     }
     private val lastNotifiedProgress = ConcurrentHashMap<Int, Int>()

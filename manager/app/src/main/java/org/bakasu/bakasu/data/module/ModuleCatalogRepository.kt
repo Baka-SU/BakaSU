@@ -22,9 +22,11 @@ import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.data.network.toDocument
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentPolicy
+import org.bakasu.bakasu.domain.model.HttpStatusException
 import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
 import org.bakasu.bakasu.domain.model.ModuleCatalogResult
 import org.bakasu.bakasu.domain.model.ModuleReadme
+import org.bakasu.bakasu.domain.model.RepositoryApiType
 import org.bakasu.bakasu.domain.model.RepositoryError
 import org.bakasu.bakasu.domain.model.RepositoryException
 import org.bakasu.bakasu.domain.model.RepositoryFailure
@@ -56,11 +58,14 @@ class ModuleCatalogRepository(
     val sources: StateFlow<List<RepositorySource>> = mutableSources.asStateFlow()
     val failures: StateFlow<Map<String, RepositoryFailure>> = mutableFailures.asStateFlow()
 
-    fun isCurrent(module: CatalogModule): Boolean = if (module.repositoryUrl == RepositorySource.KERNEL_SU_URL) {
-        val catalog = registry.currentCatalog()
-        module.detailLoaded && module.registryMetadata?.buildId == catalog?.buildId && catalog?.find(module.moduleId) != null
-    } else {
-        true
+    fun isCurrent(module: CatalogModule): Boolean {
+        if (mutableSources.value.none { it.url == module.repositoryUrl }) return false
+        return if (module.registryMetadata != null) {
+            val catalog = registry.forSource(module.repositoryUrl).currentCatalog() ?: return false
+            module.detailLoaded && module.registryMetadata.buildId == catalog.buildId && catalog.find(module.moduleId) != null
+        } else {
+            true
+        }
     }
 
     suspend fun refresh(sourceUrl: String? = null, force: Boolean = true): ModuleCatalogResult<List<CatalogModule>> {
@@ -73,7 +78,7 @@ class ModuleCatalogRepository(
                 publishModules()
                 return ModuleCatalogResult.Success(mutableModules.value)
             }
-            if (!networkStatusRepository.isAvailable() && sources.none { it.isBuiltIn }) {
+            if (!networkStatusRepository.isAvailable() && sources.none { it.apiType == RepositoryApiType.KERNEL_SU }) {
                 mutableFailures.value = mutableFailures.value + sources.associate { it.url to RepositoryFailure(RepositoryError.OFFLINE) }
                 return ModuleCatalogResult.Failure(ModuleCatalogFailure.Offline)
             }
@@ -97,10 +102,10 @@ class ModuleCatalogRepository(
                                 val current = mutableSources.value.firstOrNull { it.url == url } ?: return@commit false
                                 if ((sourceGenerations[url] ?: 0) != request.generation) return@commit false
                                 val feed = result.getOrElse { error ->
-                                    mutableFailures.value = mutableFailures.value + (url to if (current.isBuiltIn) KernelSuRegistryRepository.failure(error) else RepositoryFailure.from(error))
+                                    mutableFailures.value = mutableFailures.value + (url to if (current.apiType == RepositoryApiType.KERNEL_SU) KernelSuRegistryRepository.failure(error) else RepositoryFailure.from(error))
                                     return@commit false
                                 }
-                                if (feed.registryBuildId != null && feed.registryBuildId != registry.currentCatalog()?.buildId) return@commit false
+                                if (feed.registryBuildId != null && feed.registryBuildId != registry.forSource(url).currentCatalog()?.buildId) return@commit false
                                 val updated = mutableSources.value.map {
                                     if (it.url == url) feed.source.copy(customName = current.customName) else it
                                 }
@@ -163,15 +168,19 @@ class ModuleCatalogRepository(
         val url = runCatching { MmrlRepositoryParser.canonicalUrl(sourceUrl) }.getOrNull()
             ?: return ModuleCatalogResult.Failure(ModuleCatalogFailure.NotFound)
         fun find() = mutableModules.value.firstOrNull { it.moduleId == moduleId && it.repositoryUrl == url }
-        if (url == RepositorySource.KERNEL_SU_URL) {
-            val request = stateMutex.withLock {
-                val source = mutableSources.value.firstOrNull { it.url == url }
-                    ?: return ModuleCatalogResult.Failure(ModuleCatalogFailure.NotFound)
+        val request = stateMutex.withLock {
+            val source = mutableSources.value.firstOrNull { it.url == url }
+                ?: return ModuleCatalogResult.Failure(ModuleCatalogFailure.NotFound)
+            SourceRequest(source, sourceGenerations[url] ?: 0)
+        }
+        if (request.source.apiType == RepositoryApiType.KERNEL_SU) {
+            val registry = registry.forSource(url)
+            stateMutex.withLock {
+                if ((sourceGenerations[url] ?: 0) != request.generation) return ModuleCatalogResult.Failure(ModuleCatalogFailure.NotFound)
                 val module = find()
                 if (!forceDetail && module?.detailLoaded == true && module.registryMetadata?.buildId == registry.currentCatalog()?.buildId) {
                     return ModuleCatalogResult.Success(module)
                 }
-                SourceRequest(source, sourceGenerations[url] ?: 0)
             }
             val result = attempt { registry.loadDetail(moduleId) }
             return stateMutex.withLock {
@@ -225,7 +234,7 @@ class ModuleCatalogRepository(
     }
 
     suspend fun readme(module: CatalogModule): Result<ModuleReadme?> = attempt {
-        if (module.repositoryUrl == RepositorySource.KERNEL_SU_URL) return@attempt registry.readme(module)
+        if (module.registryMetadata != null) return@attempt registry.forSource(module.repositoryUrl).readme(module)
         val policy = module.documentPolicy()
         if (module.readmeUrl.isNotBlank()) return@attempt fetchReadme(module.readmeUrl, policy)
         val source = module.sourceUrl.toHttpUrlOrNull()
@@ -236,7 +245,7 @@ class ModuleCatalogRepository(
         if (!owner.matches(Regex("[A-Za-z0-9_.-]+")) || !repo.matches(Regex("[A-Za-z0-9_.-]+"))) return@attempt null
         val apiUrl = "https://api.github.com/repos/$owner/$repo/readme"
         val response = networkRequestRepository.request(apiUrl, documentPolicy = policy).getOrElse { error ->
-            if (error is IllegalStateException && error.message == "HTTP 404") return@attempt null
+            if (error is HttpStatusException && error.statusCode == 404) return@attempt null
             throw error
         }
         val url = MmrlRepositoryParser.resourceUrl(apiUrl, JSONObject(response.body.orEmpty()).optString("download_url"))
@@ -253,7 +262,7 @@ class ModuleCatalogRepository(
         return response.copy(url = baseUrl).toDocument(policy)
     }
 
-    suspend fun add(url: String, metadata: RepositorySource? = null): Result<RepositorySource> = attempt {
+    suspend fun add(url: String, metadata: RepositorySource? = null, apiType: RepositoryApiType = metadata?.apiType ?: RepositoryApiType.MMRL): Result<RepositorySource> = attempt {
         val canonical = MmrlRepositoryParser.canonicalUrl(url)
         val generation = stateMutex.withLock {
             mutableSources.value.firstOrNull { it.url == canonical }?.let { return@attempt it }
@@ -261,7 +270,7 @@ class ModuleCatalogRepository(
             sourceGenerations[canonical] ?: 0
         }
         if (!networkStatusRepository.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)
-        val source = metadata?.takeIf { it.url == canonical } ?: RepositorySource(canonical, canonical)
+        val source = (metadata?.takeIf { it.url == canonical } ?: RepositorySource(canonical, canonical)).copy(apiType = apiType)
         val feed = withContext(Dispatchers.IO) { loadSource(source) }
         stateMutex.withLock {
             mutableSources.value.firstOrNull { it.url == canonical }?.let { return@withLock it }
@@ -314,13 +323,14 @@ class ModuleCatalogRepository(
     }
 
     private suspend fun loadSource(source: RepositorySource): RepositoryFeed {
-        if (source.isBuiltIn) return loadKernelSuSource(source)
+        if (source.apiType == RepositoryApiType.KERNEL_SU) return loadKernelSuSource(source)
         if (!networkStatusRepository.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)
         val body = networkRequestRepository.fetch("${source.url}json/modules.json").getOrThrow()
         val feed = MmrlRepositoryParser.parse(source.url, body)
         return feed.copy(
             source = feed.source.copy(
                 customName = source.customName,
+                apiType = source.apiType,
             ),
         )
     }
@@ -330,7 +340,7 @@ class ModuleCatalogRepository(
     }
 
     private suspend fun loadKernelSuSource(source: RepositorySource): RepositoryFeed {
-        val load = registry.loadCatalog()
+        val load = registry.forSource(source.url).loadCatalog()
         val modules = load.catalog.modules.map { item ->
             RegistryCatalogMapper.summary(item, load.catalog.copy(fromCache = load.catalog.fromCache || load.error != null), source)
         }

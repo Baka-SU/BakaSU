@@ -2,6 +2,7 @@ package org.bakasu.bakasu.data.module.registry
 
 import android.app.Application
 import java.io.File
+import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -13,27 +14,74 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.CacheControl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.bakasu.bakasu.data.module.RepositorySourceStore
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.data.network.documentResponse
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
 import org.bakasu.bakasu.domain.model.DocumentPolicy
+import org.bakasu.bakasu.domain.model.HttpStatusException
 import org.bakasu.bakasu.domain.model.ModuleReadme
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
+import org.bakasu.bakasu.domain.model.RepositoryApiType
 import org.bakasu.bakasu.domain.model.RepositoryError
 import org.bakasu.bakasu.domain.model.RepositoryException
 import org.bakasu.bakasu.domain.model.RepositoryFailure
 
-class KernelSuRegistryRepository(
-    application: Application,
+class KernelSuRegistryRepository private constructor(
+    private val application: Application,
     private val httpClient: OkHttpClient,
     private val networkStatus: NetworkStatusRepository,
+    private val sourceStore: RepositorySourceStore?,
+    val baseUrl: String,
+    private val repositories: ConcurrentHashMap<String, KernelSuRegistryRepository>,
 ) {
+    constructor(
+        application: Application,
+        httpClient: OkHttpClient,
+        networkStatus: NetworkStatusRepository,
+        sourceStore: RepositorySourceStore? = null,
+    ) : this(application, httpClient, networkStatus, sourceStore, RegistryUrls.DEFAULT_BASE_URL, ConcurrentHashMap()) {
+        repositories[baseUrl] = this
+    }
+
     private val commitMutex = Mutex()
     private val details = ConcurrentHashMap<String, ApiModuleDetail>()
-    private val diskCache = FileRegistryCache(File(application.filesDir, "module_registry"))
+    private val diskCache = FileRegistryCache(
+        File(application.filesDir, "module_registry").let { root ->
+            if (baseUrl == RegistryUrls.DEFAULT_BASE_URL) {
+                root
+            } else {
+                val key = MessageDigest.getInstance("SHA-256").digest(baseUrl.toByteArray(Charsets.UTF_8))
+                    .joinToString("") { "%02x".format(it) }
+                File(root, "sources/$key")
+            }
+        },
+    )
+
+    fun forSource(url: String): KernelSuRegistryRepository {
+        val parsed = url.trim().toHttpUrlOrNull()
+        require(parsed != null && parsed.isHttps && parsed.username.isEmpty() && parsed.password.isEmpty()) { "Invalid registry URL" }
+        val normalized = RegistryUrls.normalizeBaseUrl(parsed.newBuilder().query(null).fragment(null).build().toString())
+        return repositories.computeIfAbsent(normalized) {
+            KernelSuRegistryRepository(application, httpClient, networkStatus, sourceStore, normalized, repositories)
+        }
+    }
+
+    private fun configuredBaseUrls(): List<String> = sourceStore?.load()
+        ?.filter { it.apiType == RepositoryApiType.KERNEL_SU }
+        ?.map { forSource(it.url).baseUrl }
+        ?.distinct()
+        ?: listOf(baseUrl)
+
+    private fun ownerForUrl(url: String): String? {
+        val normalized = url.toHttpUrlOrNull()?.toString() ?: return null
+        val candidates = configuredBaseUrls().filter { RegistryUrls.isSameOrigin(url, it) }
+        return candidates.filter { normalized.startsWith(it) }.maxByOrNull { it.length } ?: candidates.singleOrNull()
+    }
 
     @Volatile
     private var publishedCatalog: RegistryCatalog? = null
@@ -44,13 +92,13 @@ class KernelSuRegistryRepository(
         val request = Request.Builder().url(url).cacheControl(CacheControl.Builder().noCache().build()).build()
         var cancellation: DisposableHandle? = null
         try {
-            httpClient.documentResponse(request, DocumentPolicy.SameOrigin(RegistryUrls.DEFAULT_BASE_URL)) { call ->
+            httpClient.documentResponse(request, DocumentPolicy.SameOrigin(baseUrl)) { call ->
                 cancellation?.dispose()
                 owner.ensureActive()
                 cancellation = owner.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
             }.use { response ->
                 owner.ensureActive()
-                check(response.isSuccessful) { "HTTP ${response.code}" }
+                if (!response.isSuccessful) throw HttpStatusException(response.code)
                 val body = response.body ?: error("Empty response")
                 check(body.contentLength() <= MAX_DOCUMENT_BYTES) { "Document too large" }
                 val source = body.source()
@@ -66,6 +114,7 @@ class KernelSuRegistryRepository(
         val pendingWrites = linkedMapOf<String, String>()
         val fetcher = RegistryFetcher { url -> fetch(url, owner) }
         val client = RegistryClient(
+            baseUrl = baseUrl,
             fetcher = fetcher,
             initialCatalog = baseCatalog,
             cache = object : RegistryCache {
@@ -138,6 +187,10 @@ class KernelSuRegistryRepository(
     fun currentCatalog(): RegistryCatalog? = publishedCatalog
 
     fun isCurrent(update: ModuleUpdateVerification.Registry): Boolean {
+        if (update.repositoryUrl != baseUrl) {
+            val owner = configuredBaseUrls().firstOrNull { it == update.repositoryUrl } ?: return false
+            return forSource(owner).isCurrent(update)
+        }
         val catalog = publishedCatalog ?: return false
         if (catalog.buildId != update.buildId || catalog.find(update.moduleId) == null) return false
         val detail = details[update.moduleId]?.takeIf { it.buildId == update.buildId } ?: return false
@@ -148,9 +201,20 @@ class KernelSuRegistryRepository(
         }
     }
 
-    fun isRegistryDocument(url: String): Boolean = RegistryUrls.isSameOrigin(url, RegistryUrls.DEFAULT_BASE_URL) || (url.startsWith("#") && url.contains('@'))
+    private fun documentOwner(url: String, configuredSource: String): String? = if (url.startsWith("#") && url.contains('@')) {
+        if (configuredSource.isBlank()) RegistryUrls.DEFAULT_BASE_URL else ownerForUrl(configuredSource)
+    } else {
+        ownerForUrl(url)
+    }
 
-    suspend fun changelog(url: String): ModuleReadme? = withClient {
+    fun isRegistryDocument(url: String, configuredSource: String = ""): Boolean = documentOwner(url, configuredSource) != null
+
+    suspend fun changelog(url: String, configuredSource: String = ""): ModuleReadme? {
+        val owner = documentOwner(url, configuredSource) ?: return null
+        return forSource(owner).changelogForSource(url)
+    }
+
+    private suspend fun changelogForSource(url: String): ModuleReadme? = withClient {
         if (url.startsWith("#")) {
             val parts = url.substring(1).split('@', limit = 2)
             if (parts.size != 2) return@withClient null
@@ -173,7 +237,20 @@ class KernelSuRegistryRepository(
     }
 
     suspend fun resolveUpdate(moduleId: String, updateJsonUrl: String, zipUrl: String, versionCode: Int): ModuleUpdateVerification {
-        if (RegistryUpdatePolicy.isUnrelatedToRegistry(RegistryUrls.DEFAULT_BASE_URL, updateJsonUrl, zipUrl)) {
+        ownerForUrl(updateJsonUrl)?.let { owner ->
+            return forSource(owner).resolveUpdateForSource(moduleId, updateJsonUrl, zipUrl, versionCode)
+        }
+        val sources = configuredBaseUrls()
+        if (sources.any { RegistryUrls.isSameOrigin(updateJsonUrl, it) }) return ModuleUpdateVerification.Rejected
+        sources.forEach { owner ->
+            val result = forSource(owner).resolveUpdateForSource(moduleId, updateJsonUrl, zipUrl, versionCode)
+            if (result != ModuleUpdateVerification.Legacy) return result
+        }
+        return ModuleUpdateVerification.Legacy
+    }
+
+    private suspend fun resolveUpdateForSource(moduleId: String, updateJsonUrl: String, zipUrl: String, versionCode: Int): ModuleUpdateVerification {
+        if (RegistryUpdatePolicy.isUnrelatedToRegistry(baseUrl, updateJsonUrl, zipUrl)) {
             return ModuleUpdateVerification.Legacy
         }
         return try {
@@ -184,7 +261,7 @@ class KernelSuRegistryRepository(
                 client.currentCatalog()?.let { inIndex = it.find(moduleId) != null }
                 when (val result = RegistryUpdatePolicy.decide(client.baseUrl, updateJsonUrl, zipUrl, versionCode, inIndex, detail)) {
                     UpdateVerification.Legacy -> ModuleUpdateVerification.Legacy
-                    is UpdateVerification.Registry -> ModuleUpdateVerification.Registry(result.zipUrl, result.expected, RegistryCatalogMapper.release(result.release), moduleId, detail!!.buildId)
+                    is UpdateVerification.Registry -> ModuleUpdateVerification.Registry(result.zipUrl, result.expected, RegistryCatalogMapper.release(result.release), moduleId, detail!!.buildId, client.baseUrl)
                     is UpdateVerification.Rejected -> ModuleUpdateVerification.Rejected
                 }
             }

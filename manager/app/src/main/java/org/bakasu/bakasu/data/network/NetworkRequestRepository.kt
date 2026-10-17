@@ -8,6 +8,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.Buffer
 import org.bakasu.bakasu.domain.model.DocumentPolicy
+import org.bakasu.bakasu.domain.model.HttpStatusException
 
 data class NetworkResponse(
     val body: String?,
@@ -66,7 +67,7 @@ class NetworkRequestRepository(
                 call.execute()
             }
             response.use {
-                check(response.isSuccessful) { "HTTP ${response.code}" }
+                if (!response.isSuccessful) throw HttpStatusException(response.code)
                 NetworkResponse(
                     body = response.body?.let { body ->
                         if (maxResponseBytes == null) {
