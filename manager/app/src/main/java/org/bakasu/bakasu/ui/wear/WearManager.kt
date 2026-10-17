@@ -795,7 +795,7 @@ private fun WearMainPages(
         when (pages.getOrNull(pagerState.currentPage)) {
             HOME -> onHome(HomeUiAction.Refresh(showIndicator = false))
             SUPERUSER -> if (superuser.appGroupList.isEmpty() && !superuser.isRefreshing) onSuperUser(SuperUserUiAction.Refresh)
-            MODULES -> if (modules.moduleList.isEmpty() || modules.isNeedRefresh) onModule(ModuleUiAction.Refresh())
+            MODULES -> if ((modules.moduleList.isEmpty() || modules.isNeedRefresh) && !modules.isRefreshing) onModule(ModuleUiAction.Refresh())
         }
     }
     val homeListState = rememberTransformingLazyColumnState()

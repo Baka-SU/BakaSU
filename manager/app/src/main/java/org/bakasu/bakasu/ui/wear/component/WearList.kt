@@ -28,6 +28,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalScrollCaptureInProgress
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.LocalScreenIsActive
@@ -122,42 +124,46 @@ fun WearList(
         onClosePanel = onClosePanel,
         panelLabel = panelLabel,
     )
-    // Loading shows a progress indicator instead of the content, as the phone does; the branded
-    // loading screen is only for the manager's first load.
+    // Loading shows the indeterminate indicator at the screen center instead of the content, as the
+    // phone does; the branded loading screen is only for the manager's first load.
+    val loadingDescription = stringResource(R.string.wear_loading)
     val listContent: @Composable (PaddingValues) -> Unit = { contentPadding ->
-        Box(Modifier.fillMaxSize()) {
-            TransformingLazyColumn(
-                modifier = Modifier.fillMaxSize().graphicsLayer { translationY = animatedOffset },
-                state = listState,
-                contentPadding = contentPadding,
-                flingBehavior = if (snap) {
-                    TransformingLazyColumnDefaults.snapFlingBehavior(listState)
-                } else {
-                    ScrollableDefaults.flingBehavior()
-                },
-                rotaryScrollableBehavior = if (snap) {
-                    RotaryScrollableDefaults.snapBehavior(listState)
-                } else {
-                    RotaryScrollableDefaults.behavior(listState)
-                },
-            ) {
-                if (isLoading) {
-                    wearLoadingItem(transformationSpec)
-                } else {
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(Modifier.semantics { contentDescription = loadingDescription })
+            }
+        } else {
+            Box(Modifier.fillMaxSize()) {
+                TransformingLazyColumn(
+                    modifier = Modifier.fillMaxSize().graphicsLayer { translationY = animatedOffset },
+                    state = listState,
+                    contentPadding = contentPadding,
+                    flingBehavior = if (snap) {
+                        TransformingLazyColumnDefaults.snapFlingBehavior(listState)
+                    } else {
+                        ScrollableDefaults.flingBehavior()
+                    },
+                    rotaryScrollableBehavior = if (snap) {
+                        RotaryScrollableDefaults.snapBehavior(listState)
+                    } else {
+                        RotaryScrollableDefaults.behavior(listState)
+                    },
+                ) {
                     content(transformationSpec)
                 }
-            }
-            // Pulling down at the top shows the panel indicator in the room the list makes for it.
-            if (onOpenPanel != null) {
-                WearPullIndicator(
-                    pullProgress.floatValue,
-                    closing = onClosePanel != null,
-                    Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
-                )
+                // Pulling down at the top shows the panel indicator in the room the list makes for it.
+                if (onOpenPanel != null) {
+                    WearPullIndicator(
+                        pullProgress.floatValue,
+                        closing = onClosePanel != null,
+                        Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
+                    )
+                }
             }
         }
     }
-    if (onBack != null || onConfirm != null || backToTop) {
+    // The edge button and the room it takes stay hidden until loading ends.
+    if (!isLoading && (onBack != null || onConfirm != null || backToTop)) {
         ScreenScaffold(
             scrollState = listState,
             modifier = gestureModifier,
