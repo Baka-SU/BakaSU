@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.screen.moduleRepo
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,16 +15,20 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.twotone.Sort
 import androidx.compose.material.icons.twotone.Add
 import androidx.compose.material.icons.twotone.ArrowDropDown
+import androidx.compose.material.icons.twotone.Check
 import androidx.compose.material.icons.twotone.Download
 import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.Star
@@ -60,6 +65,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,6 +77,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -133,6 +140,7 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
         parameters = { parametersOf(repositoryUrl) },
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val repositoryTitle = uiState.sources.firstOrNull { it.url == uiState.repositoryUrl }?.displayName ?: stringResource(R.string.module_repo)
     val layoutDirection = LocalLayoutDirection.current
     val snackBarHost = LocalSnackbarHost.current
     val topAppBarState = rememberTopAppBarState()
@@ -140,7 +148,8 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState),
     )
     val moduleListState = rememberLazyListState()
-    var showDropdown by remember { mutableStateOf(false) }
+    var listRepositoryUrl by rememberSaveable { mutableStateOf(uiState.repositoryUrl) }
+    var showSortDropdown by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullToRefreshState()
     val refreshModules = { viewModel.dispatch(ModuleRepoUiAction.Refresh) }
     val context = LocalContext.current
@@ -206,35 +215,77 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
     }
 
     LaunchedEffect(viewModel, uiState.repositoryUrl) {
+        if (listRepositoryUrl != uiState.repositoryUrl) {
+            moduleListState.scrollToItem(0)
+            listRepositoryUrl = uiState.repositoryUrl
+        }
         viewModel.refresh(force = false)
-        moduleListState.scrollToItem(0)
     }
 
     Scaffold(
         topBar = {
             SearchAppBar(
-                title = uiState.sources.firstOrNull { it.url == uiState.repositoryUrl }?.displayName ?: stringResource(R.string.module_repo),
+                title = repositoryTitle,
                 searchText = uiState.search,
                 onSearchTextChange = { query ->
                     viewModel.dispatch(ModuleRepoUiAction.Search(query))
                 },
-                dropdownContent = {
+                titleContent = {
+                    // The app bar composes separate expanded and collapsed titles.
+                    var showDropdown by remember { mutableStateOf(false) }
                     Box {
-                        IconButton(
-                            onClick = { showDropdown = true },
+                        Row(
+                            modifier = Modifier
+                                .heightIn(min = 48.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable(
+                                    enabled = uiState.sources.isNotEmpty(),
+                                    role = Role.Button,
+                                    onClickLabel = stringResource(R.string.repo_configured_sources),
+                                    onClick = { showDropdown = true },
+                                )
+                                .padding(end = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
+                            Text(
+                                text = repositoryTitle,
+                                modifier = Modifier.weight(1f, fill = false),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                             Icon(
                                 imageVector = Icons.TwoTone.ArrowDropDown,
-                                contentDescription = stringResource(id = R.string.repo_configured_sources),
-                            )
-
-                            ModuleRepoDropdown(
-                                expanded = showDropdown,
-                                onDismissRequest = { showDropdown = false },
-                                viewModel = viewModel,
-                                uiState = uiState,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
+                                    .padding(4.dp),
                             )
                         }
+                        ModuleRepoDropdown(
+                            expanded = showDropdown,
+                            onDismissRequest = { showDropdown = false },
+                            viewModel = viewModel,
+                            uiState = uiState,
+                        )
+                    }
+                },
+                dropdownContent = {
+                    Box {
+                        IconButton(onClick = { showSortDropdown = true }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.TwoTone.Sort,
+                                contentDescription = stringResource(R.string.repo_sort),
+                            )
+                        }
+                        ModuleRepoSortDropdown(
+                            expanded = showSortDropdown,
+                            onDismissRequest = { showSortDropdown = false },
+                            viewModel = viewModel,
+                            uiState = uiState,
+                        )
                     }
                 },
                 onBackClick = {
@@ -396,33 +447,68 @@ private fun ModuleRepoDropdown(
     DropdownMenuPopup(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
+        modifier = Modifier.widthIn(min = 280.dp, max = 320.dp),
     ) {
         DropdownMenuGroup(shapes = MenuDefaults.groupShapes()) {
             uiState.sources.forEachIndexed { index, source ->
                 val count = source.moduleCount
+                val countDescription = count?.let { pluralStringResource(R.plurals.repo_module_count, it, it) }
                 SelectableDropdownMenuItem(
                     selected = source.url == uiState.repositoryUrl,
                     onClick = {
                         viewModel.selectRepository(source.url)
                         onDismissRequest()
                     },
-                    text = { Text(source.displayName) },
-                    supportingText = if (count == null) {
+                    text = {
+                        Text(
+                            text = source.displayName,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    leadingIcon = { Spacer(Modifier.size(MenuDefaults.LeadingIconSize)) },
+                    selectedLeadingIcon = {
+                        Icon(
+                            imageVector = Icons.TwoTone.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(MenuDefaults.LeadingIconSize),
+                        )
+                    },
+                    trailingContent = if (count == null) {
                         null
                     } else {
-                        { Text(pluralStringResource(R.plurals.repo_module_count, count, count)) }
+                        {
+                            Text(
+                                text = count.toString(),
+                                modifier = Modifier.semantics { contentDescription = countDescription.orEmpty() },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                            )
+                        }
                     },
                     shapes = MenuDefaults.itemShape(index = index, count = uiState.sources.size),
                 )
             }
         }
-        DropdownMenuGroup(
-            shapes = MenuDefaults.groupShapes(),
-        ) {
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ModuleRepoSortDropdown(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    viewModel: ModuleRepoViewModel,
+    uiState: ModuleRepoUiState,
+) {
+    DropdownMenuPopup(expanded = expanded, onDismissRequest = onDismissRequest) {
+        DropdownMenuGroup(shapes = MenuDefaults.groupShapes()) {
             CheckableDropdownMenuItem(
                 checked = uiState.sortStargazerCountFirst,
                 onCheckedChange = {
                     viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it))
+                    onDismissRequest()
                 },
                 text = { Text(stringResource(R.string.module_sort_star_first)) },
                 shapes = MenuDefaults.itemShape(

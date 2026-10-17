@@ -26,6 +26,10 @@ import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExposedDropdownMenu
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -74,9 +78,7 @@ import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.component.rememberRepositoryScrollBehavior
 import org.bakasu.bakasu.ui.component.repositoryErrorText
-import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
-import org.bakasu.bakasu.ui.component.settings.SettingsDropdownWidget
 import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.theme.blurSource
@@ -101,6 +103,7 @@ fun AddRepositoryScreen() {
     val titles = listOf(stringResource(R.string.repo_discover), stringResource(R.string.repo_server_settings))
     val apiTypes = listOf(RepositoryApiType.KERNEL_SU, RepositoryApiType.MMRL)
     val apiTypeLabels = listOf(stringResource(R.string.repo_api_kernel_su), stringResource(R.string.repo_api_mmrl))
+    var apiTypeExpanded by remember { mutableStateOf(false) }
     val configuredSourcesTitle = stringResource(R.string.repo_configured_sources)
     LaunchedEffect(Unit) { viewModel.loadDiscovery() }
     LaunchedEffect(state.added?.url) {
@@ -235,18 +238,51 @@ fun AddRepositoryScreen() {
                     contentPadding = PaddingValues(16.dp),
                 ) {
                     item {
+                        Text(
+                            text = stringResource(R.string.repo_custom_repository),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
+                        )
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
-                                item {
-                                    SettingsDropdownWidget(
-                                        title = stringResource(R.string.repo_api_type),
-                                        description = apiTypeLabels[apiTypes.indexOf(state.apiType)],
-                                        iconPlaceholder = false,
-                                        enabled = !state.busy,
-                                        choice = apiTypes.indexOf(state.apiType),
-                                        data = apiTypeLabels,
-                                        onChoiceChange = { viewModel.setApiType(apiTypes[it]) },
-                                    )
+                            ExposedDropdownMenuBox(
+                                expanded = apiTypeExpanded && !state.busy,
+                                onExpandedChange = { apiTypeExpanded = it && !state.busy },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                OutlinedTextField(
+                                    value = apiTypeLabels[apiTypes.indexOf(state.apiType)],
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    singleLine = true,
+                                    enabled = !state.busy,
+                                    label = { Text(stringResource(R.string.repo_api_type)) },
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = apiTypeExpanded && !state.busy)
+                                    },
+                                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = !state.busy),
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = apiTypeExpanded && !state.busy,
+                                    onDismissRequest = { apiTypeExpanded = false },
+                                    containerColor = MenuDefaults.groupStandardContainerColor,
+                                    shape = MenuDefaults.standaloneGroupShape,
+                                ) {
+                                    apiTypes.forEachIndexed { index, type ->
+                                        SelectableDropdownMenuItem(
+                                            selected = state.apiType == type,
+                                            onClick = {
+                                                viewModel.setApiType(type)
+                                                apiTypeExpanded = false
+                                            },
+                                            text = { Text(apiTypeLabels[index]) },
+                                            shapes = MenuDefaults.itemShape(index = index, count = apiTypes.size),
+                                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                                        )
+                                    }
                                 }
                             }
                             OutlinedTextField(

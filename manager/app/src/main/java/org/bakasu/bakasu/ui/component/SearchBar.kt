@@ -466,6 +466,7 @@ fun SearchAppBar(
     searchBarPlaceHolderText: String,
     preserveSearchOnNavigation: Boolean = false,
     expandOnActivation: Boolean = false,
+    titleContent: (@Composable () -> Unit)? = null,
 ) {
     val themeConfig: ThemeConfig = koinInject()
     val cardConfig: CardConfig = koinInject()
@@ -543,9 +544,7 @@ fun SearchAppBar(
             modifier = Modifier.blurEffect(),
             scrollBehavior = scrollBehavior,
             title = {
-                Text(
-                    text = title,
-                )
+                if (titleContent != null) titleContent() else Text(text = title)
             },
             navigationIcon = {
                 if (onBackClick != null) {

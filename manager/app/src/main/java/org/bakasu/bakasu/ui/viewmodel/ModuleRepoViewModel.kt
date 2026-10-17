@@ -71,7 +71,7 @@ class ModuleRepoViewModel(
     private val savedState: SavedStateHandle,
     repositoryUrl: String? = null,
 ) : ViewModel() {
-    private val search = MutableStateFlow("")
+    private val search = MutableStateFlow(savedState.get<String>("repository-search") ?: "")
     private val selectedRepository = MutableStateFlow<String?>(savedState["selected-repository"] ?: repositoryUrl)
     private val selectedSources = combine(observeSources.sources, selectedRepository) { sources, selected ->
         val url = sources.firstOrNull { it.url == selected }?.url ?: sources.firstOrNull()?.url
@@ -87,7 +87,7 @@ class ModuleRepoViewModel(
         val changed = activeRepository() != url
         savedState["selected-repository"] = url
         selectedRepository.value = url
-        if (changed) search.value = ""
+        if (changed) updateSearch("")
     }
     private val sortStarsFirst = MutableStateFlow(
         getBooleanPreference("module_repo_sort_star_first", false),
@@ -129,6 +129,7 @@ class ModuleRepoViewModel(
         SharingStarted.WhileSubscribed(),
         ModuleRepoUiState(
             sortStargazerCountFirst = sortStarsFirst.value,
+            search = search.value,
             isRefreshing = true,
             sources = observeSources.sources.value,
             repositoryUrl = activeRepository(),
@@ -173,6 +174,7 @@ class ModuleRepoViewModel(
     }
 
     fun updateSearch(value: String) {
+        savedState["repository-search"] = value
         search.value = value
     }
 
