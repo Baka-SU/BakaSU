@@ -39,7 +39,24 @@ sealed interface WearRoute : NavKey {
     data object ModuleRepo : WearRoute
 
     @Serializable
+    data object ModuleRepoSearch : WearRoute
+
+    @Serializable
     data class OnlineModule(val id: String) : WearRoute
+
+    /** The README, releases or information of a repository module. */
+    @Serializable
+    data class OnlineModuleSection(val id: String, val section: String) : WearRoute
+
+    /** The download of one repository module file, with what the file must match. */
+    @Serializable
+    data class OnlineModuleDownload(
+        val name: String,
+        val fileName: String,
+        val url: String,
+        val size: Long,
+        val sha256: String,
+    ) : WearRoute
 
     @Serializable
     data object ModuleSearch : WearRoute

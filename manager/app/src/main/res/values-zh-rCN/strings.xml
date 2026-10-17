@@ -741,6 +741,7 @@
     <string name="wear_source_summary">打开项目页面</string>
     <string name="wear_download">下载</string>
     <string name="wear_downloading">下载中</string>
+    <string name="wear_verifying_download">正在校验文件</string>
     <string name="wear_download_confirm_title">下载此模块？</string>
     <string name="wear_download_then_install">下载后确认安装</string>
     <string name="wear_browser_open_failed">无法打开浏览器</string>

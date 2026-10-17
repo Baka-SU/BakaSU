@@ -19,17 +19,24 @@ import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
 
-enum class ModuleDownloadPhase { DOWNLOADING, FAILED, VERIFY_FAILED, COMPLETED }
+/** [VERIFYING] follows a finished transfer while the file is checked; nothing is downloading then. */
+enum class ModuleDownloadPhase { DOWNLOADING, VERIFYING, FAILED, VERIFY_FAILED, COMPLETED }
 
 /** A null [phase] means no download; [resultUri] is set once a verified file is ready to install. */
 data class ModuleDownloadUiState(
     val asset: ModuleReleaseAsset? = null,
     val phase: ModuleDownloadPhase? = null,
-    val progress: Int = 0,
+    val downloadedBytes: Long = 0L,
+    /** The size the server announced, or -1 when it is unknown. */
+    val totalBytes: Long = -1L,
     val resultUri: String? = null,
-)
+) {
+    /** The downloaded share from 0 to 1, or null when the size is unknown and no share can be given. */
+    val fraction: Float?
+        get() = if (totalBytes > 0L) (downloadedBytes.toFloat() / totalBytes).coerceIn(0f, 1f) else null
+}
 
-/** One repository module download at a time, kept across recompositions of its page. */
+/** One repository module download, owned by its route; clearing the route cancels a running download. */
 class ModuleDownloadViewModel(
     private val enqueue: EnqueueDownloadUseCase,
     private val observe: ObserveDownloadUseCase,
@@ -49,9 +56,16 @@ class ModuleDownloadViewModel(
             val phase = try {
                 val id = enqueue(asset.downloadUrl, asset.name).also { downloadId = it }
                 val result = observe(id).filterNotNull()
-                    .onEach { download -> mutableState.update { it.copy(progress = download.progress) } }
+                    .onEach { download ->
+                        mutableState.update { it.copy(downloadedBytes = download.downloadedBytes, totalBytes = download.totalBytes) }
+                    }
                     .first { it.status == DownloadStatus.COMPLETED || it.status == DownloadStatus.FAILED }
+                // The transfer has ended, so leaving from here on has no download to cancel.
+                downloadId = null
                 val uri = result.resultUri
+                if (result.status == DownloadStatus.COMPLETED && uri != null) {
+                    mutableState.update { it.copy(phase = ModuleDownloadPhase.VERIFYING) }
+                }
                 when {
                     result.status == DownloadStatus.FAILED || uri == null -> ModuleDownloadPhase.FAILED
 
@@ -70,15 +84,6 @@ class ModuleDownloadViewModel(
             downloadId = null
             mutableState.update { it.copy(phase = phase) }
         }
-    }
-
-    /** Stops a running download and returns to no download, as after a failure or a handled result. */
-    fun reset() {
-        job?.cancel()
-        job = null
-        downloadId?.let(cancelDownload::invoke)
-        downloadId = null
-        mutableState.value = ModuleDownloadUiState()
     }
 
     override fun onCleared() {

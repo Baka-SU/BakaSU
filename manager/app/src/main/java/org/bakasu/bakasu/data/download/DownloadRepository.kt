@@ -102,10 +102,17 @@ class DownloadRepository(
         application.startService(intent)
     }
 
-    fun updateProgress(id: Int, progress: Int) {
+    fun updateProgress(id: Int, progress: Int, downloadedBytes: Long = 0L, totalBytes: Long = -1L) {
         _downloads.update { map ->
             val state = map[id] ?: return@update map
-            map + (id to state.copy(progress = progress, status = DownloadStatus.DOWNLOADING))
+            map + (
+                id to state.copy(
+                    progress = progress,
+                    downloadedBytes = downloadedBytes,
+                    totalBytes = totalBytes,
+                    status = DownloadStatus.DOWNLOADING,
+                )
+                )
         }
     }
 

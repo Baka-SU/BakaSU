@@ -75,6 +75,8 @@ import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
 import org.bakasu.bakasu.ui.viewmodel.HomeUiEvent
 import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
+import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
+import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
@@ -120,7 +122,8 @@ private const val SETTINGS = 3
 /** Destinations that need a full-featured root manager; they close when root goes away. */
 private fun WearRoute.needsRoot() = when (this) {
     is WearRoute.Module, is WearRoute.ModuleAction, is WearRoute.ModuleUpdate, is WearRoute.ModuleInstallConfirm, is WearRoute.ModuleInstall,
-    WearRoute.ModuleSort, WearRoute.ModuleSearch, WearRoute.ModuleSearchResults, WearRoute.ModuleRepo, is WearRoute.OnlineModule,
+    WearRoute.ModuleSort, WearRoute.ModuleSearch, WearRoute.ModuleSearchResults, WearRoute.ModuleRepo, WearRoute.ModuleRepoSearch, is WearRoute.OnlineModule, is WearRoute.OnlineModuleSection,
+    is WearRoute.OnlineModuleDownload,
     is WearRoute.App, WearRoute.AppFilter, WearRoute.AppSearch, WearRoute.AppSearchResults,
     WearRoute.Logs, WearRoute.LogOptions, WearRoute.AllowlistBackup, is WearRoute.LogEntry, WearRoute.LogSearch,
     WearRoute.Templates, WearRoute.OnlineTemplates, is WearRoute.TemplateEditor, WearRoute.SuSFS, WearRoute.DynamicManager,
@@ -142,6 +145,8 @@ fun WearManagerScreen() {
     val homeViewModel = koinViewModel<HomeViewModel>()
     val superUserViewModel = koinViewModel<SuperUserViewModel>()
     val moduleViewModel = koinViewModel<ModuleViewModel>()
+    // Shared by the repository list and its search page, which are separate routes.
+    val moduleRepoViewModel = koinViewModel<ModuleRepoViewModel>()
     val sulogViewModel = koinViewModel<SulogViewModel>()
     val settingsViewModel = koinViewModel<SettingsViewModel>()
     val preferenceViewModel = koinViewModel<WearPreferencesViewModel>()
@@ -201,6 +206,7 @@ fun WearManagerScreen() {
         when (backStack.lastOrNull()) {
             WearRoute.AppSearchResults -> superUserViewModel.dispatch(SuperUserUiAction.Search(""))
             WearRoute.ModuleSearchResults -> moduleViewModel.dispatch(ModuleUiAction.Search(""))
+            WearRoute.ModuleRepo -> moduleRepoViewModel.dispatch(ModuleRepoUiAction.Search(""))
             else -> Unit
         }
         if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) else activity?.finish()
@@ -461,10 +467,29 @@ fun WearManagerScreen() {
                                 }
                             }
                             entry<WearRoute.ModuleRepo> {
-                                WearModuleRepoPage(::back) { open(WearRoute.OnlineModule(it)) }
+                                WearModuleRepoPage(moduleRepoViewModel, ::back, { open(WearRoute.ModuleRepoSearch) }) { open(WearRoute.OnlineModule(it)) }
+                            }
+                            entry<WearRoute.ModuleRepoSearch> {
+                                WearModuleRepoSearchPage(moduleRepoViewModel, ::back)
                             }
                             entry<WearRoute.OnlineModule> { route ->
-                                WearOnlineModulePage(route.id, ::back, { linkViewModel.open(it, preferences.link) }, ::confirmModule)
+                                WearOnlineModulePage(
+                                    route.id,
+                                    ::back,
+                                    { linkViewModel.open(it, preferences.link) },
+                                    { open(WearRoute.OnlineModuleSection(route.id, it)) },
+                                    ::open,
+                                )
+                            }
+                            entry<WearRoute.OnlineModuleSection> { route ->
+                                WearOnlineModuleSectionPage(route.id, route.section, ::back, ::open)
+                            }
+                            entry<WearRoute.OnlineModuleDownload> { route ->
+                                // A verified file replaces the download page with the install confirmation.
+                                WearModuleDownloadPage(route) { uri ->
+                                    back()
+                                    confirmModule(uri)
+                                }
                             }
                             entry<WearRoute.ModuleSort> {
                                 WearModulePanel(modules, ::back, moduleViewModel::dispatch)
