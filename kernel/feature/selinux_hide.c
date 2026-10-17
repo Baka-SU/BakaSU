@@ -641,17 +641,7 @@ static void ksu_selinux_hide_unhook()
 extern void ksu_register_setprocattr_lsm_hook();
 #else
 // susfs selinux_hide
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
-int security_context_to_sid_with_policy(struct selinux_policy *policy, const char *scontext, u32 scontext_len, u32 *sid,
-                                        u32 def_sid, gfp_t gfp_flags);
-int security_sid_to_context_with_policy(struct selinux_policy *policy, u32 sid, char **scontext, u32 *scontext_len);
-void security_compute_av_user_with_policy(struct selinux_policy *policy, u32 ssid, u32 tsid, u16 tclass,
-                                          struct av_decision *avd);
-extern void security_dump_masked_av_fn(struct policydb *policydb, struct context *scontext, struct context *tcontext,
-                                       u16 tclass, u32 permissions, const char *reason);
-extern void context_struct_compute_av_fn(struct policydb *policydb, struct context *scontext, struct context *tcontext,
-                                         u16 tclass, struct av_decision *avd, struct extended_perms *xperms);
-#else
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0)
 struct selinux_state fake_state;
 #endif
 
