@@ -560,4 +560,10 @@
     <string name="require_kernel_version">Atualização do kernel necessária. Toque para instalar.</string>
     <string name="require_kernel_version_gki">Atualização do kernel necessária</string>
     <string name="internal_server_error">Erro do Servidor Interno</string>
+    <string name="enable_floating_bottom_bar">barra inferior flutuante</string>
+    <string name="enable_floating_bottom_bar_summary">Use a barra inferior flutuante no estilo da Apple.</string>
+    <string name="ak3_select_zip">Selecione um arquivo zip do AnyKernel3 para instalar</string>
+    <string name="install_upload_lkm_file_summary">Utilize um arquivo .ko personalizado em vez do LKM integrado</string>
+    <string name="skip_ksud">Não instale o ksud</string>
+    <string name="skip_ksud_summary">Cancele a instalação do ksud. Não habilite esta opção a menos que seja absolutamente necessário.</string>
 </resources>
