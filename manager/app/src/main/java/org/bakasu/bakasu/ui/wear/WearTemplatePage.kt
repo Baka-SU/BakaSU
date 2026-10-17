@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.Icon
@@ -61,6 +62,7 @@ import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
+import org.bakasu.bakasu.ui.wear.component.WearSwipeToDelete
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
@@ -89,6 +91,17 @@ internal fun WearTemplatePage(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val listState = rememberTransformingLazyColumnState()
+    // A local template is deleted only after this confirmation; the swipe only asks for it.
+    var pendingDelete by remember { mutableStateOf<ProfileTemplate?>(null) }
+    val deleteDialog = rememberWearConfirmDialog(
+        stringResource(R.string.app_profile_template_delete),
+        pendingDelete?.let { stringResource(R.string.wear_template_delete_message, it.name.ifBlank { it.id }) }.orEmpty(),
+        destructive = true,
+    ) {
+        pendingDelete?.let { viewModel.dispatch(TemplateUiAction.Delete(it.id)) }
+        pendingDelete = null
+    }
     var result by remember { mutableStateOf<WearResult?>(null) }
     WearResultDialog(result) { result = null }
     val imported = stringResource(R.string.app_profile_template_import_success)
@@ -116,7 +129,7 @@ internal fun WearTemplatePage(
             }
         }
     }
-    WearList(isLoading = state.isRefreshing && state.templateList.isEmpty(), onBack = onBack) { spec ->
+    WearList(isLoading = state.isRefreshing && state.templateList.isEmpty(), onBack = onBack, listState = listState) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.settings_profile_template)) }
         item {
             WearActionButton(
@@ -138,14 +151,38 @@ internal fun WearTemplatePage(
             })
         }
         item { WearActionButton(spec, Icons.TwoTone.ContentCopy, exported, { viewModel.dispatch(TemplateUiAction.Export) }) }
+        // Items are keyed by the template ID, so a reveal stays with its template as the list changes.
         LazySegmentedColumn(state.templateList, { it.id }) { template ->
-            WearSettingsJumpPageWidget(
-                spec,
-                template.name.ifBlank { template.id },
-                { onOpenTemplate(template.id, !template.local, false) },
-                icon = Icons.TwoTone.Description,
-                description = template.description.ifBlank { null },
-            )
+            val open = { onOpenTemplate(template.id, !template.local, false) }
+            if (template.local) {
+                // Local templates, which App Profile can select, reveal Delete when swiped right to left.
+                WearSwipeToDelete(
+                    spec,
+                    listState.isScrollInProgress,
+                    stringResource(R.string.app_profile_template_delete),
+                    onDelete = {
+                        pendingDelete = template
+                        deleteDialog.show()
+                    },
+                ) {
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        template.name.ifBlank { template.id },
+                        open,
+                        icon = Icons.TwoTone.Description,
+                        description = template.description.ifBlank { null },
+                        transformed = false,
+                    )
+                }
+            } else {
+                WearSettingsJumpPageWidget(
+                    spec,
+                    template.name.ifBlank { template.id },
+                    open,
+                    icon = Icons.TwoTone.Description,
+                    description = template.description.ifBlank { null },
+                )
+            }
         }
     }
 }
@@ -286,7 +323,7 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
     val template = state.template
     val fields = TEMPLATE_FIELDS
     var input by rememberSaveable { mutableIntStateOf(0) }
-    val delete = rememberWearConfirmDialog(stringResource(R.string.app_profile_template_delete), stringResource(R.string.confirm_delete)) {
+    val delete = rememberWearConfirmDialog(stringResource(R.string.app_profile_template_delete), stringResource(R.string.confirm_delete), destructive = true) {
         viewModel.dispatch(TemplateEditorUiAction.Delete)
     }
     val shownInput = input

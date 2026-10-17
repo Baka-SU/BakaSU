@@ -8,7 +8,9 @@ import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.twotone.CheckCircle
 import androidx.compose.material.icons.twotone.Download
 import androidx.compose.material.icons.twotone.Error
+import androidx.compose.material.icons.twotone.Extension
 import androidx.compose.material.icons.twotone.Folder
+import androidx.compose.material.icons.twotone.Person
 import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.Save
 import androidx.compose.material.icons.twotone.Smartphone
@@ -27,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.material3.AlertDialog
+import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
@@ -52,6 +56,7 @@ import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearChip
+import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLogPage
@@ -275,60 +280,70 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
 }
 
 /**
- * Confirms installing a module ZIP, as the phone does before flashing: the file and its
- * `module.prop` details, the target device, then [onConfirm] starts the installation. Missing
- * `module.prop` fields are left out, and an unreadable one falls back to the file name.
+ * Confirms installing a module ZIP with the official Wear [AlertDialog], as the phone does before
+ * flashing: the module and its `module.prop` details, the file and the target device, in a list
+ * that scrolls when the description is long. Missing `module.prop` fields are left out, and an
+ * unreadable one falls back to the file name. Only Confirm calls [onConfirm]; Cancel, swiping away
+ * and Back call [onDismiss]. Nothing shows while [uri] is null or its details are still read.
  */
 @Composable
-internal fun WearModuleInstallConfirmPage(uri: String, onBack: () -> Unit, onConfirm: () -> Unit) {
+internal fun WearModuleInstallConfirmDialog(uri: String?, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     val context = LocalContext.current
     val zipDetector = koinInject<ZipFileDetector>()
     var info by remember { mutableStateOf<ZipFileInfo?>(null) }
     LaunchedEffect(uri) {
-        info = withContext(Dispatchers.IO) { zipDetector.parseModuleInfo(context, uri.toUri()) }
+        info = null
+        if (uri != null) info = withContext(Dispatchers.IO) { zipDetector.parseModuleInfo(context, uri.toUri()) }
     }
-    val fileName = uri.toUri().lastPathSegment?.substringAfterLast('/').orEmpty()
     val module = info
-    WearList(isLoading = module == null, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.confirm_installation)) }
-        item { WearSectionHeader(spec, stringResource(R.string.wear_file_check)) }
-        if (module != null) {
-            val version = listOfNotNull(
-                module.version.ifBlank { null },
-                module.versionCode.ifBlank { null }?.let { "($it)" },
-            ).joinToString(" ")
+    val fileName = uri?.toUri()?.lastPathSegment?.substringAfterLast('/').orEmpty()
+    val version = listOfNotNull(
+        module?.version?.ifBlank { null },
+        module?.versionCode?.ifBlank { null }?.let { "($it)" },
+    ).joinToString(" ")
+    AlertDialog(
+        visible = uri != null && module != null,
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.TwoTone.Extension,
+                contentDescription = null,
+                modifier = Modifier.size(ButtonDefaults.LargeIconSize),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+        title = { Text(module?.name?.ifBlank { null } ?: fileName.ifBlank { stringResource(R.string.unknown_module) }) },
+        text = version.ifBlank { null }?.let {
+            { Text(stringResource(R.string.wear_labeled_value, stringResource(R.string.module_version), it)) }
+        },
+        confirmButton = {
+            AlertDialogDefaults.ConfirmButton(
+                onClick = {
+                    // Closing first keeps a second tap from starting a second installation.
+                    val target = uri ?: return@ConfirmButton
+                    onDismiss()
+                    onConfirm(target)
+                },
+            )
+        },
+        dismissButton = { AlertDialogDefaults.DismissButton(onClick = onDismiss) },
+    ) {
+        module?.author?.ifBlank { null }?.let { author ->
+            item { WearDetailField(Icons.TwoTone.Person, stringResource(R.string.module_author), author, Modifier.fillMaxWidth()) }
+        }
+        if (fileName.isNotBlank()) {
+            item { WearDetailField(Icons.TwoTone.Folder, stringResource(R.string.wear_file_name), fileName, Modifier.fillMaxWidth()) }
+        }
+        item { WearDetailField(Icons.TwoTone.Smartphone, stringResource(R.string.wear_install_target), Build.MODEL, Modifier.fillMaxWidth()) }
+        module?.description?.ifBlank { null }?.let { description ->
             item {
-                WearChip(
-                    spec,
-                    module.name.ifBlank { fileName.ifBlank { stringResource(R.string.unknown_module) } },
-                    secondaryLabel = listOfNotNull(
-                        version.ifBlank { null }?.let { stringResource(R.string.wear_labeled_value, stringResource(R.string.module_version), it) },
-                        module.author.ifBlank { null }?.let { stringResource(R.string.wear_labeled_value, stringResource(R.string.module_author), it) },
-                        fileName.ifBlank { null }?.let { stringResource(R.string.wear_labeled_value, stringResource(R.string.wear_file_name), it) },
-                    ).joinToString("\n").ifBlank { null },
-                    icon = Icons.TwoTone.Folder,
+                Text(
+                    description,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (module.description.isNotBlank()) item { WearInfoCard(spec) { Text(module.description) } }
-        }
-        item {
-            WearChip(
-                spec,
-                stringResource(R.string.wear_install_target),
-                secondaryLabel = Build.MODEL,
-                icon = Icons.TwoTone.Smartphone,
-            )
-        }
-        item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
-        item {
-            WearActionButton(
-                spec,
-                Icons.TwoTone.Download,
-                stringResource(R.string.confirm_installation),
-                onConfirm,
-                secondaryText = stringResource(R.string.wear_start_install_module),
-                colors = ButtonDefaults.buttonColors(),
-            )
         }
     }
 }

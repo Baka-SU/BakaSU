@@ -26,13 +26,19 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     description: String? = null,
+    transformed: Boolean = true,
 ) {
     FilledTonalButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
-            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
-        transformation = SurfaceTransformation(spec),
+        // Inside a swipe-to-reveal row the row owns the list transformation and edge padding.
+        modifier = if (transformed) {
+            Modifier.fillMaxWidth().transformedHeight(this, spec)
+                .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)
+        } else {
+            Modifier.fillMaxWidth()
+        },
+        transformation = if (transformed) SurfaceTransformation(spec) else null,
         icon = icon?.let { { Icon(it, contentDescription = null) } },
         secondaryLabel = description?.let { text -> { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
     ) { Text(title, maxLines = if (description == null) 3 else 2, overflow = TextOverflow.Ellipsis) }

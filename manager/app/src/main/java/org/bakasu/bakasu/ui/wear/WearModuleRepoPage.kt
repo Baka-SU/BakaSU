@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
+import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.CompactButton
@@ -263,9 +264,11 @@ internal fun WearOnlineModulePage(
         if (module == null) item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
         if (state.error != null) item { WearActionButton(spec, Icons.TwoTone.Cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
         if (module != null) {
-            // As in the design: the module icon, name and authors, then its main actions.
+            // As in the design: the module icon, name and authors, then its main actions. As the
+            // first item the icon takes the card's minimum list padding, a share of the screen
+            // height, so it stays below the time text on any screen size.
             item {
-                WearScaledItem(spec) {
+                WearScaledItem(spec, Modifier.fillMaxWidth().minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)) {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                         WearModuleIcon(52.dp)
                         // The bold name leads; authors and version follow in smaller, neutral styles.

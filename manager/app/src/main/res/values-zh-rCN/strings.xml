@@ -577,8 +577,6 @@
     <string name="install_force_backup_summary">请确保你选择的 boot 镜像是原厂镜像</string>
 
     <!-- Wear OS -->
-    <string name="wear_allowed">已允许</string>
-    <string name="wear_denied">已拒绝</string>
     <string name="wear_enabled">已启用</string>
     <string name="wear_disabled">已禁用</string>
     <string name="wear_pending_removal">等待卸载</string>
@@ -639,6 +637,7 @@
     <string name="wear_profile_mode">配置模式</string>
     <string name="wear_same_uid_apps">相同 UID 的应用组</string>
     <string name="wear_app_operations_summary">启动 · 强制停止</string>
+    <string name="wear_template_delete_message">删除模版“%1$s”？删除后 App Profile 将无法再使用它。</string>
     <string name="wear_template_view_online">查看线上范本</string>
     <string name="wear_template_online">线上范本</string>
     <string name="wear_template_online_empty">暂无线上范本</string>
@@ -662,7 +661,7 @@
     <string name="wear_module_information">模块信息</string>
     <string name="wear_module_operations">模块操作</string>
     <string name="wear_description">描述</string>
-    <string name="wear_meta_badge">元模块</string>
+    <string name="wear_meta_badge">META</string>
     <string name="wear_authorization">授权配置</string>
     <string name="wear_app_operations">应用操作</string>
     <string name="wear_operations">操作</string>
@@ -710,15 +709,10 @@
     <string name="wear_reboot_apply_kernel">应用内核变更</string>
     <string name="wear_retry">重试</string>
     <string name="wear_retry_install_summary">重新选择安装方式</string>
-    <string name="wear_file_check">文件核对</string>
-    <string name="wear_start_install_module">开始安装模块</string>
     <string name="wear_allowlist_backup">授权备份</string>
     <string name="wear_allowlist">授权列表</string>
     <string name="wear_backup_allowlist_summary">保存当前应用授权</string>
     <string name="wear_restore_allowlist_summary">从文件导入</string>
-    <string name="wear_operation_scope">操作范围</string>
-    <string name="wear_confirm_summary">执行当前操作</string>
-    <string name="wear_cancel_summary">返回上一级</string>
     <string name="wear_warning_root">Root 不可用</string>
     <string name="wear_warning_version_mismatch">版本不匹配</string>
     <string name="wear_warning_debug">DEBUG 构建</string>

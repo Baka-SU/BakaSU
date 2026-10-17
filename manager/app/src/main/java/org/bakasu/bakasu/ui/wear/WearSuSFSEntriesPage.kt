@@ -136,7 +136,7 @@ internal fun WearSuSFSDetailPage(
     onBack: () -> Unit,
     onCommand: (WearSuSFSCommand) -> Unit,
 ) {
-    val remove = rememberWearConfirmDialog(stringResource(R.string.delete), stringResource(R.string.confirm_delete)) {
+    val remove = rememberWearConfirmDialog(stringResource(R.string.delete), stringResource(R.string.confirm_delete), destructive = true) {
         onCommand { reply ->
             when (section) {
                 WearSuSFSSection.Path -> SuSFSUiAction.RemoveSusPath(path, reply)

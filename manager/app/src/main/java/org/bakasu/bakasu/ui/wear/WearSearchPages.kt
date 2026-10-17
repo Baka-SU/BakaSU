@@ -12,6 +12,7 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
@@ -46,7 +47,7 @@ internal fun WearAppSearchResults(
             state.appGroupList.isEmpty() -> item { WearStatusItem(spec, Icons.TwoTone.SearchOff, stringResource(R.string.no_apps_found)) }
         }
         items(state.appGroupList, key = { "${it.uid}:${it.primaryPackageName}" }) { group ->
-            WearAppItem(spec, group, onAppClick)
+            WearAppItem(spec, group, onAppClick, group.uid in state.managerUids)
         }
     }
 }
@@ -58,6 +59,7 @@ internal fun WearModuleSearchResults(
     error: String?,
     onEdit: () -> Unit,
     onModuleClick: (String) -> Unit,
+    onEnabledChange: (InstalledModule, Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
     val title = stringResource(R.string.search_modules)
@@ -67,7 +69,7 @@ internal fun WearModuleSearchResults(
             !error.isNullOrBlank() -> item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR) }
             state.moduleList.isEmpty() -> item { WearStatusItem(spec, Icons.TwoTone.SearchOff, stringResource(R.string.search_no_any_match)) }
         }
-        items(state.moduleList, key = { it.id }) { module -> WearModuleItem(spec, module, onModuleClick) }
+        items(state.moduleList, key = { it.id }) { module -> WearModuleItem(spec, module, onModuleClick, onEnabledChange) }
     }
 }
 

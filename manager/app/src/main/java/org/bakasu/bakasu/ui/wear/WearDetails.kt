@@ -112,6 +112,7 @@ internal fun WearModuleDetail(
             },
             module.name,
         ),
+        destructive = true,
         onConfirm = { onRemove(module.id, true) },
     )
     WearResultDialog(error?.takeIf { it.isNotBlank() }?.let { WearResult(it, success = false) }, onErrorShown)

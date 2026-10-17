@@ -121,7 +121,7 @@ private const val SETTINGS = 3
 
 /** Destinations that need a full-featured root manager; they close when root goes away. */
 private fun WearRoute.needsRoot() = when (this) {
-    is WearRoute.Module, is WearRoute.ModuleAction, is WearRoute.ModuleUpdate, is WearRoute.ModuleInstallConfirm, is WearRoute.ModuleInstall,
+    is WearRoute.Module, is WearRoute.ModuleAction, is WearRoute.ModuleUpdate, is WearRoute.ModuleInstall,
     WearRoute.ModuleSort, WearRoute.ModuleSearch, WearRoute.ModuleSearchResults, WearRoute.ModuleRepo, WearRoute.ModuleRepoSearch, is WearRoute.OnlineModule, is WearRoute.OnlineModuleSection,
     is WearRoute.OnlineModuleDownload,
     is WearRoute.App, WearRoute.AppFilter, WearRoute.AppSearch, WearRoute.AppSearchResults,
@@ -245,7 +245,11 @@ fun WearManagerScreen() {
     ) { sulogViewModel.dispatch(SulogUiAction.Search(it.trim())) }
 
     // As on the phone, a selected module ZIP is installed only after the user confirms it.
-    fun confirmModule(uri: String) = open(WearRoute.ModuleInstallConfirm(uri))
+    // A ZIP to install waits for the install confirmation dialog, shown over the current page.
+    var installConfirmUri by rememberSaveable { mutableStateOf<String?>(null) }
+    fun confirmModule(uri: String) {
+        installConfirmUri = uri
+    }
     val selectModuleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) confirmModule(uri.toString())
     }
@@ -366,6 +370,7 @@ fun WearManagerScreen() {
     // A found manager update is offered in a dialog, the stable channel first as on the phone's Home.
     WearManagerUpdateDialog(home.stableManagerUpdate ?: home.betaManagerUpdate)
     WearResultDialog(settingsResult) { clearSettingsFeedback() }
+    WearModuleInstallConfirmDialog(installConfirmUri, { installConfirmUri = null }) { open(WearRoute.ModuleInstall(it)) }
     WearOpenResultDialogs(openedOnPhone, { openedOnPhone = false }, openFailure, openFailureFallback, openFailed) {
         openFailed = false
     }
@@ -463,12 +468,6 @@ fun WearManagerScreen() {
                                     )
                                 }
                             }
-                            entry<WearRoute.ModuleInstallConfirm> { route ->
-                                WearModuleInstallConfirmPage(route.uri, ::back) {
-                                    back()
-                                    open(WearRoute.ModuleInstall(route.uri))
-                                }
-                            }
                             entry<WearRoute.ModuleInstall> { route ->
                                 WearFlashPage(FlashOperation.Module(route.uri), ::back) {
                                     moduleViewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
@@ -527,6 +526,7 @@ fun WearManagerScreen() {
                                     moduleError,
                                     onEdit = moduleSearchInput,
                                     onModuleClick = { open(WearRoute.Module(it)) },
+                                    onEnabledChange = { module, enabled -> moduleViewModel.dispatch(ModuleUiAction.SetEnabled(module.id, enabled)) },
                                     onBack = ::back,
                                 )
                             }
@@ -896,6 +896,7 @@ private fun WearMainPages(
                                 onSort = { onOpen(WearRoute.ModuleSort) },
                                 listState = moduleListState,
                                 onModuleClick = { onOpen(WearRoute.Module(it)) },
+                                onEnabledChange = { module, enabled -> onModule(ModuleUiAction.SetEnabled(module.id, enabled)) },
                                 onInstallClick = onInstallModule,
                                 onWebUi = onWebUi,
                                 onExecute = { onOpen(WearRoute.ModuleAction(it.id)) },

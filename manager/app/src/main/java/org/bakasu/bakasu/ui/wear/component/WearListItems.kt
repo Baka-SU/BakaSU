@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -120,17 +121,22 @@ fun TransformingLazyColumnItemScope.WearActionButton(
 }
 
 /**
- * A small label beside a title that marks what kind of item it is, such as a metamodule. It sits on
- * the tertiary container, so it reads apart from the title without taking its color.
+ * A small label beside a title that marks what kind of item it is, such as a metamodule. Like the
+ * phone's module labels it sits on the tertiary color by default, so it reads apart from the title.
  */
 @Composable
-fun WearBadge(text: String, modifier: Modifier = Modifier) {
+fun WearBadge(
+    text: String,
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.tertiary,
+    contentColor: Color = MaterialTheme.colorScheme.onTertiary,
+) {
     Text(
         text,
         modifier = modifier
-            .background(MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.shapes.extraSmall)
+            .background(containerColor, MaterialTheme.shapes.extraSmall)
             .padding(horizontal = 4.dp),
-        color = MaterialTheme.colorScheme.onTertiaryContainer,
+        color = contentColor,
         style = MaterialTheme.typography.labelSmall,
         maxLines = 1,
     )

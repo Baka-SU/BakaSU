@@ -221,7 +221,8 @@ internal fun WearLogOptionsPage(
     val cleanDialog = rememberWearConfirmDialog(
         stringResource(R.string.sulog_clean_title),
         stringResource(R.string.confirm_delete),
-        onClean,
+        destructive = true,
+        onConfirm = onClean,
     )
     val selectedPath = state.selectedFilePath ?: state.files.firstOrNull()?.path
     WearList(onBack = onBack) { spec ->

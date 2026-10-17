@@ -1,16 +1,12 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.twotone.Add
-import androidx.compose.material.icons.twotone.Delete
 import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Extension
 import androidx.compose.material.icons.twotone.Language
@@ -18,19 +14,22 @@ import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.Search
 import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.LocalContentColor
+import androidx.wear.compose.material3.LocalTextStyle
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.SplitSwitchButton
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
@@ -58,6 +57,7 @@ internal fun WearModulesPage(
     error: String?,
     onRefresh: () -> Unit,
     onModuleClick: (String) -> Unit,
+    onEnabledChange: (InstalledModule, Boolean) -> Unit,
     onInstallClick: () -> Unit,
     onSearch: () -> Unit,
     onSort: () -> Unit,
@@ -100,36 +100,27 @@ internal fun WearModulesPage(
             }
         }
         items(state.moduleList, key = { it.id }) { module ->
-            WearModuleItem(spec, module, onModuleClick, listState.isScrollInProgress, onWebUi, onExecute)
+            WearModuleItem(spec, module, onModuleClick, onEnabledChange, listState.isScrollInProgress, onWebUi, onExecute)
         }
     }
 }
 
-/** One module on a neutral surface; the state shows as icon and text, with color only on the icon. */
+/**
+ * One module as a split switch row: the row opens the module details and its separate switch
+ * enables or disables the module, so the two never trigger each other. The whole container takes
+ * the active (checked) color while the module is enabled. The module icon leads the title, and the
+ * version and any pending removal follow below it in the quieter secondary style.
+ */
 @Composable
 internal fun TransformingLazyColumnItemScope.WearModuleItem(
     spec: TransformationSpec,
     module: InstalledModule,
     onModuleClick: (String) -> Unit,
+    onEnabledChange: (InstalledModule, Boolean) -> Unit,
     scrolling: Boolean = false,
     onWebUi: ((InstalledModule) -> Unit)? = null,
     onExecute: ((InstalledModule) -> Unit)? = null,
 ) {
-    val status = when {
-        module.remove -> R.string.wear_pending_removal
-        module.enabled -> R.string.wear_enabled
-        else -> R.string.wear_disabled
-    }
-    val statusIcon = when {
-        module.remove -> Icons.TwoTone.Delete
-        module.enabled -> Icons.Default.CheckCircle
-        else -> Icons.Default.Block
-    }
-    val statusTint = when {
-        module.remove -> MaterialTheme.colorScheme.error
-        module.enabled -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
     val actions = buildList {
         if (module.enabled && !module.remove) {
             if (module.hasWebUi && onWebUi != null) {
@@ -150,8 +141,17 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             }
         }
     }
+    val details = listOfNotNull(
+        module.version.ifBlank { null },
+        if (module.remove) stringResource(R.string.wear_pending_removal) else null,
+    ).joinToString(" · ")
     val button: @Composable () -> Unit = {
-        Button(
+        SplitSwitchButton(
+            checked = module.enabled,
+            // As on the module details, a module waiting for removal or an update keeps its state.
+            onCheckedChange = { enabled -> if (!module.remove && !module.update) onEnabledChange(module, enabled) },
+            toggleContentDescription = stringResource(R.string.wear_enable_module),
+            onContainerClick = { onModuleClick(module.id) },
             modifier = Modifier.fillMaxWidth()
                 .then(
                     if (actions.isEmpty()) {
@@ -161,22 +161,34 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                         Modifier
                     },
                 ),
-            // A reveal row owns its transformation; a standalone button owns its own.
+            // A reveal row owns its transformation; a standalone row owns its own.
             transformation = if (actions.isEmpty()) SurfaceTransformation(spec) else null,
-            onClick = { onModuleClick(module.id) },
-            colors = ButtonDefaults.filledTonalButtonColors(),
-            icon = { Icon(Icons.TwoTone.Extension, contentDescription = null) },
-            secondaryLabel = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(statusIcon, contentDescription = null, modifier = Modifier.size(16.dp), tint = statusTint)
-                    Spacer(Modifier.width(4.dp))
-                    Text(stringResource(status), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            secondaryLabel = details.ifBlank { null }?.let { text ->
+                {
+                    // Indented by the icon, so the secondary label lines up with the module name.
+                    Spacer(Modifier.width(ButtonDefaults.IconSize + ButtonDefaults.IconSpacing))
+                    Text(
+                        text,
+                        color = if (module.remove) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             },
         ) {
-            Text(module.name, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // The split switch has no icon slot, so the unchanged module icon leads the label.
+            Icon(Icons.TwoTone.Extension, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            // Long names wrap with balanced lines rather than leaving one character on the last line.
+            Text(
+                module.name,
+                Modifier.weight(1f, fill = false),
+                style = LocalTextStyle.current.merge(TextStyle(lineBreak = LineBreak.Heading)),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (module.metamodule) {
-                WearBadge(stringResource(R.string.wear_meta_badge), Modifier.padding(start = 4.dp).align(Alignment.CenterVertically))
+                WearBadge(stringResource(R.string.wear_meta_badge), Modifier.padding(start = 4.dp))
             }
         }
     }

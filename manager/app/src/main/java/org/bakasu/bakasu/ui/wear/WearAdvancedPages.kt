@@ -236,7 +236,7 @@ internal fun WearUmountPage(onBack: () -> Unit) {
     WearResultDialog(result) { result = null }
     val failed = stringResource(R.string.operation_failed)
     var selected by remember { mutableStateOf<UmountPath?>(null) }
-    val remove = rememberWearConfirmDialog(stringResource(R.string.delete), stringResource(R.string.confirm_delete)) {
+    val remove = rememberWearConfirmDialog(stringResource(R.string.delete), stringResource(R.string.confirm_delete), destructive = true) {
         selected?.let { viewModel.dispatch(UmountManagerUiAction.Remove(it)) }
         selected = null
     }
@@ -307,7 +307,7 @@ internal fun WearUmountPage(onBack: () -> Unit) {
 @Composable
 internal fun WearUninstallPage(onBack: () -> Unit, onStart: (restore: Boolean) -> Unit) {
     var selected by remember { mutableStateOf(UninstallType.PERMANENT) }
-    val confirm = rememberWearConfirmDialog(stringResource(selected.title), stringResource(selected.message)) {
+    val confirm = rememberWearConfirmDialog(stringResource(selected.title), stringResource(selected.message), destructive = true) {
         onStart(selected == UninstallType.RESTORE_STOCK_IMAGE)
     }
     WearList(onBack = onBack) { spec ->
