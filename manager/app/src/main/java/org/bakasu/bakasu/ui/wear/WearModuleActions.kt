@@ -55,6 +55,8 @@ import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLogPage
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
@@ -191,8 +193,9 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
     val state by viewModel.state.collectAsStateWithLifecycle()
     var successful by rememberSaveable { mutableStateOf<Boolean?>(null) }
     var showLog by rememberSaveable { mutableStateOf(false) }
-    var logSaved by remember { mutableStateOf(false) }
-    var saveFailed by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<WearResult?>(null) }
+    val saved = WearResult(stringResource(R.string.log_saved), success = true, brief = true)
+    val failed = WearResult(stringResource(R.string.operation_failed), success = false, brief = true)
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
@@ -201,9 +204,9 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
                     onCompleted()
                 }
 
-                is ExecuteModuleActionUiEvent.LogSaved -> logSaved = true
+                is ExecuteModuleActionUiEvent.LogSaved -> result = saved
 
-                is ExecuteModuleActionUiEvent.Error -> saveFailed = true
+                is ExecuteModuleActionUiEvent.Error -> result = failed
             }
         }
     }
@@ -258,17 +261,5 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
             )
         }
     }
-    val savedText = stringResource(R.string.log_saved)
-    val failedText = stringResource(R.string.operation_failed)
-    val style = ConfirmationDialogDefaults.curvedTextStyle
-    SuccessConfirmationDialog(
-        visible = logSaved,
-        onDismissRequest = { logSaved = false },
-        curvedText = { confirmationDialogCurvedText(savedText, style) },
-    )
-    FailureConfirmationDialog(
-        visible = saveFailed,
-        onDismissRequest = { saveFailed = false },
-        curvedText = { confirmationDialogCurvedText(failedText, style) },
-    )
+    WearResultDialog(result) { result = null }
 }

@@ -10,10 +10,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
-import androidx.wear.compose.material3.ConfirmationDialogDefaults
-import androidx.wear.compose.material3.FailureConfirmationDialog
-import androidx.wear.compose.material3.SuccessConfirmationDialog
-import androidx.wear.compose.material3.confirmationDialogCurvedText
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -25,6 +21,8 @@ import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 
@@ -36,17 +34,17 @@ import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 @Composable
 internal fun WearAllowlistBackupPage(viewModel: SuperUserViewModel, onBack: () -> Unit) {
     var restoreUri by rememberSaveable { mutableStateOf("") }
-    var successText by remember { mutableStateOf<String?>(null) }
-    var failed by remember { mutableStateOf(false) }
-    val backupSuccess = stringResource(R.string.allowlist_backup_success)
-    val restoreSuccess = stringResource(R.string.allowlist_restore_success)
+    var result by remember { mutableStateOf<WearResult?>(null) }
+    val backupSuccess = WearResult(stringResource(R.string.allowlist_backup_success), success = true, brief = true)
+    val restoreSuccess = WearResult(stringResource(R.string.allowlist_restore_success), success = true, brief = true)
+    val failed = WearResult(stringResource(R.string.operation_failed), success = false, brief = true)
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             if (event is SuperUserUiEvent.AllowlistOperationFinished) {
-                if (event.result == AllowlistOperationResult.Success) {
-                    successText = if (event.restore) restoreSuccess else backupSuccess
-                } else {
-                    failed = true
+                result = when {
+                    event.result != AllowlistOperationResult.Success -> failed
+                    event.restore -> restoreSuccess
+                    else -> backupSuccess
                 }
             }
         }
@@ -76,7 +74,7 @@ internal fun WearAllowlistBackupPage(viewModel: SuperUserViewModel, onBack: () -
                 {
                     // The same file name as the phone backup, so both are recognized alike.
                     val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-                    runCatching { backupLauncher.launch("ksu_allowlist_backup_$timestamp.dat") }.onFailure { failed = true }
+                    runCatching { backupLauncher.launch("ksu_allowlist_backup_$timestamp.dat") }.onFailure { result = failed }
                 },
                 secondaryText = stringResource(R.string.wear_backup_allowlist_summary),
             )
@@ -86,21 +84,10 @@ internal fun WearAllowlistBackupPage(viewModel: SuperUserViewModel, onBack: () -
                 spec,
                 R.drawable.wear_symbol_history,
                 stringResource(R.string.restore_allowlist),
-                { runCatching { restoreLauncher.launch(arrayOf("application/octet-stream")) }.onFailure { failed = true } },
+                { runCatching { restoreLauncher.launch(arrayOf("application/octet-stream")) }.onFailure { result = failed } },
                 secondaryText = stringResource(R.string.wear_restore_allowlist_summary),
             )
         }
     }
-    val failedText = stringResource(R.string.operation_failed)
-    val style = ConfirmationDialogDefaults.curvedTextStyle
-    SuccessConfirmationDialog(
-        visible = successText != null,
-        onDismissRequest = { successText = null },
-        curvedText = { confirmationDialogCurvedText(successText.orEmpty(), style) },
-    )
-    FailureConfirmationDialog(
-        visible = failed,
-        onDismissRequest = { failed = false },
-        curvedText = { confirmationDialogCurvedText(failedText, style) },
-    )
+    WearResultDialog(result) { result = null }
 }

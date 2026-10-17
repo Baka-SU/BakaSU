@@ -13,10 +13,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
-import androidx.wear.compose.material3.ConfirmationDialogDefaults
-import androidx.wear.compose.material3.FailureConfirmationDialog
-import androidx.wear.compose.material3.SuccessConfirmationDialog
-import androidx.wear.compose.material3.confirmationDialogCurvedText
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +24,8 @@ import org.bakasu.bakasu.domain.usecase.GenerateBugreportUseCase
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.koin.compose.koinInject
 
 /** Saving or sharing the bugreport, as the phone's log sheet does. */
@@ -37,14 +35,15 @@ internal fun WearBugreportPage(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val generateBugreport = koinInject<GenerateBugreportUseCase>()
     var busy by remember { mutableStateOf(false) }
-    var saved by remember { mutableStateOf(false) }
-    var failed by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<WearResult?>(null) }
     val sendLog = stringResource(R.string.send_log)
+    val saved = WearResult(stringResource(R.string.log_saved), success = true, brief = true)
+    val failed = WearResult(stringResource(R.string.operation_failed), success = false, brief = true)
     fun run(block: suspend () -> Unit) {
         busy = true
-        failed = false
+        result = null
         scope.launch {
-            runCatching { block() }.onFailure { failed = true }
+            runCatching { block() }.onFailure { result = failed }
             busy = false
         }
     }
@@ -56,7 +55,7 @@ internal fun WearBugreportPage(onBack: () -> Unit) {
                         generateBugreport().inputStream().use { it.copyTo(output) }
                     }
                 }
-                saved = true
+                result = saved
             }
         }
     }
@@ -65,7 +64,7 @@ internal fun WearBugreportPage(onBack: () -> Unit) {
         item {
             WearActionButton(spec, R.drawable.wear_symbol_save, stringResource(R.string.save_log), {
                 val current = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm"))
-                runCatching { exportLauncher.launch("KernelSU_bugreport_$current.tar.gz") }.onFailure { failed = true }
+                runCatching { exportLauncher.launch("KernelSU_bugreport_$current.tar.gz") }.onFailure { result = failed }
             })
         }
         item {
@@ -85,17 +84,5 @@ internal fun WearBugreportPage(onBack: () -> Unit) {
             })
         }
     }
-    val savedText = stringResource(R.string.log_saved)
-    val failedText = stringResource(R.string.operation_failed)
-    val style = ConfirmationDialogDefaults.curvedTextStyle
-    SuccessConfirmationDialog(
-        visible = saved,
-        onDismissRequest = { saved = false },
-        curvedText = { confirmationDialogCurvedText(savedText, style) },
-    )
-    FailureConfirmationDialog(
-        visible = failed,
-        onDismissRequest = { failed = false },
-        curvedText = { confirmationDialogCurvedText(failedText, style) },
-    )
+    WearResultDialog(result) { result = null }
 }

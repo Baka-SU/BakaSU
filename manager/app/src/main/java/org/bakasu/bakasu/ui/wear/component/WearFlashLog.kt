@@ -85,14 +85,15 @@ fun WearLogPage(title: String, lines: List<String>, following: Boolean, onBack: 
 
 /**
  * Saves a log to a document the user picks, named `<prefix>_<date>.log` as on the phone, and shows
- * the result with the M3 confirmation dialogs. Returns the action that starts saving.
+ * the result once with [WearResultDialog]. Returns the action that starts saving.
  */
 @Composable
 fun rememberWearLogSaver(fileNamePrefix: String, content: () -> String): () -> Unit {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var saved by remember { mutableStateOf(false) }
-    var failed by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<WearResult?>(null) }
+    val saved = WearResult(stringResource(R.string.log_saved), success = true, brief = true)
+    val failed = WearResult(stringResource(R.string.operation_failed), success = false, brief = true)
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri: Uri? ->
         if (uri != null) {
             val text = content()
@@ -101,25 +102,13 @@ fun rememberWearLogSaver(fileNamePrefix: String, content: () -> String): () -> U
                     withContext(Dispatchers.IO) {
                         checkNotNull(context.contentResolver.openOutputStream(uri)).use { it.write(text.toByteArray()) }
                     }
-                }.onSuccess { saved = true }.onFailure { failed = true }
+                }.onSuccess { result = saved }.onFailure { result = failed }
             }
         }
     }
-    val savedText = stringResource(R.string.log_saved)
-    val failedText = stringResource(R.string.operation_failed)
-    val style = ConfirmationDialogDefaults.curvedTextStyle
-    SuccessConfirmationDialog(
-        visible = saved,
-        onDismissRequest = { saved = false },
-        curvedText = { confirmationDialogCurvedText(savedText, style) },
-    )
-    FailureConfirmationDialog(
-        visible = failed,
-        onDismissRequest = { failed = false },
-        curvedText = { confirmationDialogCurvedText(failedText, style) },
-    )
+    WearResultDialog(result) { result = null }
     return {
         val date = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.getDefault()).format(Date())
-        runCatching { launcher.launch("${fileNamePrefix}_$date.log") }.onFailure { failed = true }
+        runCatching { launcher.launch("${fileNamePrefix}_$date.log") }.onFailure { result = failed }
     }
 }

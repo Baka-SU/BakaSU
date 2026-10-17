@@ -79,32 +79,10 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     val batchResult = stringResource(R.string.susfs_entry_import_success)
     val backupFileName = stringResource(R.string.wear_susfs_backup_file_name)
     val config = state.config
-    var confirmSuccessText by remember { mutableStateOf("") }
-    var showConfirmSuccess by remember { mutableStateOf(false) }
-    var showConfirmFailure by remember { mutableStateOf(false) }
 
-    // Export, import and restoring defaults are one-shot file operations; their result shows as the
-    // official confirmation overlay with a curved label; the other commands report with WearResultDialog.
-    fun submitConfirmed(command: WearSuSFSCommand, successMessage: String) {
-        if (busy) return
-        busy = true
-        showConfirmFailure = false
-        scope.launch {
-            try {
-                if (awaitSuSFSBoolean(viewModel, command)) {
-                    awaitSuSFSConfig(viewModel) { SuSFSUiAction.Load(it) }
-                    confirmSuccessText = successMessage
-                    showConfirmSuccess = true
-                } else {
-                    showConfirmFailure = true
-                }
-            } finally {
-                busy = false
-            }
-        }
-    }
-
-    fun submit(command: WearSuSFSCommand, successMessage: String = succeeded, onSuccess: () -> Unit = {}) {
+    // Export, import and restoring defaults report [brief] results as curved text; the other
+    // commands may report longer messages.
+    fun submit(command: WearSuSFSCommand, successMessage: String = succeeded, brief: Boolean = false, onSuccess: () -> Unit = {}) {
         if (busy) return
         busy = true
         result = null
@@ -112,10 +90,10 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
             try {
                 if (awaitSuSFSBoolean(viewModel, command)) {
                     awaitSuSFSConfig(viewModel) { SuSFSUiAction.Load(it) }
-                    result = WearResult(successMessage, success = true)
+                    result = WearResult(successMessage, success = true, brief)
                     onSuccess()
                 } else {
-                    result = WearResult(failed, success = false)
+                    result = WearResult(failed, success = false, brief)
                 }
             } finally {
                 busy = false
@@ -167,20 +145,20 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
         stringResource(R.string.susfs_backup_import_confirm_title),
         stringResource(R.string.susfs_backup_import_confirm_message),
     ) {
-        submitConfirmed({ SuSFSUiAction.ImportConfig(pendingImport, it) }, importSuccess)
+        submit({ SuSFSUiAction.ImportConfig(pendingImport, it) }, importSuccess, brief = true)
     }
     val restore = rememberWearConfirmDialog(
         stringResource(R.string.susfs_backup_restore_default),
         stringResource(R.string.susfs_backup_restore_default_desc),
     ) {
-        submitConfirmed({ SuSFSUiAction.RestoreDefault(it) }, succeeded)
+        submit({ SuSFSUiAction.RestoreDefault(it) }, succeeded, brief = true)
     }
     fun importSelected(uri: String) {
         pendingImport = uri
         confirmImport.show()
     }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
-        if (uri != null) submitConfirmed({ SuSFSUiAction.ExportConfig(uri.toString(), it) }, exportSuccess)
+        if (uri != null) submit({ SuSFSUiAction.ExportConfig(uri.toString(), it) }, exportSuccess, brief = true)
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) importSelected(uri.toString())
@@ -190,7 +168,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     fun launchPicker(export: Boolean) {
         runCatching {
             if (export) exportLauncher.launch(backupFileName) else importLauncher.launch(arrayOf("application/json"))
-        }.onFailure { showConfirmFailure = true }
+        }.onFailure { result = WearResult(failed, success = false, brief = true) }
     }
     val statusContent: @Composable () -> Unit = {
         WearList(isLoading = state.isLoading || busy, onBack = { page = "" }) { spec ->
@@ -326,15 +304,4 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
             }
         }
     }
-    val confirmationStyle = ConfirmationDialogDefaults.curvedTextStyle
-    SuccessConfirmationDialog(
-        visible = showConfirmSuccess,
-        onDismissRequest = { showConfirmSuccess = false },
-        curvedText = { confirmationDialogCurvedText(confirmSuccessText, confirmationStyle) },
-    )
-    FailureConfirmationDialog(
-        visible = showConfirmFailure,
-        onDismissRequest = { showConfirmFailure = false },
-        curvedText = { confirmationDialogCurvedText(failed, confirmationStyle) },
-    )
 }

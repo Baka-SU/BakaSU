@@ -63,6 +63,8 @@ import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
@@ -149,12 +151,9 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
         }
         return
     }
-    val failureStyle = ConfirmationDialogDefaults.curvedTextStyle
-    FailureConfirmationDialog(
-        visible = failure != null && state.modules.isNotEmpty(),
-        onDismissRequest = { failure = null },
-        curvedText = { confirmationDialogCurvedText(failureReason, failureStyle) },
-    )
+    WearResultDialog(WearResult(failureReason, success = false, brief = true).takeIf { failure != null && state.modules.isNotEmpty() }) {
+        failure = null
+    }
     WearList(
         isLoading = state.isRefreshing && state.modules.isEmpty(),
         isRefreshing = state.isRefreshing,

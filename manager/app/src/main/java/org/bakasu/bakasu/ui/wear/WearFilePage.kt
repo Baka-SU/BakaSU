@@ -48,6 +48,8 @@ import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
@@ -182,12 +184,7 @@ internal fun WearFilePage(
         }
     }
     val failedText = stringResource(R.string.operation_failed)
-    val failedStyle = ConfirmationDialogDefaults.curvedTextStyle
-    FailureConfirmationDialog(
-        visible = permissionFailed,
-        onDismissRequest = { permissionFailed = false },
-        curvedText = { confirmationDialogCurvedText(failedText, failedStyle) },
-    )
+    WearResultDialog(WearResult(failedText, success = false, brief = true).takeIf { permissionFailed }) { permissionFailed = false }
     if (editingName) {
         WearSubPage({ editingName = false }) {
             WearTextInputPage(stringResource(R.string.wear_file_name), state.name) {
