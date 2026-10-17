@@ -154,6 +154,7 @@ class ModuleRepository(
                         "_",
                     ),
                     changelog = json.optString("changelog"),
+                    versionCode = onlineVersionCode,
                 )
             }
         }

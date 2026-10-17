@@ -250,12 +250,14 @@ dependencies {
     implementation(libs.ucrop)
 
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.me.zhanghai.android.appiconloader)
     implementation(libs.me.zhanghai.android.appiconloader.coil)
     implementation(libs.org.lsposed.hiddenapibypass)
 
     implementation(libs.markdown)
+    implementation(libs.markwon.tables)
     implementation(libs.androidx.webkit)
 
     implementation(libs.lsposed.cxx)

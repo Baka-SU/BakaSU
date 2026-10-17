@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -136,6 +137,7 @@ fun SettingsBaseWidget(
     foreContent: @Composable RowScope.() -> Unit = {},
     descriptionColumnContent: (@Composable ColumnScope.() -> Unit)? = null,
     containerColor: Color? = null,
+    contentPadding: PaddingValues = ListItemDefaults.ContentPadding,
     trailingContent: (@Composable BoxScope.(interactionSource: MutableInteractionSource) -> Unit)? = null,
 ) {
     val themeConfig: ThemeConfig = koinInject()
@@ -434,6 +436,7 @@ fun SettingsBaseWidget(
             leadingContent = finalLeadingContent,
             trailingContent = trailing,
             interactionSource = interactionSource,
+            contentPadding = contentPadding,
             content = expressiveContent,
         )
     } else {
@@ -460,7 +463,7 @@ fun SettingsBaseWidget(
             colors = colors,
             leadingContent = finalLeadingContent,
             trailingContent = trailing,
-            contentPadding = ListItemDefaults.ContentPadding,
+            contentPadding = contentPadding,
             content = expressiveContent,
         )
     }

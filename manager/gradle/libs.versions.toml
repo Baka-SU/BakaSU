@@ -12,6 +12,7 @@ lifecycle = "2.11.0"
 activity-compose = "1.13.0"
 core-splashscreen = "1.2.0"
 kotlinx-coroutines = "1.11.0"
+kotlinx-serialization = "1.11.0"
 coil-compose = "2.7.0"
 ucrop = "2.2.11"
 markdown = "4.6.2"
@@ -50,6 +51,7 @@ aboutLibraries = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "abo
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 
 [libraries]
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 xz = { module = "org.tukaani:xz", version.ref = "xz" }
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
@@ -104,6 +106,7 @@ miuix-nav = { group = "top.yukonga.miuix.kmp", name = "miuix-nav", version.ref =
 miuix-blur = { group = "top.yukonga.miuix.kmp", name = "miuix-blur-android", version.ref = "miuix" }
 
 markdown = { group = "io.noties.markwon", name = "core", version.ref = "markdown" }
+markwon-tables = { group = "io.noties.markwon", name = "ext-tables", version.ref = "markdown" }
 
 lsposed-cxx = { module = "org.lsposed.libcxx:libcxx", version.ref = "ndk" }
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }

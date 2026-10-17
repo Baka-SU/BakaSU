@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.component
 
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,14 +31,118 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import java.io.InputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.file.withInstallArchive
+import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.DownloadStatus
+import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
+import org.bakasu.bakasu.domain.model.RepositorySource
+import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
+import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
+import org.bakasu.bakasu.ui.util.downloader.download
+import org.bakasu.bakasu.ui.util.downloader.downloadFailureMessage
+import org.koin.compose.koinInject
+
+val LocalRepositoryModuleInstall = staticCompositionLocalOf<(Uri, CatalogModule, ModuleReleaseAsset, () -> Boolean) -> Unit> {
+    error("Repository module installation is unavailable")
+}
+
+@Composable
+fun rememberRepositoryInstallDialog(): (CatalogModule, ModuleReleaseAsset, () -> Boolean) -> Unit {
+    val context = LocalContext.current
+    val permission = LocalPermissionRequestInterface.current
+    val installRepositoryModule = LocalRepositoryModuleInstall.current
+    val enqueueDownload = koinInject<EnqueueDownloadUseCase>()
+    val observeDownload = koinInject<ObserveDownloadUseCase>()
+    val observeAssetDownload = koinInject<ObserveAssetDownloadUseCase>()
+    val getReleaseDetails = koinInject<GetModuleReleaseDetailsUseCase>()
+    val isUriAccessible = koinInject<IsModuleUriAccessibleUseCase>()
+    val scope = rememberCoroutineScope()
+    val dialog = rememberConfirmDialog()
+    val loading = rememberLoadingDialog()
+    val title = stringResource(R.string.confirm_install_module_title)
+    val downloading = stringResource(R.string.module_downloading)
+    var busy by remember { mutableStateOf(false) }
+    fun isDownloading(asset: ModuleReleaseAsset): Boolean = observeAssetDownload.current(asset)?.status.let {
+        it == DownloadStatus.PENDING || it == DownloadStatus.DOWNLOADING
+    }
+    return { module, asset, canEnqueue ->
+        scope.launch {
+            if (busy || !canEnqueue() || isDownloading(asset)) return@launch
+            if ((module.isScript || asset.verificationRequired || module.repositoryUrl == RepositorySource.KERNEL_SU_URL) && asset.expected == null) {
+                Toast.makeText(context, R.string.repo_update_unverifiable, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            busy = true
+            val confirmed = try {
+                if (module.isScript) {
+                    val cached = observeAssetDownload.current(asset)?.takeIf { it.status == DownloadStatus.COMPLETED }?.resultUri
+                    if (cached != null && withContext(Dispatchers.IO) { isUriAccessible(cached) }) {
+                        if (canEnqueue()) installRepositoryModule(cached.toUri(), module, asset, canEnqueue)
+                        return@launch
+                    }
+                    true
+                } else {
+                    val release = module.releases.firstOrNull { release -> release.assets.any { it.hasSameIdentity(asset) } }
+                        ?: return@launch
+                    val notes = loading.withLoading { getReleaseDetails.notes(module, release) }
+                    val content = notes?.content ?: module.summary
+                    if (!canEnqueue()) return@launch
+                    dialog.awaitConfirm(
+                        title = title.format(module.moduleName),
+                        content = content,
+                        document = notes,
+                    ) == ConfirmResult.Confirmed
+                }
+            } finally {
+                busy = false
+            }
+            if (!confirmed || !canEnqueue() || isDownloading(asset)) return@launch
+            withContext(Dispatchers.IO) {
+                download(
+                    context = context,
+                    permissionRequestInterface = permission,
+                    url = asset.downloadUrl,
+                    fileName = asset.name,
+                    enqueueDownload = enqueueDownload,
+                    observeDownload = observeDownload,
+                    canEnqueue = { canEnqueue() && !isDownloading(asset) },
+                    expected = asset.expected,
+                    onFailed = { state -> Toast.makeText(context, downloadFailureMessage(context, state), Toast.LENGTH_LONG).show() },
+                    onDownloaded = { uri ->
+                        if (canEnqueue()) installRepositoryModule(uri, module, asset, canEnqueue)
+                    },
+                    onDownloading = {
+                        launch(Dispatchers.Main) {
+                            Toast.makeText(context, downloading.format(module.moduleName), Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
 
 enum class ZipType {
     MODULE,
@@ -308,7 +413,7 @@ fun InstallItemCard(zipFile: ZipFileInfo) {
             }
 
             // 详细信息
-            if (zipFile.version.isNotEmpty() || zipFile.author.isNotEmpty() ||
+            if (zipFile.version.isNotEmpty() || zipFile.versionCode.isNotEmpty() || zipFile.author.isNotEmpty() ||
                 zipFile.description.isNotEmpty() || zipFile.supported.isNotEmpty()
             ) {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -319,10 +424,14 @@ fun InstallItemCard(zipFile: ZipFileInfo) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // 版本信息
-                if (zipFile.version.isNotEmpty()) {
+                if (zipFile.version.isNotEmpty() || zipFile.versionCode.isNotEmpty()) {
                     InfoRow(
                         label = stringResource(R.string.version),
-                        value = zipFile.version + if (zipFile.versionCode.isNotEmpty()) " (${zipFile.versionCode})" else "",
+                        value = if (zipFile.version.isEmpty()) {
+                            zipFile.versionCode
+                        } else {
+                            zipFile.version + if (zipFile.versionCode.isNotEmpty()) " (${zipFile.versionCode})" else ""
+                        },
                     )
                 }
 

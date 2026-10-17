@@ -468,7 +468,10 @@ class HanziToPinyin private constructor(val hasChinaCollator: Boolean) : TextTra
         private const val FIRST_PINYIN_UNIHAN = "阿"
         private const val LAST_PINYIN_UNIHAN = "鿿"
 
-        private val COLLATOR: Collator = Collator.getInstance(Locale.CHINA)
+        private val collators = object : ThreadLocal<Collator>() {
+            override fun initialValue(): Collator = Collator.getInstance(Locale.CHINA)
+        }
+        private val COLLATOR: Collator get() = checkNotNull(collators.get())
 
         fun create(): HanziToPinyin {
             val hasChineseCollator = Collator.getAvailableLocales().any { locale ->

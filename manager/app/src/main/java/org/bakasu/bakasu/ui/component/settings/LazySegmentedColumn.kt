@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -21,6 +22,7 @@ inline fun <T> LazyListScope.lazySegmentColumn(
     noHorizontalPadding: Boolean = false,
     noinline key: ((index: Int, item: T) -> Any)? = null,
     crossinline contentType: (index: Int, item: T) -> Any? = { _, _ -> null },
+    itemSpacing: Dp = ListItemDefaults.SegmentedGap,
     crossinline itemContent: @Composable LazyItemScope.(index: Int, item: T) -> Unit,
 ) {
     if (title != null) {
@@ -58,7 +60,7 @@ inline fun <T> LazyListScope.lazySegmentColumn(
             bottomEnd = bottomRadius,
         )
 
-        val topPadding = if (isFirst) 0.dp else ListItemDefaults.SegmentedGap
+        val topPadding = if (isFirst) 0.dp else itemSpacing
 
         val horizontalPadding = if (noHorizontalPadding) 0.dp else 16.dp
 
