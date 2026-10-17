@@ -1,0 +1,3 @@
+[submodule "manager/miwearhaptics"]
+	path = manager/miwearhaptics
+	url = https://github.com/Star-ZER0/miwearhaptics.git
