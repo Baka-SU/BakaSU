@@ -5,8 +5,6 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,11 +17,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
@@ -42,7 +39,12 @@ import kotlinx.coroutines.flow.collectLatest
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.component.KeyEventBlocker
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
+import org.bakasu.bakasu.ui.component.TopBarTitlePill
+import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
+import org.bakasu.bakasu.ui.component.transparentTopAppBarColors
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
@@ -72,11 +74,8 @@ fun ExecuteModuleActionScreen(moduleId: String, fromShortcut: Boolean) {
     val context = LocalContext.current
     val activity = LocalActivity.current
     val navigator = LocalNavigator.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    LaunchedEffect(Unit) {
-        scrollBehavior.state.heightOffset = scrollBehavior.state.heightOffsetLimit
-    }
 
     BackHandler(enabled = moduleActionState.running) {
         // Disable back button if action is running
@@ -109,16 +108,19 @@ fun ExecuteModuleActionScreen(moduleId: String, fromShortcut: Boolean) {
 
     Scaffold(
         topBar = {
-            TopBar(
-                isActionRunning = moduleActionState.running,
-                onBack = {
-                    navigator.pop()
-                },
-                onSave = {
-                    viewModel.dispatch(ExecuteModuleActionUiAction.SaveLog)
-                },
-                scrollBehavior = scrollBehavior,
-            )
+            TopBarScrim {
+                TopBar(
+                    isActionRunning = moduleActionState.running,
+                    onBack = {
+                        navigator.pop()
+                    },
+                    onSave = {
+                        viewModel.dispatch(ExecuteModuleActionUiAction.SaveLog)
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+        
+            }
         },
         floatingActionButton = {
             if (!moduleActionState.running) {
@@ -176,11 +178,12 @@ private fun TopBar(
     onSave: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
-    val themeConfig: ThemeConfig = koinInject()
-    val cardConfig: CardConfig = koinInject()
-    LargeFlexibleTopAppBar(
-        modifier = Modifier.blurEffect(),
-        title = { Text(stringResource(R.string.action)) },
+    TopAppBar(
+        title = {
+            TopBarTitlePill {
+                Text(stringResource(R.string.action))
+            }
+        },
         scrollBehavior = scrollBehavior,
         navigationIcon = {
             AppBackButton(
@@ -188,7 +191,7 @@ private fun TopBar(
             )
         },
         actions = {
-            IconButton(
+            TopBarIconPill(
                 onClick = onSave,
                 enabled = !isActionRunning,
             ) {
@@ -198,20 +201,7 @@ private fun TopBar(
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor =
-                if (themeConfig.isEnableBlur) {
-                    Color.Transparent
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                },
-            scrolledContainerColor =
-                if (themeConfig.isEnableBlur) {
-                    Color.Transparent
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                },
-        ),
-        windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
+        colors = transparentTopAppBarColors(),
+        windowInsets = pillTopAppBarWindowInsets()
     )
 }

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,13 +28,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.contentColorFor
@@ -67,9 +65,14 @@ import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.ui.component.NetworkRefreshContent
+import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
+import org.bakasu.bakasu.ui.component.TopBarTitlePill
+import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.component.settings.SettingsJumpPageWidget
 import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
+import org.bakasu.bakasu.ui.component.transparentTopAppBarColors
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Navigator
 import org.bakasu.bakasu.ui.navigation.Route
@@ -99,7 +102,7 @@ fun AppProfileTemplateScreen() {
     val scope = rememberCoroutineScope()
     var isUserRefreshing by remember { mutableStateOf(false) }
     val scrollBehavior =
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+        TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val navigator = LocalNavigator.current
     val context = LocalContext.current
     val clipboardManager = context.getSystemService<ClipboardManager>()
@@ -142,8 +145,6 @@ fun AppProfileTemplateScreen() {
     }
 
     LaunchedEffect(Unit) {
-        scrollBehavior.state.heightOffset = scrollBehavior.state.heightOffsetLimit
-
         navigator.observeResult<Boolean>("template_edit").collect { success ->
             if (success) {
                 navigator.clearResult("template_edit")
@@ -158,29 +159,32 @@ fun AppProfileTemplateScreen() {
 
     Scaffold(
         topBar = {
-            TopBar(
-                onBack = dropUnlessResumed { navigator.pop() },
-                onSync = {
-                    viewModel.dispatch(TemplateUiAction.Refresh(synchronize = true))
-                },
-                onImport = {
-                    val clipboardText =
-                        clipboardManager?.primaryClip?.getItemAt(0)?.text?.toString()
-                    if (clipboardText.isNullOrEmpty()) {
-                        Toast.makeText(
-                            context,
-                            appProfileTemplateImportEmpty,
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    } else {
-                        viewModel.dispatch(TemplateUiAction.Import(clipboardText))
-                    }
-                },
-                onExport = {
-                    viewModel.dispatch(TemplateUiAction.Export)
-                },
-                scrollBehavior = scrollBehavior,
-            )
+            TopBarScrim {
+                TopBar(
+                    onBack = dropUnlessResumed { navigator.pop() },
+                    onSync = {
+                        viewModel.dispatch(TemplateUiAction.Refresh(synchronize = true))
+                    },
+                    onImport = {
+                        val clipboardText =
+                            clipboardManager?.primaryClip?.getItemAt(0)?.text?.toString()
+                        if (clipboardText.isNullOrEmpty()) {
+                            Toast.makeText(
+                                context,
+                                appProfileTemplateImportEmpty,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        } else {
+                            viewModel.dispatch(TemplateUiAction.Import(clipboardText))
+                        }
+                    },
+                    onExport = {
+                        viewModel.dispatch(TemplateUiAction.Export)
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+        
+            }
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -354,34 +358,20 @@ private fun TopBar(
     onExport: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
-    val themeConfig: ThemeConfig = koinInject()
-    val cardConfig: CardConfig = koinInject()
-    LargeFlexibleTopAppBar(
-        modifier = Modifier.blurEffect(),
+    TopAppBar(
         title = {
-            Text(stringResource(R.string.settings_profile_template))
+            TopBarTitlePill {
+                Text(stringResource(R.string.settings_profile_template))
+            }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor =
-                if (themeConfig.isEnableBlur) {
-                    Color.Transparent
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                },
-            scrolledContainerColor =
-                if (themeConfig.isEnableBlur) {
-                    Color.Transparent
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                },
-        ),
+        colors = transparentTopAppBarColors(),
         navigationIcon = {
             AppBackButton(
                 onClick = onBack,
             )
         },
         actions = {
-            IconButton(onClick = onSync) {
+            TopBarIconPill(onClick = onSync) {
                 Icon(
                     Icons.TwoTone.Sync,
                     contentDescription = stringResource(id = R.string.app_profile_template_sync),
@@ -389,7 +379,7 @@ private fun TopBar(
             }
 
             var showDropdown by remember { mutableStateOf(false) }
-            IconButton(onClick = {
+            TopBarIconPill(onClick = {
                 showDropdown = true
             }) {
                 Icon(
@@ -427,8 +417,8 @@ private fun TopBar(
                 }
             }
         },
-        windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
-        scrollBehavior = scrollBehavior,
+        windowInsets = pillTopAppBarWindowInsets(),
+        scrollBehavior = scrollBehavior
     )
 }
 

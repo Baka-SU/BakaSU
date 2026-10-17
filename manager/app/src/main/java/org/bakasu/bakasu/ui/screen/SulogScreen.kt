@@ -27,7 +27,6 @@ import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
@@ -75,6 +74,8 @@ import org.bakasu.bakasu.domain.model.SulogEventType
 import org.bakasu.bakasu.domain.model.SulogFile
 import org.bakasu.bakasu.domain.model.toSulogDisplayName
 import org.bakasu.bakasu.ui.component.SearchAppBar
+import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.WarningCard
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
@@ -82,6 +83,7 @@ import org.bakasu.bakasu.ui.component.settings.SettingsChooseWidget
 import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.theme.CardConfig
+import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.util.LocalBlurState
@@ -142,12 +144,7 @@ private fun SulogScreenContent(
 ) {
     val cardConfig: CardConfig = koinInject()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
-            rememberTopAppBarState(
-                initialHeightOffset = -154f,
-                initialHeightOffsetLimit = -154f, // from debugger
-            ),
-        ),
+        TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     )
     val pullToRefreshState = rememberPullToRefreshState()
     val listState = rememberLazyListState()
@@ -172,58 +169,64 @@ private fun SulogScreenContent(
 
     Scaffold(
         topBar = {
-            SearchAppBar(
-                title = stringResource(R.string.settings_sulog),
-                searchText = localSearchText,
-                onSearchTextChange = {
-                    actions.onSearchTextChange(it)
-                    scope.launch { searchListState.scrollToItem(0) }
-                },
-                onBackClick = actions.onBack,
-                dropdownContent = {
-                    IconButton(onClick = actions.onCleanFile) {
-                        Icon(
-                            imageVector = Icons.TwoTone.DeleteSweep,
-                            contentDescription = stringResource(R.string.sulog_clean_title),
-                        )
-                    }
-                    IconButton(onClick = { showFilterMenu = true }) {
-                        Icon(
-                            imageVector = Icons.TwoTone.FilterList,
-                            contentDescription = stringResource(R.string.sulog_filter_title),
-                        )
+            TopBarScrim {
+                SearchAppBar(
+                    title = stringResource(R.string.settings_sulog),
+                    searchText = localSearchText,
+                    onSearchTextChange = {
+                        actions.onSearchTextChange(it)
+                        scope.launch { searchListState.scrollToItem(0) }
+                    },
+                    onBackClick = actions.onBack,
+                    dropdownContent = {
+                        TopBarIconPill(onClick = actions.onCleanFile) {
+                            Icon(
+                                imageVector = Icons.TwoTone.DeleteSweep,
+                                contentDescription = stringResource(R.string.sulog_clean_title),
+                            )
+                        }
+                        TopBarIconPill(onClick = { showFilterMenu = true }) {
+                            Icon(
+                                imageVector = Icons.TwoTone.FilterList,
+                                contentDescription = stringResource(R.string.sulog_filter_title),
+                            )
 
-                        DropdownMenuPopup(
-                            expanded = showFilterMenu,
-                            onDismissRequest = { showFilterMenu = false },
-                        ) {
-                            DropdownMenuGroup(
-                                shapes = MenuDefaults.groupShapes(),
+                            DropdownMenuPopup(
+                                expanded = showFilterMenu,
+                                onDismissRequest = { showFilterMenu = false },
                             ) {
-                                Spacer(modifier = Modifier.height(2.dp))
-
-                                SulogEventFilter.entries.forEachIndexed { index, filter ->
-                                    SelectableDropdownMenuItem(
-                                        selected = filter in state.selectedFilters,
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                                            actions.onToggleFilter(filter)
-                                        },
-                                        text = { Text(sulogFilterLabel(filter)) },
-                                        shapes = MenuDefaults.itemShape(
-                                            index = index,
-                                            count = SulogEventFilter.entries.size,
-                                        ),
-                                    )
+                                DropdownMenuGroup(
+                                    shapes = MenuDefaults.groupShapes()
+                                ) {
                                     Spacer(modifier = Modifier.height(2.dp))
+
+                                    SulogEventFilter.entries.forEachIndexed { index, filter ->
+                                        SelectableDropdownMenuItem(
+                                            selected = filter in state.selectedFilters,
+                                            onClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                                actions.onToggleFilter(filter)
+                                            },
+                                            text = { Text(sulogFilterLabel(filter)) },
+                                            shapes = MenuDefaults.itemShape(
+                                                index = index,
+                                                count = SulogEventFilter.entries.size
+                                            ),
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                searchBarPlaceHolderText = stringResource(R.string.sulog_search_placeholder),
-            )
+                    },
+                    scrollBehavior = scrollBehavior,
+                    searchBarPlaceHolderText = stringResource(R.string.sulog_search_placeholder),
+                    contentScrolled = {
+                        val list = if (state.searchText.isEmpty()) listState else searchListState
+                        list.firstVisibleItemIndex > 0 || list.firstVisibleItemScrollOffset > 0
+                    },
+                )
+            }
         },
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         containerColor = Color.Transparent,
@@ -276,7 +279,7 @@ private fun SulogScreenContent(
                         Box(
                             modifier = Modifier
                                 .padding(bottom = 16.dp)
-                                .padding(horizontal = 16.dp),
+                                .padding(horizontal = ScreenEdgePadding)
                         ) {
                             Column(
                                 modifier = Modifier
@@ -642,7 +645,7 @@ private fun SulogStatusSection(
     actions: SulogActions,
 ) {
     Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = Modifier.padding(horizontal = ScreenEdgePadding),
     ) {
         when (state.sulogStatus) {
             "unsupported" -> {

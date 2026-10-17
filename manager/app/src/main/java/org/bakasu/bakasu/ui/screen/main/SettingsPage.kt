@@ -16,10 +16,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -49,11 +51,11 @@ import androidx.compose.material.icons.twotone.Update
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
@@ -85,7 +87,11 @@ import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.usecase.GenerateBugreportUseCase
 import org.bakasu.bakasu.ui.component.ConfirmResult
+import org.bakasu.bakasu.ui.component.LocalTopBarSlot
+import org.bakasu.bakasu.ui.component.ProvideTopBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarTitlePill
+import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberLoadingDialog
 import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
@@ -93,12 +99,16 @@ import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
 import org.bakasu.bakasu.ui.component.settings.SettingsChooseWidget
 import org.bakasu.bakasu.ui.component.settings.SettingsJumpPageWidget
 import org.bakasu.bakasu.ui.component.settings.SettingsSwitchWidget
+import org.bakasu.bakasu.ui.component.transparentTopAppBarColors
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
+import org.bakasu.bakasu.ui.util.LocalPagerPage
+import org.bakasu.bakasu.ui.util.LocalTopBarOwner
+import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
@@ -120,7 +130,7 @@ private val SPACING_LARGE = 16.dp
 @Composable
 fun SettingsPage(bottomPadding: Dp) {
     val navigator = LocalNavigator.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val snackBarHost = LocalSnackbarHost.current
     val settingsViewModel = koinViewModel<SettingsViewModel>()
     val homeViewModel = koinViewModel<HomeViewModel>()
@@ -132,10 +142,13 @@ fun SettingsPage(bottomPadding: Dp) {
         settingsViewModel.dispatch(SettingsUiAction.LoadFeatureSettings)
     }
 
-    Scaffold(
-        topBar = {
+    val topBarHeight = LocalTopBarSlot.current?.heightFor(LocalPagerPage.current) ?: 0.dp
+
+    ProvideTopBar(active = LocalPagerPage.current == LocalTopBarOwner.current) {
             TopBar(scrollBehavior = scrollBehavior)
-        },
+    }
+
+    Scaffold(
         snackbarHost = {
             SwipeableSnackbarHost(
                 modifier = Modifier.padding(bottom = bottomPadding),
@@ -144,7 +157,7 @@ fun SettingsPage(bottomPadding: Dp) {
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        contentWindowInsets = adaptiveScaffoldWindowInsets(includeBottom = false),
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
     ) { innerPadding ->
         val loadingDialog = rememberLoadingDialog()
         var showBottomsheet by remember { mutableStateOf(false) }
@@ -173,7 +186,7 @@ fun SettingsPage(bottomPadding: Dp) {
                     .nestedScroll(scrollBehavior.nestedScrollConnection)
                     .blurSource(),
             contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding() + 5.dp,
+                top = topBarHeight + 5.dp,
                 start = 0.dp,
                 end = 0.dp,
                 bottom = innerPadding.calculateBottomPadding() + bottomPadding + 15.dp,
@@ -697,28 +710,14 @@ enum class UninstallType(val title: Int, val message: Int, val icon: ImageVector
 private fun TopBar(
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
-    val themeConfig: ThemeConfig = koinInject()
-    val cardConfig: CardConfig = koinInject()
-    LargeFlexibleTopAppBar(
-        modifier = Modifier.blurEffect(),
+    TopAppBar(
         title = {
-            Text(text = stringResource(R.string.settings))
+            TopBarTitlePill {
+                Text(text = stringResource(R.string.settings))
+            }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor =
-                if (themeConfig.isEnableBlur) {
-                    Color.Transparent
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                },
-            scrolledContainerColor =
-                if (themeConfig.isEnableBlur) {
-                    Color.Transparent
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                },
-        ),
-        windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
-        scrollBehavior = scrollBehavior,
+        colors = transparentTopAppBarColors(),
+        windowInsets = pillTopAppBarWindowInsets(),
+        scrollBehavior = scrollBehavior
     )
 }
