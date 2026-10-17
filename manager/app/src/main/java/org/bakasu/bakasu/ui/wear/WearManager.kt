@@ -124,7 +124,7 @@ private fun WearRoute.needsRoot() = when (this) {
     is WearRoute.Module, is WearRoute.ModuleAction, is WearRoute.ModuleUpdate, is WearRoute.ModuleInstall,
     WearRoute.ModuleSort, WearRoute.ModuleSearch, WearRoute.ModuleSearchResults, WearRoute.ModuleRepo, WearRoute.ModuleRepoSearch, is WearRoute.OnlineModule, is WearRoute.OnlineModuleSection,
     is WearRoute.OnlineModuleDownload,
-    is WearRoute.App, WearRoute.AppFilter, WearRoute.AppSearch, WearRoute.AppSearchResults,
+    is WearRoute.App, WearRoute.AppActions, WearRoute.AppFilter, WearRoute.AppSearch, WearRoute.AppSearchResults,
     WearRoute.Logs, WearRoute.LogOptions, WearRoute.AllowlistBackup, is WearRoute.LogEntry, WearRoute.LogSearch,
     WearRoute.Templates, WearRoute.OnlineTemplates, is WearRoute.TemplateEditor, WearRoute.SuSFS, WearRoute.DynamicManager,
     WearRoute.Umount, WearRoute.Uninstall, WearRoute.Reboot,
@@ -526,7 +526,6 @@ fun WearManagerScreen() {
                                     moduleError,
                                     onEdit = moduleSearchInput,
                                     onModuleClick = { open(WearRoute.Module(it)) },
-                                    onEnabledChange = { module, enabled -> moduleViewModel.dispatch(ModuleUiAction.SetEnabled(module.id, enabled)) },
                                     onBack = ::back,
                                 )
                             }
@@ -540,6 +539,17 @@ fun WearManagerScreen() {
                                     onBack = ::back,
                                     onSaved = { superUserViewModel.dispatch(SuperUserUiAction.StatusChanged) },
                                     onOpen = ::open,
+                                )
+                            }
+                            entry<WearRoute.AppActions> {
+                                WearAppActionsPage(
+                                    superuser,
+                                    ::back,
+                                    onSearch = appSearchInput,
+                                    onSort = { open(WearRoute.AppFilter) },
+                                    onLogs = { open(WearRoute.Logs) },
+                                    onTemplates = { open(WearRoute.Templates) },
+                                    onBackup = { open(WearRoute.AllowlistBackup) },
                                 )
                             }
                             entry<WearRoute.AppFilter> {
@@ -883,6 +893,7 @@ private fun WearMainPages(
                                 onLogs = { onOpen(WearRoute.Logs) },
                                 onBackup = { onOpen(WearRoute.AllowlistBackup) },
                                 onFilter = { onOpen(WearRoute.AppFilter) },
+                                onActions = { onOpen(WearRoute.AppActions) },
                                 listState = appListState,
                                 onAppClick = { uid, packageName -> onOpen(WearRoute.App(uid, packageName)) },
                                 backToTop = true,
@@ -896,7 +907,6 @@ private fun WearMainPages(
                                 onSort = { onOpen(WearRoute.ModuleSort) },
                                 listState = moduleListState,
                                 onModuleClick = { onOpen(WearRoute.Module(it)) },
-                                onEnabledChange = { module, enabled -> onModule(ModuleUiAction.SetEnabled(module.id, enabled)) },
                                 onInstallClick = onInstallModule,
                                 onWebUi = onWebUi,
                                 onExecute = { onOpen(WearRoute.ModuleAction(it.id)) },

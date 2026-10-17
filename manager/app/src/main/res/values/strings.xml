@@ -604,6 +604,9 @@
     <string name="wear_same_uid_apps">Apps sharing this UID</string>
     <string name="wear_app_operations_summary">Launch · Force stop</string>
     <string name="wear_template_delete_message">Delete the template “%1$s”? App Profile can no longer use it.</string>
+    <string name="wear_sulog_summary">SU access and authorization records</string>
+    <string name="wear_templates_summary">Create and import templates</string>
+    <string name="wear_allowlist_backup_summary">Back up or restore the allowlist</string>
     <string name="wear_template_view_online">View online templates</string>
     <string name="wear_template_online">Online templates</string>
     <string name="wear_template_online_empty">No online templates</string>
