@@ -36,9 +36,6 @@ sealed interface WearRoute : NavKey {
     data object ModuleRepo : WearRoute
 
     @Serializable
-    data object AppActions : WearRoute
-
-    @Serializable
     data object ModuleRepoSearch : WearRoute
 
     @Serializable

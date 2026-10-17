@@ -638,9 +638,6 @@
     <string name="wear_same_uid_apps">相同 UID 的应用组</string>
     <string name="wear_app_operations_summary">启动 · 强制停止</string>
     <string name="wear_template_delete_message">删除模版“%1$s”？删除后 App Profile 将无法再使用它。</string>
-    <string name="wear_sulog_summary">授权与访问记录</string>
-    <string name="wear_templates_summary">创建与导入模版</string>
-    <string name="wear_allowlist_backup_summary">备份或恢复授权</string>
     <string name="wear_template_view_online">查看线上范本</string>
     <string name="wear_template_online">线上范本</string>
     <string name="wear_template_online_empty">暂无线上范本</string>

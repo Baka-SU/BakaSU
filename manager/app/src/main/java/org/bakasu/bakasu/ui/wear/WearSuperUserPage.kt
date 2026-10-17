@@ -1,28 +1,19 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.Article
-import androidx.compose.material.icons.automirrored.twotone.Sort
-import androidx.compose.material.icons.twotone.Apps
 import androidx.compose.material.icons.twotone.Archive
 import androidx.compose.material.icons.twotone.Backup
 import androidx.compose.material.icons.twotone.Error
-import androidx.compose.material.icons.twotone.GridOn
-import androidx.compose.material.icons.twotone.Save
 import androidx.compose.material.icons.twotone.Search
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineBreak
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
@@ -31,11 +22,8 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.CompactButton
-import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.LocalTextStyle
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
@@ -45,13 +33,13 @@ import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.wear.component.WearBadge
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
-import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.wearGroupGap
 
 /**
@@ -70,18 +58,12 @@ internal fun WearSuperUserPage(
     onLogs: () -> Unit,
     onBackup: () -> Unit,
     onFilter: () -> Unit,
-    onActions: () -> Unit,
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     backToTop: Boolean = false,
 ) {
     // As on the phone: an empty list shows the loading indicator in place of the page; once it has
     // content, refreshing shows at the pull refresh, in the edge button.
     val loading = state.isRefreshing && state.appGroupList.isEmpty() && state.search.isEmpty()
-    // A load that found no apps, and no failure, shows the design's empty screen.
-    if (!state.isRefreshing && state.appGroupList.isEmpty() && state.search.isEmpty() && error.isNullOrBlank()) {
-        WearAppsEmpty(onActions)
-        return
-    }
     WearList(
         isLoading = loading, isRefreshing = state.isRefreshing && !loading, onRefresh = onRefresh,
         onBack = onBack, onOpenPanel = onFilter, panelLabel = stringResource(R.string.wear_filter_sort),
@@ -106,7 +88,7 @@ internal fun WearSuperUserPage(
         }
         if (state.appGroupList.isEmpty() && error.isNullOrBlank()) {
             item {
-                WearStatusItem(spec, Icons.TwoTone.Apps, stringResource(R.string.no_apps_in_category))
+                WearEmptyState(spec, Icons.TwoTone.Archive, stringResource(R.string.no_apps_found))
             }
         }
         // An app button list: 32dp app icon, the app name and the phone's status labels.
@@ -174,88 +156,5 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
         )
-    }
-}
-
-/**
- * The design's empty superuser screen: an icon and "No apps found" in the screen center, and the
- * App actions button at the bottom, which still reaches search, sorting, the SU log, templates and
- * the allowlist backup.
- */
-@Composable
-private fun WearAppsEmpty(onActions: () -> Unit) {
-    ScreenScaffold { contentPadding ->
-        Box(Modifier.fillMaxSize().padding(contentPadding)) {
-            Column(
-                Modifier.align(Alignment.Center).fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Icon(Icons.TwoTone.Archive, contentDescription = null, modifier = Modifier.size(ButtonDefaults.LargeIconSize))
-                Text(
-                    stringResource(R.string.no_apps_found),
-                    modifier = Modifier.padding(top = 8.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center,
-                )
-            }
-            CompactButton(
-                onClick = onActions,
-                modifier = Modifier.align(Alignment.BottomCenter),
-                label = { Text(stringResource(R.string.wear_app_operations)) },
-            )
-        }
-    }
-}
-
-/** The design's App actions page, each entry opening the existing page for it. */
-@Composable
-internal fun WearAppActionsPage(
-    state: SuperUserUiState,
-    onBack: () -> Unit,
-    onSearch: () -> Unit,
-    onSort: () -> Unit,
-    onLogs: () -> Unit,
-    onTemplates: () -> Unit,
-    onBackup: () -> Unit,
-) {
-    WearList(onBack = onBack) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.wear_app_operations)) }
-        item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_apps), onSearch, icon = Icons.TwoTone.Search) }
-        item {
-            WearSettingsJumpPageWidget(
-                spec,
-                stringResource(R.string.wear_filter_sort),
-                onSort,
-                icon = Icons.AutoMirrored.TwoTone.Sort,
-                description = stringResource(state.currentSortType.displayNameRes),
-            )
-        }
-        item {
-            WearSettingsJumpPageWidget(
-                spec,
-                stringResource(R.string.sulog),
-                onLogs,
-                icon = Icons.AutoMirrored.TwoTone.Article,
-                description = stringResource(R.string.wear_sulog_summary),
-            )
-        }
-        item {
-            WearSettingsJumpPageWidget(
-                spec,
-                stringResource(R.string.settings_profile_template),
-                onTemplates,
-                icon = Icons.TwoTone.GridOn,
-                description = stringResource(R.string.wear_templates_summary),
-            )
-        }
-        item {
-            WearSettingsJumpPageWidget(
-                spec,
-                stringResource(R.string.wear_allowlist_backup),
-                onBackup,
-                icon = Icons.TwoTone.Save,
-                description = stringResource(R.string.wear_allowlist_backup_summary),
-            )
-        }
     }
 }

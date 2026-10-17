@@ -35,6 +35,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
 import org.bakasu.bakasu.ui.wear.component.WearBadge
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -92,7 +93,7 @@ internal fun WearModulesPage(
         }
         if (state.moduleList.isEmpty() && error.isNullOrBlank()) {
             item {
-                WearStatusItem(spec, Icons.TwoTone.Extension, stringResource(R.string.module_empty))
+                WearEmptyState(spec, Icons.TwoTone.Extension, stringResource(R.string.module_empty))
             }
         }
         items(state.moduleList, key = { it.id }) { module ->

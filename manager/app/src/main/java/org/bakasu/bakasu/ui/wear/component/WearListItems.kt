@@ -3,10 +3,12 @@ package org.bakasu.bakasu.ui.wear.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -140,6 +142,25 @@ fun WearBadge(
         style = MaterialTheme.typography.labelSmall,
         maxLines = 1,
     )
+}
+
+/**
+ * An empty list as in the design: a large icon above a centered title, on no card, below the
+ * page's own header and buttons, which stay in place.
+ */
+@Composable
+fun TransformingLazyColumnItemScope.WearEmptyState(transformationSpec: TransformationSpec, icon: ImageVector, text: String) {
+    WearScaledItem(transformationSpec) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.LargeIconSize))
+            Text(
+                text,
+                modifier = Modifier.padding(top = 8.dp),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
 }
 
 /**
