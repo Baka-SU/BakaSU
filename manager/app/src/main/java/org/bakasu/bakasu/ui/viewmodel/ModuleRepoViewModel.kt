@@ -2,10 +2,12 @@ package org.bakasu.bakasu.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.CatalogModule
@@ -74,6 +76,8 @@ class ModuleRepoViewModel(
     )
     private val pullRefreshing = MutableStateFlow(false)
     private data class VisibleCatalogCache(val input: ModuleRepoUiState, val sources: List<RepositorySource>, val result: ModuleRepoUiState)
+
+    @Volatile
     private var visibleCatalogCache: VisibleCatalogCache? = null
 
     private val catalogState = combine(
@@ -92,7 +96,7 @@ class ModuleRepoViewModel(
             ),
             sources,
         )
-    }
+    }.flowOn(Dispatchers.Default)
     val state: StateFlow<ModuleRepoUiState> = combine(
         catalogState,
         observeRefreshing.sources,

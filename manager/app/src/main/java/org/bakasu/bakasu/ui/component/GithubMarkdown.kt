@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Color
 import android.util.Log
+import android.util.LruCache
 import android.view.MotionEvent
 import android.view.View
 import android.webkit.JavascriptInterface
@@ -21,6 +22,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +38,8 @@ import androidx.core.net.toUri
 import androidx.webkit.WebViewAssetLoader
 import java.nio.charset.StandardCharsets
 import kotlin.math.abs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.data.module.registry.RegistryUrls
 import org.bakasu.bakasu.data.network.WebResourceRepository
 import org.bakasu.bakasu.ui.activity.util.adjustLightnessArgb
@@ -50,7 +54,13 @@ import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
 import org.koin.compose.koinInject
 
+private val renderedMarkdownCache = object : LruCache<Pair<String, Boolean>, String>(2 * 1024 * 1024) {
+    override fun sizeOf(key: Pair<String, Boolean>, value: String): Int = ((key.first.length.toLong() + value.length) * 2).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+}
+
 private fun renderMarkdownDocument(content: String, restricted: Boolean): String {
+    val key = content to restricted
+    renderedMarkdownCache.get(key)?.let { return it }
     val extensions = listOf(TablesExtension.create())
     val parser = Parser.builder().extensions(extensions).build()
     val renderer = HtmlRenderer.builder().extensions(extensions).escapeHtml(restricted)
@@ -66,7 +76,7 @@ private fun renderMarkdownDocument(content: String, restricted: Boolean): String
             }
         }
     }
-    return renderer.build().render(parser.parse(content))
+    return renderer.build().render(parser.parse(content)).also { renderedMarkdownCache.put(key, it) }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -118,15 +128,28 @@ fun GithubMarkdown(
     }
 
     val cssHref = "https://appassets.androidplatform.net/assets/github-markdown.css"
-    val rendered = remember(content, renderMarkdown, restrictedBaseUrl) {
-        if (renderMarkdown) renderMarkdownDocument(content, restrictedBaseUrl != null) else content
+    val renderedState = remember(content, renderMarkdown, restrictedBaseUrl) {
+        mutableStateOf(if (renderMarkdown) renderedMarkdownCache.get(content to (restrictedBaseUrl != null)) else content)
     }
+    LaunchedEffect(content, renderMarkdown, restrictedBaseUrl) {
+        if (renderMarkdown && renderedState.value == null) {
+            loading.value = true
+            renderedState.value = withContext(Dispatchers.Default) {
+                renderMarkdownDocument(content, restrictedBaseUrl != null)
+            }
+        }
+    }
+    val rendered = renderedState.value
     val contentPolicy = if (renderMarkdown || restrictedBaseUrl != null) {
         """<meta http-equiv="Content-Security-Policy" content="script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; img-src https: data:" />"""
     } else {
         ""
     }
-    val html = """
+    val html = remember(rendered, contentPolicy, dir, isDark, bgDefault, bgMuted, bgNeutralMuted, bgAttentionMuted, fgLink, linkStyles) {
+        if (rendered == null) {
+            null
+        } else {
+            """
         <!DOCTYPE html>
         <html>
         <head>
@@ -152,10 +175,14 @@ fun GithubMarkdown(
           <article class='markdown-body' data-theme='${if (isDark) "dark" else "light"}'>$rendered</article>
         </body>
         </html>
-    """.trimIndent()
+            """.trimIndent()
+        }
+    }
 
-    key(html, baseUrl, renderMarkdown, restrictedBaseUrl) {
-        GithubMarkdownWebView(loading, html, baseUrl, renderMarkdown, restrictedBaseUrl)
+    if (html != null) {
+        key(html, baseUrl, renderMarkdown, restrictedBaseUrl) {
+            GithubMarkdownWebView(loading, html, baseUrl, renderMarkdown, restrictedBaseUrl)
+        }
     }
 
     if (loading.value && !callerProvideLoadingIndicator) {
