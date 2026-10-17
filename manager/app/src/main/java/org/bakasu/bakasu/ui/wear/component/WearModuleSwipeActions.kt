@@ -15,6 +15,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
@@ -78,7 +79,7 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
         primaryAction = {
             PrimaryActionButton(
                 onClick = { run(primary) },
-                icon = { Icon(primary.icon, contentDescription = primary.label) },
+                icon = { Icon(painterResource(primary.icon), contentDescription = primary.label) },
                 text = { Text(primary.label) },
             )
         },
@@ -86,7 +87,7 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
             {
                 SecondaryActionButton(
                     onClick = { run(action) },
-                    icon = { Icon(action.icon, contentDescription = action.label) },
+                    icon = { Icon(painterResource(action.icon), contentDescription = action.label) },
                 )
             }
         },

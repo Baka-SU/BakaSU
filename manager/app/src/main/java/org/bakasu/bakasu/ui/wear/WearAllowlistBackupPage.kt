@@ -2,9 +2,6 @@ package org.bakasu.bakasu.ui.wear
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Restore
-import androidx.compose.material.icons.twotone.Save
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -74,7 +71,7 @@ internal fun WearAllowlistBackupPage(viewModel: SuperUserViewModel, onBack: () -
         item {
             WearActionButton(
                 spec,
-                Icons.TwoTone.Save,
+                R.drawable.wear_symbol_save,
                 stringResource(R.string.backup_allowlist),
                 {
                     // The same file name as the phone backup, so both are recognized alike.
@@ -87,7 +84,7 @@ internal fun WearAllowlistBackupPage(viewModel: SuperUserViewModel, onBack: () -
         item {
             WearActionButton(
                 spec,
-                Icons.TwoTone.Restore,
+                R.drawable.wear_symbol_history,
                 stringResource(R.string.restore_allowlist),
                 { runCatching { restoreLauncher.launch(arrayOf("application/octet-stream")) }.onFailure { failed = true } },
                 secondaryText = stringResource(R.string.wear_restore_allowlist_summary),

@@ -3,25 +3,6 @@ package org.bakasu.bakasu.ui.wear
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Add
-import androidx.compose.material.icons.twotone.CheckCircle
-import androidx.compose.material.icons.twotone.Cloud
-import androidx.compose.material.icons.twotone.ContentCopy
-import androidx.compose.material.icons.twotone.ContentPaste
-import androidx.compose.material.icons.twotone.Delete
-import androidx.compose.material.icons.twotone.Description
-import androidx.compose.material.icons.twotone.Edit
-import androidx.compose.material.icons.twotone.Error
-import androidx.compose.material.icons.twotone.Flag
-import androidx.compose.material.icons.twotone.Group
-import androidx.compose.material.icons.twotone.Info
-import androidx.compose.material.icons.twotone.Numbers
-import androidx.compose.material.icons.twotone.Person
-import androidx.compose.material.icons.twotone.Save
-import androidx.compose.material.icons.twotone.Security
-import androidx.compose.material.icons.twotone.SignalWifiOff
-import androidx.compose.material.icons.twotone.Storage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
@@ -134,23 +116,23 @@ internal fun WearTemplatePage(
         item {
             WearActionButton(
                 spec,
-                Icons.TwoTone.Add,
+                R.drawable.wear_symbol_add,
                 stringResource(R.string.app_profile_template_create),
                 { onOpenTemplate("", false, true) },
             )
         }
         item {
-            WearActionButton(spec, Icons.TwoTone.Cloud, stringResource(R.string.wear_template_view_online), {
+            WearActionButton(spec, R.drawable.wear_symbol_cloud, stringResource(R.string.wear_template_view_online), {
                 if (isNetworkAvailable()) onOpenOnline() else offlineDialog.show()
             })
         }
         item {
-            WearActionButton(spec, Icons.TwoTone.ContentPaste, stringResource(R.string.app_profile_import_from_clipboard), {
+            WearActionButton(spec, R.drawable.wear_symbol_content_paste, stringResource(R.string.app_profile_import_from_clipboard), {
                 val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
                 if (text.isNullOrBlank()) result = WearResult(emptyClipboard, success = false) else viewModel.dispatch(TemplateUiAction.Import(text))
             })
         }
-        item { WearActionButton(spec, Icons.TwoTone.ContentCopy, exported, { viewModel.dispatch(TemplateUiAction.Export) }) }
+        item { WearActionButton(spec, R.drawable.wear_symbol_content_copy, exported, { viewModel.dispatch(TemplateUiAction.Export) }) }
         // Items are keyed by the template ID, so a reveal stays with its template as the list changes.
         LazySegmentedColumn(state.templateList, { it.id }) { template ->
             val open = { onOpenTemplate(template.id, !template.local, false) }
@@ -169,7 +151,7 @@ internal fun WearTemplatePage(
                         spec,
                         template.name.ifBlank { template.id },
                         open,
-                        icon = Icons.TwoTone.Description,
+                        icon = R.drawable.wear_symbol_description,
                         description = template.description.ifBlank { null },
                         transformed = false,
                     )
@@ -179,7 +161,7 @@ internal fun WearTemplatePage(
                     spec,
                     template.name.ifBlank { template.id },
                     open,
-                    icon = Icons.TwoTone.Description,
+                    icon = R.drawable.wear_symbol_description,
                     description = template.description.ifBlank { null },
                 )
             }
@@ -197,7 +179,7 @@ private fun rememberWearOfflineDialog(onDismissed: () -> Unit = {}) = rememberCu
     AlertDialog(
         visible = true,
         onDismissRequest = close,
-        icon = { Icon(Icons.TwoTone.SignalWifiOff, contentDescription = null) },
+        icon = { Icon(painterResource(R.drawable.wear_symbol_signal_wifi_off), contentDescription = null) },
         title = { Text(stringResource(R.string.wear_template_offline)) },
         text = { Text(stringResource(R.string.wear_no_internet)) },
         edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
@@ -229,7 +211,7 @@ internal fun WearOnlineTemplatePage(onBack: () -> Unit) {
         AlertDialog(
             visible = true,
             onDismissRequest = leave,
-            icon = { Icon(Icons.TwoTone.Info, contentDescription = null) },
+            icon = { Icon(painterResource(R.drawable.wear_symbol_info), contentDescription = null) },
             title = { Text(stringResource(R.string.wear_repo_connect_failed)) },
             text = {
                 Text(
@@ -278,7 +260,7 @@ internal fun WearOnlineTemplatePage(onBack: () -> Unit) {
                     val isAdded = selected.id in state.addedIds
                     WearActionButton(
                         spec,
-                        if (isAdded) Icons.TwoTone.CheckCircle else Icons.TwoTone.Add,
+                        if (isAdded) R.drawable.wear_symbol_check_circle_fill1 else R.drawable.wear_symbol_add,
                         stringResource(if (isAdded) R.string.wear_template_added else R.string.wear_template_add),
                         { viewModel.dispatch(OnlineTemplateUiAction.Add(selected)) },
                         enabled = !isAdded && !state.adding,
@@ -291,14 +273,14 @@ internal fun WearOnlineTemplatePage(onBack: () -> Unit) {
     WearList(isLoading = state.loading, onBack = onBack, onRefresh = { viewModel.dispatch(OnlineTemplateUiAction.Load) }) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_template_online)) }
         if (state.templates.isEmpty()) {
-            item { WearStatusItem(spec, Icons.TwoTone.Cloud, stringResource(R.string.wear_template_online_empty)) }
+            item { WearStatusItem(spec, R.drawable.wear_symbol_cloud, stringResource(R.string.wear_template_online_empty)) }
         }
         LazySegmentedColumn(state.templates, { it.id }) { template ->
             WearSettingsJumpPageWidget(
                 spec,
                 template.name.ifBlank { template.id },
                 { selectedId = template.id },
-                icon = if (template.id in state.addedIds) Icons.TwoTone.CheckCircle else Icons.TwoTone.Description,
+                icon = if (template.id in state.addedIds) R.drawable.wear_symbol_check_circle_fill1 else R.drawable.wear_symbol_description,
                 description = template.description.ifBlank { null },
             )
         }
@@ -346,7 +328,7 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
     } else {
         WearList(isLoading = state.loading, onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(if (readOnly) R.string.app_profile_template_view else R.string.app_profile_template_edit)) }
-            if (state.loadFailure != null) item { WearStatusItem(spec, Icons.TwoTone.Error, failed, tone = WearStatusTone.ERROR) }
+            if (state.loadFailure != null) item { WearStatusItem(spec, R.drawable.wear_symbol_error_fill1, failed, tone = WearStatusTone.ERROR) }
             if (state.loadFailure == null) {
                 // A TransformingLazyColumn item places only its last child, so the value is the widget's description.
                 SegmentedColumn(fields, { it }) { field ->
@@ -359,8 +341,8 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
                     )
                 }
                 if (!readOnly) {
-                    item { WearActionButton(spec, Icons.TwoTone.Save, stringResource(R.string.app_profile_template_save), { viewModel.dispatch(TemplateEditorUiAction.Save) }) }
-                    if (!creation) item { WearActionButton(spec, Icons.TwoTone.Delete, stringResource(R.string.app_profile_template_delete), delete::show) }
+                    item { WearActionButton(spec, R.drawable.wear_symbol_save, stringResource(R.string.app_profile_template_save), { viewModel.dispatch(TemplateEditorUiAction.Save) }) }
+                    if (!creation) item { WearActionButton(spec, R.drawable.wear_symbol_delete, stringResource(R.string.app_profile_template_delete), delete::show) }
                 }
             }
         }
@@ -375,14 +357,14 @@ private val TEMPLATE_FIELDS = listOf(
 )
 
 private fun templateFieldIcon(field: Int) = when (field) {
-    R.string.app_profile_template_id, R.string.wear_uid, R.string.wear_gid -> Icons.TwoTone.Numbers
-    R.string.app_profile_template_name -> Icons.TwoTone.Edit
-    R.string.app_profile_template_description -> Icons.TwoTone.Description
-    R.string.module_author -> Icons.TwoTone.Person
-    R.string.profile_namespace -> Icons.TwoTone.Storage
-    R.string.profile_groups -> Icons.TwoTone.Group
-    R.string.profile_flags -> Icons.TwoTone.Flag
-    else -> Icons.TwoTone.Security
+    R.string.app_profile_template_id, R.string.wear_uid, R.string.wear_gid -> R.drawable.wear_symbol_numbers
+    R.string.app_profile_template_name -> R.drawable.wear_symbol_edit
+    R.string.app_profile_template_description -> R.drawable.wear_symbol_description
+    R.string.module_author -> R.drawable.wear_symbol_person
+    R.string.profile_namespace -> R.drawable.wear_symbol_storage
+    R.string.profile_groups -> R.drawable.wear_symbol_group
+    R.string.profile_flags -> R.drawable.wear_symbol_flag
+    else -> R.drawable.wear_symbol_security
 }
 
 private fun ProfileTemplate.field(field: Int): String = when (field) {

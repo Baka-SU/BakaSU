@@ -8,8 +8,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +22,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -91,7 +90,7 @@ internal fun WearBrowserPage(url: String, onBack: () -> Unit, onUnavailable: () 
     val focus = remember { FocusRequester() }
     LaunchedEffect(webView) { focus.requestFocus() }
     ScreenScaffold(scrollInfoProvider = provider, edgeButton = {
-        EdgeButton(onClick = onBack) { Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back)) }
+        EdgeButton(onClick = onBack) { Icon(painterResource(R.drawable.wear_symbol_arrow_back), stringResource(R.string.back)) }
     }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             AndroidView(

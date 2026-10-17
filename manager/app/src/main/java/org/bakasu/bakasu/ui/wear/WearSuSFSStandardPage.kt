@@ -1,13 +1,5 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.Article
-import androidx.compose.material.icons.twotone.FolderOff
-import androidx.compose.material.icons.twotone.Info
-import androidx.compose.material.icons.twotone.Memory
-import androidx.compose.material.icons.twotone.Policy
-import androidx.compose.material.icons.twotone.Storage
-import androidx.compose.material.icons.twotone.Terminal
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -129,7 +121,7 @@ internal fun WearSuSFSStandardPage(
                                 },
                             ),
                             { field = name },
-                            icon = if (name == "release") Icons.TwoTone.Memory else Icons.TwoTone.Info,
+                            icon = if (name == "release") R.drawable.wear_symbol_memory else R.drawable.wear_symbol_info,
                             description = (if (name == "release") release else version).ifBlank { unset },
                         )
                     }
@@ -145,7 +137,7 @@ internal fun WearSuSFSStandardPage(
                                     slotLoading = false
                                 }
                             }
-                        }, icon = Icons.TwoTone.Storage)
+                        }, icon = R.drawable.wear_symbol_storage)
                     }
                 } else if (shownPage == "slots") {
                     if (slotFailed) {
@@ -162,7 +154,7 @@ internal fun WearSuSFSStandardPage(
                         item {
                             WearSettingsJumpPageWidget(spec, slot.slotName, {
                                 onCommand({ SuSFSUiAction.SetUname(slot.uname.trim(), slot.buildTime.trim(), it) }) { page = "" }
-                            }, icon = Icons.TwoTone.Storage, description = stringResource(R.string.wear_joined, slot.uname, slot.buildTime))
+                            }, icon = R.drawable.wear_symbol_storage, description = stringResource(R.string.wear_joined, slot.uname, slot.buildTime))
                         }
                     }
                 } else {
@@ -171,7 +163,7 @@ internal fun WearSuSFSStandardPage(
                             spec,
                             stringResource(R.string.susfs_standard_cmdline_path),
                             { field = "cmdline" },
-                            icon = Icons.TwoTone.Terminal,
+                            icon = R.drawable.wear_symbol_terminal,
                             description = cmdline.ifBlank { unset },
                         )
                     }
@@ -204,9 +196,9 @@ internal fun WearSuSFSStandardPage(
                         }, {})
                     },
                     icon = when (label) {
-                        R.string.susfs_standard_logging -> Icons.AutoMirrored.TwoTone.Article
-                        R.string.susfs_standard_avc_log_spoofing -> Icons.TwoTone.Policy
-                        else -> Icons.TwoTone.FolderOff
+                        R.string.susfs_standard_logging -> R.drawable.wear_symbol_article
+                        R.string.susfs_standard_avc_log_spoofing -> R.drawable.wear_symbol_policy
+                        else -> R.drawable.wear_symbol_folder_off
                     },
                     secondaryLabel = stringResource(summary),
                 )
@@ -217,13 +209,13 @@ internal fun WearSuSFSStandardPage(
                     release = config.uname.release
                     version = config.uname.version
                     page = "uname"
-                }, icon = Icons.TwoTone.Memory, description = stringResource(R.string.wear_joined, config.uname.release, config.uname.version))
+                }, icon = R.drawable.wear_symbol_memory, description = stringResource(R.string.wear_joined, config.uname.release, config.uname.version))
             }
             item {
                 WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_standard_cmdline_or_bootconfig), {
                     cmdline = config.cmdline_or_bootconfig
                     page = "cmdline"
-                }, icon = Icons.TwoTone.Terminal, description = config.cmdline_or_bootconfig.ifBlank { unset })
+                }, icon = R.drawable.wear_symbol_terminal, description = config.cmdline_or_bootconfig.ifBlank { unset })
             }
         }
     }

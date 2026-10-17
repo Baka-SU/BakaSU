@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear.component
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,7 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.ColorPainter
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
@@ -105,7 +106,7 @@ fun wearStatusColors(tone: WearStatusTone): Pair<Color?, Color> = when (tone) {
 @Composable
 fun TransformingLazyColumnItemScope.WearStatusItem(
     transformationSpec: TransformationSpec,
-    icon: ImageVector,
+    @DrawableRes icon: Int,
     message: String,
     modifier: Modifier = Modifier,
     tone: WearStatusTone = WearStatusTone.NEUTRAL,
@@ -117,7 +118,7 @@ fun TransformingLazyColumnItemScope.WearStatusItem(
         WearInfoCard(transformationSpec, modifier.fillMaxWidth(), containerColor = container) {
             Row(verticalAlignment = Alignment.Top) {
                 Icon(
-                    icon,
+                    painterResource(icon),
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                     tint = if (neutral) LocalContentColor.current else content,
@@ -141,7 +142,7 @@ fun TransformingLazyColumnItemScope.WearStatusItem(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Icon(
-            icon,
+            painterResource(icon),
             contentDescription = null,
             tint = if (neutral) MaterialTheme.colorScheme.onSurfaceVariant else content,
             modifier = Modifier.size(24.dp).align(Alignment.CenterHorizontally),

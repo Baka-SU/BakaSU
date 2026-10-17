@@ -12,11 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberOverscrollEffect
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalScrollCaptureInProgress
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -215,15 +211,17 @@ fun WearList(
                         )
                     } else {
                         Icon(
-                            if (onClosePanel != null) {
-                                Icons.Default.KeyboardArrowDown
-                            } else if (onConfirm != null) {
-                                Icons.Default.Check
-                            } else if (backToTop) {
-                                Icons.Default.VerticalAlignTop
-                            } else {
-                                Icons.AutoMirrored.Default.ArrowBack
-                            },
+                            painterResource(
+                                if (onClosePanel != null) {
+                                    R.drawable.wear_symbol_keyboard_arrow_down
+                                } else if (onConfirm != null) {
+                                    R.drawable.wear_symbol_check
+                                } else if (backToTop) {
+                                    R.drawable.wear_symbol_vertical_align_top
+                                } else {
+                                    R.drawable.wear_symbol_arrow_back
+                                },
+                            ),
                             contentDescription = stringResource(
                                 if (onClosePanel != null) {
                                     R.string.wear_close_panel

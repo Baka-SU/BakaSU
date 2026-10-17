@@ -1,9 +1,10 @@
 package org.bakasu.bakasu.ui.wear.component.settings
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.ButtonDefaults
@@ -23,7 +24,7 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
     spec: TransformationSpec,
     title: String,
     onClick: () -> Unit,
-    icon: ImageVector? = null,
+    @DrawableRes icon: Int? = null,
     enabled: Boolean = true,
     description: String? = null,
     transformed: Boolean = true,
@@ -39,7 +40,7 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
             Modifier.fillMaxWidth()
         },
         transformation = if (transformed) SurfaceTransformation(spec) else null,
-        icon = icon?.let { { Icon(it, contentDescription = null) } },
+        icon = icon?.let { { Icon(painterResource(it), contentDescription = null) } },
         secondaryLabel = description?.let { text -> { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
     ) { Text(title, maxLines = if (description == null) 3 else 2, overflow = TextOverflow.Ellipsis) }
 }

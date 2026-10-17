@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear.component
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,7 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,7 +47,7 @@ fun TransformingLazyColumnItemScope.WearChip(
     label: String,
     modifier: Modifier = Modifier,
     secondaryLabel: String? = null,
-    icon: ImageVector? = null,
+    @DrawableRes icon: Int? = null,
     emphasis: WearChipEmphasis = WearChipEmphasis.MEDIUM,
     headlineBadges: List<String> = emptyList(),
     secondaryLabelStyle: TextStyle? = null,
@@ -84,7 +85,7 @@ fun TransformingLazyColumnItemScope.WearChip(
                 )
             },
             border = border,
-            icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize)) } },
+            icon = icon?.let { { Icon(painterResource(it), contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize)) } },
             // Keep the description to two lines; mode badges are measured separately in the headline.
             // A [secondaryLabelStyle] from the theme typography lets a dense summary fit one line.
             secondaryLabel = secondaryLabel?.let { text ->
@@ -120,7 +121,7 @@ fun TransformingLazyColumnItemScope.WearChip(
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
-                Icon(icon, contentDescription = null, tint = content, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Icon(painterResource(icon), contentDescription = null, tint = content, modifier = Modifier.size(ButtonDefaults.IconSize))
                 Spacer(Modifier.width(ButtonDefaults.IconSpacing))
             }
             Column(Modifier.weight(1f)) {

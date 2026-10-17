@@ -3,17 +3,7 @@ package org.bakasu.bakasu.ui.wear
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.AltRoute
-import androidx.compose.material.icons.twotone.Folder
-import androidx.compose.material.icons.twotone.Info
-import androidx.compose.material.icons.twotone.Map
-import androidx.compose.material.icons.twotone.RestartAlt
-import androidx.compose.material.icons.twotone.Restore
-import androidx.compose.material.icons.twotone.Save
-import androidx.compose.material.icons.twotone.Storage
-import androidx.compose.material.icons.twotone.Tune
-import androidx.compose.material.icons.twotone.VisibilityOff
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,7 +12,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.material3.ConfirmationDialogDefaults
@@ -59,12 +48,12 @@ import org.koin.compose.viewmodel.koinViewModel
  * @date 2026/10/1.
  */
 
-internal enum class WearSuSFSSection(val title: Int, val icon: ImageVector) {
-    Standard(R.string.susfs_tab_standard, Icons.TwoTone.Tune),
-    Path(R.string.susfs_tab_sus_path, Icons.TwoTone.Folder),
-    Kstat(R.string.susfs_tab_sus_kstat, Icons.TwoTone.Storage),
-    Redirect(R.string.susfs_tab_open_redirect, Icons.AutoMirrored.TwoTone.AltRoute),
-    Map(R.string.susfs_tab_sus_map, Icons.TwoTone.Map),
+internal enum class WearSuSFSSection(val title: Int, @DrawableRes val icon: Int) {
+    Standard(R.string.susfs_tab_standard, R.drawable.wear_symbol_tune),
+    Path(R.string.susfs_tab_sus_path, R.drawable.wear_symbol_folder),
+    Kstat(R.string.susfs_tab_sus_kstat, R.drawable.wear_symbol_storage),
+    Redirect(R.string.susfs_tab_open_redirect, R.drawable.wear_symbol_alt_route),
+    Map(R.string.susfs_tab_sus_map, R.drawable.wear_symbol_map),
 }
 
 internal typealias WearSuSFSCommand = (SuSFSCommandReply) -> SuSFSUiAction
@@ -214,7 +203,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                     config?.enabled == true,
                     { enabled -> submit({ SuSFSUiAction.SetEnabled(enabled, it) }) },
                     enabled = config != null && !busy,
-                    icon = Icons.TwoTone.VisibilityOff,
+                    icon = R.drawable.wear_symbol_visibility_off,
                     secondaryLabel = stringResource(R.string.susfs_enable_config_summary),
                 )
             }
@@ -223,9 +212,9 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                     WearInfoCard(spec) { Text(stringResource(R.string.susfs_config_disable_warning)) }
                 }
             }
-            item { WearInfoCard(spec) { WearDetailField(Icons.TwoTone.Info, stringResource(R.string.susfs_status_version), state.statusInfo?.version?.ifBlank { noData } ?: noData) } }
-            item { WearInfoCard(spec) { WearDetailField(Icons.TwoTone.Tune, stringResource(R.string.susfs_status_variant), state.statusInfo?.variant?.ifBlank { noData } ?: noData) } }
-            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_status_enabled_features), { page = "capabilities" }, icon = Icons.TwoTone.Info) }
+            item { WearInfoCard(spec) { WearDetailField(R.drawable.wear_symbol_info, stringResource(R.string.susfs_status_version), state.statusInfo?.version?.ifBlank { noData } ?: noData) } }
+            item { WearInfoCard(spec) { WearDetailField(R.drawable.wear_symbol_tune, stringResource(R.string.susfs_status_variant), state.statusInfo?.variant?.ifBlank { noData } ?: noData) } }
+            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_status_enabled_features), { page = "capabilities" }, icon = R.drawable.wear_symbol_info) }
             item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_backup_restore)) }
             SegmentedColumn(listOf("export", "import", "reset"), { it }) { action ->
                 when (action) {
@@ -233,7 +222,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                         spec,
                         stringResource(R.string.susfs_backup_export),
                         { launchPicker(true) },
-                        icon = Icons.TwoTone.Save,
+                        icon = R.drawable.wear_symbol_save,
                         description = stringResource(R.string.susfs_backup_description),
                     )
 
@@ -241,7 +230,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                         spec,
                         stringResource(R.string.susfs_backup_import),
                         { launchPicker(false) },
-                        icon = Icons.TwoTone.Restore,
+                        icon = R.drawable.wear_symbol_history,
                         description = stringResource(R.string.susfs_restore_description),
                     )
 
@@ -249,12 +238,12 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                         spec,
                         stringResource(R.string.susfs_backup_restore_default),
                         restore::show,
-                        icon = Icons.TwoTone.Restore,
+                        icon = R.drawable.wear_symbol_history,
                         description = stringResource(R.string.susfs_backup_restore_default_desc),
                     )
                 }
             }
-            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.reboot), onReboot, icon = Icons.TwoTone.RestartAlt) }
+            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.reboot), onReboot, icon = R.drawable.wear_symbol_restart_alt) }
         }
     }
     val route = page
@@ -322,7 +311,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     } else {
         WearList(isLoading = state.isLoading || busy, onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.susfs_config_title)) }
-            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_tab_status), { page = "status" }, icon = Icons.TwoTone.Info) }
+            item { WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_tab_status), { page = "status" }, icon = R.drawable.wear_symbol_info) }
             LazySegmentedColumn(WearSuSFSSection.entries, { it.name }) { entry ->
                 WearSettingsJumpPageWidget(
                     spec,

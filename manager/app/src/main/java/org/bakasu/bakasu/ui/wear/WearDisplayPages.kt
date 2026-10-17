@@ -10,16 +10,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Check
-import androidx.compose.material.icons.twotone.Delete
-import androidx.compose.material.icons.twotone.FormatSize
-import androidx.compose.material.icons.twotone.Image
-import androidx.compose.material.icons.twotone.Opacity
-import androidx.compose.material.icons.twotone.Palette
-import androidx.compose.material.icons.twotone.Restore
-import androidx.compose.material.icons.twotone.Settings
-import androidx.compose.material.icons.twotone.Vibration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
@@ -123,7 +114,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                         stringResource(R.string.dynamic_color_title),
                         state.useDynamicColor,
                         { onAction(SettingsUiAction.SetDynamicColor(it)) },
-                        icon = Icons.TwoTone.Palette,
+                        icon = R.drawable.wear_symbol_palette,
                         secondaryLabel = stringResource(R.string.dynamic_color_summary),
                     )
                 }
@@ -132,7 +123,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                         spec,
                         stringResource(if (selection == WearSelection.Palette) R.string.dynamic_palette_style else R.string.dynamic_color_spec),
                         { onOpen(WearRoute.Selection(selection)) },
-                        icon = Icons.TwoTone.Palette,
+                        icon = R.drawable.wear_symbol_palette,
                         description = if (selection == WearSelection.Palette) paletteLabel(state.dynamicPaletteStyle) else colorSpecLabel(state.dynamicColorSpec),
                     )
                 }
@@ -144,7 +135,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                                 stringResource(R.string.settings_config_use_custom_background_seed_color),
                                 config.isUseBackgroundSeedColor,
                                 backgrounds::saveUseBackgroundSeedColor,
-                                icon = Icons.TwoTone.Image,
+                                icon = R.drawable.wear_symbol_image,
                             )
                         }
                     }
@@ -154,7 +145,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                             stringResource(R.string.settings_custom_enable_high_contrast),
                             config.isHighContrastMode,
                             backgrounds::saveEnableHighContrastMode,
-                            icon = Icons.TwoTone.Settings,
+                            icon = R.drawable.wear_symbol_settings,
                             secondaryLabel = stringResource(R.string.settings_custom_enable_high_contrast_summary),
                         )
                     }
@@ -181,7 +172,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                 item { WearSectionHeader(spec, stringResource(R.string.wear_custom_color)) }
                 item { HexColorButton(spec, hex, valid) { editingHex = true } }
                 item {
-                    WearActionButton(spec, Icons.TwoTone.Check, stringResource(R.string.background_crop_apply), {
+                    WearActionButton(spec, R.drawable.wear_symbol_check, stringResource(R.string.background_crop_apply), {
                         onAction(SettingsUiAction.SetDynamicColor(false))
                         onAction(SettingsUiAction.SetThemeColor(hex.toColorInt()))
                     }, enabled = valid, colors = ButtonDefaults.buttonColors())
@@ -190,7 +181,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                 item {
                     WearActionButton(
                         spec,
-                        Icons.TwoTone.Image,
+                        R.drawable.wear_symbol_image,
                         stringResource(R.string.settings_custom_background_summary),
                         onImage,
                         colors = ButtonDefaults.filledTonalButtonColors(),
@@ -205,14 +196,14 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                                 stringResource(R.string.settings_config_enable_blur),
                                 config.isEnableBlur,
                                 backgrounds::saveEnableBlur,
-                                icon = Icons.TwoTone.Image,
+                                icon = R.drawable.wear_symbol_image,
                             )
                         }
                     }
                     item {
                         WearActionButton(
                             spec,
-                            Icons.TwoTone.Delete,
+                            R.drawable.wear_symbol_delete,
                             stringResource(R.string.wear_remove_background),
                             { onAction(SettingsUiAction.RemoveCustomBackground) },
                             colors = ButtonDefaults.filledTonalButtonColors(),
@@ -221,7 +212,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                     item {
                         WearSliderCard(
                             spec,
-                            Icons.TwoTone.Image,
+                            R.drawable.wear_symbol_image,
                             stringResource(R.string.settings_background_dim),
                             "${(state.backgroundDim * 100).roundToInt()}%",
                             state.backgroundDim,
@@ -235,7 +226,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                     item {
                         WearSliderCard(
                             spec,
-                            Icons.TwoTone.Opacity,
+                            R.drawable.wear_symbol_opacity,
                             stringResource(R.string.settings_card_alpha),
                             "${(state.cardAlpha * 100).roundToInt()}%",
                             state.cardAlpha,
@@ -268,7 +259,7 @@ private fun ColorSwatch(color: Color, selected: Boolean, onSelect: () -> Unit) {
         border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface) else null,
     ) {
         Icon(
-            Icons.TwoTone.Check,
+            painterResource(R.drawable.wear_symbol_check),
             contentDescription = "${stringResource(R.string.theme_color)} ${color.toArgb().toHex()}",
             tint = if (selected) Color.Black else Color.Transparent,
         )
@@ -352,7 +343,7 @@ internal fun WearDpiPage(
                         else -> onSimpleMode(value)
                     }
                 },
-                icon = Icons.TwoTone.Settings,
+                icon = R.drawable.wear_symbol_settings,
                 secondaryLabel = when (label) {
                     R.string.wear_block_back_key -> stringResource(R.string.wear_block_back_key_summary)
                     R.string.wear_disable_swipe_back -> stringResource(R.string.wear_disable_swipe_back_summary)
@@ -370,7 +361,7 @@ internal fun WearDpiPage(
                 preferences.xiaomiWatch5Detected || preferences.xiaomiWatch5Mode,
                 { enabled -> if (enabled) xiaomiWatch5Dialog.show() else preferenceViewModel.setXiaomiWatch5Mode(false) },
                 enabled = !preferences.xiaomiWatch5Detected,
-                icon = Icons.TwoTone.Vibration,
+                icon = R.drawable.wear_symbol_watch_vibration,
                 secondaryLabel = stringResource(
                     if (preferences.xiaomiWatch5Detected) R.string.wear_xiaomi_watch5_detected else R.string.wear_xiaomi_watch5_mode_summary,
                 ),
@@ -386,7 +377,7 @@ internal fun WearDpiPage(
                 spec,
                 stringResource(if (selection == WearSelection.BackAnimation) R.string.predictive_back_animation else R.string.predictive_back_exit_direction),
                 { onOpen(WearRoute.Selection(selection)) },
-                icon = Icons.TwoTone.Settings,
+                icon = R.drawable.wear_symbol_settings,
                 description = if (selection == WearSelection.BackAnimation) backAnimationLabel(state.predictiveBackAnimation) else backDirectionLabel(state.predictiveBackExitDirection),
             )
         }
@@ -395,7 +386,7 @@ internal fun WearDpiPage(
         item {
             WearSliderCard(
                 spec,
-                Icons.TwoTone.FormatSize,
+                R.drawable.wear_symbol_format_size,
                 stringResource(R.string.app_dpi_title),
                 stringResource(R.string.wear_ui_scale, pending),
                 pending,
@@ -407,7 +398,7 @@ internal fun WearDpiPage(
         item {
             WearActionButton(
                 spec,
-                Icons.TwoTone.Check,
+                R.drawable.wear_symbol_check,
                 stringResource(R.string.dpi_apply_settings),
                 { onAction(SettingsUiAction.ApplyDpi) },
                 state.tempDpi != state.currentDpi,
@@ -417,7 +408,7 @@ internal fun WearDpiPage(
         item {
             WearActionButton(
                 spec,
-                Icons.TwoTone.Restore,
+                R.drawable.wear_symbol_history,
                 stringResource(R.string.language_system_default),
                 { onAction(SettingsUiAction.SetTempDpi(systemDpi)) },
                 state.tempDpi != systemDpi,

@@ -1,36 +1,8 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.os.Build
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.Article
-import androidx.compose.material.icons.twotone.Adb
-import androidx.compose.material.icons.twotone.Apps
-import androidx.compose.material.icons.twotone.AspectRatio
-import androidx.compose.material.icons.twotone.BugReport
-import androidx.compose.material.icons.twotone.Build
-import androidx.compose.material.icons.twotone.Delete
-import androidx.compose.material.icons.twotone.ElectricalServices
-import androidx.compose.material.icons.twotone.Extension
-import androidx.compose.material.icons.twotone.Fence
-import androidx.compose.material.icons.twotone.FolderDelete
-import androidx.compose.material.icons.twotone.FolderOff
-import androidx.compose.material.icons.twotone.FolderOpen
-import androidx.compose.material.icons.twotone.FormatSize
-import androidx.compose.material.icons.twotone.Info
-import androidx.compose.material.icons.twotone.Language
-import androidx.compose.material.icons.twotone.Palette
-import androidx.compose.material.icons.twotone.Policy
-import androidx.compose.material.icons.twotone.RemoveCircle
-import androidx.compose.material.icons.twotone.RemoveModerator
-import androidx.compose.material.icons.twotone.RestartAlt
-import androidx.compose.material.icons.twotone.Science
-import androidx.compose.material.icons.twotone.Security
-import androidx.compose.material.icons.twotone.Settings
-import androidx.compose.material.icons.twotone.Translate
-import androidx.compose.material.icons.twotone.Update
-import androidx.compose.material.icons.twotone.VisibilityOff
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
@@ -94,55 +66,58 @@ private data class SettingsPageLink(
     val summary: String? = null,
 )
 
-private fun settingsToggleIcon(label: Int): ImageVector = when (label) {
-    R.string.settings_check_manager_update -> Icons.TwoTone.Update
-    R.string.settings_check_beta_update -> Icons.TwoTone.Science
-    R.string.settings_check_module_update -> Icons.TwoTone.Extension
-    R.string.settings_soft_reboot -> Icons.TwoTone.RestartAlt
-    R.string.icon_switch_title -> Icons.TwoTone.Apps
-    R.string.settings_kernel_umount -> Icons.TwoTone.RemoveCircle
-    R.string.settings_umount_modules_default -> Icons.TwoTone.FolderDelete
-    R.string.settings_sulog -> Icons.AutoMirrored.TwoTone.Article
-    R.string.settings_selinux_hide -> Icons.TwoTone.Policy
-    R.string.settings_adb_root -> Icons.TwoTone.Adb
-    R.string.settings_auto_jailbreak -> Icons.TwoTone.ElectricalServices
-    else -> Icons.TwoTone.Settings
+@DrawableRes
+private fun settingsToggleIcon(label: Int): Int = when (label) {
+    R.string.settings_check_manager_update -> R.drawable.wear_symbol_update
+    R.string.settings_check_beta_update -> R.drawable.wear_symbol_science
+    R.string.settings_check_module_update -> R.drawable.wear_symbol_extension
+    R.string.settings_soft_reboot -> R.drawable.wear_symbol_restart_alt
+    R.string.icon_switch_title -> R.drawable.wear_symbol_apps
+    R.string.settings_kernel_umount -> R.drawable.wear_symbol_do_not_disturb_on
+    R.string.settings_umount_modules_default -> R.drawable.wear_symbol_folder_delete
+    R.string.settings_sulog -> R.drawable.wear_symbol_article
+    R.string.settings_selinux_hide -> R.drawable.wear_symbol_policy
+    R.string.settings_adb_root -> R.drawable.wear_symbol_adb
+    R.string.settings_auto_jailbreak -> R.drawable.wear_symbol_electrical_services
+    else -> R.drawable.wear_symbol_settings
 }
 
-private fun settingsCategoryIcon(category: WearSettingsCategory): ImageVector = when (category) {
-    WearSettingsCategory.General -> Icons.TwoTone.Settings
-    WearSettingsCategory.Security -> Icons.TwoTone.Security
-    WearSettingsCategory.Advanced -> Icons.TwoTone.Build
-    WearSettingsCategory.Display -> Icons.TwoTone.Palette
+@DrawableRes
+private fun settingsCategoryIcon(category: WearSettingsCategory): Int = when (category) {
+    WearSettingsCategory.General -> R.drawable.wear_symbol_settings
+    WearSettingsCategory.Security -> R.drawable.wear_symbol_security
+    WearSettingsCategory.Advanced -> R.drawable.wear_symbol_build
+    WearSettingsCategory.Display -> R.drawable.wear_symbol_palette
 }
 
-private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
-    WearRoute.DynamicManager -> Icons.TwoTone.Security
+@DrawableRes
+private fun settingsRouteIcon(route: WearRoute): Int = when (route) {
+    WearRoute.DynamicManager -> R.drawable.wear_symbol_security
 
-    WearRoute.Color -> Icons.TwoTone.Palette
+    WearRoute.Color -> R.drawable.wear_symbol_palette
 
-    WearRoute.Dpi -> Icons.TwoTone.FormatSize
+    WearRoute.Dpi -> R.drawable.wear_symbol_format_size
 
-    WearRoute.Logs -> Icons.AutoMirrored.TwoTone.Article
+    WearRoute.Logs -> R.drawable.wear_symbol_article
 
-    WearRoute.Bugreport -> Icons.TwoTone.BugReport
+    WearRoute.Bugreport -> R.drawable.wear_symbol_bug_report
 
-    WearRoute.Templates -> Icons.TwoTone.Fence
+    WearRoute.Templates -> R.drawable.wear_symbol_fence
 
-    WearRoute.Umount -> Icons.TwoTone.FolderOff
+    WearRoute.Umount -> R.drawable.wear_symbol_folder_off
 
-    WearRoute.Uninstall -> Icons.TwoTone.Delete
+    WearRoute.Uninstall -> R.drawable.wear_symbol_delete
 
     is WearRoute.Selection -> when (route.selection) {
-        WearSelection.ScreenShape -> Icons.TwoTone.AspectRatio
-        WearSelection.Language -> Icons.TwoTone.Translate
-        WearSelection.LinkMode -> Icons.TwoTone.Language
-        WearSelection.PickerMode -> Icons.TwoTone.FolderOpen
-        WearSelection.SuCompat -> Icons.TwoTone.RemoveModerator
-        WearSelection.BackAnimation, WearSelection.BackDirection, WearSelection.Palette, WearSelection.ColorSpec -> Icons.TwoTone.Settings
+        WearSelection.ScreenShape -> R.drawable.wear_symbol_aspect_ratio
+        WearSelection.Language -> R.drawable.wear_symbol_translate
+        WearSelection.LinkMode -> R.drawable.wear_symbol_language
+        WearSelection.PickerMode -> R.drawable.wear_symbol_folder_open
+        WearSelection.SuCompat -> R.drawable.wear_symbol_remove_moderator
+        WearSelection.BackAnimation, WearSelection.BackDirection, WearSelection.Palette, WearSelection.ColorSpec -> R.drawable.wear_symbol_settings
     }
 
-    else -> Icons.TwoTone.Settings
+    else -> R.drawable.wear_symbol_settings
 }
 
 /**
@@ -207,7 +182,7 @@ internal fun WearSettingsPage(
                         spec,
                         stringResource(R.string.susfs_config_setting_title),
                         { onOpen(WearRoute.SuSFS) },
-                        icon = Icons.TwoTone.VisibilityOff,
+                        icon = R.drawable.wear_symbol_visibility_off,
                     )
                 }
             }
@@ -217,7 +192,7 @@ internal fun WearSettingsPage(
                     spec,
                     stringResource(R.string.about),
                     { onOpen(WearRoute.About) },
-                    icon = Icons.TwoTone.Info,
+                    icon = R.drawable.wear_symbol_info,
                     description = version,
                 )
             }

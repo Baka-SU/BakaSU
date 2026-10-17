@@ -3,8 +3,6 @@ package org.bakasu.bakasu.ui.wear
 import android.content.res.Configuration
 import android.os.Build
 import androidx.compose.foundation.background
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Error
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -190,7 +188,7 @@ fun WearStartupStatus(error: String? = null) {
         } else {
             WearList { spec ->
                 item { WearPageHeader(spec, stringResource(R.string.app_name)) }
-                item { WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR) }
+                item { WearStatusItem(spec, R.drawable.wear_symbol_error_fill1, error, tone = WearStatusTone.ERROR) }
             }
         }
     }

@@ -1,28 +1,12 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.twotone.AccountCircle
-import androidx.compose.material.icons.twotone.Apps
-import androidx.compose.material.icons.twotone.Delete
-import androidx.compose.material.icons.twotone.Description
-import androidx.compose.material.icons.twotone.Error
-import androidx.compose.material.icons.twotone.Extension
-import androidx.compose.material.icons.twotone.Language
-import androidx.compose.material.icons.twotone.Person
-import androidx.compose.material.icons.twotone.PlayArrow
-import androidx.compose.material.icons.twotone.PowerSettingsNew
-import androidx.compose.material.icons.twotone.Security
-import androidx.compose.material.icons.twotone.Tag
-import androidx.compose.material.icons.twotone.Update
-import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,7 +16,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -94,7 +78,7 @@ internal fun WearModuleDetail(
             }
             if (!error.isNullOrBlank()) {
                 item {
-                    WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
+                    WearStatusItem(spec, R.drawable.wear_symbol_error_fill1, error, tone = WearStatusTone.ERROR)
                 }
             }
         }
@@ -128,10 +112,10 @@ internal fun WearModuleDetail(
         item { WearSectionHeader(spec, stringResource(R.string.wear_module_information)) }
         // Information rows read like the operation buttons below (icon, label, secondary label), but
         // stay cards, as nothing happens on a tap.
-        item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.TwoTone.Person, stringResource(R.string.module_author), module.author.ifBlank { unknown }) } }
-        item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.TwoTone.Tag, stringResource(R.string.wear_details), module.id) } }
+        item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(R.drawable.wear_symbol_person, stringResource(R.string.module_author), module.author.ifBlank { unknown }) } }
+        item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(R.drawable.wear_symbol_tag, stringResource(R.string.wear_details), module.id) } }
         if (module.description.isNotBlank()) {
-            item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.TwoTone.Description, stringResource(R.string.wear_description), module.description) } }
+            item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(R.drawable.wear_symbol_description, stringResource(R.string.wear_description), module.description) } }
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_module_operations)) }
         // Every operation uses the button's icon, label and secondary label slots: the label names the
@@ -143,7 +127,7 @@ internal fun WearModuleDetail(
                 module.enabled,
                 { onEnabledChange(module.id, it) },
                 enabled = !module.remove && !module.update,
-                icon = Icons.TwoTone.PowerSettingsNew,
+                icon = R.drawable.wear_symbol_power_settings_new,
                 secondaryLabel = stringResource(if (module.enabled) R.string.wear_enabled else R.string.wear_disabled),
                 compact = true,
             )
@@ -152,7 +136,7 @@ internal fun WearModuleDetail(
             item {
                 WearActionButton(
                     spec,
-                    Icons.TwoTone.Language,
+                    R.drawable.wear_symbol_language,
                     stringResource(R.string.wear_webui),
                     { onWebUi(module) },
                     enabled = module.enabled && !module.remove,
@@ -165,7 +149,7 @@ internal fun WearModuleDetail(
             item {
                 WearActionButton(
                     spec,
-                    Icons.TwoTone.PlayArrow,
+                    R.drawable.wear_symbol_play_arrow,
                     stringResource(R.string.action),
                     { onExecute(module) },
                     enabled = module.enabled && !module.remove,
@@ -178,7 +162,7 @@ internal fun WearModuleDetail(
             item {
                 WearActionButton(
                     spec,
-                    Icons.TwoTone.Update,
+                    R.drawable.wear_symbol_update,
                     stringResource(R.string.module_update),
                     { onUpdate(module) },
                     enabled = !module.remove,
@@ -190,7 +174,7 @@ internal fun WearModuleDetail(
         item {
             WearActionButton(
                 spec,
-                Icons.TwoTone.Delete,
+                R.drawable.wear_symbol_delete,
                 stringResource(R.string.uninstall),
                 removeDialog::show,
                 enabled = !module.remove,
@@ -214,9 +198,9 @@ internal fun WearModuleDetail(
  * and a quieter secondary label, which wraps rather than running into the icon.
  */
 @Composable
-private fun WearInfoRow(icon: ImageVector, label: String, value: String) {
+private fun WearInfoRow(@DrawableRes icon: Int, label: String, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+        Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.labelMedium)
@@ -238,7 +222,7 @@ internal fun WearAppDetail(
             item {
                 WearPageHeader(spec, stringResource(R.string.profile))
             }
-            item { WearStatusItem(spec, Icons.TwoTone.Apps, stringResource(R.string.no_apps_found)) }
+            item { WearStatusItem(spec, R.drawable.wear_symbol_apps, stringResource(R.string.no_apps_found)) }
         }
         return
     }
@@ -280,10 +264,10 @@ internal fun WearAppDetail(
             WearList(onBack = { detailPage = "" }) { spec ->
                 item { WearPageHeader(spec, stringResource(if (detailPage == "affected") R.string.affected_applications else R.string.wear_app_operations)) }
                 if (detailPage == "affected") {
-                    group.apps.forEach { app -> item { WearInfoCard(spec) { WearDetailField(Icons.TwoTone.Apps, app.label, app.displayIdentifier) } } }
+                    group.apps.forEach { app -> item { WearInfoCard(spec) { WearDetailField(R.drawable.wear_symbol_apps, app.label, app.displayIdentifier) } } }
                 } else {
                     listOf(AppControlAction.LAUNCH to R.string.launch_app, AppControlAction.FORCE_STOP to R.string.force_stop_app).forEach { (action, label) ->
-                        item { WearActionButton(spec, Icons.TwoTone.Apps, stringResource(label), { viewModel.dispatch(AppProfileUiAction.ControlApp(action)) }) }
+                        item { WearActionButton(spec, R.drawable.wear_symbol_apps, stringResource(label), { viewModel.dispatch(AppProfileUiAction.ControlApp(action)) }) }
                     }
                 }
             }
@@ -340,7 +324,7 @@ internal fun WearAppDetail(
                         checked = profile.allowSu,
                         onCheckedChange = { save(profile.copy(allowSu = it)) },
                         enabled = !isManager && !group.isWebViewZygote,
-                        icon = Icons.TwoTone.Security,
+                        icon = R.drawable.wear_symbol_security,
                         secondaryLabel = stringResource(R.string.wear_root_access),
                     )
                 }
@@ -349,7 +333,7 @@ internal fun WearAppDetail(
                         spec,
                         stringResource(R.string.wear_profile_mode),
                         { editingProfile = true },
-                        icon = Icons.TwoTone.AccountCircle,
+                        icon = R.drawable.wear_symbol_account_circle,
                         enabled = !isManager,
                         description = stringResource(
                             if (if (profile.allowSu) profile.rootUseDefault else profile.nonRootUseDefault) {
@@ -371,7 +355,7 @@ internal fun WearAppDetail(
                             { save(profile.copy(umountModules = it, nonRootUseDefault = false)) },
                             enabled = !isManager && !profile.nonRootUseDefault,
                             secondaryLabel = stringResource(R.string.profile_umount_modules_summary),
-                            icon = Icons.TwoTone.Extension,
+                            icon = R.drawable.wear_symbol_extension,
                         )
                     }
                 }
@@ -395,7 +379,7 @@ internal fun WearAppDetail(
                     }
                 }
             } else {
-                item { WearStatusItem(spec, Icons.TwoTone.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
+                item { WearStatusItem(spec, R.drawable.wear_symbol_error_fill1, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
             }
         }
     }

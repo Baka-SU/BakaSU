@@ -2,16 +2,9 @@ package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Add
-import androidx.compose.material.icons.twotone.Error
-import androidx.compose.material.icons.twotone.Extension
-import androidx.compose.material.icons.twotone.Language
-import androidx.compose.material.icons.twotone.PlayArrow
-import androidx.compose.material.icons.twotone.Search
-import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineBreak
@@ -81,19 +74,19 @@ internal fun WearModulesPage(
             WearIconButtonGroup(
                 spec,
                 listOf(
-                    WearIconAction(Icons.TwoTone.Search, stringResource(R.string.search_modules), onSearch),
-                    WearIconAction(Icons.TwoTone.Add, stringResource(R.string.install), onInstallClick),
+                    WearIconAction(R.drawable.wear_symbol_search, stringResource(R.string.search_modules), onSearch),
+                    WearIconAction(R.drawable.wear_symbol_add, stringResource(R.string.install), onInstallClick),
                 ),
             )
         }
         if (!error.isNullOrBlank()) {
             item {
-                WearStatusItem(spec, Icons.TwoTone.Error, error, tone = WearStatusTone.ERROR)
+                WearStatusItem(spec, R.drawable.wear_symbol_error_fill1, error, tone = WearStatusTone.ERROR)
             }
         }
         if (state.moduleList.isEmpty() && error.isNullOrBlank()) {
             item {
-                WearEmptyState(spec, Icons.TwoTone.Extension, stringResource(R.string.module_empty))
+                WearEmptyState(spec, R.drawable.wear_symbol_extension, stringResource(R.string.module_empty))
             }
         }
         items(state.moduleList, key = { it.id }) { module ->
@@ -122,7 +115,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             if (module.hasWebUi && onWebUi != null) {
                 add(
                     WearIconAction(
-                        Icons.TwoTone.Language,
+                        R.drawable.wear_symbol_language,
                         stringResource(R.string.wear_webui),
                     ) { onWebUi(module) },
                 )
@@ -130,7 +123,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             if (module.hasActionScript && onExecute != null) {
                 add(
                     WearIconAction(
-                        Icons.TwoTone.PlayArrow,
+                        R.drawable.wear_symbol_play_arrow,
                         stringResource(R.string.action),
                     ) { onExecute(module) },
                 )
@@ -156,7 +149,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             // A reveal row owns its transformation; a standalone row owns its own.
             transformation = if (actions.isEmpty()) SurfaceTransformation(spec) else null,
             colors = if (module.enabled) ButtonDefaults.filledVariantButtonColors() else ButtonDefaults.filledTonalButtonColors(),
-            icon = { Icon(Icons.TwoTone.Extension, contentDescription = null) },
+            icon = { Icon(painterResource(R.drawable.wear_symbol_extension), contentDescription = null) },
             secondaryLabel = details.ifBlank { null }?.let { text ->
                 {
                     Text(

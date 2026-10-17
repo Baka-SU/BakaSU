@@ -6,10 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Code
-import androidx.compose.material.icons.twotone.Copyright
-import androidx.compose.material.icons.twotone.Group
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,7 +97,7 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
             WearChip(
                 spec,
                 stringResource(R.string.wear_icon_copyright),
-                icon = Icons.TwoTone.Copyright,
+                icon = R.drawable.wear_symbol_copyright,
                 onClick = copyright::show,
             )
         }
@@ -110,7 +106,7 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
                 spec,
                 stringResource(R.string.get_source_code),
                 secondaryLabel = stringResource(R.string.get_source_code_detail),
-                icon = Icons.TwoTone.Code,
+                icon = R.drawable.wear_symbol_code,
                 onClick = { onOpenLink(projectUrl) },
             )
         }
@@ -119,7 +115,7 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
                 spec,
                 stringResource(R.string.join_telegram_group),
                 secondaryLabel = stringResource(R.string.join_telegram_group_detail),
-                icon = Icons.TwoTone.Group,
+                icon = R.drawable.wear_symbol_group,
                 onClick = { onOpenLink("https://t.me/BakaSU") },
             )
         }
@@ -128,7 +124,7 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
                 spec,
                 stringResource(R.string.open_source_license),
                 secondaryLabel = stringResource(R.string.license, stringResource(R.string.wear_project_license)),
-                icon = Icons.TwoTone.Copyright,
+                icon = R.drawable.wear_symbol_copyright,
                 onClick = onLicenses,
             )
         }

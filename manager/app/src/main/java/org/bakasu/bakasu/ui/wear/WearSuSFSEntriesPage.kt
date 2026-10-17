@@ -2,16 +2,6 @@ package org.bakasu.bakasu.ui.wear
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.AltRoute
-import androidx.compose.material.icons.twotone.Add
-import androidx.compose.material.icons.twotone.Delete
-import androidx.compose.material.icons.twotone.FileOpen
-import androidx.compose.material.icons.twotone.Folder
-import androidx.compose.material.icons.twotone.Save
-import androidx.compose.material.icons.twotone.Security
-import androidx.compose.material.icons.twotone.Storage
-import androidx.compose.material.icons.twotone.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -123,7 +113,7 @@ internal fun WearSuSFSEntriesPage(
             }
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
-        item { WearActionButton(spec, Icons.TwoTone.Add, stringResource(R.string.susfs_entry_manual_add), onAdd, secondaryText = stringResource(section.title)) }
+        item { WearActionButton(spec, R.drawable.wear_symbol_add, stringResource(R.string.susfs_entry_manual_add), onAdd, secondaryText = stringResource(section.title)) }
     }
 }
 
@@ -186,7 +176,7 @@ internal fun WearSuSFSDetailPage(
                 }
             }
         }
-        item { WearSettingsJumpPageWidget(spec, stringResource(R.string.delete), remove::show, icon = Icons.TwoTone.Delete) }
+        item { WearSettingsJumpPageWidget(spec, stringResource(R.string.delete), remove::show, icon = R.drawable.wear_symbol_delete) }
     }
 }
 
@@ -292,7 +282,7 @@ internal fun WearSuSFSAddPage(
                     else -> subtype
                 },
                 onBack = { choosing = "" },
-                icon = { if (shownChoice == "uid") Icons.TwoTone.Security else section.icon },
+                icon = { if (shownChoice == "uid") R.drawable.wear_symbol_security else section.icon },
             ) {
                 when (shownChoice) {
                     "uid" -> uid = it
@@ -377,7 +367,7 @@ internal fun WearSuSFSAddPage(
                     spec,
                     stringResource(R.string.susfs_entry_path_label),
                     { field = 0 },
-                    icon = Icons.TwoTone.Folder,
+                    icon = R.drawable.wear_symbol_folder,
                     description = path.ifBlank { default },
                 )
             }
@@ -385,7 +375,7 @@ internal fun WearSuSFSAddPage(
                 item {
                     WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_entry_import_from_file), {
                         runCatching { importLauncher.launch(arrayOf("*/*")) }.onFailure { fileError = readFailed }
-                    }, icon = Icons.TwoTone.FileOpen, description = stringResource(R.string.susfs_entry_import_hint))
+                    }, icon = R.drawable.wear_symbol_file_open, description = stringResource(R.string.susfs_entry_import_hint))
                 }
             }
             if (section == WearSuSFSSection.Path || section == WearSuSFSSection.Kstat) {
@@ -396,7 +386,7 @@ internal fun WearSuSFSAddPage(
                         {
                             choosing = if (section == WearSuSFSSection.Path) "path" else "kstat"
                         },
-                        icon = Icons.TwoTone.Tune,
+                        icon = R.drawable.wear_symbol_tune,
                         description = stringResource(
                             if (section == WearSuSFSSection.Kstat) {
                                 kstatLabel(type)
@@ -415,7 +405,7 @@ internal fun WearSuSFSAddPage(
                         spec,
                         stringResource(R.string.susfs_redirect_redirected_path),
                         { field = 1 },
-                        icon = Icons.AutoMirrored.TwoTone.AltRoute,
+                        icon = R.drawable.wear_symbol_alt_route,
                         description = redirected.ifBlank { default },
                     )
                 }
@@ -424,7 +414,7 @@ internal fun WearSuSFSAddPage(
                         spec,
                         stringResource(R.string.susfs_redirect_uid_scheme),
                         { choosing = "uid" },
-                        icon = Icons.TwoTone.Security,
+                        icon = R.drawable.wear_symbol_security,
                         description = stringResource(uidLabel(UidScheme.valueOf(uid))),
                     )
                 }
@@ -436,13 +426,13 @@ internal fun WearSuSFSAddPage(
                         spec,
                         stringResource(label),
                         { field = index + 2 },
-                        icon = Icons.TwoTone.Storage,
+                        icon = R.drawable.wear_symbol_storage,
                         description = staticValues[index].ifBlank { default },
                     )
                 }
             }
             item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
-            item { WearActionButton(spec, Icons.TwoTone.Save, stringResource(R.string.wear_save_path), saveEntries, enabled = !busy && !readingFile) }
+            item { WearActionButton(spec, R.drawable.wear_symbol_save, stringResource(R.string.wear_save_path), saveEntries, enabled = !busy && !readingFile) }
         }
     }
 }

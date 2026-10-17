@@ -5,14 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.Article
-import androidx.compose.material.icons.twotone.CheckCircle
-import androidx.compose.material.icons.twotone.Download
-import androidx.compose.material.icons.twotone.Error
-import androidx.compose.material.icons.twotone.Extension
-import androidx.compose.material.icons.twotone.PlayArrow
-import androidx.compose.material.icons.twotone.Save
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -116,7 +109,7 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
                 changelogError != null -> item {
                     WearStatusItem(
                         spec,
-                        Icons.TwoTone.Error,
+                        R.drawable.wear_symbol_error_fill1,
                         stringResource(R.string.module_changelog_failed, changelogError.orEmpty()),
                         tone = WearStatusTone.ERROR,
                     )
@@ -146,7 +139,7 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
                     modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
                         .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
                     transformation = SurfaceTransformation(spec),
-                    icon = { Icon(Icons.TwoTone.Download, contentDescription = null) },
+                    icon = { Icon(painterResource(R.drawable.wear_symbol_download), contentDescription = null) },
                     secondaryLabel = {
                         Text(
                             when {
@@ -237,16 +230,16 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
                 ),
                 secondaryLabel = lines.lastOrNull { it.isNotBlank() },
                 icon = when (successful) {
-                    true -> Icons.TwoTone.CheckCircle
-                    false -> Icons.TwoTone.Error
-                    null -> Icons.TwoTone.PlayArrow
+                    true -> R.drawable.wear_symbol_check_circle_fill1
+                    false -> R.drawable.wear_symbol_error_fill1
+                    null -> R.drawable.wear_symbol_play_arrow
                 },
             )
         }
         item {
             WearActionButton(
                 spec,
-                Icons.AutoMirrored.TwoTone.Article,
+                R.drawable.wear_symbol_article,
                 fullLog,
                 { showLog = true },
                 secondaryText = stringResource(R.string.wear_install_log_summary),
@@ -257,7 +250,7 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
         item {
             WearActionButton(
                 spec,
-                Icons.TwoTone.Save,
+                R.drawable.wear_symbol_save,
                 stringResource(R.string.wear_save_output),
                 { viewModel.dispatch(ExecuteModuleActionUiAction.SaveLog) },
                 enabled = !state.running,
@@ -309,7 +302,7 @@ internal fun WearModuleInstallConfirmDialog(uri: String?, onDismiss: () -> Unit,
         onDismissRequest = onDismiss,
         icon = {
             Icon(
-                Icons.TwoTone.Extension,
+                painterResource(R.drawable.wear_symbol_extension),
                 contentDescription = null,
                 modifier = Modifier.size(ButtonDefaults.LargeIconSize),
                 tint = MaterialTheme.colorScheme.primary,

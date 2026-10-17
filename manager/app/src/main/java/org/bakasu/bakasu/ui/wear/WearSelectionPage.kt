@@ -1,17 +1,8 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.os.Build
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.AutoAwesome
-import androidx.compose.material.icons.twotone.Circle
-import androidx.compose.material.icons.twotone.FolderOpen
-import androidx.compose.material.icons.twotone.Language
-import androidx.compose.material.icons.twotone.RemoveModerator
-import androidx.compose.material.icons.twotone.Smartphone
-import androidx.compose.material.icons.twotone.Square
-import androidx.compose.material.icons.twotone.Translate
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
@@ -129,26 +120,27 @@ internal fun WearSelectionPage(
     }
 }
 
-private fun selectionIcon(selection: WearSelection, value: String): ImageVector = when (selection) {
+@DrawableRes
+private fun selectionIcon(selection: WearSelection, value: String): Int = when (selection) {
     WearSelection.ScreenShape -> when (value) {
-        "round" -> Icons.TwoTone.Circle
-        "square" -> Icons.TwoTone.Square
-        else -> Icons.TwoTone.AutoAwesome
+        "round" -> R.drawable.wear_symbol_circle
+        "square" -> R.drawable.wear_symbol_square
+        else -> R.drawable.wear_symbol_auto_awesome
     }
 
-    WearSelection.Language -> Icons.TwoTone.Translate
+    WearSelection.Language -> R.drawable.wear_symbol_translate
 
-    WearSelection.SuCompat -> Icons.TwoTone.RemoveModerator
+    WearSelection.SuCompat -> R.drawable.wear_symbol_remove_moderator
 
     WearSelection.LinkMode -> when (value) {
-        "webview" -> Icons.TwoTone.Language
-        "phone" -> Icons.TwoTone.Smartphone
-        else -> Icons.TwoTone.AutoAwesome
+        "webview" -> R.drawable.wear_symbol_language
+        "phone" -> R.drawable.wear_symbol_smartphone
+        else -> R.drawable.wear_symbol_auto_awesome
     }
 
-    WearSelection.PickerMode -> if (value == "auto") Icons.TwoTone.AutoAwesome else Icons.TwoTone.FolderOpen
+    WearSelection.PickerMode -> if (value == "auto") R.drawable.wear_symbol_auto_awesome else R.drawable.wear_symbol_folder_open
 
-    WearSelection.BackAnimation, WearSelection.BackDirection, WearSelection.Palette, WearSelection.ColorSpec -> Icons.TwoTone.AutoAwesome
+    WearSelection.BackAnimation, WearSelection.BackDirection, WearSelection.Palette, WearSelection.ColorSpec -> R.drawable.wear_symbol_auto_awesome
 }
 
 @Composable
