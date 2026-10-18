@@ -10,7 +10,6 @@ import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.data.flash.FlashRepository
-import org.bakasu.bakasu.data.haptics.CrownHapticsRepository
 import org.bakasu.bakasu.data.shell.KsuCliRepository
 import org.bakasu.bakasu.data.theme.MonetCompatColorSource
 
@@ -21,13 +20,10 @@ class ApplicationInitializationRepository(
     private val flashRepository: FlashRepository,
     private val ksuCliRepository: KsuCliRepository,
     private val monetCompatColorSource: MonetCompatColorSource,
-    private val crownHapticsRepository: CrownHapticsRepository,
 ) {
     @SuppressLint("RestrictedApi")
     suspend fun initialize() {
         MainShell.setBuilder(ksuCliRepository.generateMainShellBuilder())
-        // Before any screen reads the crown haptic constants; settings are preloaded by now.
-        crownHapticsRepository.applyPolicy()
         monetCompatColorSource.initialize()
         Coil.setImageLoader(imageLoader)
         File(application.dataDir, "webroot").mkdirs()

@@ -9,6 +9,8 @@ pluginManagement {
         mavenCentral()
         maven("https://jitpack.io")
     }
+    // Resolves the vendored cnwearoverlay plugin by id.
+    includeBuild("cnwearoverlay")
 }
 
 dependencyResolutionManagement {
@@ -19,10 +21,9 @@ dependencyResolutionManagement {
     }
 }
 
-// Crown scroll haptics on watches without the Google Wear SDK, such as the Xiaomi Watch 5: the
-// miwearhaptics submodule routes the Google haptic getters to a Google/Xiaomi compatibility layer.
-// It provides both the plugin and its runtime library, so it is included at the top level.
-includeBuild("miwearhaptics")
+// Crown haptics on Xiaomi/OPPO watches: the vendored cnwearoverlay build (LGPL-3.0, see
+// cnwearoverlay/LICENSE) patches Wear Compose rotary haptics at build time. It is a plain
+// directory, not a submodule, so a checkout builds without fetching anything.
 
 rootProject.name = "BakaSU"
 include(":app")

@@ -114,8 +114,6 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          # manager/miwearhaptics is a submodule the manager build includes.
-          submodules: true
 
       - name: Setup Java
         uses: actions/setup-java@v6

@@ -1,0 +1,29 @@
+# Gradle / Android outputs and project caches
+.gradle/
+.kotlin/
+**/build/
+**/release/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# Machine-specific configuration and signing keys
+local.properties
+keystore.properties
+*.jks
+*.keystore
+/.idea/
+*.iml
+
+# OS and editor temporary files
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~

@@ -64,7 +64,7 @@
         tools:targetApi="34"
         android:directBootAware="true"
         android:zygotePreloadName="org.bakasu.bakasu.magica.AppZygotePreload">
-        <!-- The Google Wear SDK, when the watch has it, for Wear Compose crown haptics; miwearhaptics
+        <!-- The Google Wear SDK, when the watch has it, for Wear Compose crown haptics; cnwearoverlay
              falls back to the Xiaomi SDK without it. Optional, so other devices still install. -->
         <uses-library
             android:name="wear-sdk"
