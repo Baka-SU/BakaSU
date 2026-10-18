@@ -581,7 +581,7 @@
     <string name="skip_ksud_summary">Cancel ksud installation. Do not enable this unless absolutely necessary.</string>
 
     <!-- Wear OS -->
-    <string name="wear_mode_lkm" translatable="false">LKM</string>
+    <string name="wear_mode_lkm">LKM</string>
     <string name="wear_enabled">Enabled</string>
     <string name="wear_disabled">Disabled</string>
     <string name="wear_pending_removal">Pending removal</string>
@@ -616,10 +616,10 @@
     <string name="wear_template_added">Added to App Profile</string>
     <string name="wear_template_already_added">A local template with this ID already exists</string>
     <string name="wear_settings_selinux_hide_summary">Block app detection</string>
-    <string name="wear_mode_builtin" translatable="false">Built-in</string>
-    <string name="wear_uid" translatable="false">UID</string>
-    <string name="wear_gid" translatable="false">GID</string>
-    <string name="wear_webui" translatable="false">WebUI</string>
+    <string name="wear_mode_builtin">Built-in</string>
+    <string name="wear_uid">UID</string>
+    <string name="wear_gid">GID</string>
+    <string name="wear_webui">WebUI</string>
     <string name="scroll_to_top">Back to top</string>
     <string name="wear_display">Display</string>
     <string name="wear_link_mode">Open module WebUI</string>

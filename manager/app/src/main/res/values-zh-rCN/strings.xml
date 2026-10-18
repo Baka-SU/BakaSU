@@ -751,4 +751,9 @@
     <string name="wear_download_then_install">下载后确认安装</string>
     <string name="wear_browser_open_failed">无法打开浏览器</string>
     <string name="wear_download_verify_failed">文件校验失败</string>
+    <string name="wear_mode_builtin">内置</string>
+    <string name="wear_mode_lkm">LKM</string>
+    <string name="wear_uid">UID</string>
+    <string name="wear_gid">GID</string>
+    <string name="wear_webui">WebUI</string>
 </resources>
