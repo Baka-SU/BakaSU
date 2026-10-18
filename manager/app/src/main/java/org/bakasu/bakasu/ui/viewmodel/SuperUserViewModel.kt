@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.data.packageinfo.RootAccessDeniedException
 import org.bakasu.bakasu.domain.model.AllowlistOperationResult
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.domain.usecase.BackupAllowlistUseCase
@@ -65,9 +64,6 @@ sealed interface SuperUserUiAction {
 
 sealed interface SuperUserUiEvent {
     data class Error(val message: String) : SuperUserUiEvent
-
-    /** Loading failed because root was refused, as checked after the root service did not start. */
-    data object RootDenied : SuperUserUiEvent
     data class AllowlistOperationFinished(
         val result: AllowlistOperationResult,
         val restore: Boolean,
@@ -194,11 +190,7 @@ class SuperUserViewModel(
 
     suspend fun fetchAppList() {
         refreshSuperUsers()
-            .onFailure {
-                mutableEvents.tryEmit(
-                    if (it is RootAccessDeniedException) SuperUserUiEvent.RootDenied else SuperUserUiEvent.Error(it.message.orEmpty()),
-                )
-            }
+            .onFailure { mutableEvents.tryEmit(SuperUserUiEvent.Error(it.message.orEmpty())) }
     }
 
     private fun notifySuperuserStatusChanged() {
