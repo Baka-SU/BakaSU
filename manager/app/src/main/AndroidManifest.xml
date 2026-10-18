@@ -8,7 +8,9 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-    <!-- The Wear built-in file picker browses shared storage without root. -->
+    <!-- All-files access is only ever requested by the Wear file picker, and only when no root
+         shell is available: watches usually have no DocumentsUI, so browsing /sdcard needs it.
+         Phones never ask for it, since root covers every path there. -->
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
