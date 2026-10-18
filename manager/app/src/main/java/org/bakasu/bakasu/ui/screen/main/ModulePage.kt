@@ -122,7 +122,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.data.file.ZipFileDetector
+import org.bakasu.bakasu.data.file.ModuleUtils
 import org.bakasu.bakasu.data.file.ZipFileInfo
 import org.bakasu.bakasu.data.file.ZipType
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
@@ -184,7 +184,7 @@ fun ModulePage(bottomPadding: Dp) {
     val isModuleUriAccessible = koinInject<IsModuleUriAccessibleUseCase>()
     val takeModuleUriPermission = koinInject<TakeModuleUriPermissionUseCase>()
     val extractModuleName = koinInject<ExtractModuleNameUseCase>()
-    val zipFileDetector = koinInject<ZipFileDetector>()
+    val zipFileDetector = koinInject<ModuleUtils>()
     val navigator = LocalNavigator.current
     val context = LocalContext.current
     val viewModel = koinViewModel<ModuleViewModel>()

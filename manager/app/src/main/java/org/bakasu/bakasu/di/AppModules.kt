@@ -18,8 +18,8 @@ import org.bakasu.bakasu.data.application.DynamicManagerRepository
 import org.bakasu.bakasu.data.count.CountRepository
 import org.bakasu.bakasu.data.download.DownloadRepository
 import org.bakasu.bakasu.data.file.ModuleFileRepository
+import org.bakasu.bakasu.data.file.ModuleUtils
 import org.bakasu.bakasu.data.file.WearFileRepository
-import org.bakasu.bakasu.data.file.ZipFileDetector
 import org.bakasu.bakasu.data.flash.FlashRepository
 import org.bakasu.bakasu.data.kernel.KernelRepository
 import org.bakasu.bakasu.data.kernel.UmountRepository
@@ -302,7 +302,7 @@ val repositoryModule = module {
     singleOf(::ShortcutRepository)
     singleOf(::Shortcut)
     singleOf(::MonetColorsProvider)
-    singleOf(::ZipFileDetector)
+    singleOf(::ModuleUtils)
     single { HanziToPinyin.create() } bind TextTransliterator::class
 }
 
