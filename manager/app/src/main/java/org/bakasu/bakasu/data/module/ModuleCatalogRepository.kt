@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.data.module
 
 import com.topjohnwu.superuser.io.SuFile
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -23,19 +22,16 @@ import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.json.JSONArray
 import org.json.JSONObject
 
-// The online module repository (KernelSU Modules API v1)
+// For modules repo
 class ModuleCatalogRepository(
     private val networkStatusRepository: NetworkStatusRepository,
     private val networkRequestRepository: NetworkRequestRepository,
 ) {
     private companion object {
-        const val BASE_URL = "https://modules.kernelsu.org/"
-        const val INDEX_URL = BASE_URL + "api/v1/index.json"
-        const val SCHEMA_VERSION = 1
+        const val MODULES_URL = "https://modules.kernelsu.org/modules.json"
     }
 
     private val refreshMutex = Mutex()
-    private val readmePaths = ConcurrentHashMap<String, String>()
     private val mutableModules = MutableStateFlow<List<CatalogModule>>(emptyList())
     private val mutableRefreshing = MutableStateFlow(false)
     private val mutableOffline = MutableStateFlow(false)
@@ -72,113 +68,123 @@ class ModuleCatalogRepository(
     }
 
     suspend fun get(moduleId: String): ModuleCatalogResult<CatalogModule> {
-        val module = mutableModules.value.firstOrNull { it.moduleId == moduleId }
-            ?: when (val refreshed = refresh()) {
-                is ModuleCatalogResult.Failure -> return refreshed
-
-                is ModuleCatalogResult.Success -> refreshed.value.firstOrNull { it.moduleId == moduleId }
-                    ?: return ModuleCatalogResult.Failure(ModuleCatalogFailure.NotFound)
-            }
-        // The README is a separate document, fetched when the module is opened.
-        if (module.readme.isNotEmpty()) return ModuleCatalogResult.Success(module)
-        val readme = readmePaths[moduleId]?.let { path ->
-            withContext(Dispatchers.IO) { networkRequestRepository.fetch(BASE_URL + path).getOrNull() }
-        }.orEmpty()
-        val withReadme = module.copy(readme = readme)
-        if (readme.isNotEmpty()) {
-            mutableModules.value = mutableModules.value.map { if (it.moduleId == moduleId) withReadme else it }
+        mutableModules.value.firstOrNull { it.moduleId == moduleId }?.let {
+            return ModuleCatalogResult.Success(it)
         }
-        return ModuleCatalogResult.Success(withReadme)
+        return when (val refreshed = refresh()) {
+            is ModuleCatalogResult.Failure -> refreshed
+
+            is ModuleCatalogResult.Success -> refreshed.value.firstOrNull { it.moduleId == moduleId }
+                ?.let { ModuleCatalogResult.Success(it) }
+                ?: ModuleCatalogResult.Failure(ModuleCatalogFailure.NotFound)
+        }
     }
 
-    /** The KernelSU Modules API: the index names the module list, each entry names its detail document. */
     private suspend fun fetchModules(): List<CatalogModule> {
-        val index = JSONObject(networkRequestRepository.fetch(INDEX_URL).getOrThrow())
-        check(index.optInt("schemaVersion") == SCHEMA_VERSION) { "Unsupported module index" }
-        val list = JSONObject(networkRequestRepository.fetch(BASE_URL + index.getString("modules")).getOrThrow())
-        check(list.optInt("schemaVersion") == SCHEMA_VERSION) { "Unsupported module list" }
-        val items = list.optJSONArray("modules") ?: JSONArray()
+        val body = networkRequestRepository.fetch(MODULES_URL).getOrThrow()
+        val json = JSONArray(body)
         return coroutineScope {
-            (0 until items.length()).map { index ->
-                async(Dispatchers.IO) { items.optJSONObject(index)?.let { parseModule(it) } }
+            (0 until json.length()).map { index ->
+                async(Dispatchers.IO) { json.optJSONObject(index)?.let { parseModule(it) } }
             }.awaitAll().filterNotNull()
         }
     }
 
     private suspend fun parseModule(item: JSONObject): CatalogModule? {
-        val moduleId = item.optString("id").takeIf(String::isNotEmpty) ?: return null
-        // Only installable modules are listed; other kinds (such as one-shot scripts) are not modules.
-        if (item.optString("kind", "module") != "module") return null
+        val moduleId = item.optString("moduleId").takeIf(String::isNotEmpty) ?: return null
         val authorList = item.optJSONArray("authors")?.let { authors ->
             (0 until authors.length()).mapNotNull { index ->
                 authors.optJSONObject(index)?.let { author ->
                     val name = author.optString("name").trim()
-                    name.takeIf(String::isNotEmpty)?.let { CatalogAuthor(it, author.optString("url").trim()) }
+                    name.takeIf(String::isNotEmpty)?.let {
+                        CatalogAuthor(it, stripTicks(author.optString("link")))
+                    }
                 }
             }
         }.orEmpty()
-        val stable = item.optJSONObject("stable")
-        val latestVersion = stable?.optString("version").orEmpty()
-        val detail = item.optString("detail").takeIf(String::isNotEmpty)?.let { fetchModuleDetail(moduleId, it) }
+        val latestReleaseObject = item.optJSONObject("latestRelease")
+        val latestRelease = latestReleaseObject?.optString(
+            "name",
+            latestReleaseObject.optString("version"),
+        ).orEmpty()
+        val detail = fetchModuleDetail(moduleId)
         val releases = detail?.releases.orEmpty()
 
         return CatalogModule(
             moduleId = moduleId,
-            moduleName = item.optString("name"),
-            authors = authorList.joinToString(", ") { it.name },
+            moduleName = item.optString("moduleName"),
+            authors = authorList.takeIf { it.isNotEmpty() }
+                ?.joinToString(", ") { it.name }
+                ?: item.optString("authors"),
             authorList = authorList,
             summary = item.optString("summary"),
             metamodule = item.optBoolean("metamodule"),
-            stargazerCount = item.optInt("stars"),
+            stargazerCount = item.optInt("stargazerCount"),
             updatedAt = item.optString("updatedAt"),
-            createdAt = "",
-            latestRelease = latestVersion,
-            latestReleaseTime = stable?.optString("publishedAt").orEmpty(),
-            latestVersionCode = stable?.opt("versionCode").toIntCompat(),
-            latestAsset = detail?.releaseVersions?.indexOf(latestVersion)?.takeIf { it >= 0 }?.let(releases::get)
-                ?: releases.firstOrNull(),
+            createdAt = item.optString("createdAt"),
+            latestRelease = latestRelease,
+            latestReleaseTime = latestReleaseObject?.optString("time").orEmpty(),
+            latestVersionCode = latestReleaseObject?.opt("versionCode").toIntCompat(),
+            latestAsset = releases.firstOrNull { it.name == latestRelease },
             installed = SuFile.open("/data/adb/modules/$moduleId/module.prop").exists(),
-            readme = "",
+            readme = detail?.readme.orEmpty(),
             sourceUrl = detail?.sourceUrl.orEmpty(),
             releases = releases,
         )
     }
 
-    private suspend fun fetchModuleDetail(moduleId: String, path: String): Detail? = networkRequestRepository
-        .fetch(BASE_URL + path)
+    private suspend fun fetchModuleDetail(moduleId: String): Detail? = networkRequestRepository
+        .fetch("https://modules.kernelsu.org/module/$moduleId.json")
         .getOrNull()
         ?.let { body ->
             val json = JSONObject(body)
-            json.optString("readme").takeIf(String::isNotEmpty)?.let { readmePaths[moduleId] = it }
             val releases = json.optJSONArray("releases")?.let { array ->
-                (0 until array.length()).mapNotNull { index -> array.optJSONObject(index) }
-            }.orEmpty().filter { it.optJSONObject("zip")?.optString("url")?.isNotEmpty() == true }
+                (0 until array.length()).mapNotNull { index ->
+                    array.optJSONObject(index)?.toRelease()
+                }
+            }.orEmpty()
             Detail(
-                sourceUrl = json.optJSONObject("source")?.optString("url").orEmpty(),
-                releases = releases.map { it.toRelease() },
-                releaseVersions = releases.map { it.optString("version") },
+                readme = json.optString("readmeHTML"),
+                sourceUrl = stripTicks(json.optString("sourceUrl")),
+                releases = releases,
             )
         }
 
-    /** A repository release publishes exactly one module ZIP. */
     private fun JSONObject.toRelease(): ModuleRelease {
-        val tag = optString("tag")
-        val zip = getJSONObject("zip")
+        val releaseName = optString("name", optString("tagName", optString("version")))
+        val assets = optJSONArray("releaseAssets")?.let { array ->
+            (0 until array.length()).mapNotNull { index ->
+                array.optJSONObject(index)?.let { asset ->
+                    val name = asset.optString("name")
+                    val url = stripTicks(asset.optString("downloadUrl"))
+                    if (name.isBlank() || url.isBlank()) {
+                        null
+                    } else {
+                        ModuleReleaseAsset(
+                            name = name,
+                            downloadUrl = url,
+                            size = asset.optLong("size"),
+                            downloadCount = asset.opt("downloadCount").toIntCompat(),
+                        )
+                    }
+                }
+            }
+        }.orEmpty()
         return ModuleRelease(
-            name = optString("name").ifBlank { optString("version").ifBlank { tag } },
-            tagName = tag,
+            name = releaseName,
+            tagName = optString("tagName", releaseName),
             publishedAt = optString("publishedAt"),
-            descriptionHTML = optString("changelogHtml"),
-            assets = listOf(
-                ModuleReleaseAsset(
-                    name = zip.optString("name").ifBlank { zip.optString("url").substringAfterLast('/') },
-                    downloadUrl = zip.optString("url"),
-                    size = zip.optLong("size"),
-                    downloadCount = 0,
-                    sha256 = zip.optString("sha256"),
-                ),
-            ),
+            descriptionHTML = optString("descriptionHTML"),
+            assets = assets,
         )
+    }
+
+    private fun stripTicks(value: String): String = value.trim().let {
+        if (it.startsWith('`') && it.endsWith('`') && it.length >= 2) {
+            it.substring(1, it.length - 1)
+        } else {
+            it
+        }
     }
 
     private fun Any?.toIntCompat(): Int = when (this) {
@@ -188,8 +194,8 @@ class ModuleCatalogRepository(
     }
 
     private data class Detail(
+        val readme: String,
         val sourceUrl: String,
         val releases: List<ModuleRelease>,
-        val releaseVersions: List<String>,
     )
 }
