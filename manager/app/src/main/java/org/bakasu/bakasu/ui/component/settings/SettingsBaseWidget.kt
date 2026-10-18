@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.ui.component.settings
 
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.FocusInteraction
@@ -8,8 +9,6 @@ import androidx.compose.foundation.interaction.HoverInteraction
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -20,17 +19,18 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
@@ -49,23 +49,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import org.bakasu.bakasu.ui.component.settings.material3internal.rememberAnimatedShape
 import org.bakasu.bakasu.ui.theme.CardConfig
@@ -133,7 +130,7 @@ fun SettingsBaseWidget(
     onLongClick: ((Offset) -> Unit)? = null,
     clickHaptic: HapticFeedbackType? = HapticFeedbackType.ContextClick,
     leadingContent: (@Composable () -> Unit)? = null,
-    foreContent: @Composable RowScope.() -> Unit = {},
+    foreContent: (@Composable RowScope.() -> Unit)? = null,
     descriptionColumnContent: (@Composable ColumnScope.() -> Unit)? = null,
     containerColor: Color? = null,
     trailingContent: (@Composable BoxScope.(interactionSource: MutableInteractionSource) -> Unit)? = null,
@@ -260,32 +257,6 @@ fun SettingsBaseWidget(
         RectangleShape
     }
 
-    val safeClickShape = if (onClick != null || onLongClick != null) {
-        remember(clickShape) {
-            object : Shape {
-                override fun createOutline(
-                    size: Size,
-                    layoutDirection: LayoutDirection,
-                    density: Density,
-                ): Outline = clickShape.createOutline(size, layoutDirection, density)
-            }
-        }
-    } else {
-        RectangleShape
-    }
-    val listItemShapes = if (onClick != null || onLongClick != null) {
-        ListItemDefaults.shapes(
-            shape = safeClickShape,
-            selectedShape = safeClickShape,
-            pressedShape = safeClickShape,
-            focusedShape = safeClickShape,
-            hoveredShape = safeClickShape,
-            draggedShape = safeClickShape,
-        )
-    } else {
-        shapes
-    }
-
     val clipShape = if (onClick != null || onLongClick != null) {
         clickShape
     } else {
@@ -296,18 +267,17 @@ fun SettingsBaseWidget(
         .heightIn(min = adaptiveMinHeight)
     if (isOnBackground && themeConfig.isEnableBlurExp) {
         itemModifier = itemModifier
-            .clip(clipShape)
             .renderBackgroundBlur(finalContainerColor)
     }
 
     val finalLeadingContent: (@Composable () -> Unit)? =
-        if (leadingContent == null && icon == null && !iconPlaceholder) {
+        if (leadingContent == null && icon == null) {
             null
         } else {
             {
                 leadingContent?.invoke()
 
-                if (icon != null || iconPlaceholder) {
+                if (icon != null || (iconPlaceholder && leadingContent == null)) {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
@@ -372,97 +342,125 @@ fun SettingsBaseWidget(
                     )
                 }
 
-                foreContent()
+                foreContent?.invoke(this)
             }
         }
     }
 
-    // M3E ListItem has bug, supportingContent will cause RectList broken
-    // and cause application crash.
+    val hasContent = title != null || description != null ||
+        descriptionColumnContent != null || foreContent != null
 
-    // We use headlineContent + Column + supportingContent for workaround,
-    // Hope Google fix this problem in their new version....
-    val expressiveContent: @Composable () -> Unit = {
-        Column {
-            headline()
-            CompositionLocalProvider(
-                LocalContentColor provides colors.supportingContentColor(
-                    enabled = enabled,
-                    selected = selected,
-                    dragged = false,
-                ),
-            ) {
-                supportingContent()
-            }
-        }
-    }
-
-    if (onClick != null || onLongClick != null) {
-        var touchPoint by remember { mutableStateOf(Offset.Zero) }
-
-        ListItem(
-            selected = selected,
-            modifier = itemModifier
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitFirstDown(requireUnconsumed = false)
-                            touchPoint = event.position
+    var touchPoint by remember { mutableStateOf(Offset.Zero) }
+    val clickable = onClick != null || onLongClick != null
+    val surfaceModifier = itemModifier
+        .clip(clipShape)
+        .then(
+            if (clickable) {
+                Modifier
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                touchPoint = awaitFirstDown(requireUnconsumed = false).position
+                            }
                         }
                     }
-                },
-            onClick = {
-                if (clickHaptic != null) {
-                    hapticFeedback.performHapticFeedback(clickHaptic)
-                }
-                onClick?.invoke(touchPoint)
-            },
-            onLongClick = if (onLongClick != null) {
-                {
-                    if (clickHaptic != null) {
-                        hapticFeedback.performHapticFeedback(clickHaptic)
-                    }
-                    onLongClick(touchPoint)
-                }
+                    .combinedClickable(
+                        enabled = enabled,
+                        interactionSource = interactionSource,
+                        onClick = {
+                            clickHaptic?.let(hapticFeedback::performHapticFeedback)
+                            onClick?.invoke(touchPoint)
+                        },
+                        onLongClick = onLongClick?.let { callback ->
+                            {
+                                clickHaptic?.let(hapticFeedback::performHapticFeedback)
+                                callback(touchPoint)
+                            }
+                        },
+                    )
             } else {
-                null
+                Modifier
+                    .then(if (!enabled) Modifier.semantics { disabled() } else Modifier)
             },
-            enabled = enabled,
-            colors = colors,
-            shapes = listItemShapes,
-            verticalAlignment = Alignment.CenterVertically,
-            leadingContent = finalLeadingContent,
-            trailingContent = trailing,
-            interactionSource = interactionSource,
-            content = expressiveContent,
         )
-    } else {
-        /*
-         * Non-clickable item:
-         *
-         * Do not use the clickable ListItem overload here.
-         * Otherwise, a null onClick would have to be represented as enabled = false,
-         * which incorrectly exposes the item as disabled and changes its visual state.
-         */
-        ListItem(
-            modifier = itemModifier
-                .clip(baseShape)
-                .then(
-                    if (!enabled) {
-                        Modifier.semantics { disabled() }
-                    } else {
-                        Modifier
-                    },
-                ),
-            enabled = enabled,
-            verticalAlignment = Alignment.CenterVertically,
-            shapes = shapes,
-            colors = colors,
-            leadingContent = finalLeadingContent,
-            trailingContent = trailing,
-            contentPadding = ListItemDefaults.ContentPadding,
-            content = expressiveContent,
-        )
+
+    Surface(
+        modifier = surfaceModifier,
+        // The outer modifier already clips to the resolved shape. Keeping Surface rectangular
+        // avoids creating a second graphics layer during measurement.
+        shape = RectangleShape,
+        color = backgroundColor,
+        contentColor = baseContentColor,
+    ) {
+        Layout(
+            content = {
+                finalLeadingContent?.let { content ->
+                    Box {
+                        content()
+                    }
+                }
+                if (hasContent) {
+                    Box {
+                        Column {
+                            headline()
+                            CompositionLocalProvider(
+                                LocalContentColor provides colors.supportingContentColor(
+                                    enabled = enabled,
+                                    selected = selected,
+                                    dragged = false,
+                                ),
+                            ) {
+                                supportingContent()
+                            }
+                        }
+                    }
+                }
+                trailing?.invoke()
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(ListItemDefaults.ContentPadding),
+        ) { measurables, constraints ->
+            var index = 0
+            val leading = if (finalLeadingContent != null) measurables[index++] else null
+            val content = if (hasContent) measurables[index++] else null
+            val trailing = if (trailing != null) measurables[index] else null
+            val spacing = 8.dp.roundToPx()
+            // Only the row should honor the minimum height; slots wrap their content.
+            val slotConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+            val leadingPlaceable = leading?.measure(
+                slotConstraints,
+            )
+            val trailingPlaceable = trailing?.measure(
+                slotConstraints,
+            )
+            val occupiedWidth = (leadingPlaceable?.width ?: 0) + (trailingPlaceable?.width ?: 0)
+            val gapCount = (if (leadingPlaceable != null) 1 else 0) +
+                (if (trailingPlaceable != null) 1 else 0)
+            val contentMaxWidth =
+                (constraints.maxWidth - occupiedWidth - spacing * gapCount).coerceAtLeast(0)
+            val contentPlaceable = content?.measure(
+                slotConstraints.copy(minWidth = contentMaxWidth, maxWidth = contentMaxWidth),
+            )
+            val width = constraints.maxWidth
+            val height = maxOf(
+                leadingPlaceable?.height ?: 0,
+                contentPlaceable?.height ?: 0,
+                trailingPlaceable?.height ?: 0,
+            ).coerceIn(constraints.minHeight, constraints.maxHeight)
+            layout(width, height) {
+                var x = 0
+                leadingPlaceable?.placeRelative(x, (height - leadingPlaceable.height) / 2)
+                if (leadingPlaceable != null) x += leadingPlaceable.width + spacing
+                contentPlaceable?.placeRelative(x, (height - contentPlaceable.height) / 2)
+                if (trailingPlaceable != null) {
+                    trailingPlaceable.placeRelative(
+                        width - trailingPlaceable.width,
+                        (height - trailingPlaceable.height) / 2,
+                    )
+                }
+            }
+        }
     }
 }
 

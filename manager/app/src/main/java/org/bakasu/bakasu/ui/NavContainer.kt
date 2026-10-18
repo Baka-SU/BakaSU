@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -35,6 +36,9 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -97,6 +101,7 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.nav.core.LocalNavTransitionScope
 import top.yukonga.miuix.kmp.nav.core.NavCornerClipMode
 import top.yukonga.miuix.kmp.nav.core.NavDisplay
 import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
@@ -550,6 +555,7 @@ private fun ManagerNavEntry(
     useBlur: Boolean,
     content: @Composable () -> Unit,
 ) {
+    val transitionRunning = LocalNavTransitionScope.current.isRunning
     val navigationEventState = rememberNavigationEventState(NavigationEventInfo.None)
     NavigationBackHandler(
         state = navigationEventState,
@@ -570,6 +576,17 @@ private fun ManagerNavEntry(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
+            .onPreviewKeyEvent { transitionRunning }
+            .pointerInput(transitionRunning) {
+                if (transitionRunning) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            event.changes.forEach { it.consume() }
+                        }
+                    }
+                }
+            }
             .then(
                 if (backgroundRenderState.imagePainter == null) Modifier.background(MaterialTheme.colorScheme.surfaceContainer) else Modifier,
             ),
@@ -625,6 +642,7 @@ private fun ManagerNavEntry(
             }
         }
     }
+    BackHandler(enabled = transitionRunning) { }
 }
 
 private fun Route.Flash.toFlashIt(): FlashIt = when (flashType) {

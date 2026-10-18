@@ -25,19 +25,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.zIndex
@@ -254,6 +251,7 @@ fun SegmentedColumn(
                         }
 
                         var hasFocus by remember { mutableStateOf(false) }
+                        val currentProgress = progresses[index].value
 
                         LaunchedEffect(itemData.visible) {
                             if (!itemData.visible && hasFocus) {
@@ -268,27 +266,19 @@ fun SegmentedColumn(
                                 .semantics {
                                     if (!itemData.visible) hideFromAccessibility()
                                 }
-                                .graphicsLayer {
-                                    val currentProgress = progresses[index].value
-                                    val safeProgress = currentProgress.coerceAtLeast(0f)
-
-                                    clip = true
-                                    this.shape = object : Shape {
-                                        override fun createOutline(
-                                            size: Size,
-                                            layoutDirection: LayoutDirection,
-                                            density: Density,
-                                        ) = Outline.Rectangle(
-                                            Rect(
-                                                0f,
-                                                0f,
-                                                size.width,
-                                                size.height * safeProgress,
-                                            ),
-                                        )
-                                    }
-                                    alpha = (currentProgress * 1.5f).coerceIn(0f, 1f)
-                                },
+                                .then(
+                                    if (currentProgress >= 1f) {
+                                        Modifier
+                                    } else {
+                                        Modifier.drawWithContent {
+                                            val safeProgress = currentProgress.coerceAtLeast(0f)
+                                            val contentScope = this
+                                            clipRect(bottom = size.height * safeProgress) {
+                                                contentScope.drawContent()
+                                            }
+                                        }
+                                    },
+                                ),
                         ) {
                             CompositionLocalProvider(LocalSegmentedItemShape provides shape) {
                                 Column(
@@ -307,11 +297,13 @@ fun SegmentedColumn(
                 }
             },
         ) { measurables, constraints ->
-            val placeables = measurables.map { it.measure(constraints) }
+            val placeables = ArrayList<Placeable>(measurables.size)
             var currentY = 0f
-            val positions = mutableListOf<Int>()
+            val positions = ArrayList<Int>(measurables.size)
 
-            placeables.forEachIndexed { index, placeable ->
+            measurables.forEachIndexed { index, measurable ->
+                val placeable = measurable.measure(constraints)
+                placeables += placeable
                 positions.add(currentY.roundToInt())
                 val progress = progresses[index].value
                 currentY += placeable.height * progress

@@ -31,7 +31,7 @@ fun SettingsJumpPageWidget(
     onLongClick: ((Offset) -> Unit)? = null,
     hapticFeedbackType: HapticFeedbackType = HapticFeedbackType.ContextClick,
     leadingContent: (@Composable () -> Unit)? = null,
-    foreContent: @Composable RowScope.() -> Unit = {},
+    foreContent: (@Composable RowScope.() -> Unit)? = null,
     descriptionColumnContent: @Composable ColumnScope.() -> Unit = {},
     trailingIcon: ImageVector = Icons.Filled.ChevronRight,
 ) {

@@ -152,7 +152,7 @@ fun MainScreen(
                     ),
                 state = pagerState,
                 userScrollEnabled = userScrollEnabled && !interceptPagerGestures,
-                beyondViewportPageCount = if (homeState.isInitialDataLoaded) 1 else 0,
+                beyondViewportPageCount = pages.size,
                 pageNestedScrollConnection = if (interceptPagerGestures) {
                     PagerGestureNestedScrollConnection
                 } else {
