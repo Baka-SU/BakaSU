@@ -9,8 +9,16 @@ pluginManagement {
         mavenCentral()
         maven("https://jitpack.io")
     }
-    // Resolves the vendored cnwearoverlay plugin by id.
-    includeBuild("cnwearoverlay")
+    // Crown haptics on Xiaomi/OPPO watches: cnwearoverlay patches Wear Compose rotary haptics at
+    // build time. Its plugin marker is not on a public repository, so the id is mapped to the
+    // JitPack module coordinates published from Hanhanawa/cnwearoverlay.
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "cc.star0.wear.lib.cnwearoverlay") {
+                useModule("com.github.Hanhanawa.cnwearoverlay:plugin:1.0.2")
+            }
+        }
+    }
 }
 
 dependencyResolutionManagement {
@@ -20,10 +28,6 @@ dependencyResolutionManagement {
         maven("https://jitpack.io")
     }
 }
-
-// Crown haptics on Xiaomi/OPPO watches: the vendored cnwearoverlay build (LGPL-3.0, see
-// cnwearoverlay/LICENSE) patches Wear Compose rotary haptics at build time. It is a plain
-// directory, not a submodule, so a checkout builds without fetching anything.
 
 rootProject.name = "BakaSU"
 include(":app")
