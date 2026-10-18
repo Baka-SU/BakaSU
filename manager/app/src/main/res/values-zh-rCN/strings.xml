@@ -578,6 +578,7 @@
     <string name="repo_configured_sources">已配置的仓库</string>
     <string name="repo_sort">排序</string>
     <string name="repo_manage">管理仓库</string>
+    <string name="repo_select_repository">选择仓库</string>
     <string name="repo_discover">发现 MMRL</string>
     <string name="repo_custom_url">自定义 URL</string>
     <string name="repo_url">仓库 URL</string>

@@ -1,9 +1,7 @@
 package org.bakasu.bakasu.ui.screen.moduleRepo
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,18 +20,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.twotone.Sort
 import androidx.compose.material.icons.twotone.Check
 import androidx.compose.material.icons.twotone.Download
-import androidx.compose.material.icons.twotone.ExpandLess
 import androidx.compose.material.icons.twotone.ExpandMore
 import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.Settings
@@ -53,13 +48,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -83,6 +81,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -406,21 +406,21 @@ private fun ModuleRepositorySelector(
     onManage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    var showSheet by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val selectedSource = sources.firstOrNull { it.url == selectedRepository }
     val selectedCount = selectedSource?.moduleCount
     val selectedCountDescription = selectedCount?.let { pluralStringResource(R.plurals.repo_module_count, it, it) }
     CatalogCard(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = modifier.fillMaxWidth().semantics { role = Role.Button },
+        onClick = { showSheet = true },
+        shape = RoundedCornerShape(20.dp),
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .clickable(role = Role.Button) { expanded = !expanded }
+                .heightIn(min = 40.dp)
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -430,6 +430,7 @@ private fun ModuleRepositorySelector(
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -438,84 +439,105 @@ private fun ModuleRepositorySelector(
                     text = selectedCount.toString(),
                     modifier = Modifier.semantics { contentDescription = selectedCountDescription.orEmpty() },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
             Icon(
-                imageVector = if (expanded) Icons.TwoTone.ExpandLess else Icons.TwoTone.ExpandMore,
+                imageVector = Icons.TwoTone.ExpandMore,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
             )
         }
-        AnimatedVisibility(visible = expanded) {
-            Column {
-                Column(
-                    modifier = Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()).selectableGroup(),
-                ) {
-                    sources.forEach { source ->
-                        val selected = source.url == selectedRepository
-                        val countDescription = source.moduleCount?.let { pluralStringResource(R.plurals.repo_module_count, it, it) }
-                        val contentColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 64.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                                .selectable(selected = selected, role = Role.RadioButton) {
-                                    onSelect(source.url)
-                                    expanded = false
+    }
+    if (showSheet) {
+        val sheetState = rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        )
+        ModalBottomSheet(
+            sheetState = sheetState,
+            onDismissRequest = { showSheet = false },
+            containerColor = MaterialTheme.colorScheme.surfaceBright,
+        ) {
+            Text(
+                text = stringResource(R.string.repo_select_repository),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 16.dp).semantics { heading() },
+            )
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false).selectableGroup(),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                items(sources, key = { it.url }) { source ->
+                    val selected = source.url == selectedRepository
+                    val countDescription = source.moduleCount?.let { pluralStringResource(R.plurals.repo_module_count, it, it) }
+                    val contentColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 64.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                            .selectable(selected = selected, role = Role.RadioButton) {
+                                onSelect(source.url)
+                                scope.launch {
+                                    sheetState.hide()
+                                    showSheet = false
                                 }
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = source.displayName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                                color = contentColor,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (countDescription != null) {
                                 Text(
-                                    text = source.displayName,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-                                    color = contentColor,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
+                                    text = countDescription,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (selected) contentColor else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                if (countDescription != null) {
-                                    Text(
-                                        text = countDescription,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (selected) contentColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
                             }
-                            if (selected) {
-                                Icon(
-                                    imageVector = Icons.TwoTone.Check,
-                                    contentDescription = null,
-                                    tint = contentColor,
-                                    modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                                )
-                            } else {
-                                Spacer(Modifier.size(MenuDefaults.LeadingIconSize))
-                            }
+                        }
+                        if (selected) {
+                            Icon(
+                                imageVector = Icons.TwoTone.Check,
+                                contentDescription = null,
+                                tint = contentColor,
+                                modifier = Modifier.size(MenuDefaults.LeadingIconSize),
+                            )
+                        } else {
+                            Spacer(Modifier.size(MenuDefaults.LeadingIconSize))
                         }
                     }
                 }
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = Dp.Hairline)
-                TextButton(
-                    onClick = {
-                        expanded = false
+            }
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp), thickness = Dp.Hairline)
+            TextButton(
+                onClick = {
+                    scope.launch {
+                        sheetState.hide()
+                        showSheet = false
                         onManage()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.TwoTone.Settings, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Text(
-                        text = stringResource(R.string.repo_manage),
-                        modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                        textAlign = TextAlign.Start,
-                    )
-                    Icon(Icons.AutoMirrored.TwoTone.KeyboardArrowRight, contentDescription = null)
-                }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 16.dp),
+            ) {
+                Icon(Icons.TwoTone.Settings, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(
+                    text = stringResource(R.string.repo_manage),
+                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                    textAlign = TextAlign.Start,
+                )
+                Icon(Icons.AutoMirrored.TwoTone.KeyboardArrowRight, contentDescription = null)
             }
         }
     }

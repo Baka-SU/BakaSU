@@ -581,6 +581,7 @@
     <string name="repo_configured_sources">Configured repositories</string>
     <string name="repo_sort">Sort</string>
     <string name="repo_manage">Manage repositories</string>
+    <string name="repo_select_repository">Select repository</string>
     <string name="repo_discover">Discover MMRL</string>
     <string name="repo_custom_url">Custom URL</string>
     <string name="repo_url">Repository URL</string>
