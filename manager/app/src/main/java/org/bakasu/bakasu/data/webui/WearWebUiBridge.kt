@@ -43,14 +43,21 @@ object WearWebUiProtocol {
     const val FRAME_STDERR: Byte = 3
     const val FRAME_EXIT: Byte = 4
 
+    /** One part of a file read; a zero-length chunk ends the stream. */
+    const val FRAME_CHUNK: Byte = 5
+
+    /** Keeps every frame small enough for a watch heap. */
+    const val CHUNK_SIZE = 64 * 1024
+
     fun DataOutputStream.writeFrame(type: Byte, payload: ByteArray) {
+        require(payload.size <= MAX_FRAME_SIZE) { "Frame too large" }
         writeByte(type.toInt())
         writeInt(payload.size)
         write(payload)
         flush()
     }
 
-    private const val MAX_FRAME_SIZE = 64 * 1024 * 1024
+    private const val MAX_FRAME_SIZE = 8 * 1024 * 1024
 
     fun DataInputStream.readFrame(): Pair<Byte, ByteArray> {
         val type = readByte()
@@ -185,7 +192,32 @@ class RemoteWebUiBackend private constructor(
 
     override fun listModules(): String = runCatching { single("modules", "")?.decodeToString() }.getOrNull() ?: "[]"
 
-    override fun openFile(path: String): InputStream? = runCatching { single("file", path)?.inputStream() }.getOrNull()
+    override fun openFile(path: String): InputStream? = runCatching {
+        val channel = Tasks.await(client.openChannel(nodeId, WearWebUiProtocol.RPC_PATH), 15, TimeUnit.SECONDS)
+        try {
+            val output = DataOutputStream(Tasks.await(client.getOutputStream(channel)).buffered())
+            val request = JSONObject().put("token", token).put("op", "file").put("arg", path).put("extra", 0)
+            with(WearWebUiProtocol) { output.writeFrame(FRAME_OK, request.toString().toByteArray()) }
+            val input = DataInputStream(Tasks.await(client.getInputStream(channel)).buffered())
+            val (type, payload) = with(WearWebUiProtocol) { input.readFrame() }
+            when {
+                type != WearWebUiProtocol.FRAME_CHUNK -> {
+                    client.close(channel)
+                    null
+                }
+
+                payload.isEmpty() -> {
+                    client.close(channel)
+                    ByteArray(0).inputStream()
+                }
+
+                else -> RemoteFileInputStream(client, channel, input, payload)
+            }
+        } catch (e: Exception) {
+            client.close(channel)
+            throw e
+        }
+    }.getOrNull()
 
     override fun listPackages(type: String): String = runCatching { single("packages", type)?.decodeToString() }.getOrNull() ?: "[]"
 
@@ -236,6 +268,54 @@ class RemoteWebUiBackend private constructor(
                 client.close(channel)
             }
         }
+    }
+}
+
+/** Streams a [WearWebUiProtocol.FRAME_CHUNK] sequence, pulling the next chunk on demand. */
+private class RemoteFileInputStream(
+    private val client: ChannelClient,
+    private val channel: ChannelClient.Channel,
+    private val input: DataInputStream,
+    initial: ByteArray,
+) : InputStream() {
+    private var chunk = initial
+    private var offset = 0
+    private var closed = false
+
+    override fun read(): Int {
+        if (!ensure()) return -1
+        return chunk[offset++].toInt() and 0xFF
+    }
+
+    override fun read(b: ByteArray, off: Int, len: Int): Int {
+        if (len == 0) return 0
+        if (!ensure()) return -1
+        val count = minOf(len, chunk.size - offset)
+        System.arraycopy(chunk, offset, b, off, count)
+        offset += count
+        return count
+    }
+
+    override fun available(): Int = chunk.size - offset
+
+    private fun ensure(): Boolean {
+        while (offset >= chunk.size) {
+            if (closed) return false
+            val (type, payload) = with(WearWebUiProtocol) { input.readFrame() }
+            if (type != WearWebUiProtocol.FRAME_CHUNK || payload.isEmpty()) {
+                close()
+                return false
+            }
+            chunk = payload
+            offset = 0
+        }
+        return true
+    }
+
+    override fun close() {
+        if (closed) return
+        closed = true
+        runCatching { client.close(channel) }
     }
 }
 
@@ -301,7 +381,21 @@ internal suspend fun serveWebUiCall(
                 "file" -> {
                     val webRoot = File("/data/adb/modules/$moduleId/webroot")
                     val file = File(arg).normalize()
-                    answer(if (file.path.startsWith(webRoot.path + "/")) backend.openFile(file.path)?.use { it.readBytes() } else null)
+                    val stream = if (file.path.startsWith(webRoot.path + "/")) backend.openFile(file.path) else null
+                    if (stream == null) {
+                        output.writeFrame(FRAME_ERROR, ByteArray(0))
+                    } else {
+                        // Chunked, so a page file never needs one watch-sized frame.
+                        stream.use { source ->
+                            val buffer = ByteArray(CHUNK_SIZE)
+                            while (true) {
+                                val read = source.read(buffer)
+                                if (read < 0) break
+                                output.writeFrame(FRAME_CHUNK, buffer.copyOf(read))
+                            }
+                        }
+                        output.writeFrame(FRAME_CHUNK, ByteArray(0))
+                    }
                 }
 
                 "spawn" -> {
