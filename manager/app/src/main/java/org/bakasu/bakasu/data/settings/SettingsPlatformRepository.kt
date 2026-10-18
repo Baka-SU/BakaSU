@@ -282,18 +282,14 @@ class SettingsPlatformRepository(
         cardConfig.isCustomAlphaSet = false
         cardConfig.isCustomBackgroundEnabled = false
         cardConfig.save()
-        themeConfig.preventBackgroundRefresh = false
         backgroundManager.saveBackgroundDim(0f)
         backgroundManager.saveEnableBlurExp(false)
         backgroundManager.saveUseBackgroundSeedColor(false)
         backgroundManager.saveEnableHighContrastMode(false)
-        settings.putBoolean("prevent_background_refresh", false)
     }
 
     private fun initializeFirstRun() {
         if (settings.getBoolean("is_first_run", true)) {
-            themeConfig.preventBackgroundRefresh = false
-            settings.putBoolean("prevent_background_refresh", false)
             settings.putBoolean("is_first_run", false)
         }
     }

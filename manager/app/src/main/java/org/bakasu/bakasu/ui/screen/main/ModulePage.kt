@@ -115,7 +115,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyant.capsule.ContinuousRoundedRectangle
 import kotlinx.coroutines.Dispatchers
@@ -454,7 +453,7 @@ fun ModulePage(bottomPadding: Dp) {
                     onUpdateModule = {
                         navigator.push(Route.Flash.moduleUpdate(it.toString()))
                     },
-                    onClickModule = { id, name, hasWebUi ->
+                    onClickModule = { id, hasWebUi ->
                         val currentTime = System.currentTimeMillis()
                         if (currentTime - lastClickTime < 600) {
                             Log.d("ModuleScreen", "Click too fast, ignoring")
@@ -466,9 +465,13 @@ fun ModulePage(bottomPadding: Dp) {
                             try {
                                 context.startActivity(
                                     Intent(context, WebUIActivity::class.java)
-                                        .setData("kernelsu://webui/$id".toUri())
-                                        .putExtra("id", id)
-                                        .putExtra("name", name),
+                                        .setData(
+                                            Uri.Builder()
+                                                .scheme("kernelsu")
+                                                .authority("webui")
+                                                .appendQueryParameter("id", id)
+                                                .build(),
+                                        ),
                                 )
                             } catch (e: Exception) {
                                 Log.e("ModuleScreen", "Error launching WebUI: ${e.message}", e)
@@ -582,7 +585,7 @@ private fun ModuleList(
     modifier: Modifier = Modifier,
     boxModifier: Modifier = Modifier,
     onUpdateModule: (Uri) -> Unit,
-    onClickModule: (id: String, name: String, hasWebUi: Boolean) -> Unit,
+    onClickModule: (id: String, hasWebUi: Boolean) -> Unit,
     context: Context,
     snackBarHost: SnackbarHostState,
     bottomPadding: Dp,
@@ -862,14 +865,6 @@ private fun ModuleList(
             ?.takeIf { it.isNotBlank() }
             ?.let { "su:$it" }
         openShortcutDialogForType(shortcutType)
-        if (module.hasActionScript && module.hasWebUi) {
-            selectedShortcutType = null
-            openShortcutDialogForType(ShortcutType.Action)
-        } else if (module.hasActionScript) {
-            openShortcutDialogForType(ShortcutType.Action)
-        } else if (module.hasWebUi) {
-            openShortcutDialogForType(ShortcutType.WebUI)
-        }
     }
 
     PullToRefreshBox(
@@ -969,7 +964,7 @@ private fun ModuleList(
                         }
                     },
                     onClick = {
-                        onClickModule(it.dirId, it.name, it.hasWebUi)
+                        onClickModule(it.dirId, it.hasWebUi)
                     },
                     onModuleAddShortcut = { module, type ->
                         onModuleAddShortcut(module, type)

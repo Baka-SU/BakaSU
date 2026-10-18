@@ -247,7 +247,6 @@ val repositoryModule = module {
             applicationScope = get(applicationScopeQualifier),
             flashRepository = get(),
             ksuCliRepository = get(),
-            monetCompatColorSource = get(),
         )
     }
     singleOf(::ManagerUpdateRepository)

@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.ui.screen.main
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,6 +37,7 @@ import org.bakasu.bakasu.ui.activity.component.NavigationBar
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
 import org.bakasu.bakasu.ui.rememberMaterial3BlurBackdrop
 import org.bakasu.bakasu.ui.screen.BottomBarDestination
+import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalBlurState
@@ -70,6 +72,12 @@ fun MainScreen(
         initialPage = uiSelectedPage,
         pageCount = { pages.size },
     )
+    val backgroundRenderState = LocalBackgroundRenderState.current
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.isScrollInProgress }.collect {
+            backgroundRenderState.pagerScrollActive = it
+        }
+    }
     var userScrollEnabled by remember { mutableStateOf(true) }
     var animating by remember { mutableStateOf(false) }
     var animateJob by remember { mutableStateOf<Job?>(null) }
@@ -80,9 +88,11 @@ fun MainScreen(
     }
     val interceptPagerGestures = pagerMode == PagerInterceptionMode.CrossAxisInterceptor
 
-    val handlePageChange: (Int) -> Unit = remember(pagerState, coroutineScope) {
+    val handlePageChange: (Int) -> Unit = remember(pagerState, coroutineScope, pages) {
         { page ->
+            if (page !in pages.indices) return@remember
             uiSelectedPage = page
+
             if (page == pagerState.currentPage) {
                 if (animateJob != null && lastRequestedPage != page) {
                     animateJob?.cancel()
@@ -91,26 +101,25 @@ fun MainScreen(
                     userScrollEnabled = true
                 }
                 lastRequestedPage = page
-            } else {
-                if (animateJob != null && lastRequestedPage == page) {
-                    // Already animating to the requested page
-                } else {
-                    animateJob?.cancel()
-                    animating = true
-                    userScrollEnabled = false
-                    val job = coroutineScope.launch {
-                        try {
-                            pagerState.animateScrollToPage(page)
-                        } finally {
-                            if (animateJob === this) {
-                                userScrollEnabled = true
-                                animating = false
-                                animateJob = null
-                            }
+            } else if (animateJob == null || lastRequestedPage != page) {
+                animateJob?.cancel()
+                animating = true
+                userScrollEnabled = false
+                lastRequestedPage = page
+                animateJob = coroutineScope.launch {
+                    try {
+                        // A held pager gesture owns the scroll mutation at UserInput
+                        // priority. Stop it explicitly so a navigation tap always wins.
+                        pagerState.scroll(MutatePriority.PreventUserInput) { }
+                        pagerState.animateScrollToPage(page)
+                    } finally {
+                        if (animateJob === this) {
+                            animating = false
+                            userScrollEnabled = true
+                            animateJob = null
+                            lastRequestedPage = pagerState.currentPage
                         }
                     }
-                    animateJob = job
-                    lastRequestedPage = page
                 }
             }
         }
@@ -143,7 +152,7 @@ fun MainScreen(
                     ),
                 state = pagerState,
                 userScrollEnabled = userScrollEnabled && !interceptPagerGestures,
-                beyondViewportPageCount = 1,
+                beyondViewportPageCount = pages.size,
                 pageNestedScrollConnection = if (interceptPagerGestures) {
                     PagerGestureNestedScrollConnection
                 } else {

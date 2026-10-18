@@ -17,12 +17,12 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.StartupState
 import org.bakasu.bakasu.domain.usecase.ApplyLanguageUseCase
 import org.bakasu.bakasu.domain.usecase.EnsureManagerInstalledUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveStartupStateUseCase
-import org.bakasu.bakasu.ui.activity.util.ThemeChangeContentObserver
 import org.bakasu.bakasu.ui.activity.util.ThemeUtils
 import org.bakasu.bakasu.ui.theme.KernelSUTheme
 import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
@@ -32,13 +32,10 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
-import org.bakasu.bakasu.ui.viewmodel.SuperUserUiAction
-import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
-    private val superUserViewModel: SuperUserViewModel by viewModel()
     private val homeViewModel: HomeViewModel by viewModel()
     private val moduleViewModel: ModuleViewModel by viewModel()
     private val settingsViewModel: SettingsViewModel by viewModel()
@@ -48,7 +45,6 @@ class MainActivity : ComponentActivity() {
     private val applyLanguage: ApplyLanguageUseCase by inject()
     private val startupState by lazy { observeStartupState() }
 
-    private lateinit var themeChangeObserver: ThemeChangeContentObserver
     private var isInitialized = false
 
     override fun attachBaseContext(newBase: Context?) {
@@ -73,9 +69,14 @@ class MainActivity : ComponentActivity() {
             splashScreen.setKeepOnScreenCondition {
                 when (startupState.value) {
                     StartupState.Loading -> true
-                    StartupState.Ready -> false
+                    StartupState.Ready -> !homeViewModel.uiState.value.isInitialDataLoaded
                     is StartupState.Failed -> false
                 }
+            }
+
+            // Keep the home state active even when an incoming intent opens another screen.
+            lifecycleScope.launch {
+                homeViewModel.uiState.first { it.isInitialDataLoaded }
             }
 
             lifecycleScope.launch { ensureManagerInstalled() }
@@ -101,7 +102,6 @@ class MainActivity : ComponentActivity() {
 
             // Initialize app state once.
             if (!isInitialized) {
-                initializeViewModels()
                 initializeData()
                 isInitialized = true
             }
@@ -127,63 +127,23 @@ class MainActivity : ComponentActivity() {
         intentChannel.trySend(intent)
     }
 
-    private fun extractZipUris(intent: Intent?): List<Uri>? = when (intent?.action) {
-        Intent.ACTION_SEND -> {
-            val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra(Intent.EXTRA_STREAM)
-            }
-            uri?.let { listOf(it) }
-        }
-
-        Intent.ACTION_SEND_MULTIPLE -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
-            }
-        }
-
-        else -> when {
-            intent?.data != null -> listOf(intent.data!!)
-
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
-                intent?.getParcelableArrayListExtra("uris", Uri::class.java)
-            }
-
-            else -> {
-                @Suppress("DEPRECATION")
-                intent?.getParcelableArrayListExtra("uris")
-            }
-        }
-    }
-
-    private fun initializeViewModels() {
-        // Register theme change observer.
-        themeChangeObserver = themeUtils.registerThemeChangeObserver(this)
-    }
-
     private fun initializeData() {
         lifecycleScope.launch {
             try {
                 homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
-                superUserViewModel.dispatch(SuperUserUiAction.Refresh)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
 
         // Initialize theme settings.
-        themeUtils.initializeThemeSettings(this, settingsViewModel)
+        themeUtils.initializeThemeSettings(settingsViewModel)
     }
 
     override fun onResume() {
         try {
             super.onResume()
-            themeUtils.onActivityResume(this)
+            themeUtils.onActivityResume()
             synchronizeUiSettings()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -201,15 +161,6 @@ class MainActivity : ComponentActivity() {
         try {
             super.onPause()
             themeUtils.onActivityPause()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    override fun onDestroy() {
-        try {
-            themeUtils.unregisterThemeChangeObserver(this, themeChangeObserver)
-            super.onDestroy()
         } catch (e: Exception) {
             e.printStackTrace()
         }

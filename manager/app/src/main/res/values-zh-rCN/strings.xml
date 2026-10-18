@@ -413,6 +413,7 @@
     <string name="network_offline">您处于离线状态</string>
     <string name="network_retry">重试</string>
     <string name="please_check_network">请检查网络连接情况，然后稍后重试</string>
+    <string name="internal_server_error">内部服务器错误</string>
     <string name="confirm_install_module_title">要安装模块 %s 吗?</string>
     <string name="assets_multiple_select_dialog_title">请选择你想安装的附件</string>
     <string name="assets_multiple_select_dialog_content_description">大小: %1$s, 下载数: %2$s</string>

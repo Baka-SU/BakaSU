@@ -3,10 +3,17 @@
   "extends": [
     "config:recommended"
   ],
-  "ignorePresets": ["workarounds:javaLTSVersions"],
-  "ignoreDeps": ["java-jdk"],
+  "ignorePresets": [
+    "workarounds:javaLTSVersions"
+  ],
+  "ignoreDeps": [
+    "java-jdk",
+    "prettyplease"
+  ],
   "timezone": "Asia/Shanghai",
-  "addLabels": ["dependencies"],
+  "addLabels": [
+    "dependencies"
+  ],
   "commitMessagePrefix": "deps:",
   "schedule": [
     "after 6pm",
@@ -14,30 +21,60 @@
   ],
   "packageRules": [
     {
-      "matchManagers":["maven","gradle"],
-      "matchFileNames": ["manager/**"],
+      "matchManagers": [
+        "maven",
+        "gradle"
+      ],
+      "matchFileNames": [
+        "manager/**"
+      ],
       "groupName": "maven group in manager",
-      "labels": ["manager","java"]
+      "labels": [
+        "manager",
+        "java"
+      ]
     },
     {
-      "matchManagers":["cargo"],
-      "matchFileNames": ["userspace/ksud/**"],
+      "matchManagers": [
+        "cargo"
+      ],
+      "matchFileNames": [
+        "userspace/ksud/**"
+      ],
       "groupName": "cargo group in ksud",
-      "labels": ["rust","ksud"]
-    },
-        {
-      "matchManagers":["cargo"],
-      "matchFileNames": ["userspace/ksuinit/**"],
-      "groupName": "cargo group in ksuinit",
-      "labels": ["rust","ksuinit"]
+      "labels": [
+        "rust",
+        "ksud"
+      ]
     },
     {
-      "matchCategories":["ci"],
-      "matchDepTypes":["action"],
-      "matchDatasources":["github-tags"],
-      "matchUpdateTypes":"major",
+      "matchManagers": [
+        "cargo"
+      ],
+      "matchFileNames": [
+        "userspace/ksuinit/**"
+      ],
+      "groupName": "cargo group in ksuinit",
+      "labels": [
+        "rust",
+        "ksuinit"
+      ]
+    },
+    {
+      "matchCategories": [
+        "ci"
+      ],
+      "matchDepTypes": [
+        "action"
+      ],
+      "matchDatasources": [
+        "github-tags"
+      ],
+      "matchUpdateTypes": "major",
       "groupName": "action group",
-      "labels": ["github_actions"]
+      "labels": [
+        "github_actions"
+      ]
     }
   ]
 }

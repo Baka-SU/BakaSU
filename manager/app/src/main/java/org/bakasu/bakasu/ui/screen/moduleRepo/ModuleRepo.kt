@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.screen.moduleRepo
 
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -21,13 +22,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Download
 import androidx.compose.material.icons.twotone.Extension
 import androidx.compose.material.icons.twotone.MoreVert
 import androidx.compose.material.icons.twotone.Star
+import androidx.compose.material.icons.twotone.Warning
 import androidx.compose.material.icons.twotone.WebAsset
+import androidx.compose.material3.Button
 import androidx.compose.material3.CheckableDropdownMenuItem
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuPopup
@@ -110,6 +114,7 @@ import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.downloader.download
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
+import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.formatFileSize
@@ -129,6 +134,7 @@ fun ModuleRepoScreen() {
     val enqueueDownload = koinInject<EnqueueDownloadUseCase>()
     val observeDownload = koinInject<ObserveDownloadUseCase>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiEvent by viewModel.events.collectAsStateWithLifecycle(null)
     val snackBarHost = LocalSnackbarHost.current
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
@@ -195,7 +201,60 @@ fun ModuleRepoScreen() {
         contentWindowInsets = adaptiveScaffoldWindowInsets(),
         snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) },
     ) { innerPadding ->
-        if (isLoading) {
+        if (uiEvent is ModuleRepoUiEvent.Error && !uiState.offline) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blurSource()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .renderBackgroundBlur(MaterialTheme.colorScheme.surfaceContainer)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.TwoTone.Warning,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        text = stringResource(R.string.internal_server_error),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
+                    )
+                    Spacer(modifier = Modifier.height(1.dp))
+
+                    Text(
+                        text = (uiEvent as ModuleRepoUiEvent.Error).message,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMediumEmphasized,
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Button(
+                        contentPadding = PaddingValues(horizontal = 50.dp),
+                        onClick = refreshModules,
+                    ) {
+                        Text(text = stringResource(R.string.network_retry))
+                    }
+                }
+            }
+        } else if (isLoading) {
             NetworkRefreshContent(
                 offline = uiState.offline,
                 onRetry = refreshModules,

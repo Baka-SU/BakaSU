@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,6 +35,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -43,7 +48,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -97,6 +101,7 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.nav.core.LocalNavTransitionScope
 import top.yukonga.miuix.kmp.nav.core.NavCornerClipMode
 import top.yukonga.miuix.kmp.nav.core.NavDisplay
 import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
@@ -550,6 +555,7 @@ private fun ManagerNavEntry(
     useBlur: Boolean,
     content: @Composable () -> Unit,
 ) {
+    val transitionRunning = LocalNavTransitionScope.current.isRunning
     val navigationEventState = rememberNavigationEventState(NavigationEventInfo.None)
     NavigationBackHandler(
         state = navigationEventState,
@@ -570,19 +576,23 @@ private fun ManagerNavEntry(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
+            .onPreviewKeyEvent { transitionRunning }
+            .pointerInput(transitionRunning) {
+                if (transitionRunning) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            event.changes.forEach { it.consume() }
+                        }
+                    }
+                }
+            }
             .then(
-                if (!themeConfig.backgroundImageLoaded) {
-                    Modifier.background(
-                        MaterialTheme.colorScheme.surfaceContainer,
-                    )
-                } else {
-                    Modifier
-                },
+                if (backgroundRenderState.imagePainter == null) Modifier.background(MaterialTheme.colorScheme.surfaceContainer) else Modifier,
             ),
     ) {
         val isPortrait = maxWidth < maxHeight || (maxHeight / maxWidth > 1.4f)
-        val surfaceContainer =
-            MaterialTheme.colorScheme.surfaceContainer
+        val surfaceContainer = MaterialTheme.colorScheme.surfaceContainer
 
         CompositionLocalProvider(
             LocalPortraitState provides isPortrait,
@@ -592,19 +602,23 @@ private fun ManagerNavEntry(
             LocalSnackbarHost provides snackBarHostState,
             LocalBackgroundBlurAnchor provides backgroundBlurAnchorCoordinates,
         ) {
-            backgroundRenderState.imagePainter?.let {
+            backgroundRenderState.imagePainter?.let { painter ->
+                val backgroundBitmap = backgroundRenderState.imageBitmap
+                // Draw the decoded bitmap once available so the background does
+                // not depend on the async painter's crossfade invalidations.
+                val backgroundPainter = remember(backgroundBitmap, painter) {
+                    backgroundBitmap?.let { BitmapPainter(it) } ?: painter
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .zIndex(-1f)
-                        .onGloballyPositioned { newCoordinates ->
-                            backgroundBlurAnchorCoordinates =
-                                newCoordinates.takeIf { coordinates ->
-                                    coordinates.isAttached
-                                }
+                        .onGloballyPositioned { coordinates ->
+                            backgroundBlurAnchorCoordinates = coordinates.takeIf {
+                                it.isAttached
+                            }
                         }
                         .paint(
-                            painter = it,
+                            painter = backgroundPainter,
                             contentScale = ContentScale.Crop,
                         )
                         .drawWithContent {
@@ -628,6 +642,7 @@ private fun ManagerNavEntry(
             }
         }
     }
+    BackHandler(enabled = transitionRunning) { }
 }
 
 private fun Route.Flash.toFlashIt(): FlashIt = when (flashType) {

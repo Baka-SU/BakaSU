@@ -421,6 +421,7 @@
     <string name="network_offline">You are offline</string>
     <string name="network_retry">Retry</string>
     <string name="please_check_network">Please check your internet connection and try again</string>
+    <string name="internal_server_error">Internal Server Error</string>
     <string name="confirm_install_module_title">Do you want install %s module?</string>
     <string name="assets_multiple_select_dialog_title">Select assets you want to install</string>
     <string name="assets_multiple_select_dialog_content_description">Size: %1$s, Download count: %2$s</string>
