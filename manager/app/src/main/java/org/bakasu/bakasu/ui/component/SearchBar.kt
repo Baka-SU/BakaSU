@@ -104,15 +104,16 @@ import org.bakasu.bakasu.ui.util.LocalPagerPage
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.koin.compose.koinInject
 
-private val SearchBarExpandedHeight = 77.dp
+private val SearchBarInitialHeight = 77.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Stable
 class SearchAppBarScrollBehavior internal constructor(
     private val topAppBarScrollBehavior: TopAppBarScrollBehavior,
-    private val searchBarHeight: Float,
+    searchBarHeightState: MutableFloatState,
     searchBarHeightOffsetState: MutableFloatState,
 ) : TopAppBarScrollBehavior {
+    private var searchBarHeight by searchBarHeightState
     private var searchBarHeightOffset by searchBarHeightOffsetState
     private var lastSearchBarScrollDelta = 0f
     private var isUserScrollInProgress = false
@@ -120,6 +121,14 @@ class SearchAppBarScrollBehavior internal constructor(
 
     val searchBarExpandedFraction: Float
         get() = (1f + searchBarHeightOffset / searchBarHeight).coerceIn(0f, 1f)
+
+    internal fun updateSearchBarHeight(height: Float) {
+        // Keep the last measured height while AnimatedVisibility has no content.
+        if (height <= 0f || height == searchBarHeight) return
+        val fraction = searchBarExpandedFraction
+        searchBarHeight = height
+        searchBarHeightOffset = -height * (1f - fraction)
+    }
 
     override val state = topAppBarScrollBehavior.state
     override val isPinned = topAppBarScrollBehavior.isPinned
@@ -283,10 +292,12 @@ fun rememberSearchAppBarScrollBehavior(
 ): SearchAppBarScrollBehavior {
     val density = LocalDensity.current
     val searchBarHeightOffset = rememberSaveable(density) { mutableFloatStateOf(0f) }
+    val initialSearchBarHeight = with(density) { SearchBarInitialHeight.toPx() }
+    val searchBarHeight = rememberSaveable(density) { mutableFloatStateOf(initialSearchBarHeight) }
     return remember(topAppBarScrollBehavior, density) {
         SearchAppBarScrollBehavior(
             topAppBarScrollBehavior = topAppBarScrollBehavior,
-            searchBarHeight = with(density) { SearchBarExpandedHeight.toPx() },
+            searchBarHeightState = searchBarHeight,
             searchBarHeightOffsetState = searchBarHeightOffset,
         )
     }
@@ -297,9 +308,10 @@ private fun Modifier.textFieldBackground(color: ColorProducer, shape: Shape): Mo
     onDrawBehind { drawOutline(outline, color = color()) }
 }
 
-private fun Modifier.collapseWithTopAppBar(expandedFraction: Float): Modifier = clipToBounds().layout { measurable, constraints ->
+private fun Modifier.collapseWithTopAppBar(scrollBehavior: SearchAppBarScrollBehavior?): Modifier = clipToBounds().layout { measurable, constraints ->
     val placeable = measurable.measure(constraints.copy(minHeight = 0))
-    val fraction = expandedFraction.coerceIn(0f, 1f)
+    scrollBehavior?.updateSearchBarHeight(placeable.height.toFloat())
+    val fraction = scrollBehavior?.searchBarExpandedFraction ?: 1f
     val visibleHeight = (placeable.height * fraction).roundToInt()
 
     layout(placeable.width, visibleHeight) {
@@ -602,7 +614,7 @@ fun SearchAppBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .alpha(searchBarExpansionFraction)
-                .collapseWithTopAppBar(searchBarExpansionFraction),
+                .collapseWithTopAppBar(searchAppBarScrollBehavior),
         ) {
             Column {
                 searchHeaderContent?.invoke()
