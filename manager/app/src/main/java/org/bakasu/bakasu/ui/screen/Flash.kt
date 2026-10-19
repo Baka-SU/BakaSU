@@ -421,6 +421,7 @@ fun FlashScreen(flashIt: FlashIt) {
             showReboot = showFloatAction,
         ),
         logFilePrefix = "KernelSU_install_log",
+        logContent = logContent.toString(),
         onReboot = {
             flashViewModel.dispatch(
                 FlashUiAction.Reboot(
