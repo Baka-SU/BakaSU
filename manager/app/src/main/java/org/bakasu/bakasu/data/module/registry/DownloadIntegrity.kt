@@ -124,7 +124,7 @@ object RegistryDownloadStore {
 
     fun expectedFromDirName(name: String): ExpectedFile? {
         val m = DIR_PATTERN.matchEntire(name) ?: return null
-        val size = m.groupValues[2].toLongOrNull() ?: return null
+        val size = m.groupValues[2].toLong()
         return ExpectedFile(size, m.groupValues[1])
     }
 

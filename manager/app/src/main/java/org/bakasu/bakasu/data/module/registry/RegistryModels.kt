@@ -23,8 +23,6 @@ object RegistryKind {
 data class ApiIndex(
     val schemaVersion: Int,
     val buildId: String,
-    val repoCommit: String,
-    val generatedAt: String,
     /** "api/v1/modules.json" */
     val modules: String,
 )
@@ -90,25 +88,17 @@ data class ApiRelease(
     /** Sanitized HTML of the release notes, or null. */
     val changelogHtml: String? = null,
     val zip: ApiZip,
-    val tagCommit: String,
-    val releaseUrl: String,
+    val tagCommit: String = "",
+    val releaseUrl: String = "",
     val attestationUrl: String? = null,
     val immutable: Boolean,
 )
 
 @Serializable
-data class ApiCompatibility(
-    val androidMinApi: Int? = null,
-    val androidMaxApi: Int? = null,
-    val architectures: List<String>? = null,
-)
-
-@Serializable
 data class ApiSource(
-    val host: String,
-    val fullName: String,
-    val url: String,
-    val commit: String,
+    val fullName: String = "",
+    val url: String = "",
+    val commit: String = "",
 )
 
 @Serializable
@@ -132,13 +122,11 @@ data class ApiModuleDetail(
     val stable: ApiVersionRef,
     val stars: Int? = null,
     val starsRepository: String? = null,
-    val detail: String,
     val updatedAt: String,
     val license: String? = null,
     val homepage: String? = null,
     val support: String? = null,
-    val compatibility: ApiCompatibility? = null,
-    val source: ApiSource,
+    val source: ApiSource = ApiSource(),
     /** "api/v1/modules/{id}/readme" (an HTML fragment), or null when the module has no README. */
     val readme: String? = null,
     /** Newest versionCode first; the first non-prerelease entry equals `stable`. */

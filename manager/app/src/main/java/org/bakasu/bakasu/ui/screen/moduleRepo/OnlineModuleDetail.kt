@@ -85,7 +85,6 @@ import org.bakasu.bakasu.domain.model.ModuleReadme
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.model.ModuleReleaseDetails
-import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.model.documentPolicy
 import org.bakasu.bakasu.domain.usecase.GetLastScriptRunUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
@@ -246,7 +245,7 @@ fun InfoTab(
         metadata?.let {
             if (it.tags.isNotEmpty()) add(ModuleInfoRow(R.string.repo_tags, it.tags.joinToString(", ")))
             it.stars?.let { stars ->
-                val repository = metadata.starsRepository?.takeIf { name -> name.matches(Regex("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")) }
+                val repository = metadata.starsRepository
                 add(ModuleInfoRow(R.string.repo_stars, listOfNotNull(NumberFormat.getIntegerInstance().format(stars), repository).joinToString(" · "), repository?.let { name -> "https://github.com/$name" }))
             }
             it.license?.takeIf(String::isNotBlank)?.let { license -> add(ModuleInfoRow(R.string.repo_license, license)) }
@@ -430,25 +429,24 @@ private fun LazyListScope.releaseGroup(module: CatalogModule, release: ModuleRel
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ReadmeTab(
+private fun ReadmeTab(
     module: CatalogModule,
     nestedScrollConnection: NestedScrollConnection,
     innerPadding: PaddingValues,
-    viewModel: ModuleDetailViewModel? = null,
+    viewModel: ModuleDetailViewModel,
 ) {
-    val state = viewModel?.state?.collectAsStateWithLifecycle()?.value
-    val remote = module.registryMetadata != null || module.repositoryUrl != RepositorySource.KERNEL_SU_URL
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val documentUrl = module.readmeUrl.ifBlank { module.sourceUrl }
-    val document = state?.documents?.get(documentUrl)
+    val document = state.documents[documentUrl]
     LaunchedEffect(module.catalogId, documentUrl, module.detailLoaded, module.registryMetadata?.buildId) {
-        if (remote && module.detailLoaded) viewModel?.loadReadme()
+        if (module.detailLoaded) viewModel.loadReadme()
     }
-    val readme = if (remote) document?.document else ModuleReadme(module.readme, "https://appassets.androidplatform.net/", DocumentFormat.HTML, module.documentPolicy())
+    val readme = document?.document
     val content = readme?.content.orEmpty()
     val htmlLoading = remember(content) { mutableStateOf(true) }
-    val detailFailed = remote && !module.detailLoaded && state?.error != null
-    val documentLoading = remote && !detailFailed && (!module.detailLoaded || document == null || document.loading)
-    val documentFailed = detailFailed || (remote && document?.failed == true)
+    val detailFailed = !module.detailLoaded && state.error != null
+    val documentLoading = !detailFailed && (!module.detailLoaded || document == null || document.loading)
+    val documentFailed = detailFailed || document?.failed == true
     Column(Modifier.fillMaxSize().padding(innerPadding)) {
         DetailNotice(module, state, viewModel)
         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {

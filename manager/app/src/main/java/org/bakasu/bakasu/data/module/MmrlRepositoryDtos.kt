@@ -40,7 +40,6 @@ internal data class RepositoryModuleDto(
 internal data class RepositoryTrackDto(
     @SerializedName("source") val source: String? = null,
     @SerializedName("added") val added: Double? = null,
-    @SerializedName("build_metadata") val buildMetadata: String? = null,
 )
 
 internal data class RepositoryReleaseDto(

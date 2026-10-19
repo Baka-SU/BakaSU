@@ -214,8 +214,11 @@ class ScriptRepository(
         val dir = prepared.dir.absolutePath
         try {
             val command = ScriptCommand.build(
+                hostInfo(),
+                prepared.manifest.id,
                 dir,
-                ScriptCommand.environment(hostInfo(), prepared.manifest.id, dir, prepared.params, values),
+                prepared.params,
+                values,
             )
             val code = try {
                 cli.runOneshotScript(command, { output(it, false) }, { output(it, true) })

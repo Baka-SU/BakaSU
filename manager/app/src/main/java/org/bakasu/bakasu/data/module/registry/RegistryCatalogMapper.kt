@@ -33,7 +33,6 @@ object RegistryCatalogMapper {
             detailLoaded = false,
             registryMetadata = RegistryModuleMetadata(
                 buildId = catalog.buildId,
-                detailPath = item.detail,
                 tags = item.tags,
                 iconUrl = item.icon?.let { RegistryUrls.resolve(source.url, it) },
                 stars = item.stars,
@@ -45,10 +44,10 @@ object RegistryCatalogMapper {
 
     fun detail(load: RegistryClient.DetailLoad, source: RepositorySource): CatalogModule {
         val detail = load.detail
-        val item = ApiModuleSummary(
-            id = detail.id, name = detail.name, summary = detail.summary, authors = detail.authors,
+        val item = load.catalog.find(detail.id)!!.copy(
+            name = detail.name, summary = detail.summary, authors = detail.authors,
             tags = detail.tags, metamodule = detail.metamodule, kind = detail.kind, icon = detail.icon, stable = detail.stable,
-            stars = detail.stars, starsRepository = detail.starsRepository, detail = detail.detail, updatedAt = detail.updatedAt,
+            stars = detail.stars, starsRepository = detail.starsRepository, updatedAt = detail.updatedAt,
         )
         val summary = summary(item, load.catalog, source)
         val releases = detail.releases.filterNot { it.prerelease }.map(::release)

@@ -26,7 +26,7 @@ import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
 import org.bakasu.bakasu.domain.usecase.SetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.TransliterateTextUseCase
 
-enum class CatalogContent { SOURCE_UNAVAILABLE, LOADING, MODULES, FAILED, SEARCH_EMPTY, SOURCE_EMPTY }
+enum class CatalogContent { LOADING, MODULES, FAILED, SEARCH_EMPTY, SOURCE_EMPTY }
 
 data class ModuleRepoUiState(
     val modules: List<CatalogModule> = emptyList(),
@@ -39,7 +39,6 @@ data class ModuleRepoUiState(
     val failures: Map<String, RepositoryFailure> = emptyMap(),
 ) {
     val content: CatalogContent get() = when {
-        repositoryUrl != null && sources.none { it.url == repositoryUrl } -> CatalogContent.SOURCE_UNAVAILABLE
         modules.isNotEmpty() -> CatalogContent.MODULES
         isRefreshing -> CatalogContent.LOADING
         sources.any { it.url == repositoryUrl && it.url in failures } -> CatalogContent.FAILED
@@ -90,10 +89,6 @@ class ModuleRepoViewModel(
         getBooleanPreference("module_repo_sort_star_first", false),
     )
     private val pullRefreshing = MutableStateFlow(false)
-    private data class VisibleCatalogCache(val input: ModuleRepoUiState, val sources: List<RepositorySource>, val result: ModuleRepoUiState)
-
-    @Volatile
-    private var visibleCatalogCache: VisibleCatalogCache? = null
 
     private val catalogState = combine(
         observeModules(),
@@ -133,22 +128,16 @@ class ModuleRepoViewModel(
     )
     val uiState: StateFlow<ModuleRepoUiState> = state
 
-    private fun visibleState(catalog: ModuleRepoUiState, sources: List<RepositorySource>): ModuleRepoUiState {
-        visibleCatalogCache?.let { if (it.input == catalog && it.sources == sources) return it.result }
-        val sourceUrls = sources.map { it.url }.toSet()
-        val result = catalog.copy(
-            modules = catalog.modules.filter { module ->
-                module.repositoryUrl in sourceUrls && module.repositoryUrl == catalog.repositoryUrl &&
-                    (
-                        module.moduleId.contains(catalog.search, true) || module.moduleName.contains(catalog.search, true) ||
-                            transliterateText(module.moduleName).contains(catalog.search, true)
-                        )
-            }.sortedByDescending { if (catalog.sortStargazerCountFirst) it.stargazerCount else 0 },
-            sources = sources,
-        )
-        visibleCatalogCache = VisibleCatalogCache(catalog, sources, result)
-        return result
-    }
+    private fun visibleState(catalog: ModuleRepoUiState, sources: List<RepositorySource>): ModuleRepoUiState = catalog.copy(
+        modules = catalog.modules.filter { module ->
+            module.repositoryUrl == catalog.repositoryUrl &&
+                (
+                    module.moduleId.contains(catalog.search, true) || module.moduleName.contains(catalog.search, true) ||
+                        transliterateText(module.moduleName).contains(catalog.search, true)
+                    )
+        }.sortedByDescending { if (catalog.sortStargazerCountFirst) it.stargazerCount else 0 },
+        sources = sources,
+    )
 
     fun resolveModule(catalogId: String): CatalogModule? = observeModules().value.firstOrNull { module ->
         module.catalogId == catalogId && module.repositoryUrl == activeRepository() &&

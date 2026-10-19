@@ -19,8 +19,6 @@ object ScriptCommand {
     const val BUSYBOX = "$BIN_DIR/busybox"
     const val ENTRY = "action.sh"
 
-    private val ENV_NAME = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
-
     /** Quotes [value] for a POSIX shell: `it's` -> `'it'\''s'`. */
     fun quote(value: String): String {
         require('\u0000' !in value) { "NUL cannot be passed through a shell" }
@@ -31,7 +29,7 @@ object ScriptCommand {
      * Environment of a run, in order. [values] are the user's inputs per param key (missing
      * keys use the default); throws [IllegalArgumentException] if any of them is invalid.
      */
-    fun environment(
+    private fun environment(
         host: ScriptHostInfo,
         moduleId: String,
         dir: String,
@@ -65,10 +63,9 @@ object ScriptCommand {
     }
 
     /** `cd <dir> && <env...> PATH=... busybox sh ./action.sh </dev/null` */
-    fun build(dir: String, env: List<Pair<String, String>>): String = buildString {
+    fun build(host: ScriptHostInfo, moduleId: String, dir: String, params: ScriptParams, values: Map<String, String>): String = buildString {
         append("cd ").append(quote(dir)).append(" && ")
-        for ((name, value) in env) {
-            require(ENV_NAME.matches(name) && name != "PATH") { "Invalid variable name: $name" }
+        for ((name, value) in environment(host, moduleId, dir, params, values)) {
             append(name).append('=').append(quote(value)).append(' ')
         }
         append("PATH=\"\$PATH\":").append(quote(BIN_DIR)).append(' ')

@@ -35,7 +35,7 @@ object MmrlRepositoryParser {
     fun parse(url: String, body: String): RepositoryFeed {
         val base = canonicalUrl(url)
         val feed = decode<RepositoryFeedDto>(body)
-        val name = feed.name?.takeIf(String::isNotBlank) ?: fail(RepositoryError.INVALID_FEED)
+        val name = feed.name.orEmpty().ifBlank { base }
         if (feed.metadata?.version?.let { it !in 0..1 } == true) fail(RepositoryError.UNSUPPORTED_FORMAT)
         val source = RepositorySource(
             base,
@@ -66,8 +66,8 @@ object MmrlRepositoryParser {
 
     private fun module(source: RepositorySource, item: RepositoryModuleDto): CatalogModule {
         val id = item.id.orEmpty()
-        val name = item.name.orEmpty()
-        if (!id.matches(Regex("[A-Za-z0-9][A-Za-z0-9_.-]*")) || name.isBlank()) fail(RepositoryError.INVALID_FEED)
+        if (id.isBlank()) fail(RepositoryError.INVALID_FEED)
+        val name = item.name.orEmpty().ifBlank { id }
         val versionCode = item.versionCode ?: fail(RepositoryError.INVALID_FEED)
         val entries = item.versions ?: fail(RepositoryError.INVALID_FEED)
         val currentRelease = entries.singleOrNull { it?.versionCode == versionCode }
@@ -118,7 +118,6 @@ object MmrlRepositoryParser {
             repositoryUrl = source.url,
             repositoryName = source.name,
             readmeUrl = resourceUrl(source.url, item.readme.orEmpty()),
-            releaseMetadataUrl = resourceUrl(source.url, item.track?.buildMetadata.orEmpty()),
             iconUrl = resourceUrl(source.url, item.icon.orEmpty()).takeIf(String::isNotBlank),
         )
     }

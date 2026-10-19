@@ -50,12 +50,10 @@ data class CatalogModule(
     val sourceUrl: String,
     val releases: List<ModuleRelease>,
     val repositoryUrl: String,
-    val readme: String = "",
     val repositoryName: String = "",
     val readmeUrl: String = "",
     val detailLoaded: Boolean = true,
     val registryMetadata: RegistryModuleMetadata? = null,
-    val releaseMetadataUrl: String = "",
     val iconUrl: String? = null,
     val isScript: Boolean = false,
 ) {
@@ -65,7 +63,6 @@ data class CatalogModule(
 
 data class RegistryModuleMetadata(
     val buildId: String,
-    val detailPath: String,
     val tags: List<String>,
     val iconUrl: String?,
     val stars: Int?,

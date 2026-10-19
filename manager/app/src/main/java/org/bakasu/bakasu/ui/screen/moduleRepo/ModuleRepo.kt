@@ -382,7 +382,6 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                     } else if (uiState.content != CatalogContent.LOADING) {
                         val content = uiState.content
                         val title = when (content) {
-                            CatalogContent.SOURCE_UNAVAILABLE -> R.string.repo_module_unavailable
                             CatalogContent.SEARCH_EMPTY -> R.string.search_no_any_match
                             else -> R.string.repo_source_empty
                         }

@@ -11,7 +11,7 @@ import java.io.IOException
  */
 class FileRegistryCache(private val dir: File) : RegistryCache {
 
-    private fun fileFor(key: String): File = File(dir, key.replace(UNSAFE, "_") + ".cache")
+    private fun fileFor(key: String): File = File(dir, "$key.cache")
 
     override fun read(key: String): String? {
         val file = fileFor(key)
@@ -33,9 +33,5 @@ class FileRegistryCache(private val dir: File) : RegistryCache {
             tmp.delete()
             throw e
         }
-    }
-
-    private companion object {
-        val UNSAFE = Regex("[^A-Za-z0-9._-]")
     }
 }

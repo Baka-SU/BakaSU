@@ -241,8 +241,8 @@ class ModuleCatalogRepository(
             ?: return@attempt null
         val owner = source.pathSegments.getOrNull(0).orEmpty()
         val repo = source.pathSegments.getOrNull(1).orEmpty().removeSuffix(".git")
-        if (!owner.matches(Regex("[A-Za-z0-9_.-]+")) || !repo.matches(Regex("[A-Za-z0-9_.-]+"))) return@attempt null
-        val apiUrl = "https://api.github.com/repos/$owner/$repo/readme"
+        val apiUrl = "https://api.github.com/".toHttpUrlOrNull()!!.newBuilder()
+            .addPathSegment("repos").addPathSegment(owner).addPathSegment(repo).addPathSegment("readme").build().toString()
         val response = networkRequestRepository.request(apiUrl, documentPolicy = policy).getOrElse { error ->
             if (error is HttpStatusException && error.statusCode == 404) return@attempt null
             throw error
@@ -253,19 +253,14 @@ class ModuleCatalogRepository(
     }
 
     private suspend fun fetchReadme(url: String, policy: DocumentPolicy): ModuleReadme {
-        val safeUrl = MmrlRepositoryParser.resourceUrl(url, url)
-        if (safeUrl.isBlank()) throw RepositoryException(RepositoryError.INVALID_URL)
-        val response = networkRequestRepository.request(safeUrl, documentPolicy = policy).getOrThrow()
-        val baseUrl = MmrlRepositoryParser.resourceUrl(safeUrl, response.url)
-        if (baseUrl.isBlank()) throw RepositoryException(RepositoryError.INVALID_URL)
-        return response.copy(url = baseUrl).toDocument(policy)
+        val response = networkRequestRepository.request(url, documentPolicy = policy).getOrThrow()
+        return response.toDocument(policy)
     }
 
     suspend fun add(url: String, metadata: RepositorySource? = null, apiType: RepositoryApiType = metadata?.apiType ?: RepositoryApiType.MMRL): Result<RepositorySource> = attempt {
         val canonical = MmrlRepositoryParser.canonicalUrl(url)
         val generation = stateMutex.withLock {
             mutableSources.value.firstOrNull { it.url == canonical }?.let { return@attempt it }
-            requireUserSource(canonical)
             sourceGenerations[canonical] ?: 0
         }
         if (!networkStatusRepository.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)

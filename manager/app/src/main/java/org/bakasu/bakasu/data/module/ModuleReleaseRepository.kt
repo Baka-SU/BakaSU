@@ -29,7 +29,6 @@ import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseDetails
 import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.model.documentPolicy
-import org.json.JSONArray
 import org.json.JSONObject
 
 /** Resolves presentation metadata without changing the selected repository's downloadable assets. */
@@ -39,7 +38,6 @@ class ModuleReleaseRepository(
 ) {
     private data class Cached(val result: Result<NetworkResponse>, val expiresAt: Long)
     private data class GithubRef(val project: String, val tag: String)
-    private data class Update(val zipUrl: String, val changelog: String)
 
     private val mutex = Mutex()
     private val requests = Semaphore(3)
@@ -65,21 +63,11 @@ class ModuleReleaseRepository(
         val primary = async {
             attempt { document(release.changelogUrl, retry, policy) }?.also { send(ModuleReleaseDetails(notes = it)) }
         }
-        val update = attempt { update(module, release, retry) }
-        val fallback = async {
-            if (primary.await() == null) {
-                update?.let { attempt { document(it.changelog, retry, policy) } }?.also { send(ModuleReleaseDetails(notes = it)) }
-            } else {
-                null
-            }
-        }
         val reference = release.assets.firstNotNullOfOrNull { githubDownload(it.downloadUrl) }
-            ?: update?.let { githubDownload(it.zipUrl) }
-        val github = attempt { github(module, release, reference, retry) }
+        val github = reference?.let { attempt { github(it, retry) } }
         val primaryNotes = primary.await()
-        val updateNotes = fallback.await()
         val githubPage = github?.text("html_url")?.let(::safeUrl)?.takeIf { githubDownloadPage(it) != null }
-        val notes = primaryNotes ?: updateNotes ?: github?.text("body")?.takeIf(String::isNotBlank)?.let {
+        val notes = primaryNotes ?: github?.text("body")?.takeIf(String::isNotBlank)?.let {
             githubPage?.let { page -> ModuleReadme(it, page, policy = policy) }
         }
         send(
@@ -88,7 +76,7 @@ class ModuleReleaseRepository(
                 publishedAt = github?.text("published_at")?.takeIf(String::isNotBlank),
                 releaseUrl = githubPage,
                 notes = notes,
-                notesFailed = notes == null && (release.changelogUrl.isNotBlank() || update?.changelog?.isNotBlank() == true),
+                notesFailed = notes == null && release.changelogUrl.isNotBlank(),
             ),
         )
     }.flowOn(Dispatchers.IO)
@@ -100,60 +88,11 @@ class ModuleReleaseRepository(
         return response.copy(body = content).toDocument(policy)
     }
 
-    private suspend fun update(module: CatalogModule, release: ModuleRelease, retry: Boolean): Update? {
-        val code = release.versionCode ?: return null
-        if (module.releaseMetadataUrl.isBlank() || module.releases.count { it.versionCode == code } != 1) return null
-        val track = response(module.releaseMetadataUrl, retry, module.documentPolicy())
-        val body = track.body.orEmpty()
-        val declared = if (body.trimStart().startsWith("{")) {
-            JSONObject(body).optString("update_to")
-        } else {
-            // Read only an unambiguous top-level HTTPS scalar, not general YAML or aliases.
-            if (Regex("""(?m)^update_to[ \t]*:""").findAll(body).count() != 1) return null
-            val values = Regex("""(?m)^update_to:[ \t]*(https://[^\s"'#]+|"https://[^"\r\n]+"|'https://[^'\r\n]+')[ \t]*(?:#.*)?$""")
-                .findAll(body)
-            values.singleOrNull()?.groupValues?.get(1)?.trim('"', '\'').orEmpty()
-        }
-        val updateUrl = MmrlRepositoryParser.resourceUrl(track.url, declared)
-        if (updateUrl.isBlank()) return null
-        val response = response(updateUrl, retry, module.documentPolicy())
-        val json = JSONObject(response.body.orEmpty())
-        val updateCode = json.opt("versionCode") as? Number ?: return null
-        if (updateCode.toDouble() != code.toDouble()) return null
-        return Update(
-            zipUrl = MmrlRepositoryParser.resourceUrl(response.url, json.optString("zipUrl")),
-            changelog = MmrlRepositoryParser.resourceUrl(response.url, json.optString("changelog")),
-        )
+    private suspend fun github(reference: GithubRef, retry: Boolean): JSONObject? {
+        val url = githubApi(reference.project).addPathSegment("releases").addPathSegment("tags").addPathSegment(reference.tag).build()
+        val json = JSONObject(response(url.toString(), retry).body.orEmpty())
+        return json.takeIf { !it.optBoolean("draft") && it.optString("tag_name") == reference.tag }
     }
-
-    private suspend fun github(module: CatalogModule, release: ModuleRelease, reference: GithubRef?, retry: Boolean): JSONObject? {
-        if (reference != null) {
-            val url = githubApi(reference.project).addPathSegment("releases").addPathSegment("tags").addPathSegment(reference.tag).build()
-            val json = JSONObject(response(url.toString(), retry).body.orEmpty())
-            return json.takeIf { !it.optBoolean("draft") && it.optString("tag_name") == reference.tag }
-        }
-        val project = githubProject(module.sourceUrl) ?: return null
-        val url = githubApi(project).addPathSegment("releases").addQueryParameter("per_page", "30").build()
-        val json = JSONArray(response(url.toString(), retry).body.orEmpty())
-        val version = release.tagName.ifBlank { release.name }
-        if (version.isBlank()) return null
-        val decorated = version.contains(" (")
-        val candidates = (0 until json.length()).mapNotNull { json.optJSONObject(it) }.filter { item ->
-            !item.optBoolean("draft") &&
-                versionTag(item.optString("tag_name")) == versionTag(version) &&
-                (!decorated || hasVersionCodeAsset(item, release.versionCode))
-        }
-        return candidates.singleOrNull()
-    }
-
-    private fun hasVersionCodeAsset(release: JSONObject, code: Int?): Boolean {
-        if (code == null) return false
-        val boundary = Regex("""(?:^|[-_])$code(?:$|[-_.])""")
-        val assets = release.optJSONArray("assets") ?: return false
-        return (0 until assets.length()).any { boundary.containsMatchIn(assets.optJSONObject(it)?.optString("name").orEmpty()) }
-    }
-
-    private fun versionTag(version: String): String = version.trim().substringBefore(" (").removePrefix("v")
 
     private fun githubProject(value: String): String? {
         val url = safeUrl(value)?.toHttpUrlOrNull() ?: return null
@@ -161,7 +100,6 @@ class ModuleReleaseRepository(
         val parts = url.pathSegments.filter(String::isNotBlank)
         if (parts.size < 2) return null
         val project = parts.take(2).mapIndexed { index, part -> if (index == 1) part.removeSuffix(".git") else part }
-        if (project.any { !it.matches(Regex("[A-Za-z0-9_.-]+")) || it == "." || it == ".." }) return null
         return project.joinToString("/")
     }
 
@@ -190,7 +128,6 @@ class ModuleReleaseRepository(
     private suspend fun response(url: String, retry: Boolean, policy: DocumentPolicy = DocumentPolicy.PublicHttps()): NetworkResponse {
         val safe = safeUrl(url) ?: error("Invalid release metadata URL")
         val response = request(safe, retry, policy).getOrThrow()
-        check(safeUrl(response.url) != null) { "Invalid release metadata redirect" }
         if (safe.toHttpUrlOrNull()?.host == "api.github.com") {
             check(response.url.toHttpUrlOrNull()?.host == "api.github.com") { "Invalid GitHub API redirect" }
         }

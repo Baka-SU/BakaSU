@@ -13,6 +13,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
 import okhttp3.CacheControl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -284,6 +285,7 @@ class KernelSuRegistryRepository private constructor(
         fun failure(error: Throwable): RepositoryFailure = when (error) {
             is UnsupportedSchemaException -> RepositoryFailure(RepositoryError.UNSUPPORTED_FORMAT)
             is RegistryException -> RepositoryFailure(RepositoryError.INVALID_FEED)
+            is SerializationException -> RepositoryFailure(RepositoryError.INVALID_FEED)
             else -> RepositoryFailure.from(error)
         }
     }

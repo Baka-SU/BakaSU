@@ -18,7 +18,6 @@ object RegistryUrls {
     )
 
     private val API_PATH = Regex("^[A-Za-z0-9._\\-/]+$")
-    private val REPO_PART = Regex("^[A-Za-z0-9._-]+$")
 
     /** Ensures an https base URL ending with '/'. */
     fun normalizeBaseUrl(baseUrl: String): String {
@@ -47,21 +46,6 @@ object RegistryUrls {
         return uri.isAbsolute && !uri.isOpaque &&
             uri.scheme.equals("https", ignoreCase = true) &&
             !uri.host.isNullOrEmpty() && uri.rawUserInfo == null
-    }
-
-    /** An absolute http(s) URL with a host and no user info (homepage / support links). */
-    fun isWebUrl(url: String): Boolean {
-        val uri = runCatching { URI(url) }.getOrNull() ?: return false
-        return uri.isAbsolute && !uri.isOpaque &&
-            (uri.scheme.equals("https", ignoreCase = true) || uri.scheme.equals("http", ignoreCase = true)) &&
-            !uri.host.isNullOrEmpty() && uri.rawUserInfo == null
-    }
-
-    /** A link to a `#fragment` of the document that was loaded with [documentUrl] as its URL. */
-    fun isInPageAnchor(url: String, documentUrl: String): Boolean {
-        val hash = url.indexOf('#')
-        if (hash <= 0 || hash == url.length - 1) return false
-        return url.substring(0, hash) == documentUrl
     }
 
     /** Port with the scheme default filled in, or -1 for unknown schemes. */
@@ -122,9 +106,6 @@ object RegistryUrls {
                 return false
             }
         }
-        val owner = segments[0]
-        val repo = segments[1]
-        if (!REPO_PART.matches(owner) || !REPO_PART.matches(repo)) return false
         if (segments[2] != "releases" || segments[3] != "download") return false
         return true
     }
