@@ -11,7 +11,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.data.flash.FlashRepository
 import org.bakasu.bakasu.data.shell.KsuCliRepository
-import org.bakasu.bakasu.data.theme.MonetCompatColorSource
 
 class ApplicationInitializationRepository(
     private val application: Application,
@@ -19,12 +18,10 @@ class ApplicationInitializationRepository(
     private val applicationScope: CoroutineScope,
     private val flashRepository: FlashRepository,
     private val ksuCliRepository: KsuCliRepository,
-    private val monetCompatColorSource: MonetCompatColorSource,
 ) {
     @SuppressLint("RestrictedApi")
     suspend fun initialize() {
         MainShell.setBuilder(ksuCliRepository.generateMainShellBuilder())
-        monetCompatColorSource.initialize()
         Coil.setImageLoader(imageLoader)
         File(application.dataDir, "webroot").mkdirs()
         Os.setenv("TMPDIR", application.cacheDir.absolutePath, true)
