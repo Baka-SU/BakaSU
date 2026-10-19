@@ -19,16 +19,11 @@ import top.yukonga.miuix.kmp.nav.core.LocalNavTransitionScope
 import top.yukonga.miuix.kmp.utils.PagerGestureNestedScrollConnection
 import top.yukonga.miuix.kmp.utils.horizontalPagerSwipeOverride
 
-/**
- * The single pager entry point for the app. It keeps gesture arbitration consistent between
- * pages while still allowing screens with custom pager interception to provide their connection.
- */
 @Composable
 fun HorizontalPagerWithInteraction(
     state: PagerState,
     modifier: Modifier = Modifier,
     userScrollEnabled: Boolean = true,
-    beyondViewportPageCount: Int = 0,
     pageNestedScrollConnection: NestedScrollConnection? = null,
     flingBehavior: TargetedFlingBehavior? = null,
     enableGestureOverride: Boolean = true,
@@ -54,7 +49,7 @@ fun HorizontalPagerWithInteraction(
             modifier
         },
         userScrollEnabled = if (enableGestureOverride) false else userScrollEnabled,
-        beyondViewportPageCount = if (contentReady) beyondViewportPageCount else 0,
+        beyondViewportPageCount = if (contentReady) state.pageCount else 0,
         pageNestedScrollConnection = if (enableGestureOverride) {
             pageNestedScrollConnection ?: PagerGestureNestedScrollConnection
         } else {

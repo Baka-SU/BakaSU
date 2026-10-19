@@ -106,6 +106,7 @@ val LocalSegmentedItemShape = compositionLocalOf<Shape> { RoundedCornerShape(16.
  * @param foreContent A composable slot for content displayed alongside/over the headline.
  * @param trailingContent A composable slot for trailing content, e.g. switches, checkboxes, or arrows.
  * @param containerColor Custom container color, if provided, selected/isError will be ignored.
+ * @param contentColor Custom content color, if provided, selected/isError will be ignored.
  */
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -133,6 +134,7 @@ fun SettingsBaseWidget(
     foreContent: (@Composable RowScope.() -> Unit)? = null,
     descriptionColumnContent: (@Composable ColumnScope.() -> Unit)? = null,
     containerColor: Color? = null,
+    contentColor: Color? = null,
     trailingContent: (@Composable BoxScope.(interactionSource: MutableInteractionSource) -> Unit)? = null,
 ) {
     val themeConfig: ThemeConfig = koinInject()
@@ -178,13 +180,14 @@ fun SettingsBaseWidget(
         }
     }
 
-    val baseContentColor = if (containerColor != null) {
-        MaterialTheme.colorScheme.contentColorFor(containerColor)
-    } else if (selected) {
-        MaterialTheme.colorScheme.contentColorFor(MaterialTheme.colorScheme.primaryContainer)
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
+    val baseContentColor = contentColor
+        ?: if (containerColor != null) {
+            MaterialTheme.colorScheme.contentColorFor(containerColor)
+        } else if (selected) {
+            MaterialTheme.colorScheme.contentColorFor(MaterialTheme.colorScheme.primaryContainer)
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
 
     val resolvedIconColor = iconColor
         ?: baseContentColor
@@ -265,6 +268,8 @@ fun SettingsBaseWidget(
 
     var itemModifier = (if (fillMaxWidth) modifier.fillMaxWidth() else modifier)
         .heightIn(min = adaptiveMinHeight)
+        .clip(clipShape)
+
     if (isOnBackground && themeConfig.isEnableBlurExp) {
         itemModifier = itemModifier
             .renderBackgroundBlur(finalContainerColor)
@@ -353,7 +358,6 @@ fun SettingsBaseWidget(
     var touchPoint by remember { mutableStateOf(Offset.Zero) }
     val clickable = onClick != null || onLongClick != null
     val surfaceModifier = itemModifier
-        .clip(clipShape)
         .then(
             if (clickable) {
                 Modifier

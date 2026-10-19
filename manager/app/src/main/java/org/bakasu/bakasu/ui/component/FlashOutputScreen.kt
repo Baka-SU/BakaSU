@@ -1,4 +1,4 @@
-package org.bakasu.bakasu.ui.screen
+package org.bakasu.bakasu.ui.component
 
 import android.os.Environment
 import androidx.compose.foundation.layout.Box
@@ -42,8 +42,6 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.ui.component.KeyEventBlocker
-import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
@@ -64,6 +62,7 @@ fun FlashOutputScreen(
     logFilePrefix: String,
     onBack: () -> Unit,
     onReboot: () -> Unit,
+    logContent: String = state.output,
     headerContent: (@Composable () -> Unit)? = null,
 ) {
     val snackbarHost = LocalSnackbarHost.current
@@ -84,13 +83,13 @@ fun FlashOutputScreen(
                 scope.launch {
                     val date = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.getDefault()).format(Date())
                     val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "${logFilePrefix}_$date.log")
-                    file.writeText(state.output)
+                    file.writeText(logContent)
                     snackbarHost.showReplacingSnackbar(savedTemplate.format(file.absolutePath))
                 }
             }, scrollBehavior)
         },
         floatingActionButton = {
-            if (state.showReboot || state.status == FlashingStatus.SUCCESS) {
+            if (state.showReboot) {
                 ExtendedFloatingActionButton(onClick = onReboot, icon = {
                     Icon(Icons.TwoTone.Refresh, contentDescription = stringResource(R.string.reboot))
                 }, text = { Text(stringResource(R.string.reboot)) })

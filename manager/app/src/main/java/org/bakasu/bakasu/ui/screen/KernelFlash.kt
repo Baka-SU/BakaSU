@@ -18,8 +18,8 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.component.FlashOutputScreen
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
-import org.bakasu.bakasu.ui.screen.FlashOutputScreen
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
 import org.bakasu.bakasu.ui.viewmodel.FlashState
@@ -102,6 +102,7 @@ fun KernelFlashScreen(
             if (!flashState.isFlashing) navigator.pop()
         },
         logFilePrefix = "KernelSU_kernel_flash_log",
+        logContent = uiState.fullLog,
         onReboot = { viewModel.dispatch(KernelFlashUiAction.Reboot) },
     )
 }
