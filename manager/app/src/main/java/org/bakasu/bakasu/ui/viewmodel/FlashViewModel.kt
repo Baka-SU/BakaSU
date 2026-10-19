@@ -20,6 +20,13 @@ import org.bakasu.bakasu.domain.usecase.RebootUseCase
 
 enum class FlashingStatus { FLASHING, SUCCESS, FAILED }
 
+/** State consumed by the common flash output screen. */
+data class FlashState(
+    val status: FlashingStatus = FlashingStatus.FLASHING,
+    val output: String = "",
+    val showReboot: Boolean = false,
+)
+
 data class ModuleInstallStatus(
     val totalModules: Int = 0,
     val currentModule: Int = 0,

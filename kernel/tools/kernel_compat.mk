@@ -118,6 +118,12 @@ $(info -- $(REPO_NAME)/compat: modern dentry_open found)
 ccflags-y += -DKSU_COMPAT_HAS_MODERN_DENTRY_OPEN
 endif
 
+# Linux 6.11 renamed the arm64 compat syscall count and table declarations.
+ifeq ($(shell grep -q "__NR_compat32_syscalls" $(srctree)/arch/arm64/kernel/sys32.c 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found __NR_compat32_syscalls)
+ccflags-y += -DKSU_COMPAT_HAS_NR_COMPAT32_SYSCALLS
+endif
+
 # UL, look for "ext4_unregister_sysfs" on fs/ext4
 ifeq ($(shell grep -q "^extern void ext4_unregister_sysfs" $(srctree)/fs/ext4/ext4.h 2>/dev/null; echo $$?),0)
 $(info -- $(REPO_NAME)/compat: ext4_unregister_sysfs found)
@@ -330,4 +336,11 @@ endif
 ifeq ($(shell grep -q -F "rc = mls_context_to_sid(pol, oldc, p, ctx, sidtabp, def_sid);" $(srctree)/security/selinux/ss/services.c 2>/dev/null; echo $$?),0)
 $(info -- $(REPO_NAME)/compat: stricter mls_context_to_sid found)
 ccflags-y += -DKSU_COMPAT_HAS_STRICTER_MLS_CONTEXT_TO_SID
+endif
+
+# Google's backport
+# https://android-review.googlesource.com/q/Iead2a1d90731ae24fefec2a40af5ffdc457ac916
+ifeq ($(shell grep -q "^int context_add_hash" $(srctree)/security/selinux/ss/services.c 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found hash indexed sidtab)
+ccflags-y += -DKSU_COMPAT_HAS_CONTEXT_ADD_HASH
 endif

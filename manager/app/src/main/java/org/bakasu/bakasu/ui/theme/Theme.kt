@@ -41,6 +41,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -56,12 +57,16 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -69,6 +74,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.zIndex
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
@@ -131,8 +137,18 @@ class ThemeConfig(
     var backgroundImageLoaded by mutableStateOf(false)
     var isThemeChanging by mutableStateOf(false)
     var isHighContrastMode by mutableStateOf(false)
-    var isEnableBlur by mutableStateOf(false)
-    var isEnableBlurExp by mutableStateOf(false)
+    private val _isEnableBlur = mutableStateOf(false)
+    var isEnableBlur: Boolean
+        get() = _isEnableBlur.value && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        set(value) {
+            _isEnableBlur.value = value
+        }
+    private val _isEnableBlurExp = mutableStateOf(false)
+    var isEnableBlurExp: Boolean
+        get() = _isEnableBlurExp.value && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        set(value) {
+            _isEnableBlurExp.value = value
+        }
     var isUseBackgroundSeedColor by mutableStateOf(false)
     var bottomBarStyle by mutableStateOf(BottomBarStyle.MATERIAL3_EXPRESSIVE)
 
@@ -175,6 +191,8 @@ class BackgroundRenderState {
     var blurImageBitmap: ImageBitmap? by mutableStateOf(null)
     var blurViewportSize by mutableStateOf(IntSize(0, 0))
     var blurFrameTick by mutableIntStateOf(0)
+    var scrollActive by mutableStateOf(false)
+    var pagerScrollActive by mutableStateOf(false)
     var seedColor by mutableIntStateOf(0)
 }
 
@@ -371,7 +389,31 @@ fun KernelSUTheme(
             motionScheme = MotionScheme.expressive(),
             typography = generateTypography(themeConfig),
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
+            val backgroundMotionConnection = remember(backgroundRenderState) {
+                object : NestedScrollConnection {
+                    override fun onPostScroll(
+                        consumed: Offset,
+                        available: Offset,
+                        source: NestedScrollSource,
+                    ): Offset {
+                        backgroundRenderState.scrollActive = true
+                        return Offset.Zero
+                    }
+
+                    override suspend fun onPostFling(
+                        consumed: Velocity,
+                        available: Velocity,
+                    ): Velocity {
+                        backgroundRenderState.scrollActive = false
+                        return Velocity.Zero
+                    }
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(backgroundMotionConnection),
+            ) {
                 BackgroundLayer(themeConfig, settings, backgroundRenderState)
                 content()
             }
@@ -424,6 +466,7 @@ private fun ThemeInitializer(
 
 @Composable
 private fun MonetCompatInitializer(themeConfig: ThemeConfig, themeRepository: ThemeRepository) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return
     val source = koinInject<MonetCompatColorSource>()
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -463,23 +506,27 @@ private fun BackgroundLayer(
         }
     }
 
-    val hasBackgroundBitmap = renderState.imageBitmap != null
-    val hasBlurBitmap = renderState.blurImageBitmap != null
-    val needsFallbackFrames = hasBackgroundBitmap &&
-        (!themeConfig.isEnableBlur || Build.VERSION.SDK_INT < Build.VERSION_CODES.S)
-    val needsBlurFrames =
-        (themeConfig.isEnableBlurExp && hasBlurBitmap) ||
-            (themeConfig.isEnableBlur && hasBackgroundBitmap)
-
-    LaunchedEffect(needsFallbackFrames, needsBlurFrames) {
-        if (!needsFallbackFrames && !needsBlurFrames) return@LaunchedEffect
-
-        while (true) {
-            withFrameNanos { }
-            renderState.blurFrameTick = if (renderState.blurFrameTick == Int.MAX_VALUE) {
-                0
-            } else {
-                renderState.blurFrameTick + 1
+    // Translucent surfaces must re-sample/re-map the background only while content is actually
+    // moving: nested-scroll drags/flings (scrollActive) and horizontal pager swipes, which
+    // translate layers without re-recording backdrop nodes (pagerScrollActive). At rest the loop
+    // is suspended and no frame is produced, so hwui stays idle. The tick must never be bumped
+    // from a draw callback, which would self-sustain through consumers inside the source subtree.
+    LaunchedEffect(Unit) {
+        snapshotFlow {
+            renderState.imageBitmap != null &&
+                (renderState.scrollActive || renderState.pagerScrollActive)
+        }.collect { active ->
+            if (!active) return@collect
+            while (
+                renderState.imageBitmap != null &&
+                (renderState.scrollActive || renderState.pagerScrollActive)
+            ) {
+                withFrameNanos { }
+                renderState.blurFrameTick = if (renderState.blurFrameTick == Int.MAX_VALUE) {
+                    0
+                } else {
+                    renderState.blurFrameTick + 1
+                }
             }
         }
     }
@@ -524,7 +571,7 @@ private const val BACKGROUND_BLUR_RADIUS = 45f
  */
 @Composable
 fun Modifier.blurSource(): Modifier {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return this
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return this
 
     return LocalBlurState.current?.let {
         this.then(Modifier.layerBackdrop(it))
@@ -549,7 +596,7 @@ fun Modifier.blurEffect(
 ): Modifier {
     val themeConfig = koinInject<ThemeConfig>()
     val cardConfig = koinInject<CardConfig>()
-    if (!themeConfig.isEnableBlur || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+    if (!themeConfig.isEnableBlur || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return renderBackgroundFallback(
             compensateHorizontalOverscroll = compensateHorizontalOverscroll,
             compensateVerticalOverscroll = compensateVerticalOverscroll,
@@ -585,6 +632,7 @@ fun Modifier.blurEffect(
                     shape = { RectangleShape },
                     effects = {
                         renderState.blurFrameTick
+                        stretchOverscrollState?.version
 
                         textureBlurEffect(
                             blurRadiusX = 25f,
@@ -656,6 +704,7 @@ private fun Modifier.renderBackgroundFallback(
         }
         .drawWithContent {
             renderState.blurFrameTick
+            stretchOverscrollState?.version
 
             val boundsInBackground = coordinates?.boundsInBackgroundNow(backgroundAnchor)
                 ?: coordinates?.localBoundsInWindowNow()
@@ -821,6 +870,7 @@ fun Modifier.renderBackgroundBlur(
         }
         .drawWithContent {
             renderState.blurFrameTick
+            stretchOverscrollState?.version
 
             val currentBitmap = renderState.blurImageBitmap
             val currentBoundsInBackground = coordinates?.boundsInBackgroundNow(backgroundBlurAnchor)
@@ -1849,14 +1899,19 @@ private fun BackgroundInitializer(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    val dynamicColorFromSystem = themeConfig.monetCompatSeedColor
+    val dynamicColorFromSystem =
+        if (Build.VERSION.SDK_INT >= 31) {
+            colorResource(id = android.R.color.system_accent1_500).toArgb()
+        } else {
+            themeConfig.monetCompatSeedColor
+        }
 
     val calcedCachedSeedColor =
         settings.getInt("cached_seed_color", dynamicColorFromSystem)
 
     LaunchedEffect(themeConfig.isEnableBlurExp, renderState.blurViewportSize) {
         if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             themeConfig.isEnableBlurExp &&
             renderState.blurViewportSize.width > 0 &&
             renderState.blurViewportSize.height > 0
@@ -1895,7 +1950,7 @@ private fun BackgroundInitializer(
             themeConfig.isThemeChanging = false
 
             if (
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 themeConfig.isEnableBlurExp &&
                 renderState.blurViewportSize.width > 0 &&
                 renderState.blurViewportSize.height > 0
@@ -1986,6 +2041,10 @@ private fun createColorScheme(
         when {
             dynamicColor && themeConfig.isUseBackgroundSeedColor && renderState.seedColor != 0 -> {
                 renderState.seedColor
+            }
+
+            dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                colorResource(id = android.R.color.system_accent1_500).toArgb()
             }
 
             dynamicColor -> {

@@ -557,8 +557,8 @@
     <string name="require_kernel_version">Wymagana aktualizacja jądra. Kliknij aby zainstalować.</string>
     <string name="require_kernel_version_gki">Wymagana aktualizacja jądra</string>
     <string name="internal_server_error">Wewnętrzny błąd serwera</string>
-    <string name="enable_floating_bottom_bar">Latający dolny pasek</string>
-    <string name="enable_floating_bottom_bar_summary">Używaj latającego dolnego paska w stylu Apple.</string>
+    <string name="enable_floating_bottom_bar">Uniesiony dolny pasek</string>
+    <string name="enable_floating_bottom_bar_summary">Używaj uniesionego dolnego paska w stylu Apple.</string>
     <string name="ak3_select_zip">Wybierz plik zip AnyKernel3 do sflashowania</string>
     <string name="install_upload_lkm_file_summary">Użyj niestandardowego pliku .ko zamiast wbudowanego LKM</string>
     <string name="skip_ksud">Nie instaluj ksud</string>

@@ -491,8 +491,8 @@ fun SearchAppBar(
         currentOnSearchTextChange(textFieldState.text.toString())
     }
 
-    LaunchedEffect(isPageActive) {
-        if (!isPageActive && scrollBehavior?.state?.collapsedFraction?.toDouble() == 1.0) {
+    LaunchedEffect(isCurrentPage) {
+        if (!isCurrentPage && scrollBehavior?.state?.collapsedFraction?.toDouble() == 1.0) {
             searchAppBarScrollBehavior?.collapseSearchBar()
         }
     }
@@ -511,9 +511,11 @@ fun SearchAppBar(
         }
     }
 
-    DisposableEffect(isPageActive, searchAppBarScrollBehavior) {
+    // Navigation changes the entry lifecycle while it is still visible in the transition.
+    // Only switching pager pages should reset the search bar's expansion.
+    DisposableEffect(isCurrentPage, searchAppBarScrollBehavior) {
         onDispose {
-            if (isPageActive) searchAppBarScrollBehavior?.reset()
+            if (isCurrentPage) searchAppBarScrollBehavior?.reset()
         }
     }
 
@@ -521,7 +523,6 @@ fun SearchAppBar(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE && currentIsCurrentPage) {
                 resetSearch()
-                searchAppBarScrollBehavior?.reset()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

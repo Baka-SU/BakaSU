@@ -9,7 +9,6 @@ use anyhow::{Result, bail};
 use clap::ValueEnum;
 
 const UPDATE_BINARY_ENTRY: &str = "META-INF/com/google/android/update-binary";
-const PATCH_MARKER: &[u8] = b"chmod -R 755 tools bin;";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 pub enum Slot {
@@ -24,10 +23,6 @@ impl Slot {
             Self::B => "_b",
         }
     }
-}
-
-fn shell_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\"'\"'"))
 }
 
 enum InstallerOutputLine<'a> {
@@ -86,39 +81,6 @@ fn forward_installer_output<R: BufRead, U: Write, C: Write>(
         }
     }
     user_interface_error.or(console_error).map_or(Ok(()), Err)
-}
-
-fn patch_update_binary(script: &[u8], mkbootfs: &Path) -> Result<Vec<u8>> {
-    let matches = script
-        .windows(PATCH_MARKER.len())
-        .enumerate()
-        .filter_map(|(index, candidate)| (candidate == PATCH_MARKER).then_some(index))
-        .collect::<Vec<_>>();
-
-    if matches.is_empty() {
-        bail!("AnyKernel3 update-binary does not contain the mkbootfs injection marker");
-    }
-    if matches.len() != 1 {
-        bail!("AnyKernel3 update-binary contains multiple mkbootfs injection markers");
-    }
-
-    let mkbootfs = mkbootfs
-        .to_str()
-        .ok_or_else(|| anyhow::anyhow!("mkbootfs path is not valid UTF-8"))?;
-    if mkbootfs.contains('\0') {
-        bail!("mkbootfs path contains a NUL byte");
-    }
-    let injection = format!(
-        "cp -f {} \"$AKHOME/tools/mkbootfs\" || exit 1; ",
-        shell_quote(mkbootfs)
-    );
-
-    let marker = matches[0];
-    let mut patched = Vec::with_capacity(script.len() + injection.len());
-    patched.extend_from_slice(&script[..marker]);
-    patched.extend_from_slice(injection.as_bytes());
-    patched.extend_from_slice(&script[marker..]);
-    Ok(patched)
 }
 
 fn select_update_binary<I, S>(entries: I) -> Result<usize>
@@ -187,7 +149,7 @@ where
 mod android {
     use std::{
         fs::{self, File},
-        io::{BufReader, Read},
+        io::{self, BufReader},
         path::{Path, PathBuf},
         process::{Command, Stdio},
     };
@@ -199,13 +161,10 @@ mod android {
         android::{resetprop, utils},
         anykernel3::{
             Slot, UPDATE_BINARY_ENTRY, combine_results, ensure_installer_success,
-            forward_installer_output, installer_arguments, patch_update_binary, run_then_restore,
-            select_update_binary,
+            forward_installer_output, installer_arguments, run_then_restore, select_update_binary,
         },
-        assets, defs,
+        banner, defs,
     };
-
-    const MAX_UPDATE_BINARY_SIZE: u64 = 4 * 1024 * 1024;
 
     struct SlotOverride {
         original: String,
@@ -258,75 +217,58 @@ mod android {
         }
     }
 
-    fn read_update_binary(zip_path: &Path) -> Result<Vec<u8>> {
+    fn extract_update_binary(temp_dir: &TempDir, zip_path: &Path) -> Result<PathBuf> {
         let file = File::open(zip_path)
             .with_context(|| format!("failed to open {}", zip_path.display()))?;
+
         let mut archive = zip::ZipArchive::new(file)
             .with_context(|| format!("invalid ZIP archive {}", zip_path.display()))?;
 
         let mut names = Vec::with_capacity(archive.len());
+
         for index in 0..archive.len() {
             let entry = archive
                 .by_index(index)
                 .with_context(|| format!("failed to inspect ZIP entry {index}"))?;
+
             names.push((index, entry.name().to_owned()));
         }
+
         let index = select_update_binary(names.iter().map(|(index, name)| (*index, name)))?;
 
         let mut entry = archive
             .by_index(index)
             .context("failed to open AnyKernel3 update-binary")?;
+
         ensure!(
             !entry.is_dir(),
             "{UPDATE_BINARY_ENTRY} is a directory instead of a script"
         );
-        ensure!(
-            entry.size() <= MAX_UPDATE_BINARY_SIZE,
-            "{UPDATE_BINARY_ENTRY} exceeds the {} byte safety limit",
-            MAX_UPDATE_BINARY_SIZE
-        );
 
-        let expected_size = entry.size();
-        let mut script = Vec::with_capacity(expected_size as usize);
-        (&mut entry)
-            .take(MAX_UPDATE_BINARY_SIZE + 1)
-            .read_to_end(&mut script)
-            .context("failed to read AnyKernel3 update-binary")?;
-        ensure!(
-            script.len() as u64 <= MAX_UPDATE_BINARY_SIZE,
-            "{UPDATE_BINARY_ENTRY} exceeds the {} byte safety limit",
-            MAX_UPDATE_BINARY_SIZE
-        );
-        ensure!(
-            script.len() as u64 == expected_size,
-            "AnyKernel3 update-binary was truncated while reading"
-        );
-        ensure!(
-            !script.contains(&0),
-            "AnyKernel3 update-binary contains a NUL byte"
-        );
-        Ok(script)
-    }
+        let update_binary = temp_dir.path().join(UPDATE_BINARY_ENTRY);
 
-    fn prepare(temp_dir: &TempDir, zip_path: &Path) -> Result<PathBuf> {
-        eprintln!("- Preparing AnyKernel3 package");
-        let script = read_update_binary(zip_path)?;
-        let patched = patch_update_binary(&script, Path::new(assets::MKBOOTFS_PATH))?;
-        assets::ensure_binaries(false).context("failed to extract embedded binary assets")?;
-        fs::create_dir_all(temp_dir.path().join("tmp"))
-            .context("failed to create the AnyKernel3 POSTINSTALL tmp directory")?;
-
-        let update_binary = temp_dir
-            .path()
-            .join("META-INF/com/google/android/update-binary");
         fs::create_dir_all(
             update_binary
                 .parent()
                 .context("update-binary path has no parent")?,
         )
-        .context("failed to create AnyKernel3 script directory")?;
-        fs::write(&update_binary, patched).context("failed to write patched update-binary")?;
+        .context("failed to create update-binary directory")?;
+
+        let mut output = File::create(&update_binary).context("failed to create update-binary")?;
+
+        io::copy(&mut entry, &mut output).context("failed to extract update-binary")?;
+
         Ok(update_binary)
+    }
+
+    fn prepare(temp_dir: &TempDir, zip_path: &Path) -> Result<PathBuf> {
+        println!("{}", banner::print_banner());
+        println!("- Extracting AnyKernel3");
+
+        fs::create_dir_all(temp_dir.path().join("tmp"))
+            .context("failed to create the AnyKernel3 POSTINSTALL tmp directory")?;
+
+        extract_update_binary(temp_dir, zip_path)
     }
 
     fn run_installer(
@@ -335,7 +277,7 @@ mod android {
         zip_path: &Path,
         slot: Option<Slot>,
     ) -> Result<()> {
-        eprintln!("- Running AnyKernel3 installer");
+        println!("- Executing AnyKernel3 installer");
         let mut command = Command::new("/system/bin/sh");
         command
             .arg(update_binary)
@@ -412,7 +354,7 @@ mod android {
             cleanup_result,
             "failed to clean the AnyKernel3 working directory",
         )?;
-        eprintln!("- AnyKernel3 installation completed");
+        println!("- Done!");
         Ok(())
     }
 }

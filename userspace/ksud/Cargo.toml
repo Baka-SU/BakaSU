@@ -12,6 +12,7 @@ const_format = "0.2"
 log = "0.4"
 rust-embed = { version = "8", features = [
   "debug-embed",
+  "include-exclude",
   "compression", # must clean build after updating binaries
 ] }
 which = "8"

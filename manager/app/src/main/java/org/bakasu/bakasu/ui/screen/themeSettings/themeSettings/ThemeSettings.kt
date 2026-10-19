@@ -653,7 +653,7 @@ private fun AppearanceSettings(
             }
         }
 
-        item(visible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        item(visible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             SettingsSwitchWidget(
                 icon = Icons.TwoTone.BlurOn,
                 title = stringResource(id = R.string.settings_config_enable_blur),
@@ -668,7 +668,7 @@ private fun AppearanceSettings(
             )
         }
 
-        item(visible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isPortrait) {
+        item(visible = isPortrait) {
             SettingsSwitchWidget(
                 icon = Icons.TwoTone.Dock,
                 title = stringResource(R.string.enable_floating_bottom_bar),
@@ -984,7 +984,7 @@ private fun SegmentedColumnScope.backgroundAdjustmentControls(
     }
 
     item(
-        visible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && state.useDynamicColor,
+        visible = state.useDynamicColor,
         topPadding = 1.dp,
     ) {
         SettingsSwitchWidget(
