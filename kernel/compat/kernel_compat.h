@@ -111,12 +111,7 @@ static_assert(1 == 0, "Unsupported architecture!");
 #define ksyscall(...) __ksyscall_exp(ksyscall_, __ksyscall_count_args(__VA_ARGS__))(__VA_ARGS__)
 
 #define ksu_close_fd(fd) ({ ksyscall(close, fd); })
-#define ksu_sys_setns(fd, flags) ({ ksyscall(setns, fd, flags); })
 #define ksu_sys_umount(mnt, flags) ({ ksyscall(umount, (char __user *)mnt, flags); })
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
-#define ksys_unshare(flags) ({ ksyscall(unshare, flags); })
-#endif
 
 /*
  * Leagcy Huawei Hisi Devices info Start
