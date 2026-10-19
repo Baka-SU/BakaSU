@@ -67,6 +67,69 @@ repository depend on a ViewModel or UI component, and do not move repository wor
 
 ---
 
+## Wear Manager structure
+
+The phone and the watch are one Gradle module (`:app`), one package (`org.bakasu.bakasu`) and one
+Koin container. The Wear Manager shares `data/`, `domain/` and the ViewModels with the phone; only
+its UI and a few Wear-only data sources are separate.
+
+### Entry points
+
+* `KernelSUApplication` starts Koin and runs `InitializeApplicationUseCase` for both form factors.
+* `ui/MainActivity.kt` checks `PackageManager.FEATURE_WATCH` and hands watches over to
+  `ui/wear/WearMainActivity.kt` by component name, so phone code imports nothing from `ui.wear`.
+  Do not add further watch branches to phone activities.
+* `WearMainActivity` applies the language, initializes the manager, refreshes the home and app
+  lists, and shows loading, error or `WearManagerScreen` according to `StartupState`.
+* `WearActivity` is the shared base of the Wear activities; it only intercepts `KEYCODE_BACK` when
+  the user enables the block-back-key option.
+* `WearWebUIActivity` hosts module WebUI on the watch, and `WearFilePickerActivity` answers SAF
+  picker requests on watches without DocumentsUI (`exported=false`, low intent-filter priority).
+
+### Wear-only data sources
+
+* `data/file`: `WearFileRepository` (uses `SuFile` with root, plain `File` otherwise, still limited
+  by the process permissions) and `WearFileProvider`.
+* `data/webui`: `WearWebUiBridge` and `WearWebUiService`, the Data Layer bridge that lets the phone
+  run a watch module WebUI.
+* `WearPreferencesViewModel` holds the watch-only preferences (pickers, links, screen shape, long
+  press feedback, keep screen on, back handling). Other Wear pages reuse the phone ViewModels, such
+  as `HomeViewModel`, `SuperUserViewModel`, `ModuleViewModel`, `SettingsViewModel`,
+  `SulogViewModel`, `SuSFSViewModel`, `FlashViewModel`, `KernelFlashViewModel` and
+  `ExecuteModuleActionViewModel`.
+* `play-services-wearable` is still used by phone links, the WebUI Data Layer messages and online
+  templates; keep it while those features call it.
+
+### Wear UI
+
+* Pages live in `ui/wear/`; Wear components live in `ui/wear/component/`, with the Wear settings
+  adapters in `ui/wear/component/settings/`. Phone and Wear UI must not use each other's components;
+  the `WearPhoneComponentBoundary` lint check warns when they do. Only the dialog API
+  (`rememberCustomDialog`, `DialogHandle`) and `PackageIcon` are shared; non-UI helpers such as the
+  `module.prop` parser `ZipFileDetector` live in `data/`.
+* `WearManager.kt` owns one `AppScaffold`, the four-page main `WearHorizontalPager` and a Navigation 3 `NavDisplay`;
+  `WearRoutes.kt` declares the serializable destinations. Open and close pages through the
+  `open`/`back` helpers and add a `WearRoute` for every new page instead of in-page string stacks.
+* Lists use `WearList` (`ScreenScaffold` + `TransformingLazyColumn`), which applies the round-screen
+  transformation and keeps items unscaled on square screens. Build pages from `WearPageHeader`,
+  `WearSectionHeader`, `WearChip`, `WearActionButton` and the settings adapters.
+* `WearSubPage` holds input or detail pages nested in one destination; `WearLogPage` and
+  `rememberWearLogSaver` show and save the output of flash and script runs.
+* Confirmations use `rememberWearConfirmDialog`; one-shot results use the M3
+  `SuccessConfirmationDialog`/`FailureConfirmationDialog`.
+* `WearManagerTheme` applies DPI, screen shape, haptics, keep screen on, dynamic color, background
+  and card opacity, sharing `ThemeConfig`, `BackgroundManager` and the settings use cases with the
+  phone.
+* Below API 36 `WearSwipeToDismissBox` provides the in-app swipe back; from API 36 the platform
+  predictive back and Wear Navigation 3 handle it.
+
+### Wear verification
+
+Gradle builds do not cover SU authorization, SUSFS kernels, round and square layouts, predictive
+back or the phone connection; check those on a watch when a change touches them.
+
+---
+
 ## UI component conventions
 
 ### Canonical component location
@@ -182,9 +245,9 @@ instead.
   surfaces.
 * Extend the nearest existing pattern before creating a new abstraction.
 * Avoid duplicating existing widgets, shapes, or resource-access patterns.
-* Use `org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction` for every pager. Do not
-  call
-  `HorizontalPager` directly from screens; pager gesture arbitration belongs in this component.
+* Use `org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction` for every phone pager and
+  `org.bakasu.bakasu.ui.wear.component.WearHorizontalPager` for every Wear pager. Do not call
+  `HorizontalPager` directly from screens; pager gesture arbitration belongs in these components.
 
 ---
 
@@ -223,7 +286,7 @@ Before completing a UI or settings task, verify:
 * Standard settings rows use the relevant `SettingsBaseWidget` wrapper instead of a hand-built
   equivalent.
 * Dynamic corner-shape animation uses `AnimatedShape.kt` when applicable.
-* Every pager is rendered through `HorizontalPagerWithInteraction`.
+* Every pager is rendered through `HorizontalPagerWithInteraction` (phone) or `WearHorizontalPager` (Wear).
 * No user-visible string is hardcoded.
 * Compose strings use `stringResource` whenever possible.
 * Verify formatting with `./gradlew spotlessCheck` and ensure it passes before reporting completion.
