@@ -71,7 +71,6 @@ import org.bakasu.bakasu.domain.usecase.ClearDynamicManagerUseCase
 import org.bakasu.bakasu.domain.usecase.ConfigureSuLogUseCase
 import org.bakasu.bakasu.domain.usecase.ControlAppUseCase
 import org.bakasu.bakasu.domain.usecase.DeleteProfileTemplateUseCase
-import org.bakasu.bakasu.domain.usecase.DiscoverModuleRepositoriesUseCase
 import org.bakasu.bakasu.domain.usecase.EnableSulogUseCase
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.EnqueueManagerUpdateUseCase
@@ -374,7 +373,6 @@ val useCaseModule = module {
     factoryOf(::ResolveModuleUpdateUseCase)
     factoryOf(::GetModuleUpdateChangelogUseCase)
     factoryOf(::ObserveRepositorySourcesUseCase)
-    factoryOf(::DiscoverModuleRepositoriesUseCase)
     factoryOf(::AddModuleRepositoryUseCase)
     factoryOf(::RenameModuleRepositoryUseCase)
     factoryOf(::RemoveModuleRepositoryUseCase)

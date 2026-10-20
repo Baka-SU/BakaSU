@@ -10,14 +10,6 @@ internal data class RepositoryFeedDto(
     @SerializedName("description") val description: String? = null,
 )
 
-internal data class RepositoryDiscoveryDto(
-    @SerializedName("url") val url: String? = null,
-    @SerializedName("name") val name: String? = null,
-    @SerializedName("id") val id: String? = null,
-    @SerializedName("description") val description: String? = null,
-    @SerializedName("modules_count") val moduleCount: Int? = null,
-)
-
 internal data class RepositoryMetadataDto(@SerializedName("version") val version: Int? = null)
 
 internal data class RepositoryModuleDto(

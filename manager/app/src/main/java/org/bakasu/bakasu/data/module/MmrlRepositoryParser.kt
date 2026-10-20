@@ -50,20 +50,6 @@ object MmrlRepositoryParser {
         return RepositoryFeed(source.copy(moduleCount = modules.size), modules)
     }
 
-    fun discovery(body: String): List<RepositorySource> = decode<List<RepositoryDiscoveryDto?>>(body)
-        .mapNotNull { item ->
-            if (item == null) fail(RepositoryError.INVALID_FEED)
-            val url = runCatching { canonicalUrl(item.url.orEmpty()) }.getOrNull() ?: return@mapNotNull null
-            val name = item.name?.takeIf(String::isNotBlank) ?: return@mapNotNull null
-            RepositorySource(
-                url,
-                name,
-                item.id.orEmpty(),
-                item.description.orEmpty(),
-                moduleCount = item.moduleCount?.takeIf { it >= 0 },
-            )
-        }.distinctBy { it.url }
-
     private fun module(source: RepositorySource, item: RepositoryModuleDto): CatalogModule {
         val id = item.id.orEmpty()
         if (id.isBlank()) fail(RepositoryError.INVALID_FEED)

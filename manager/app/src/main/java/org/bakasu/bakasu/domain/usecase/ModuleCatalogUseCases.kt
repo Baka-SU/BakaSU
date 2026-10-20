@@ -15,7 +15,6 @@ import org.bakasu.bakasu.domain.model.ModuleReadme
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
 import org.bakasu.bakasu.domain.model.RepositoryApiType
-import org.bakasu.bakasu.domain.model.RepositorySource
 
 class ObserveCatalogModulesUseCase(private val repository: ModuleCatalogRepository) {
     operator fun invoke() = repository.modules
@@ -81,12 +80,8 @@ class ObserveRepositorySourcesUseCase(private val repository: ModuleCatalogRepos
     val failures get() = repository.failures
 }
 
-class DiscoverModuleRepositoriesUseCase(private val repository: ModuleCatalogRepository) {
-    suspend operator fun invoke() = repository.discover()
-}
-
 class AddModuleRepositoryUseCase(private val repository: ModuleCatalogRepository) {
-    suspend operator fun invoke(url: String, metadata: RepositorySource? = null, apiType: RepositoryApiType = metadata?.apiType ?: RepositoryApiType.MMRL) = repository.add(url, metadata, apiType)
+    suspend operator fun invoke(url: String, apiType: RepositoryApiType = RepositoryApiType.MMRL) = repository.add(url, apiType)
 }
 
 class RenameModuleRepositoryUseCase(private val repository: ModuleCatalogRepository) {

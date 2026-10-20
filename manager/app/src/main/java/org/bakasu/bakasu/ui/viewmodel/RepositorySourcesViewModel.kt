@@ -14,28 +14,23 @@ import org.bakasu.bakasu.domain.model.RepositoryApiType
 import org.bakasu.bakasu.domain.model.RepositoryFailure
 import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.usecase.AddModuleRepositoryUseCase
-import org.bakasu.bakasu.domain.usecase.DiscoverModuleRepositoriesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.RenameModuleRepositoryUseCase
 
 data class RepositorySourcesUiState(
     val sources: List<RepositorySource> = emptyList(),
-    val discovered: List<RepositorySource> = emptyList(),
     val failures: Map<String, RepositoryFailure> = emptyMap(),
     val url: String = "",
     val apiType: RepositoryApiType = RepositoryApiType.KERNEL_SU,
-    val discovering: Boolean = false,
     val busy: Boolean = false,
     val addingUrl: String? = null,
-    val discoveryError: RepositoryFailure? = null,
     val error: RepositoryFailure? = null,
     val added: RepositorySource? = null,
 )
 
 class RepositorySourcesViewModel(
     private val observe: ObserveRepositorySourcesUseCase,
-    private val discover: DiscoverModuleRepositoriesUseCase,
     private val addRepository: AddModuleRepositoryUseCase,
     private val renameRepository: RenameModuleRepositoryUseCase,
     private val removeRepository: RemoveModuleRepositoryUseCase,
@@ -48,7 +43,6 @@ class RepositorySourcesViewModel(
                 ?: RepositoryApiType.KERNEL_SU,
         ),
     )
-    private var discoveryLoaded = false
     val state = combine(local, observe.sources, observe.failures) { state, sources, failures ->
         state.copy(sources = sources, failures = failures)
     }.stateIn(
@@ -75,25 +69,11 @@ class RepositorySourcesViewModel(
         local.update { it.copy(error = null) }
     }
 
-    fun loadDiscovery(force: Boolean = false) {
-        if (local.value.discovering || (!force && discoveryLoaded)) return
-        local.update { it.copy(discovering = true, discoveryError = null) }
-        launchTracked(onComplete = { local.update { it.copy(discovering = false) } }) {
-            discover().onSuccess { items ->
-                local.update { it.copy(discovered = items) }
-            }.onFailure { error ->
-                local.update { it.copy(discoveryError = RepositoryFailure.from(error)) }
-            }
-            discoveryLoaded = true
-        }
-    }
-
     fun add(
         url: String = local.value.url,
-        metadata: RepositorySource? = null,
-        apiType: RepositoryApiType = metadata?.apiType ?: local.value.apiType,
+        apiType: RepositoryApiType = local.value.apiType,
     ) = perform(addingUrl = url) {
-        addRepository(url, metadata, apiType).onSuccess { source -> local.update { it.copy(added = source) } }
+        addRepository(url, apiType).onSuccess { source -> local.update { it.copy(added = source) } }
             .onFailure { error -> local.update { it.copy(error = RepositoryFailure.from(error)) } }
     }
 

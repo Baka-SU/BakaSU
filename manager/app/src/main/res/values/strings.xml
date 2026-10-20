@@ -582,7 +582,6 @@
     <string name="repo_sort">Sort</string>
     <string name="repo_manage">Manage repositories</string>
     <string name="repo_select_repository">Select repository</string>
-    <string name="repo_discover">Discover MMRL</string>
     <string name="repo_custom_url">Custom URL</string>
     <string name="repo_url">Repository URL</string>
     <string name="repo_url_hint">Enter MMRL repository URL</string>
@@ -594,8 +593,6 @@
     <string name="repo_display_name_hint">Leave blank to use the repository name. The URL stays unchanged.</string>
     <string name="repo_save_name">Save</string>
     <string name="repo_error_module_archive">This download is not a valid module ZIP. Try another release.</string>
-    <string name="repo_added">Added</string>
-    <string name="repo_discovery_empty">No repositories found</string>
     <string name="repo_error_url">Check the repository link and try again.</string>
     <string name="repo_error_feed">This URL did not return a valid module repository. Check the URL.</string>
     <string name="repo_error_format">This repository uses an unsupported format version.</string>
@@ -646,8 +643,6 @@
         <item quantity="one">%1$d module</item>
         <item quantity="other">%1$d modules</item>
     </plurals>
-    <string name="repo_googlers">Googlers Magisk Repo</string>
-    <string name="repo_googlers_description">Magisk modules from Googlers Repo</string>
     <string name="repo_install_latest">Install latest</string>
     <string name="repo_expand_changelog">Expand changelog</string>
     <string name="repo_collapse_changelog">Collapse changelog</string>

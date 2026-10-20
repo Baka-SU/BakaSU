@@ -579,7 +579,6 @@
     <string name="repo_sort">排序</string>
     <string name="repo_manage">管理仓库</string>
     <string name="repo_select_repository">选择仓库</string>
-    <string name="repo_discover">发现 MMRL</string>
     <string name="repo_custom_url">自定义 URL</string>
     <string name="repo_url">仓库 URL</string>
     <string name="repo_url_hint">输入 MMRL 仓库 URL</string>
@@ -591,8 +590,6 @@
     <string name="repo_display_name_hint">留空以使用仓库名称。URL 保持不变。</string>
     <string name="repo_save_name">保存</string>
     <string name="repo_error_module_archive">下载的文件不是有效的模块 ZIP。请尝试其他版本。</string>
-    <string name="repo_added">已添加</string>
-    <string name="repo_discovery_empty">未找到仓库</string>
     <string name="repo_error_url">请检查仓库链接后重试。</string>
     <string name="repo_error_feed">此 URL 未返回有效的模块仓库。请检查 URL。</string>
     <string name="repo_error_format">此仓库使用了不支持的格式版本。</string>
@@ -642,8 +639,6 @@
     <plurals name="repo_module_count">
         <item quantity="other">%1$d 个模块</item>
     </plurals>
-    <string name="repo_googlers">Googlers Magisk Repo</string>
-    <string name="repo_googlers_description">Googlers Repo 提供的 Magisk 模块</string>
     <string name="repo_install_latest">安装最新版本</string>
     <string name="repo_expand_changelog">展开更新日志</string>
     <string name="repo_collapse_changelog">收起更新日志</string>

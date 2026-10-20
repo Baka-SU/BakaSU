@@ -228,13 +228,6 @@ class ModuleCatalogRepository(
         }
     }
 
-    suspend fun discover(): Result<List<RepositorySource>> = attempt {
-        if (!networkStatusRepository.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)
-        val body = networkRequestRepository.fetch("https://mmrl.dev/api/repositories.json").getOrThrow()
-        MmrlRepositoryParser.discovery(body)
-            .filterNot { it.isBuiltIn }
-    }
-
     suspend fun readme(module: CatalogModule, retry: Boolean = false): Result<ModuleReadme?> = attempt {
         if (module.registryMetadata != null) return@attempt registry.forSource(module.repositoryUrl).readme(module)
         val policy = module.documentPolicy()
@@ -307,14 +300,14 @@ class ModuleCatalogRepository(
         return response.toDocument(policy)
     }
 
-    suspend fun add(url: String, metadata: RepositorySource? = null, apiType: RepositoryApiType = metadata?.apiType ?: RepositoryApiType.MMRL): Result<RepositorySource> = attempt {
+    suspend fun add(url: String, apiType: RepositoryApiType = RepositoryApiType.MMRL): Result<RepositorySource> = attempt {
         val canonical = MmrlRepositoryParser.canonicalUrl(url)
         val generation = stateMutex.withLock {
             mutableSources.value.firstOrNull { it.url == canonical }?.let { return@attempt it }
             sourceGenerations[canonical] ?: 0
         }
         if (!networkStatusRepository.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)
-        val source = (metadata?.takeIf { it.url == canonical } ?: RepositorySource(canonical, canonical)).copy(apiType = apiType)
+        val source = RepositorySource(canonical, canonical, apiType = apiType)
         val feed = withContext(Dispatchers.IO) { loadSource(source) }
         stateMutex.withLock {
             mutableSources.value.firstOrNull { it.url == canonical }?.let { return@withLock it }

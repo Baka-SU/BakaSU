@@ -61819,7 +61819,6 @@ HSPLorg/bakasu/bakasu/domain/usecase/ConfigureSuLogUseCase;-><clinit>()V
 HSPLorg/bakasu/bakasu/domain/usecase/ConfigureSuLogUseCase;-><init>(Lorg/bakasu/bakasu/data/kernel/KernelRepository;)V
 Lorg/bakasu/bakasu/domain/usecase/ControlAppUseCase;
 Lorg/bakasu/bakasu/domain/usecase/DeleteProfileTemplateUseCase;
-Lorg/bakasu/bakasu/domain/usecase/DiscoverModuleRepositoriesUseCase;
 Lorg/bakasu/bakasu/domain/usecase/EnableSulogUseCase;
 Lorg/bakasu/bakasu/domain/usecase/EnqueueDownloadUseCase;
 HSPLorg/bakasu/bakasu/domain/usecase/EnqueueDownloadUseCase;-><clinit>()V
