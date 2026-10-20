@@ -204,7 +204,6 @@
     <string name="warning_of_meta_module_title">Yêu cầu Siêu Mô-đun</string>
     <string name="warning_of_meta_module_summary">Mô-đun này muốn gắn kết /system, mà được xử lý bởi siêu mô-đun. Không có nó, mô-đun có thể không hoạt động</string>
     <string name="sort_usage_freq">Tần suất sử dụng</string>
-    <string name="no_apps_in_category">Không có ứng dụng nào trong danh mục này</string>
     <string name="susfs_config_title">Cấu hình SuSFS</string>
     <string name="susfs_config_setting_title">Cấu hình SuSFS</string>
     <string name="module_update_json">JSON cập nhật</string>

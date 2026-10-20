@@ -327,7 +327,6 @@
     <string name="sort_size">Памер</string>
     <string name="sort_usage_freq">Частата выкарыстання</string>
     <string name="reverse_order">Зваротны парадак</string>
-    <string name="no_apps_in_category">Няма заявак у гэтай катэгорыі</string>
     <string name="persistent">Пастаянны</string>
     <string name="temporary">Часовае</string>
     <string name="susfs_config_title">Канфігурацыя SuSFS</string>

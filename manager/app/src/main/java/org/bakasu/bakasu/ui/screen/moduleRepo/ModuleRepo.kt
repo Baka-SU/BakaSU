@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.screen.moduleRepo
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,29 +12,29 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.twotone.Sort
+import androidx.compose.material.icons.twotone.Add
 import androidx.compose.material.icons.twotone.Check
 import androidx.compose.material.icons.twotone.Download
-import androidx.compose.material.icons.twotone.ExpandMore
 import androidx.compose.material.icons.twotone.PlayArrow
 import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.material.icons.twotone.Star
 import androidx.compose.material.icons.twotone.Warning
+import androidx.compose.material.icons.twotone.WebAsset
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CheckableDropdownMenuItem
@@ -42,6 +43,7 @@ import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,7 +76,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.pluralStringResource
@@ -83,9 +84,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -105,8 +106,6 @@ import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
 import org.bakasu.bakasu.ui.component.CatalogCard
-import org.bakasu.bakasu.ui.component.CatalogCardHeading
-import org.bakasu.bakasu.ui.component.CatalogModuleIcon
 import org.bakasu.bakasu.ui.component.NetworkRefreshContent
 import org.bakasu.bakasu.ui.component.RepositoryEmptyContent
 import org.bakasu.bakasu.ui.component.SearchAppBar
@@ -116,12 +115,17 @@ import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.component.rememberRepositoryInstallDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
 import org.bakasu.bakasu.ui.component.repositoryErrorText
+import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
+import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
+import org.bakasu.bakasu.ui.component.settings.SettingsJumpPageWidget
+import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Navigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.screen.LabelText
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
+import org.bakasu.bakasu.ui.util.LocalBackgroundBlurProvided
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
@@ -233,16 +237,13 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                 onSearchTextChange = { query ->
                     viewModel.dispatch(ModuleRepoUiAction.Search(query))
                 },
-                searchHeaderContent = {
+                dropdownContent = {
                     ModuleRepositorySelector(
                         sources = uiState.sources,
                         selectedRepository = uiState.repositoryUrl,
                         onSelect = viewModel::selectRepository,
                         onManage = { navigator.push(Route.AddRepository) },
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp),
                     )
-                },
-                dropdownContent = {
                     Box {
                         IconButton(onClick = { showSortDropdown = true }) {
                             Icon(
@@ -381,10 +382,7 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                         NetworkRefreshContent(offline = false, onRetry = refreshModules, modifier = Modifier.fillMaxSize())
                     } else if (uiState.content != CatalogContent.LOADING) {
                         val content = uiState.content
-                        val title = when (content) {
-                            CatalogContent.SEARCH_EMPTY -> R.string.search_no_any_match
-                            else -> R.string.repo_source_empty
-                        }
+                        val title = requireNotNull(content.resId)
                         RepositoryEmptyContent(
                             title = stringResource(title),
                             description = "",
@@ -407,46 +405,8 @@ private fun ModuleRepositorySelector(
 ) {
     var showSheet by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val selectedSource = sources.firstOrNull { it.url == selectedRepository }
-    val selectedCount = selectedSource?.moduleCount
-    val selectedCountDescription = selectedCount?.let { pluralStringResource(R.plurals.repo_module_count, it, it) }
-    CatalogCard(
-        modifier = modifier.fillMaxWidth().semantics { role = Role.Button },
-        onClick = { showSheet = true },
-        shape = RoundedCornerShape(20.dp),
-        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 40.dp)
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = selectedSource?.displayName ?: stringResource(R.string.repo_configured_sources),
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (selectedCount != null) {
-                Text(
-                    text = selectedCount.toString(),
-                    modifier = Modifier.semantics { contentDescription = selectedCountDescription.orEmpty() },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-            }
-            Icon(
-                imageVector = Icons.TwoTone.ExpandMore,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-        }
+    IconButton(onClick = { showSheet = true }, modifier = modifier) {
+        Icon(Icons.TwoTone.Settings, contentDescription = stringResource(R.string.repo_manage))
     }
     if (showSheet) {
         val sheetState = rememberBottomSheetState(
@@ -456,87 +416,61 @@ private fun ModuleRepositorySelector(
         ModalBottomSheet(
             sheetState = sheetState,
             onDismissRequest = { showSheet = false },
-            containerColor = MaterialTheme.colorScheme.surfaceBright,
         ) {
-            Text(
-                text = stringResource(R.string.repo_select_repository),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 16.dp).semantics { heading() },
-            )
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth().weight(1f, fill = false).selectableGroup(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                items(sources, key = { it.url }) { source ->
-                    val selected = source.url == selectedRepository
-                    val countDescription = source.moduleCount?.let { pluralStringResource(R.plurals.repo_module_count, it, it) }
-                    val contentColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 64.dp)
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                            .selectable(selected = selected, role = Role.RadioButton) {
+            CompositionLocalProvider(LocalBackgroundBlurProvided provides true) {
+                Text(
+                    text = stringResource(R.string.repo_select_repository),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 16.dp).semantics { heading() },
+                )
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
+                        .selectableGroup(),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                ) {
+                    lazySegmentColumn(items = sources, key = { _, source -> source.url }) { _, source ->
+                        val selected = source.url == selectedRepository
+                        val countDescription = source.moduleCount?.let { pluralStringResource(R.plurals.repo_module_count, it, it) }
+                        SettingsBaseWidget(
+                            modifier = Modifier.semantics {
+                                role = Role.RadioButton
+                                this.selected = selected
+                            },
+                            title = source.displayName,
+                            description = countDescription ?: source.shortUrl(),
+                            selected = selected,
+                            iconPlaceholder = false,
+                            isOnBackground = false,
+                            onClick = {
                                 onSelect(source.url)
                                 scope.launch {
                                     sheetState.hide()
                                     showSheet = false
                                 }
-                            }
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                text = source.displayName,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-                                color = contentColor,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            if (countDescription != null) {
-                                Text(
-                                    text = countDescription,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (selected) contentColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                        if (selected) {
-                            Icon(
-                                imageVector = Icons.TwoTone.Check,
-                                contentDescription = null,
-                                tint = contentColor,
-                                modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                            )
-                        } else {
-                            Spacer(Modifier.size(MenuDefaults.LeadingIconSize))
-                        }
+                            },
+                            trailingContent = {
+                                if (selected) Icon(Icons.TwoTone.Check, contentDescription = null)
+                            },
+                        )
                     }
                 }
-            }
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp), thickness = Dp.Hairline)
-            TextButton(
-                onClick = {
-                    scope.launch {
-                        sheetState.hide()
-                        showSheet = false
-                        onManage()
+                SegmentedColumn(modifier = Modifier.padding(bottom = 16.dp)) {
+                    item {
+                        SettingsJumpPageWidget(
+                            icon = Icons.TwoTone.Add,
+                            title = stringResource(R.string.repo_add_repository),
+                            description = stringResource(R.string.repo_manage),
+                            renderBackgroundBlur = false,
+                            onClick = {
+                                scope.launch {
+                                    sheetState.hide()
+                                    showSheet = false
+                                    onManage()
+                                }
+                            },
+                        )
                     }
-                },
-                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 16.dp),
-            ) {
-                Icon(Icons.TwoTone.Settings, contentDescription = null, modifier = Modifier.size(20.dp))
-                Text(
-                    text = stringResource(R.string.repo_manage),
-                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                    textAlign = TextAlign.Start,
-                )
-                Icon(Icons.AutoMirrored.TwoTone.KeyboardArrowRight, contentDescription = null)
+                }
             }
         }
     }
@@ -577,112 +511,75 @@ fun OnlineModuleItem(
     quickInstallEnabled: Boolean = true,
 ) {
     val metadataColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val locale = LocalConfiguration.current.locales[0]
-    CatalogCard(onClick = onOpen) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Column(Modifier.weight(1f)) {
-                CatalogCardHeading(
-                    title = module.moduleName,
-                    leadingContent = {
-                        CatalogModuleIcon(
-                            url = module.registryMetadata?.iconUrl ?: module.iconUrl,
-                            origin = module.registryMetadata?.let { module.repositoryUrl },
-                            modifier = Modifier.padding(end = 8.dp),
-                        )
-                    },
-                )
-                Text(
-                    text = stringResource(R.string.repo_module_id_value, module.moduleId),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = metadataColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (module.authors.isNotBlank()) {
-                    Text(
-                        text = "${stringResource(R.string.module_author)}: ${module.authors}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = metadataColor,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+    CatalogCard(onClick = onOpen, contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = module.moduleName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                maxLines = 1,
+            )
+            if (module.stargazerCount > 0) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(
+                        imageVector = Icons.TwoTone.Star,
+                        contentDescription = stringResource(R.string.repo_stars),
+                        tint = metadataColor,
+                        modifier = Modifier.size(16.dp),
                     )
+                    Text(module.stargazerCount.toString(), style = MaterialTheme.typography.bodySmall, color = metadataColor)
                 }
+            }
+        }
+        Text(
+            text = stringResource(R.string.repo_module_version_value, module.latestRelease, module.latestVersionCode),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            text = stringResource(R.string.repo_module_author_value, module.authors),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = module.summary,
+            style = MaterialTheme.typography.bodySmall,
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 4,
+        )
+        Spacer(Modifier.height(12.dp))
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
+        ) {
+            LabelText(label = module.moduleId, containerColor = MaterialTheme.colorScheme.primary)
+            if (module.metamodule) {
+                LabelText(label = stringResource(R.string.module_meta_label), containerColor = MaterialTheme.colorScheme.tertiary)
+            }
+            if (module.isScript) {
+                LabelText(label = stringResource(R.string.module_repo_script_badge), containerColor = MaterialTheme.colorScheme.tertiary)
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider(thickness = Dp.Hairline)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FilledTonalButton(
+                onClick = onOpen,
+                modifier = Modifier.defaultMinSize(minWidth = 52.dp, minHeight = 32.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
+            ) {
+                Icon(Icons.TwoTone.WebAsset, contentDescription = stringResource(R.string.learn_more), modifier = Modifier.size(20.dp))
             }
             if (onQuickInstall != null && (!module.detailLoaded || module.latestAsset?.assets?.isNotEmpty() == true)) {
                 key(module.latestAsset?.assets) {
                     QuickInstallButton(module, quickInstallLoading, quickInstallEnabled, onQuickInstall)
                 }
-            }
-        }
-        if (module.summary.isNotBlank()) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = module.summary,
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = metadataColor,
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 4,
-            )
-        }
-        if (module.isScript || module.metamodule) {
-            FlowRow(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                itemVerticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (module.isScript) {
-                    LabelText(label = stringResource(R.string.module_repo_script_badge), containerColor = MaterialTheme.colorScheme.tertiary)
-                }
-                if (module.metamodule) {
-                    LabelText(
-                        label = stringResource(R.string.module_meta_label),
-                        containerColor = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        HorizontalDivider(thickness = Dp.Hairline)
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = module.latestRelease,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = metadataColor,
-                    modifier = Modifier.weight(1f, fill = false),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (module.stargazerCount > 0) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Icon(
-                            imageVector = Icons.TwoTone.Star,
-                            contentDescription = stringResource(R.string.repo_stars),
-                            tint = metadataColor,
-                            modifier = Modifier.size(14.dp),
-                        )
-                        Text(module.stargazerCount.toString(), style = MaterialTheme.typography.bodySmall, color = metadataColor)
-                    }
-                }
-            }
-            if (module.latestReleaseTime.isNotBlank()) {
-                Text(
-                    text = releaseDate(module.latestReleaseTime, locale),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = metadataColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
             }
         }
     }
@@ -713,7 +610,12 @@ private fun QuickInstallButton(module: CatalogModule, loading: Boolean, enabled:
     } else {
         stringResource(if (module.isScript) R.string.script_run else R.string.repo_install_latest)
     }
-    IconButton(onClick = onClick, enabled = enabled && !loading && !downloading, modifier = Modifier.size(48.dp).semantics { contentDescription = description }) {
+    FilledTonalButton(
+        onClick = onClick,
+        enabled = enabled && !loading && !downloading,
+        modifier = Modifier.defaultMinSize(minWidth = 52.dp, minHeight = 32.dp).semantics { contentDescription = description },
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
+    ) {
         when {
             loading -> LoadingIndicator(modifier = Modifier.size(24.dp))
             downloading -> CircularProgressIndicator(progress = { progress / 100f }, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)

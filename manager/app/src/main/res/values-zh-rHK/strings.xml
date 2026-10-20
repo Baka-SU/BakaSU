@@ -268,7 +268,6 @@
     <string name="warning_of_meta_module_title">需要元模組</string>
     <string name="warning_of_meta_module_summary">此模組想掛載 /system，此操作由 meta 模組處理。若缺少它，模組可能無法正常運作</string>
     <string name="sort_usage_freq">使用頻率</string>
-    <string name="no_apps_in_category">此分類中冇應用程式</string>
     <string name="persistent">持久</string>
     <string name="temporary">臨時</string>
     <string name="susfs_config_title">SuSFS 設定</string>

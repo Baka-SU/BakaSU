@@ -18,24 +18,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.domain.model.RepositoryError
 import org.bakasu.bakasu.domain.model.RepositoryFailure
 
 @Composable
-fun repositoryErrorText(error: RepositoryError): String = stringResource(
-    when (error) {
-        RepositoryError.INVALID_URL -> R.string.repo_error_url
-        RepositoryError.INVALID_FEED -> R.string.repo_error_feed
-        RepositoryError.UNSUPPORTED_FORMAT -> R.string.repo_error_format
-        RepositoryError.NETWORK -> R.string.repo_error_network
-        RepositoryError.OFFLINE -> R.string.network_offline
-        RepositoryError.STORAGE -> R.string.repo_error_storage
-    },
-)
-
-@Composable
 fun repositoryErrorText(failure: RepositoryFailure): String {
-    val reason = repositoryErrorText(failure.reason)
+    val reason = stringResource(
+        failure.reason.error,
+    )
     return failure.httpStatus?.let { stringResource(R.string.repo_error_http, reason, it) } ?: reason
 }
 

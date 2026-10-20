@@ -1,11 +1,15 @@
 package org.bakasu.bakasu.ui.screen.moduleRepo
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,10 +18,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Add
@@ -29,23 +33,23 @@ import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExposedDropdownMenu
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDropdownMenuItem
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,9 +57,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -72,17 +80,24 @@ import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.ui.component.CatalogCard
 import org.bakasu.bakasu.ui.component.CatalogCardHeading
 import org.bakasu.bakasu.ui.component.ConfirmResult
-import org.bakasu.bakasu.ui.component.FilledTonalLoadingButton
-import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
-import org.bakasu.bakasu.ui.component.NetworkRefreshContent
-import org.bakasu.bakasu.ui.component.RepositoryEmptyContent
-import org.bakasu.bakasu.ui.component.RepositoryPageScaffold
+import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
-import org.bakasu.bakasu.ui.component.rememberRepositoryScrollBehavior
 import org.bakasu.bakasu.ui.component.repositoryErrorText
+import org.bakasu.bakasu.ui.component.settings.AppBackButton
+import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
+import org.bakasu.bakasu.ui.component.settings.SettingsDropdownWidget
+import org.bakasu.bakasu.ui.component.settings.SettingsTextFieldWidget
+import org.bakasu.bakasu.ui.navigation.LocalNavigator
+import org.bakasu.bakasu.ui.theme.CardConfig
+import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
+import org.bakasu.bakasu.ui.util.LocalBackgroundBlurProvided
+import org.bakasu.bakasu.ui.util.LocalSnackbarHost
+import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 internal fun RepositorySource.shortUrl() = url.toHttpUrlOrNull()?.let {
@@ -94,16 +109,22 @@ internal fun RepositorySource.shortUrl() = url.toHttpUrlOrNull()?.let {
 fun AddRepositoryScreen() {
     val viewModel = koinViewModel<RepositorySourcesViewModel>(key = "add-repository")
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val pager = rememberPagerState(initialPage = 1) { 2 }
-    val discoverScroll = rememberLazyListState()
     val customScroll = rememberLazyListState()
-    val scrollBehavior = rememberRepositoryScrollBehavior(pager.currentPage)
-    val scope = rememberCoroutineScope()
-    val titles = listOf(stringResource(R.string.repo_discover), stringResource(R.string.repo_server_settings))
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        rememberTopAppBarState(
+            initialHeightOffset = -154f,
+            initialHeightOffsetLimit = -154f, // from debugger
+        ),
+    )
     val apiTypes = listOf(RepositoryApiType.KERNEL_SU, RepositoryApiType.MMRL)
-    val apiTypeLabels = listOf(stringResource(R.string.repo_api_kernel_su), stringResource(R.string.repo_api_mmrl))
+    val apiTypeLabels = apiTypes.map { stringResource(it.resId) }
     val addForm = rememberCustomDialog { dismiss ->
-        var apiTypeExpanded by remember { mutableStateOf(false) }
+        val urlField = rememberTextFieldState(initialText = state.url)
+        LaunchedEffect(urlField) {
+            snapshotFlow { urlField.text.toString() }.collect { value ->
+                if (value != state.url) viewModel.setUrl(value)
+            }
+        }
         val dismissAddForm = {
             if (!state.busy) {
                 viewModel.clearError()
@@ -114,84 +135,52 @@ fun AddRepositoryScreen() {
             onDismissRequest = dismissAddForm,
             title = { Text(stringResource(R.string.repo_add_repository)) },
             text = {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    ExposedDropdownMenuBox(
-                        expanded = apiTypeExpanded && !state.busy,
-                        onExpandedChange = { apiTypeExpanded = it && !state.busy },
-                        modifier = Modifier.fillMaxWidth(),
+                CompositionLocalProvider(LocalBackgroundBlurProvided provides true) {
+                    SegmentedColumn(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        contentPadding = PaddingValues(0.dp),
                     ) {
-                        OutlinedTextField(
-                            value = apiTypeLabels[apiTypes.indexOf(state.apiType)],
-                            onValueChange = {},
-                            readOnly = true,
-                            singleLine = true,
-                            enabled = !state.busy,
-                            label = { Text(stringResource(R.string.repo_api_type)) },
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = apiTypeExpanded && !state.busy)
-                            },
-                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = !state.busy),
-                        )
-                        ExposedDropdownMenu(
-                            expanded = apiTypeExpanded && !state.busy,
-                            onDismissRequest = { apiTypeExpanded = false },
-                            containerColor = MenuDefaults.groupStandardContainerColor,
-                            shape = MenuDefaults.standaloneGroupShape,
-                        ) {
-                            apiTypes.forEachIndexed { index, type ->
-                                SelectableDropdownMenuItem(
-                                    selected = state.apiType == type,
-                                    onClick = {
-                                        viewModel.setApiType(type)
-                                        apiTypeExpanded = false
-                                    },
-                                    text = { Text(apiTypeLabels[index]) },
-                                    shapes = MenuDefaults.itemShape(index = index, count = apiTypes.size),
-                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-                                )
-                            }
+                        item {
+                            SettingsDropdownWidget(
+                                title = stringResource(R.string.repo_api_type),
+                                description = apiTypeLabels[apiTypes.indexOf(state.apiType)],
+                                iconPlaceholder = false,
+                                enabled = !state.busy,
+                                renderBackgroundBlur = false,
+                                choice = apiTypes.indexOf(state.apiType),
+                                data = apiTypeLabels,
+                                onChoiceChange = { viewModel.setApiType(apiTypes[it]) },
+                            )
+                        }
+                        item {
+                            SettingsTextFieldWidget(
+                                state = urlField,
+                                title = stringResource(R.string.repo_server_url),
+                                error = state.error?.let { repositoryErrorText(it) }.orEmpty(),
+                                enabled = !state.busy,
+                                renderBackgroundBlur = false,
+                                lineLimits = TextFieldLineLimits.SingleLine,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
+                                onKeyboardAction = {
+                                    if (urlField.text.isNotBlank() && !state.busy) viewModel.add(url = urlField.text.toString())
+                                },
+                            )
                         }
                     }
-                    OutlinedTextField(
-                        value = state.url,
-                        onValueChange = viewModel::setUrl,
-                        label = { Text(stringResource(R.string.repo_server_url)) },
-                        placeholder = {
-                            Text(
-                                stringResource(
-                                    if (state.apiType == RepositoryApiType.KERNEL_SU) {
-                                        R.string.repo_url_kernel_su_hint
-                                    } else {
-                                        R.string.repo_url_mmrl_hint
-                                    },
-                                ),
-                            )
-                        },
-                        singleLine = true,
-                        enabled = !state.busy,
-                        isError = state.error != null,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = {
-                            if (state.url.isNotBlank() && !state.busy) viewModel.add()
-                        }),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    state.error?.let { Text(repositoryErrorText(it), color = MaterialTheme.colorScheme.error) }
                 }
             },
             confirmButton = {
-                FilledTonalLoadingButton(
-                    text = stringResource(R.string.add),
-                    loading = state.addingUrl == state.url,
-                    onClick = { viewModel.add() },
-                    enabled = state.url.isNotBlank() && !state.busy,
-                )
+                val loading = state.addingUrl == state.url
+                FilledTonalButton(onClick = { viewModel.add() }, modifier = Modifier, enabled = state.url.isNotBlank() && !state.busy && !loading) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(text = stringResource(R.string.add), modifier = Modifier.alpha(if (loading) 0f else 1f))
+                        if (loading) {
+                            Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
+                                LoadingIndicator(Modifier.size(20.dp))
+                            }
+                        }
+                    }
+                }
             },
             dismissButton = {
                 TextButton(onClick = dismissAddForm, enabled = !state.busy) {
@@ -200,7 +189,6 @@ fun AddRepositoryScreen() {
             },
         )
     }
-    LaunchedEffect(Unit) { viewModel.loadDiscovery() }
     LaunchedEffect(state.added?.url) {
         if (state.added != null) {
             viewModel.consumeAdded()
@@ -210,160 +198,82 @@ fun AddRepositoryScreen() {
             }
         }
     }
-    RepositoryPageScaffold(
-        title = stringResource(R.string.repo_configure),
-        scrollBehavior = scrollBehavior,
-        topBarContent = {
-            PrimaryTabRow(selectedTabIndex = pager.currentPage, containerColor = Color.Transparent) {
-                titles.forEachIndexed { index, title ->
-                    Tab(
-                        selected = pager.currentPage == index,
-                        onClick = { scope.launch { pager.animateScrollToPage(index) } },
-                        text = { Text(title) },
+    val navigator = LocalNavigator.current
+    val theme = koinInject<ThemeConfig>()
+    val cards = koinInject<CardConfig>()
+    val barColor = if (theme.isEnableBlur) {
+        Color.Transparent
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer.copy(cards.cardAlpha)
+    }
+    val layoutDirection = LocalLayoutDirection.current
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            LargeFlexibleTopAppBar(
+                modifier = Modifier.blurEffect(),
+                title = {
+                    Text(
+                        text = stringResource(R.string.repo_configure),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                }
-            }
+                },
+                navigationIcon = { AppBackButton(onClick = { navigator.pop() }) },
+                windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = barColor,
+                    scrolledContainerColor = barColor,
+                ),
+            )
         },
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        contentWindowInsets = adaptiveScaffoldWindowInsets(),
+        snackbarHost = { SwipeableSnackbarHost(hostState = LocalSnackbarHost.current) },
     ) { padding ->
-        HorizontalPagerWithInteraction(
-            pager,
-            modifier = Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).blurSource(),
-        ) { page ->
-            if (page == 0 && state.discovering && state.discovered.isEmpty()) {
-                NetworkRefreshContent(
-                    offline = false,
-                    onRetry = { viewModel.loadDiscovery() },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else if (page == 0) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    state = discoverScroll,
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    if (state.discovering) {
-                        item {
-                            NetworkRefreshContent(
-                                offline = false,
-                                onRetry = { viewModel.loadDiscovery(force = true) },
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                            )
-                        }
-                    }
-                    state.discoveryError?.let { error ->
-                        item {
-                            RepositoryEmptyContent(
-                                title = repositoryErrorText(error),
-                                description = "",
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-                                action = stringResource(R.string.network_retry),
-                                onAction = { viewModel.loadDiscovery(force = true) },
-                            )
-                        }
-                    }
-                    state.error?.let { error -> item { Text(repositoryErrorText(error), color = MaterialTheme.colorScheme.error) } }
-                    if (!state.discovering && state.discoveryError == null && state.discovered.isEmpty()) {
-                        item {
-                            RepositoryEmptyContent(
-                                stringResource(R.string.repo_discovery_empty),
-                                "",
-                                Modifier.fillMaxWidth().padding(vertical = 32.dp),
-                            )
-                        }
-                    }
-                    items(state.discovered, key = { it.url }) { source ->
-                        val added = state.sources.any { it.url == source.url }
-                        val adding = state.addingUrl == source.url
-                        val description = source.description.takeIf(String::isNotBlank)
-                        CatalogCard {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.Top,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    CatalogCardHeading(source.name)
-                                    Text(
-                                        source.shortUrl(),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 3,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                                if (added && !adding) {
-                                    FilledTonalButton(onClick = {}, enabled = false) {
-                                        Text(stringResource(R.string.repo_added))
-                                    }
-                                } else {
-                                    FilledTonalLoadingButton(
-                                        text = stringResource(R.string.add),
-                                        loading = adding,
-                                        onClick = { viewModel.add(source.url, source, RepositoryApiType.MMRL) },
-                                        enabled = !state.busy,
-                                    )
-                                }
-                            }
-                            if (description != null) {
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    text = description,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            source.moduleCount?.let { count ->
-                                Spacer(Modifier.height(8.dp))
-                                HorizontalDivider(thickness = Dp.Hairline)
-                                Text(
-                                    pluralStringResource(R.plurals.repo_module_count, count, count),
-                                    modifier = Modifier.padding(top = 4.dp),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    state = customScroll,
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    item(key = "add-repository") {
-                        if (!addForm.isShown) {
-                            state.error?.let { error ->
-                                Text(repositoryErrorText(error), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 12.dp))
-                            }
-                        }
-                        FilledTonalButton(
-                            onClick = {
-                                viewModel.clearError()
-                                addForm.show()
-                            },
-                            enabled = !state.busy,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Icon(Icons.TwoTone.Add, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Text(stringResource(R.string.repo_add_repository), modifier = Modifier.padding(start = 8.dp))
-                        }
-                    }
-                    items(state.sources, key = { it.url }) { source ->
-                        RepositorySourceItem(
-                            source = source,
-                            busy = state.busy,
-                            failed = state.failures.containsKey(source.url),
-                            onRename = { name, onSaved -> viewModel.rename(source, name, onSaved) },
-                            onRemove = { viewModel.remove(source) },
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().blurSource(),
+            state = customScroll,
+            contentPadding = PaddingValues(
+                start = padding.calculateStartPadding(layoutDirection) + 16.dp,
+                top = padding.calculateTopPadding() + 16.dp,
+                end = padding.calculateEndPadding(layoutDirection) + 16.dp,
+                bottom = padding.calculateBottomPadding() + 16.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item(key = "add-repository") {
+                if (!addForm.isShown) {
+                    state.error?.let { error ->
+                        Text(
+                            repositoryErrorText(error),
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(bottom = 12.dp),
                         )
                     }
                 }
+                FilledTonalButton(
+                    onClick = {
+                        viewModel.clearError()
+                        addForm.show()
+                    },
+                    enabled = !state.busy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.TwoTone.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Text(stringResource(R.string.repo_add_repository), modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+            items(state.sources, key = { it.url }) { source ->
+                RepositorySourceItem(
+                    source = source,
+                    busy = state.busy,
+                    failed = state.failures.containsKey(source.url),
+                    onRename = { name, onSaved -> viewModel.rename(source, name, onSaved) },
+                    onRemove = { viewModel.remove(source) },
+                )
             }
         }
     }

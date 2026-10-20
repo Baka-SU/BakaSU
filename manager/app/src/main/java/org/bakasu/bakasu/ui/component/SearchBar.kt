@@ -480,7 +480,6 @@ fun SearchAppBar(
     searchBarPlaceHolderText: String,
     preserveStateOnNavigation: Boolean = false,
     searchContext: String? = null,
-    searchHeaderContent: (@Composable () -> Unit)? = null,
 ) {
     val themeConfig: ThemeConfig = koinInject()
     val cardConfig: CardConfig = koinInject()
@@ -617,7 +616,6 @@ fun SearchAppBar(
                 .collapseWithTopAppBar(searchAppBarScrollBehavior),
         ) {
             Column {
-                searchHeaderContent?.invoke()
                 CompactSearchBar(
                     modifier = Modifier
                         .fillMaxWidth()

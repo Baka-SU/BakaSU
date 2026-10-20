@@ -540,11 +540,7 @@ class DownloadService : Service() {
     private fun buildFailureNotification(fileName: String, verificationFailure: DownloadVerificationFailure? = null) = NotificationCompat.Builder(this, CHANNEL_ID)
         .setContentTitle(getString(R.string.download_failed_title))
         .setContentText(
-            when (verificationFailure) {
-                DownloadVerificationFailure.URL_NOT_ALLOWED -> getString(R.string.repo_download_url_blocked)
-                DownloadVerificationFailure.SIZE_MISMATCH, DownloadVerificationFailure.SHA256_MISMATCH -> getString(R.string.repo_download_verify_failed, fileName)
-                null -> getString(R.string.download_failed_content, fileName)
-            },
+            getString(verificationFailure?.resId ?: R.string.download_failed_content, fileName),
         )
         .setSmallIcon(android.R.drawable.stat_notify_error)
         .setAutoCancel(true)

@@ -1,5 +1,8 @@
 package org.bakasu.bakasu.domain.model
 
+import androidx.annotation.StringRes
+import org.bakasu.bakasu.R
+
 const val WEBVIEW_ZYGOTE_UID = 1053
 const val WEBVIEW_ZYGOTE_PROFILE_KEY = "webview_zygote"
 
@@ -65,7 +68,15 @@ data class SuperUserState(
     val groups: List<InstalledAppGroup> = emptyList(),
     val refreshing: Boolean = false,
     val loadingProgress: Float = 0f,
+    val hasLoaded: Boolean = false,
+    val loadFailure: SuperUserLoadFailure? = null,
 )
+
+enum class SuperUserLoadFailure(@param:StringRes val resId: Int) {
+    ROOT_ACCESS_REQUIRED(R.string.superuser_root_access_required),
+    SERVICE_START_FAILED(R.string.superuser_service_start_failed),
+    PACKAGE_LOAD_FAILED(R.string.superuser_packages_load_failed),
+}
 
 sealed interface AllowlistOperationResult {
     data object Success : AllowlistOperationResult

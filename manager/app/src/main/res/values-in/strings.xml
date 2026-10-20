@@ -193,7 +193,6 @@
     <string name="module_failed_count">%d Gagal memasang modul baru</string>
     <string name="kernel_flashing">Memasang Kernel</string>
     <string name="sort_usage_freq">Frekuensi penggunaan</string>
-    <string name="no_apps_in_category">Tidak ada aplikasi dalam kategori ini</string>
     <string name="susfs_config_title">Konfigurasi SuSFS</string>
     <string name="susfs_config_setting_title">Konfigurasi SUSFS</string>
     <string name="module_update_json">Perbarui JSON</string>

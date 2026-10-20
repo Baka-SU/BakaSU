@@ -1,8 +1,15 @@
 package org.bakasu.bakasu.domain.model
 
+import androidx.annotation.StringRes
+import org.bakasu.bakasu.R
+
 enum class DownloadStatus { PENDING, DOWNLOADING, COMPLETED, FAILED }
 
-enum class DownloadVerificationFailure { URL_NOT_ALLOWED, SIZE_MISMATCH, SHA256_MISMATCH }
+enum class DownloadVerificationFailure(@param:StringRes val resId: Int) {
+    URL_NOT_ALLOWED(R.string.repo_download_url_blocked),
+    SIZE_MISMATCH(R.string.repo_download_verify_failed),
+    SHA256_MISMATCH(R.string.repo_download_verify_failed),
+}
 
 data class DownloadState(
     val id: Int,

@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.data.script
 
+import androidx.annotation.StringRes
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -12,21 +13,22 @@ import java.util.UUID
 import java.util.zip.ZipInputStream
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
 import org.apache.commons.compress.archivers.zip.ZipFile
+import org.bakasu.bakasu.R
 
 class ScriptPackageException(val reason: Reason, message: String, cause: Throwable? = null) : IOException(message, cause) {
-    enum class Reason {
+    enum class Reason(@param:StringRes val resId: Int) {
         /** Not a readable ZIP (or an unsupported compression / encryption). */
-        CORRUPT,
+        CORRUPT(R.string.script_error_corrupt),
 
         /** Absolute path, `..`, symlink, special file or duplicate entry. */
-        UNSAFE_ENTRY,
-        TOO_LARGE,
-        MISSING_MODULE_PROP,
-        NOT_ONESHOT,
-        INVALID_ID,
-        ID_MISMATCH,
-        MISSING_ACTION,
-        INVALID_PARAMS,
+        UNSAFE_ENTRY(R.string.script_error_unsafe),
+        TOO_LARGE(R.string.script_error_too_large),
+        MISSING_MODULE_PROP(R.string.script_error_missing_prop),
+        NOT_ONESHOT(R.string.script_error_not_oneshot),
+        INVALID_ID(R.string.script_error_invalid_id),
+        ID_MISMATCH(R.string.script_error_id_mismatch),
+        MISSING_ACTION(R.string.script_error_missing_action),
+        INVALID_PARAMS(R.string.script_error_params),
     }
 }
 

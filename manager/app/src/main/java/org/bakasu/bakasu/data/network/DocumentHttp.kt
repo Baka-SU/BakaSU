@@ -85,6 +85,10 @@ internal fun isPublicDocumentAddress(address: InetAddress): Boolean {
 internal fun NetworkResponse.toDocument(policy: DocumentPolicy): ModuleReadme = ModuleReadme(
     content = body ?: error("Empty document"),
     baseUrl = url,
-    format = DocumentFormat.MARKDOWN,
+    format = if (header("Content-Type")?.substringBefore(';')?.trim()?.lowercase() in setOf("text/html", "application/xhtml+xml")) {
+        DocumentFormat.HTML
+    } else {
+        DocumentFormat.MARKDOWN
+    },
     policy = policy,
 )

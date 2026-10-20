@@ -79,9 +79,9 @@ fun SusKstatTab(
     val statBlocks = remember { TextFieldState() }
     val statBlksize = remember { TextFieldState() }
 
-    val subtypeNormal = stringResource(R.string.susfs_kstat_subtype_normal)
-    val subtypeFullClone = stringResource(R.string.susfs_kstat_subtype_full_clone)
-    val subtypeStatically = stringResource(R.string.susfs_kstat_subtype_statically)
+    val subtypeNormal = stringResource(SusKstatType.Normal.resId)
+    val subtypeFullClone = stringResource(SusKstatType.FullClone.resId)
+    val subtypeStatically = stringResource(SusKstatType.Statically.resId)
     val subtypes = listOf(subtypeNormal, subtypeFullClone, subtypeStatically)
 
     RegisterSuSFSRefresh(onRegisterRefresh) { config, _ ->
@@ -120,12 +120,6 @@ fun SusKstatTab(
     val operationFailedMsg = stringResource(R.string.susfs_operation_failed)
     val defaultValueLabel = stringResource(R.string.susfs_value_default)
     val susfsEntryImportSuccess = stringResource(R.string.susfs_entry_import_success)
-
-    fun SusKstatType.localizedLabel(): String = when (this) {
-        SusKstatType.Normal -> subtypeNormal
-        SusKstatType.FullClone -> subtypeFullClone
-        SusKstatType.Statically -> subtypeStatically
-    }
 
     LazyColumn(
         modifier = Modifier
@@ -170,7 +164,7 @@ fun SusKstatTab(
             SettingsJumpPageWidget(
                 iconPlaceholder = false,
                 title = item.path,
-                description = item.spoof_type.localizedLabel(),
+                description = stringResource(item.spoof_type.resId),
                 onClick = { detailItem = item },
             )
         }
@@ -307,7 +301,7 @@ fun SusKstatTab(
     detailItem?.let { item ->
         val fields = mutableListOf(
             pathLabel to item.path,
-            spoofTypeLabel to item.spoof_type.localizedLabel(),
+            spoofTypeLabel to stringResource(item.spoof_type.resId),
         )
         item.statically?.let { st ->
             fields.add("ino" to (st.ino?.toString() ?: defaultValueLabel))

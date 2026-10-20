@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.viewmodel
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.FlashOperation
 import org.bakasu.bakasu.domain.model.FlashOperationUpdate
 import org.bakasu.bakasu.domain.usecase.CheckFlashModuleMountUseCase
@@ -18,7 +20,18 @@ import org.bakasu.bakasu.domain.usecase.ExecuteFlashOperationUseCase
 import org.bakasu.bakasu.domain.usecase.IsSoftRebootPreferredUseCase
 import org.bakasu.bakasu.domain.usecase.RebootUseCase
 
-enum class FlashingStatus { FLASHING, SUCCESS, FAILED }
+enum class FlashingStatus(@param:StringRes val resId: Int) {
+    FLASHING(R.string.flashing),
+    SUCCESS(R.string.flash_success),
+    FAILED(R.string.flash_failed),
+}
+
+/** State consumed by the common flash output screen. */
+data class FlashState(
+    val status: FlashingStatus = FlashingStatus.FLASHING,
+    val output: String = "",
+    val showReboot: Boolean = false,
+)
 
 data class ModuleInstallStatus(
     val totalModules: Int = 0,

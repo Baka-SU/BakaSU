@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.viewmodel
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.materialkolor.PaletteStyle
@@ -29,12 +30,12 @@ import org.bakasu.bakasu.domain.usecase.SetSuEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.UpdateAppearanceUseCase
 import org.bakasu.bakasu.domain.usecase.UpdatePlatformSettingUseCase
 
-enum class PredictiveBackAnimation(val value: String) {
-    None("none"),
-    AOSP("aosp"),
-    MIUIX("miuix"),
-    Scale("scale"),
-    KernelSUClassic("ksu_classic"),
+enum class PredictiveBackAnimation(val value: String, @param:StringRes val resId: Int) {
+    None("none", R.string.predictive_back_animation_none),
+    AOSP("aosp", R.string.predictive_back_animation_aosp),
+    MIUIX("miuix", R.string.predictive_back_animation_miuix),
+    Scale("scale", R.string.predictive_back_animation_scale),
+    KernelSUClassic("ksu_classic", R.string.predictive_back_animation_ksu_classic),
     ;
 
     companion object {
@@ -42,10 +43,10 @@ enum class PredictiveBackAnimation(val value: String) {
     }
 }
 
-enum class PredictiveBackExitDirection(val value: String) {
-    FOLLOW_GESTURE("follow_gesture"),
-    ALWAYS_RIGHT("always_right"),
-    ALWAYS_LEFT("always_left"),
+enum class PredictiveBackExitDirection(val value: String, @param:StringRes val resId: Int) {
+    FOLLOW_GESTURE("follow_gesture", R.string.predictive_back_exit_direction_follow_gesture),
+    ALWAYS_RIGHT("always_right", R.string.predictive_back_exit_direction_always_right),
+    ALWAYS_LEFT("always_left", R.string.predictive_back_exit_direction_always_left),
     ;
 
     companion object {

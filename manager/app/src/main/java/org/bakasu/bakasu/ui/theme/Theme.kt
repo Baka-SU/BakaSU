@@ -37,6 +37,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -105,6 +106,7 @@ import org.bakasu.bakasu.data.theme.MonetCompatColorSource
 import org.bakasu.bakasu.data.theme.ThemeRepository
 import org.bakasu.bakasu.ui.overscroll.StretchOverscrollCompensationState
 import org.bakasu.bakasu.ui.util.LocalBackgroundBlurAnchor
+import org.bakasu.bakasu.ui.util.LocalBackgroundBlurProvided
 import org.bakasu.bakasu.ui.util.LocalBlurState
 import org.bakasu.bakasu.ui.util.LocalPagerPage
 import org.bakasu.bakasu.ui.util.LocalPagerState
@@ -192,8 +194,18 @@ class BackgroundRenderState {
     var blurViewportSize by mutableStateOf(IntSize(0, 0))
     var blurFrameTick by mutableIntStateOf(0)
     var scrollActive by mutableStateOf(false)
-    var pagerScrollActive by mutableStateOf(false)
+    private val scrollingPagers = mutableStateMapOf<Any, Unit>()
+    val pagerScrollActive: Boolean
+        get() = scrollingPagers.isNotEmpty()
     var seedColor by mutableIntStateOf(0)
+
+    internal fun updatePagerScroll(owner: Any, active: Boolean) {
+        if (active) {
+            scrollingPagers[owner] = Unit
+        } else {
+            scrollingPagers.remove(owner)
+        }
+    }
 }
 
 val LocalBackgroundRenderState = compositionLocalOf<BackgroundRenderState> {
@@ -842,6 +854,8 @@ private fun Rect.mapToBitmapBounds(
 fun Modifier.renderBackgroundBlur(
     tintColor: Color? = null,
 ): Modifier {
+    if (LocalBackgroundBlurProvided.current) return this
+
     val themeConfig = koinInject<ThemeConfig>()
     val cardConfig = koinInject<CardConfig>()
     val renderState = LocalBackgroundRenderState.current

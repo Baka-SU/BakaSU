@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.ui.screen
 
 import android.content.Intent
-import android.os.Environment
 import android.os.Parcelable
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -13,31 +12,26 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.Error
 import androidx.compose.material.icons.twotone.Info
-import androidx.compose.material.icons.twotone.Refresh
 import androidx.compose.material.icons.twotone.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,7 +39,6 @@ import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -63,9 +56,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -73,10 +63,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -93,8 +79,7 @@ import org.bakasu.bakasu.domain.usecase.ExecuteFlashOperationUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleNameUseCase
 import org.bakasu.bakasu.domain.usecase.IsLateLoadModeUseCase
 import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
-import org.bakasu.bakasu.ui.component.KeyEventBlocker
-import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.FlashOutputScreen
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
@@ -102,12 +87,9 @@ import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
-import org.bakasu.bakasu.ui.theme.blurSource
-import org.bakasu.bakasu.ui.theme.monospaceFontFamily
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
-import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
-import org.bakasu.bakasu.ui.util.showReplacingSnackbar
+import org.bakasu.bakasu.ui.viewmodel.FlashState
 import org.bakasu.bakasu.ui.viewmodel.FlashUiAction
 import org.bakasu.bakasu.ui.viewmodel.FlashViewModel
 import org.bakasu.bakasu.ui.viewmodel.FlashingStatus
@@ -126,7 +108,6 @@ fun FlashScreen(flashIt: FlashIt) {
     val executeFlashOperation = koinInject<ExecuteFlashOperationUseCase>()
     val context = LocalContext.current
 
-    // 是否通过从外部启动的模块安装
     val isExternalInstall = remember {
         when (flashIt) {
             is FlashIt.FlashModule -> {
@@ -418,96 +399,47 @@ fun FlashScreen(flashIt: FlashIt) {
         }
     }
 
-    val onBack: () -> Unit = {
-        val canGoBack = when (flashIt) {
-            is FlashIt.FlashModuleUpdate -> flashUiState.flashingStatus != FlashingStatus.FLASHING
-            else -> flashUiState.flashingStatus != FlashingStatus.FLASHING
-        }
-
-        if (canGoBack) {
-            if (isExternalInstall) {
-                (context as? ComponentActivity)?.finish()
-            } else {
-                if (flashIt is FlashIt.FlashModules || flashIt is FlashIt.FlashModuleUpdate) {
-                    viewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
-                    viewModel.dispatch(ModuleUiAction.Refresh())
-                    navigator.replaceAll(listOf(Route.Module))
-                } else {
-                    viewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
-                    viewModel.dispatch(ModuleUiAction.Refresh())
-                    navigator.pop()
-                }
-            }
-        }
+    BackHandler(flashUiState.flashingStatus == FlashingStatus.FLASHING) {
+        // deny back
     }
 
-    BackHandler(enabled = true) {
-        onBack()
+    BackHandler(flashUiState.flashingStatus != FlashingStatus.FLASHING && isExternalInstall) {
+        (context as? ComponentActivity)?.finish()
     }
 
-    Scaffold(
-        contentWindowInsets = adaptiveScaffoldWindowInsets(),
-        topBar = {
-            TopBar(
-                flashUiState.flashingStatus,
-                currentStatus,
-                onBack = onBack,
-                onSave = {
-                    scope.launch {
-                        val format = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.getDefault())
-                        val date = format.format(Date())
-                        val file = File(
-                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                            "KernelSU_install_log_$date.log",
-                        )
-                        file.writeText(logContent.toString())
-                        snackBarHost.showReplacingSnackbar(logSavedString.format(file.absolutePath))
-                    }
-                },
-                scrollBehavior = scrollBehavior,
+    LaunchedEffect(flashUiState.flashingStatus) {
+        if (flashUiState.flashingStatus == FlashingStatus.FLASHING) return@LaunchedEffect
+
+        viewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
+        viewModel.dispatch(ModuleUiAction.Refresh())
+    }
+
+    FlashOutputScreen(
+        state = FlashState(
+            status = flashUiState.flashingStatus,
+            output = text,
+            showReboot = showFloatAction,
+        ),
+        logFilePrefix = "KernelSU_install_log",
+        logContent = logContent.toString(),
+        onReboot = {
+            flashViewModel.dispatch(
+                FlashUiAction.Reboot(
+                    allowSoftReboot = flashIt is FlashIt.FlashModule || flashIt is FlashIt.FlashModules || flashIt is FlashIt.FlashModuleUpdate,
+                ),
             )
         },
-        floatingActionButton = {
-            if (showFloatAction) {
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        flashViewModel.dispatch(
-                            FlashUiAction.Reboot(
-                                allowSoftReboot = flashIt is FlashIt.FlashModule || flashIt is FlashIt.FlashModules || flashIt is FlashIt.FlashModuleUpdate,
-                            ),
-                        )
-                    },
-                    icon = {
-                        Icon(
-                            Icons.TwoTone.Refresh,
-                            contentDescription = stringResource(id = R.string.reboot),
-                        )
-                    },
-                    text = {
-                        Text(text = stringResource(id = R.string.reboot))
-                    },
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    expanded = true,
-                )
+        onBack = {
+            if (flashUiState.flashingStatus == FlashingStatus.FLASHING) return@FlashOutputScreen
+
+            if (isExternalInstall) {
+                (context as? ComponentActivity)?.finish()
+                return@FlashOutputScreen
             }
+
+            navigator.pop()
         },
-        snackbarHost = { SwipeableSnackbarHost(hostState = snackBarHost) },
-        containerColor = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) { innerPadding ->
-        KeyEventBlocker {
-            it.key == Key.VolumeDown || it.key == Key.VolumeUp
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize(1f)
-                .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .blurSource(),
-        ) {
-            Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
-
+        headerContent = {
             if (flashIt is FlashIt.FlashModules) {
                 ModuleInstallProgressBar(
                     currentIndex = flashIt.currentIndex + 1,
@@ -516,30 +448,9 @@ fun FlashScreen(flashIt: FlashIt) {
                     status = flashUiState.flashingStatus,
                     failedModules = currentStatus.failedModules,
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
             }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(scrollState),
-            ) {
-                LaunchedEffect(text) {
-                    scrollState.animateScrollTo(scrollState.maxValue)
-                }
-                Text(
-                    modifier = Modifier.padding(16.dp),
-                    text = text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = monospaceFontFamily(),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
-        }
-    }
+        },
+    )
 }
 
 private const val JAILBREAK_WARNING_COUNTDOWN = 10
@@ -737,13 +648,7 @@ private fun TopBar(
         modifier = Modifier.blurEffect(),
         title = {
             Text(
-                text = stringResource(
-                    when (status) {
-                        FlashingStatus.FLASHING -> R.string.flashing
-                        FlashingStatus.SUCCESS -> R.string.flash_success
-                        FlashingStatus.FAILED -> R.string.flash_failed
-                    },
-                ),
+                text = stringResource(status.resId),
                 color = statusColor,
             )
         },

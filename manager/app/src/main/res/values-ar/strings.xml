@@ -287,7 +287,6 @@
     <string name="settings_background_dim">تعديل ظلمة الخلفية</string>
     <string name="warning_of_meta_module_title">تحتاج لـ Metamodule</string>
     <string name="sort_usage_freq">تكرار الاستخدام</string>
-    <string name="no_apps_in_category">لا يوجد تطبيق في هذه الفئة</string>
     <string name="persistent">مستمر</string>
     <string name="temporary">مؤقت</string>
     <string name="susfs_config_title">اعداد SuFS</string>

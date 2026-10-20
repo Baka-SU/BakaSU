@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.data.script
 
+import androidx.annotation.StringRes
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
@@ -8,6 +9,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParseException
 import com.google.gson.JsonPrimitive
 import com.google.gson.Strictness
+import org.bakasu.bakasu.R
 
 /*
  * params.json (schemaVersion 1) of a one-shot script: the parameters the manager asks for
@@ -17,15 +19,15 @@ import com.google.gson.Strictness
 class ScriptParamsException(message: String) : Exception(message)
 
 /** Why a parameter value is rejected. */
-enum class ParamError {
-    REQUIRED,
-    TOO_LONG,
-    INVALID_CHARACTERS,
-    NOT_AN_INTEGER,
-    BELOW_MIN,
-    ABOVE_MAX,
-    INVALID_OPTION,
-    INVALID_BOOLEAN,
+enum class ParamError(@param:StringRes val resId: Int) {
+    REQUIRED(R.string.script_param_required),
+    TOO_LONG(R.string.script_param_too_long),
+    INVALID_CHARACTERS(R.string.script_param_invalid_characters),
+    NOT_AN_INTEGER(R.string.script_param_not_integer),
+    BELOW_MIN(R.string.script_param_below_min),
+    ABOVE_MAX(R.string.script_param_above_max),
+    INVALID_OPTION(R.string.script_param_invalid),
+    INVALID_BOOLEAN(R.string.script_param_invalid),
 }
 
 /**

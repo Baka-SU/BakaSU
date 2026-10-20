@@ -298,7 +298,6 @@
     <string name="warning_of_meta_module_title">Requiere un modulo meta</string>
     <string name="warning_of_meta_module_summary">Este modulo quiere montar /system, que esta manejado por el modulo meta. Sin el, el modulo puede no funcionar</string>
     <string name="reverse_order">Orden reverso</string>
-    <string name="no_apps_in_category">No hay una aplicación en esta categoría</string>
     <string name="persistent">Persistente</string>
     <string name="module_update_json_copied">Actualización JSON se ha copiado al portapapeles</string>
     <string name="kstat_config_description_title">Descripción de la configuración de Kstat</string>

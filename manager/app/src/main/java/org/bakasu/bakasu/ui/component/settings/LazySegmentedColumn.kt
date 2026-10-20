@@ -14,6 +14,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 inline fun <T> LazyListScope.lazySegmentColumn(
@@ -46,12 +48,26 @@ inline fun <T> LazyListScope.lazySegmentColumn(
         contentType = { index: Int -> contentType(index, items[index]) },
     ) { index ->
         val item = items[index]
+        val themeConfig = koinInject<ThemeConfig>()
+        val continuous = themeConfig.isEnableBlurExp
 
         val isFirst = index == 0
         val isLast = index == items.lastIndex
 
-        val topRadius = if (isFirst) 16.dp else 5.dp
-        val bottomRadius = if (isLast) 16.dp else 5.dp
+        val topRadius = if (isFirst) {
+            16.dp
+        } else if (continuous) {
+            0.dp
+        } else {
+            5.dp
+        }
+        val bottomRadius = if (isLast) {
+            16.dp
+        } else if (continuous) {
+            0.dp
+        } else {
+            5.dp
+        }
 
         val shape = RoundedCornerShape(
             topStart = topRadius,
@@ -60,7 +76,7 @@ inline fun <T> LazyListScope.lazySegmentColumn(
             bottomEnd = bottomRadius,
         )
 
-        val topPadding = if (isFirst) 0.dp else itemSpacing
+        val topPadding = if (isFirst || continuous) 0.dp else itemSpacing
 
         val horizontalPadding = if (noHorizontalPadding) 0.dp else 16.dp
 

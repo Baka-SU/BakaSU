@@ -152,7 +152,7 @@ class ModuleDetailViewModel(
             return
         }
         val url = module.readmeUrl.ifBlank { module.sourceUrl }
-        loadDocument(url, retry) { getReadme(module) }
+        loadDocument(url, retry) { getReadme(module, retry) }
     }
 
     fun loadReleaseDetails(release: ModuleRelease, retry: Boolean = false) {

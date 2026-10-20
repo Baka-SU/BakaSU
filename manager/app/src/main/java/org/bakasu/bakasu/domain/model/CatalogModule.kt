@@ -1,5 +1,8 @@
 package org.bakasu.bakasu.domain.model
 
+import androidx.annotation.StringRes
+import org.bakasu.bakasu.R
+
 data class CatalogAuthor(
     val name: String,
     val link: String,
@@ -95,9 +98,18 @@ data class ModuleReleaseDetails(
 )
 
 sealed interface ModuleCatalogFailure {
-    data object Offline : ModuleCatalogFailure
-    data object NotFound : ModuleCatalogFailure
-    data class Network(val message: String) : ModuleCatalogFailure
+    @get:StringRes
+    val resId: Int
+
+    data object Offline : ModuleCatalogFailure {
+        override val resId = R.string.network_offline
+    }
+    data object NotFound : ModuleCatalogFailure {
+        override val resId = R.string.repo_module_unavailable
+    }
+    data class Network(val message: String) : ModuleCatalogFailure {
+        override val resId = R.string.repo_error_network
+    }
 }
 
 sealed interface ModuleCatalogResult<out T> {

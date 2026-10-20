@@ -200,7 +200,6 @@
     <string name="warning_of_meta_module_title">メタモジュールが必要です</string>
     <string name="warning_of_meta_module_summary">このモジュールは /system をマウントしようとしますが、メタモジュールがそれを処理します。そうでなければ動作しない可能性があります</string>
     <string name="sort_usage_freq">使用頻度</string>
-    <string name="no_apps_in_category">このカテゴリーにアプリはありません</string>
     <string name="susfs_config_title">SuSFS の構成</string>
     <string name="susfs_config_setting_title">SuSFS の構成</string>
     <string name="module_update_json">更新用の JSON</string>

@@ -124,6 +124,7 @@
     <string name="profile_selinux_rules">Rules</string>
     <string name="module_update">Update</string>
     <string name="module_downloading">Downloading module: %s</string>
+    <string name="script_downloading">Downloading script: %s</string>
     <string name="module_start_downloading">Start downloading: %s</string>
     <string name="module_action_success">Module action executed successfully.</string>
     <string name="new_version_available">New version %s is available, click to upgrade</string>
@@ -341,7 +342,6 @@
     <string name="sort_size">Size</string>
     <string name="sort_usage_freq">Frequency of use</string>
     <string name="reverse_order">Reverse order</string>
-    <string name="no_apps_in_category">No application in this category</string>
     <string name="persistent">Persistent</string>
     <string name="temporary">Temporary</string>
     <string name="susfs_config_title">SuSFS Configuration</string>
@@ -692,4 +692,9 @@
     <string name="script_param_below_min">Must be at least %d</string>
     <string name="script_param_above_max">Must be at most %d</string>
     <string name="script_param_invalid">Invalid value</string>
+    <string name="repo_module_version_value">Version: %1$s (%2$d)</string>
+    <string name="repo_module_author_value">Author: %1$s</string>
+    <string name="superuser_root_access_required">Root access is required to load applications.</string>
+    <string name="superuser_service_start_failed">RootService failed to start. Retry to load applications.</string>
+    <string name="superuser_packages_load_failed">Failed to load applications from RootService. Please retry.</string>
 </resources>

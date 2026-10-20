@@ -1,5 +1,8 @@
 package org.bakasu.bakasu.data.script
 
+import androidx.annotation.StringRes
+import org.bakasu.bakasu.R
+
 /** What the manager knows about the running KernelSU, exported to the script like ksud does. */
 data class ScriptHostInfo(
     val ksuVersion: String,
@@ -76,12 +79,12 @@ object ScriptCommand {
 }
 
 /** Result of a run, by exit code. */
-enum class ScriptOutcome {
-    SUCCESS,
+enum class ScriptOutcome(@param:StringRes val resId: Int) {
+    SUCCESS(R.string.script_result_success),
 
     /** Exit code 2: the script decided it does not apply to this device. */
-    NOT_APPLICABLE,
-    FAILURE,
+    NOT_APPLICABLE(R.string.script_result_not_applicable),
+    FAILURE(R.string.script_result_failed),
     ;
 
     companion object {

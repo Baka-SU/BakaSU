@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.viewmodel
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.ModuleCatalogResult
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
@@ -26,7 +28,13 @@ import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
 import org.bakasu.bakasu.domain.usecase.SetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.TransliterateTextUseCase
 
-enum class CatalogContent { LOADING, MODULES, FAILED, SEARCH_EMPTY, SOURCE_EMPTY }
+enum class CatalogContent(@param:StringRes val resId: Int? = null) {
+    LOADING,
+    MODULES,
+    FAILED,
+    SEARCH_EMPTY(R.string.search_no_any_match),
+    SOURCE_EMPTY(R.string.repo_source_empty),
+}
 
 data class ModuleRepoUiState(
     val modules: List<CatalogModule> = emptyList(),

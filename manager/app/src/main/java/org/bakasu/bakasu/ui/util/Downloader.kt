@@ -13,7 +13,6 @@ import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
-import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
 import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.domain.model.ManagerUpdateInfo
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
@@ -91,11 +90,10 @@ fun downloadManagerUpdate(
     }
 }
 
-fun downloadFailureMessage(context: Context, state: DownloadState): String = when (state.verificationFailure) {
-    DownloadVerificationFailure.URL_NOT_ALLOWED -> context.getString(R.string.repo_download_url_blocked)
-    DownloadVerificationFailure.SIZE_MISMATCH, DownloadVerificationFailure.SHA256_MISMATCH -> context.getString(R.string.repo_download_verify_failed, state.fileName)
-    null -> context.getString(R.string.download_failed_content, state.fileName)
-}
+fun downloadFailureMessage(context: Context, state: DownloadState): String = context.getString(
+    state.verificationFailure?.resId ?: R.string.download_failed_content,
+    state.fileName,
+)
 
 private fun requestDownloadPermissions(
     context: Context,

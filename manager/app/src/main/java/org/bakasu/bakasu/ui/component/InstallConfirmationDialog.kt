@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui.component
 import android.content.Context
 import android.net.Uri
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -83,6 +84,7 @@ fun rememberRepositoryInstallDialog(): (CatalogModule, ModuleReleaseAsset, () ->
     val loading = rememberLoadingDialog()
     val title = stringResource(R.string.confirm_install_module_title)
     val downloading = stringResource(R.string.module_downloading)
+    val downloadingScript = stringResource(R.string.script_downloading)
     var busy by remember { mutableStateOf(false) }
     fun isDownloading(asset: ModuleReleaseAsset): Boolean = observeAssetDownload.current(asset)?.status.let {
         it == DownloadStatus.PENDING || it == DownloadStatus.DOWNLOADING
@@ -135,7 +137,8 @@ fun rememberRepositoryInstallDialog(): (CatalogModule, ModuleReleaseAsset, () ->
                     },
                     onDownloading = {
                         launch(Dispatchers.Main) {
-                            Toast.makeText(context, downloading.format(module.moduleName), Toast.LENGTH_SHORT).show()
+                            val message = if (module.isScript) downloadingScript else downloading
+                            Toast.makeText(context, message.format(module.moduleName), Toast.LENGTH_SHORT).show()
                         }
                     },
                 )
@@ -144,10 +147,10 @@ fun rememberRepositoryInstallDialog(): (CatalogModule, ModuleReleaseAsset, () ->
     }
 }
 
-enum class ZipType {
-    MODULE,
-    KERNEL,
-    UNKNOWN,
+enum class ZipType(@param:StringRes val resId: Int, @param:StringRes val unknownNameResId: Int) {
+    MODULE(R.string.module_package, R.string.unknown_module),
+    KERNEL(R.string.kernel_package, R.string.unknown_kernel),
+    UNKNOWN(R.string.unknown_package, R.string.unknown_file),
     ;
 
     companion object {
@@ -390,22 +393,14 @@ fun InstallItemCard(zipFile: ZipFileInfo) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = zipFile.name.ifEmpty {
-                            when (zipFile.type) {
-                                ZipType.MODULE -> stringResource(R.string.unknown_module)
-                                ZipType.KERNEL -> stringResource(R.string.unknown_kernel)
-                                else -> stringResource(R.string.unknown_file)
-                            }
+                            stringResource(zipFile.type.unknownNameResId)
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = when (zipFile.type) {
-                            ZipType.MODULE -> stringResource(R.string.module_package)
-                            ZipType.KERNEL -> stringResource(R.string.kernel_package)
-                            else -> stringResource(R.string.unknown_package)
-                        },
+                        text = stringResource(zipFile.type.resId),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

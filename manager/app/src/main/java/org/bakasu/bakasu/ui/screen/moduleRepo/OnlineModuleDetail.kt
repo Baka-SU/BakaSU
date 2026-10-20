@@ -1,12 +1,15 @@
 package org.bakasu.bakasu.ui.screen.moduleRepo
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.defaultMinSize
@@ -34,12 +37,16 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -64,7 +71,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.text.HtmlCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.text.NumberFormat
 import java.time.Instant
@@ -72,9 +78,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogModule
@@ -89,28 +93,32 @@ import org.bakasu.bakasu.domain.model.documentPolicy
 import org.bakasu.bakasu.domain.usecase.GetLastScriptRunUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
+import org.bakasu.bakasu.ui.component.CatalogCard
 import org.bakasu.bakasu.ui.component.GithubMarkdown
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
-import org.bakasu.bakasu.ui.component.RepositoryPageScaffold
+import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.WarningCard
 import org.bakasu.bakasu.ui.component.moduleAssetDetails
 import org.bakasu.bakasu.ui.component.rememberRepositoryInstallDialog
-import org.bakasu.bakasu.ui.component.rememberRepositoryScrollBehavior
 import org.bakasu.bakasu.ui.component.repositoryErrorText
 import org.bakasu.bakasu.ui.component.scriptLastRunText
+import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
 import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Navigator
 import org.bakasu.bakasu.ui.navigation.Route
+import org.bakasu.bakasu.ui.theme.CardConfig
+import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
+import org.bakasu.bakasu.ui.util.LocalSnackbarHost
+import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
 import org.bakasu.bakasu.ui.viewmodel.ReleaseDetailsState
-import org.commonmark.ext.gfm.tables.TablesExtension
-import org.commonmark.parser.Parser
-import org.commonmark.renderer.html.HtmlRenderer
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
@@ -133,30 +141,60 @@ fun OnlineModuleDetailScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val module = state.module
     if (module == null) {
-        RepositoryPageScaffold(stringResource(R.string.module_repo)) { padding ->
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                if (state.loading) {
-                    LoadingIndicator()
-                } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            stringResource(
-                                when (state.error) {
-                                    ModuleCatalogFailure.Offline -> R.string.network_offline
-                                    ModuleCatalogFailure.NotFound -> R.string.repo_module_unavailable
-                                    else -> R.string.repo_error_network
-                                },
-                            ),
-                        )
-                        if (state.error != ModuleCatalogFailure.NotFound) {
-                            FilledTonalButton(onClick = { viewModel.dispatch(ModuleDetailUiAction.Retry) }) {
-                                Text(stringResource(R.string.network_retry))
+        val navigator = LocalNavigator.current
+        val theme = koinInject<ThemeConfig>()
+        val cards = koinInject<CardConfig>()
+        val scroll = null ?: TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+            rememberTopAppBarState(
+                initialHeightOffset = -154f,
+                initialHeightOffsetLimit = -154f, // from debugger
+            ),
+        )
+        val barColor = if (theme.isEnableBlur) {
+            Color.Transparent
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer.copy(cards.cardAlpha)
+        }
+        Scaffold(
+            modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+            topBar = {
+                Column(Modifier.blurEffect().background(barColor)) {
+                    LargeFlexibleTopAppBar(
+                        title = { Text(stringResource(R.string.module_repo), maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                        navigationIcon = { AppBackButton(onClick = { navigator.pop() }) },
+                        actions = { },
+                        windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
+                        scrollBehavior = scroll,
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            scrolledContainerColor = Color.Transparent,
+                        ),
+                    )
+                }
+            },
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            contentWindowInsets = adaptiveScaffoldWindowInsets(),
+            snackbarHost = { SwipeableSnackbarHost(hostState = LocalSnackbarHost.current) },
+            content = { padding: PaddingValues ->
+                Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    if (state.loading) {
+                        LoadingIndicator()
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                stringResource(state.error?.resId ?: R.string.repo_error_network),
+                            )
+                            if (state.error != ModuleCatalogFailure.NotFound) {
+                                FilledTonalButton(onClick = { viewModel.dispatch(ModuleDetailUiAction.Retry) }) {
+                                    Text(stringResource(R.string.network_retry))
+                                }
                             }
                         }
                     }
                 }
-            }
-        }
+            },
+        )
         return
     }
     OnlineModuleDetailContent(module, viewModel)
@@ -170,58 +208,98 @@ private fun OnlineModuleDetailContent(module: CatalogModule, viewModel: ModuleDe
     val tabTitles = listOf(stringResource(R.string.readme), stringResource(R.string.release), stringResource(R.string.info))
     val uriHandler = LocalUriHandler.current
     val pagerState = rememberPagerState(pageCount = { tabTitles.size })
-    val scrollBehavior = rememberRepositoryScrollBehavior(pagerState.currentPage)
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        rememberTopAppBarState(
+            initialHeightOffset = -154f,
+            initialHeightOffsetLimit = -154f, // from debugger
+        ),
+    )
 
     BackHandler(pagerState.currentPage != 0) {
         coroutineScope.launch { pagerState.animateScrollToPage(0) }
     }
-    RepositoryPageScaffold(
-        title = module.moduleName,
-        scrollBehavior = scrollBehavior,
-        actions = {
-            IconButton(onClick = { uriHandler.openUri(module.pageUrl) }) {
-                Icon(
-                    imageVector = Icons.TwoTone.OpenInBrowser,
-                    contentDescription = stringResource(R.string.open_module_home_page),
+    val navigator = LocalNavigator.current
+    val theme = koinInject<ThemeConfig>()
+    val cards = koinInject<CardConfig>()
+    val scroll = scrollBehavior ?: TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        rememberTopAppBarState(
+            initialHeightOffset = -154f,
+            initialHeightOffsetLimit = -154f, // from debugger
+        ),
+    )
+    val barColor = if (theme.isEnableBlur) {
+        Color.Transparent
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer.copy(cards.cardAlpha)
+    }
+    Scaffold(
+        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        topBar = {
+            Column(Modifier.blurEffect().background(barColor)) {
+                LargeFlexibleTopAppBar(
+                    title = {
+                        Text(
+                            text = module.moduleName,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    navigationIcon = { AppBackButton(onClick = { navigator.pop() }) },
+                    actions = {
+                        IconButton(onClick = { uriHandler.openUri(module.pageUrl) }) {
+                            Icon(
+                                imageVector = Icons.TwoTone.OpenInBrowser,
+                                contentDescription = stringResource(R.string.open_module_home_page),
+                            )
+                        }
+                    },
+                    windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
+                    scrollBehavior = scroll,
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        scrolledContainerColor = Color.Transparent,
+                    ),
                 )
-            }
-        },
-        topBarContent = {
-            PrimaryTabRow(
-                selectedTabIndex = pagerState.currentPage,
-                containerColor = Color.Transparent,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                tabTitles.forEachIndexed { index, title ->
-                    Tab(
-                        selected = pagerState.currentPage == index,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        text = { Text(title) },
-                    )
+                PrimaryTabRow(
+                    selectedTabIndex = pagerState.currentPage,
+                    containerColor = Color.Transparent,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    tabTitles.forEachIndexed { index, title ->
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = { Text(title) },
+                        )
+                    }
                 }
             }
         },
-    ) { innerPadding ->
-        HorizontalPagerWithInteraction(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize().blurSource(),
-            beyondViewportPageCount = 2,
-        ) { page ->
-            when (page) {
-                0 -> ReadmeTab(module, scrollBehavior.nestedScrollConnection, innerPadding, viewModel)
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        contentWindowInsets = adaptiveScaffoldWindowInsets(),
+        snackbarHost = { SwipeableSnackbarHost(hostState = LocalSnackbarHost.current) },
+        content = { innerPadding: PaddingValues ->
+            HorizontalPagerWithInteraction(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize().blurSource(),
+            ) { page ->
+                when (page) {
+                    0 -> ReadmeTab(module, scrollBehavior.nestedScrollConnection, innerPadding, viewModel)
 
-                1 -> ReleasesTab(
-                    module,
-                    scrollBehavior.nestedScrollConnection,
-                    innerPadding,
-                    viewModel,
-                )
+                    1 -> ReleasesTab(
+                        module,
+                        scrollBehavior.nestedScrollConnection,
+                        innerPadding,
+                        viewModel,
+                    )
 
-                2 -> InfoTab(module, scrollBehavior.nestedScrollConnection, innerPadding, viewModel)
+                    2 -> InfoTab(module, scrollBehavior.nestedScrollConnection, innerPadding, viewModel)
+                }
             }
-        }
-    }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -240,10 +318,7 @@ fun InfoTab(
     val infoTitle = stringResource(R.string.info)
     val repositoryTitle = stringResource(R.string.module_repo)
     val info = buildList {
-        add(ModuleInfoRow(R.string.repo_module_id, module.moduleId))
-        add(ModuleInfoRow(R.string.module_version, "${module.latestRelease} (${module.latestVersionCode})"))
         metadata?.let {
-            if (it.tags.isNotEmpty()) add(ModuleInfoRow(R.string.repo_tags, it.tags.joinToString(", ")))
             it.stars?.let { stars ->
                 val repository = metadata.starsRepository
                 add(ModuleInfoRow(R.string.repo_stars, listOfNotNull(NumberFormat.getIntegerInstance().format(stars), repository).joinToString(" · "), repository?.let { name -> "https://github.com/$name" }))
@@ -289,10 +364,12 @@ fun InfoTab(
             }
             item(key = "source-spacing") { Spacer(Modifier.height(8.dp)) }
         }
-        lazySegmentColumn(info, title = infoTitle, key = { _, row -> "info:${row.title}" }) { _, row ->
-            ModuleInfoLink(stringResource(row.title), row.description, row.url, row.allowHttp)
+        if (info.isNotEmpty()) {
+            lazySegmentColumn(info, title = infoTitle, key = { _, row -> "info:${row.title}" }) { _, row ->
+                ModuleInfoLink(stringResource(row.title), row.description, row.url, row.allowHttp)
+            }
+            item(key = "info-spacing") { Spacer(Modifier.height(8.dp)) }
         }
-        item(key = "info-spacing") { Spacer(Modifier.height(8.dp)) }
         lazySegmentColumn(listOf(module.repositoryUrl), title = repositoryTitle, key = { _, _ -> "repository" }) { _, url ->
             ModuleInfoLink(module.repositoryName, url, url)
         }
@@ -312,7 +389,6 @@ private fun ModuleInfoLink(title: String, description: String?, url: String?, al
         descriptionStyle = MaterialTheme.typography.bodyMedium,
         descriptionColor = MaterialTheme.colorScheme.onSurfaceVariant,
         iconPlaceholder = false,
-        onClick = link?.let { target -> { uriHandler.openUri(target) } },
     ) {
         if (link != null) {
             FilledTonalButton(
@@ -338,7 +414,9 @@ private fun DetailNotice(module: CatalogModule, state: ModuleDetailUiState?, vie
     if (!cached && !stale && state?.error == null) return
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         if (cached) Text(stringResource(R.string.repo_using_cache), style = MaterialTheme.typography.bodySmall)
-        if (stale) Text(stringResource(R.string.repo_health_stale), style = MaterialTheme.typography.bodySmall)
+        if (stale) {
+            WarningCard(message = stringResource(R.string.repo_health_stale))
+        }
         if (failure != null) {
             Text(repositoryErrorText(failure), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         } else if (state?.error != null) {
@@ -419,9 +497,6 @@ private fun LazyListScope.releaseGroup(module: CatalogModule, release: ModuleRel
                 },
             )
         }
-        release.attestationUrl?.takeIf(String::isNotBlank)?.let { url ->
-            add("attestation" to { ModuleInfoLink(stringResource(R.string.repo_attestation), null, url) })
-        }
     }
     lazySegmentColumn(rows, key = { _, row -> "$releaseKey:${row.first}" }) { _, row -> row.second() }
     item(key = "$releaseKey:spacing") { Spacer(Modifier.height(12.dp)) }
@@ -436,6 +511,7 @@ private fun ReadmeTab(
     viewModel: ModuleDetailViewModel,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val layoutDirection = LocalLayoutDirection.current
     val documentUrl = module.readmeUrl.ifBlank { module.sourceUrl }
     val document = state.documents[documentUrl]
     LaunchedEffect(module.catalogId, documentUrl, module.detailLoaded, module.registryMetadata?.buildId) {
@@ -447,43 +523,58 @@ private fun ReadmeTab(
     val detailFailed = !module.detailLoaded && state.error != null
     val documentLoading = !detailFailed && (!module.detailLoaded || document == null || document.loading)
     val documentFailed = detailFailed || document?.failed == true
-    Column(Modifier.fillMaxSize().padding(innerPadding)) {
-        DetailNotice(module, state, viewModel)
-        Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.fillMaxSize().padding(
+            start = innerPadding.calculateStartPadding(layoutDirection),
+            end = innerPadding.calculateEndPadding(layoutDirection),
+        ),
+    ) {
+        LazyColumn(
+            Modifier.fillMaxSize().nestedScroll(nestedScrollConnection),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                bottom = innerPadding.calculateBottomPadding() + 16.dp,
+            ),
+        ) {
+            item(key = "status") { DetailNotice(module, state, viewModel) }
             when {
                 documentLoading -> Unit
 
-                documentFailed -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(stringResource(R.string.repo_document_error))
-                    TextButton(onClick = {
-                        if (!module.detailLoaded) viewModel.dispatch(ModuleDetailUiAction.Retry) else viewModel.loadReadme(retry = true)
-                    }) {
-                        Text(stringResource(R.string.network_retry))
-                    }
-                }
-
-                content.isBlank() -> Text(stringResource(R.string.repo_no_readme))
-
-                else -> {
-                    LazyColumn(
-                        Modifier.fillMaxSize().nestedScroll(nestedScrollConnection),
-                        contentPadding = PaddingValues(bottom = 16.dp),
-                    ) {
-                        item(key = "document") {
-                            GithubMarkdown(
-                                document = requireNotNull(readme),
-                                backgroundColor = Color.Transparent,
-                                loading = htmlLoading,
-                                readmeLinks = true,
-                                callerProvideLoadingIndicator = true,
-                            )
+                documentFailed -> item(key = "error") {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(stringResource(R.string.repo_document_error))
+                        TextButton(onClick = {
+                            if (!module.detailLoaded) viewModel.dispatch(ModuleDetailUiAction.Retry) else viewModel.loadReadme(retry = true)
+                        }) {
+                            Text(stringResource(R.string.network_retry))
                         }
                     }
                 }
+
+                content.isBlank() -> item(key = "empty") {
+                    Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.repo_no_readme))
+                    }
+                }
+
+                else -> item(key = "document") {
+                    CatalogCard(
+                        modifier = Modifier.padding(16.dp),
+                        contentPadding = PaddingValues(0.dp),
+                    ) {
+                        GithubMarkdown(
+                            document = requireNotNull(readme),
+                            backgroundColor = Color.Transparent,
+                            loading = htmlLoading,
+                            readmeLinks = true,
+                            callerProvideLoadingIndicator = true,
+                        )
+                    }
+                }
             }
-            if (documentLoading || (!documentFailed && content.isNotBlank() && htmlLoading.value)) {
-                LoadingIndicator(Modifier.align(Alignment.Center))
-            }
+        }
+        if (documentLoading || (!documentFailed && content.isNotBlank() && htmlLoading.value)) {
+            LoadingIndicator(Modifier.align(Alignment.Center))
         }
     }
 }
@@ -544,7 +635,6 @@ private fun ReleaseAsset(module: CatalogModule, release: ModuleRelease, asset: M
         descriptionStyle = MaterialTheme.typography.bodyMedium,
         descriptionColor = MaterialTheme.colorScheme.onSurfaceVariant,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
-        onClick = if (downloading) null else ({ onClick() }),
         descriptionColumnContent = {
             asset.expected?.let { expected ->
                 val fullHash = stringResource(R.string.repo_sha256, expected.sha256)
@@ -596,83 +686,46 @@ private fun ReleaseNotes(module: CatalogModule, release: ModuleRelease, state: R
         ModuleReadme(it, module.repositoryUrl, DocumentFormat.HTML, policy)
     }
     var expanded by rememberSaveable(module.catalogId, release.tagName, release.versionCode) { mutableStateOf(false) }
-    val previewState = remember(document) { mutableStateOf<ReleaseNotesPreview?>(null) }
-    LaunchedEffect(document) {
-        if (document != null) {
-            previewState.value = withContext(Dispatchers.Default) { releaseNotesPreview(document) }
-        }
-    }
-    val preview = previewState.value
     val htmlLoading = remember(document) { mutableStateOf(true) }
     val documentLoading = document == null && release.changelogUrl.isNotBlank() && (state == null || state.loading)
     val documentFailed = state?.details?.notesFailed == true
     Column(Modifier.fillMaxWidth()) {
-        if (preview?.collapsible == true) {
-            TextButton(onClick = {
-                if (!expanded) htmlLoading.value = true
-                expanded = !expanded
-            }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.module_changelog), modifier = Modifier.weight(1f))
-                Icon(
-                    imageVector = if (expanded) Icons.TwoTone.ExpandLess else Icons.TwoTone.ExpandMore,
-                    contentDescription = stringResource(if (expanded) R.string.repo_collapse_changelog else R.string.repo_expand_changelog),
-                )
-            }
+        TextButton(
+            onClick = { expanded = !expanded },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.show_detail_or_hide_detail), modifier = Modifier.weight(1f))
+            Icon(
+                imageVector = if (expanded) Icons.TwoTone.ExpandLess else Icons.TwoTone.ExpandMore,
+                contentDescription = stringResource(if (expanded) R.string.repo_collapse_changelog else R.string.repo_expand_changelog),
+            )
         }
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            when {
-                documentLoading -> Unit
+        if (expanded) {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                when {
+                    documentLoading -> LoadingIndicator()
 
-                documentFailed -> Column {
-                    Text(stringResource(R.string.repo_changelog_error))
-                    TextButton(onClick = { viewModel?.loadReleaseDetails(release, retry = true) }) {
-                        Text(stringResource(R.string.network_retry))
+                    documentFailed -> Column {
+                        Text(stringResource(R.string.repo_changelog_error))
+                        TextButton(onClick = { viewModel?.loadReleaseDetails(release, retry = true) }) {
+                            Text(stringResource(R.string.network_retry))
+                        }
                     }
-                }
 
-                document != null && preview != null -> {
-                    if (preview.collapsible && !expanded) {
-                        Text(
-                            text = preview.text,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 6,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    } else {
+                    document != null -> {
                         GithubMarkdown(
                             document = document,
                             backgroundColor = Color.Transparent,
                             loading = htmlLoading,
                             callerProvideLoadingIndicator = true,
                         )
+                        if (htmlLoading.value) LoadingIndicator()
                     }
                 }
             }
-            val rendering = document != null && preview != null && (!preview.collapsible || expanded) && htmlLoading.value
-            if (documentLoading || (document != null && preview == null) || (!documentFailed && rendering)) LoadingIndicator()
         }
     }
 }
-
-private data class ReleaseNotesPreview(val text: String, val collapsible: Boolean)
-
-private fun releaseNotesPreview(document: ModuleReadme): ReleaseNotesPreview {
-    val html = if (document.format == DocumentFormat.HTML) {
-        document.content
-    } else {
-        val extensions = listOf(TablesExtension.create())
-        val parser = Parser.builder().extensions(extensions).build()
-        HtmlRenderer.builder().extensions(extensions).build().render(parser.parse(document.content))
-    }
-    val text = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
-    val collapsible = text.codePointCount(0, text.length) > RELEASE_NOTES_PREVIEW_LIMIT
-    val preview = if (collapsible) text.substring(0, text.offsetByCodePoints(0, RELEASE_NOTES_PREVIEW_LIMIT)).trimEnd() + "…" else text
-    return ReleaseNotesPreview(preview, collapsible)
-}
-
-private const val RELEASE_NOTES_PREVIEW_LIMIT = 500
 
 @Composable
 @Preview

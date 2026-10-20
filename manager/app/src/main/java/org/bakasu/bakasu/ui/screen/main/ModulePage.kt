@@ -563,12 +563,7 @@ private fun getMetaModuleWarningText(
     if (!showWarning) return null
     if (!hasModuleRequireMount) return null
 
-    return when (status) {
-        MetaModuleStatus.MISSING -> context.getString(R.string.no_meta_module_installed)
-        MetaModuleStatus.REMOVED -> context.getString(R.string.meta_module_removed)
-        MetaModuleStatus.DISABLED -> context.getString(R.string.meta_module_disabled)
-        MetaModuleStatus.ACTIVE -> null
-    }
+    return status.resId?.let { context.getString(it) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

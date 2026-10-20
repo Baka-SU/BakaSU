@@ -326,7 +326,6 @@
     <string name="sort_size">Dimensione</string>
     <string name="sort_usage_freq">Frequenza d\'utilizzo</string>
     <string name="reverse_order">Ordine inverso</string>
-    <string name="no_apps_in_category">Nessuna applicazione in questa categoria</string>
     <string name="persistent">Persistente</string>
     <string name="temporary">Temporaneo</string>
     <string name="susfs_config_title">Configurazione SuSFS</string>

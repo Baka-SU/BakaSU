@@ -7,6 +7,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -565,7 +566,6 @@ private fun LogBottomSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceBright,
     ) {
         Row(
             modifier = Modifier
@@ -673,7 +673,7 @@ fun UninstallItem(
     )
 }
 
-enum class UninstallType(val title: Int, val message: Int, val icon: ImageVector) {
+enum class UninstallType(@param:StringRes val title: Int, @param:StringRes val message: Int, val icon: ImageVector) {
     TEMPORARY(
         R.string.settings_uninstall_temporary,
         R.string.settings_uninstall_temporary_message,

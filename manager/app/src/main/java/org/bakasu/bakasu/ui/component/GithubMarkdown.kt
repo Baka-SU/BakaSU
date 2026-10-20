@@ -30,6 +30,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -58,6 +60,7 @@ import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
 import org.koin.compose.koinInject
+import top.yukonga.miuix.kmp.nav.core.LocalNavTransitionScope
 
 private val documentScrollScript = """
     (function() {
@@ -258,6 +261,7 @@ private fun GithubMarkdownWebView(
 ) {
     val policy = document.policy
     val resourceRepository = koinInject<WebResourceRepository>()
+    val transitionRunning = LocalNavTransitionScope.current.isRunning
 
     AndroidView(
         factory = { context ->
@@ -339,7 +343,10 @@ private fun GithubMarkdownWebView(
                     Log.e("GithubMarkdown", "WebView setup failed", e)
                 }
             }
-            frameLayout.addView(webView)
+            frameLayout.addView(
+                webView,
+                FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT),
+            )
             frameLayout
         },
         onRelease = { frameLayout ->
@@ -353,6 +360,11 @@ private fun GithubMarkdownWebView(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
+            .graphicsLayer {
+                // Keep Chromium hardware accelerated and composite its content with the
+                // navigation transform instead of switching WebView to software drawing.
+                compositingStrategy = if (transitionRunning) CompositingStrategy.Offscreen else CompositingStrategy.Auto
+            }
             .clipToBounds(),
     )
 }

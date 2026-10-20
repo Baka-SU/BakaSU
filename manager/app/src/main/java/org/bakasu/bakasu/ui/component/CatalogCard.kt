@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui.component
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -34,6 +35,7 @@ fun CatalogCard(
     onClick: (() -> Unit)? = null,
     shape: Shape = RoundedCornerShape(16.dp),
     containerColor: Color? = null,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val themeConfig = koinInject<ThemeConfig>()
@@ -48,7 +50,7 @@ fun CatalogCard(
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .renderBackgroundBlur(),
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), content = content)
+        Column(Modifier.padding(contentPadding), content = content)
     }
 }
 

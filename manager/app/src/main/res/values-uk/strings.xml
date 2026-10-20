@@ -303,7 +303,6 @@
     <string name="warning_of_meta_module_title">Потрібен метамодуль</string>
     <string name="warning_of_meta_module_summary">Цей модуль хоче монтувати /system; цим займатиметься метамодуль. Без нього модуль може не працювати</string>
     <string name="sort_usage_freq">Частота використання</string>
-    <string name="no_apps_in_category">Немає додатків у цій категорії</string>
     <string name="persistent">Постійний</string>
     <string name="temporary">Тимчасовий</string>
     <string name="susfs_config_title">Налаштування SuSFS</string>

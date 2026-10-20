@@ -732,29 +732,16 @@ private fun SulogDetailDialog(
 }
 
 @Composable
-fun sulogFilterLabel(filter: SulogEventFilter): String = when (filter) {
-    SulogEventFilter.RootExecve -> stringResource(R.string.sulog_filter_root_execve)
-    SulogEventFilter.SuCompat -> stringResource(R.string.sulog_filter_sucompat)
-    SulogEventFilter.IoctlGrantRoot -> stringResource(R.string.sulog_filter_ioctl_grant_root)
-    SulogEventFilter.DaemonEvent -> stringResource(R.string.sulog_filter_daemon_restart)
-}
+fun sulogFilterLabel(filter: SulogEventFilter): String = stringResource(filter.resId)
 
 @Composable
-fun sulogEntryTitle(entry: SulogEntry): String = when (entry.eventType) {
-    SulogEventType.RootExecve -> entry.fields["comm"]
-        ?: stringResource(R.string.sulog_filter_root_execve)
-
-    SulogEventType.SuCompat -> stringResource(R.string.sulog_filter_sucompat)
-
-    SulogEventType.IoctlGrantRoot -> stringResource(R.string.sulog_filter_ioctl_grant_root)
-
-    SulogEventType.DaemonEvent -> stringResource(R.string.sulog_filter_daemon_restart)
-
-    SulogEventType.Dropped -> stringResource(R.string.sulog_event_dropped)
-
-    SulogEventType.Unknown -> entry.fields["type"]?.replace('_', ' ')
-        ?.replaceFirstChar(Char::uppercase)
-        ?: stringResource(R.string.sulog_entry_unknown_event)
+fun sulogEntryTitle(entry: SulogEntry): String {
+    val title = when (entry.eventType) {
+        SulogEventType.RootExecve -> entry.fields["comm"]
+        SulogEventType.Unknown -> entry.fields["type"]?.replace('_', ' ')?.replaceFirstChar(Char::uppercase)
+        else -> null
+    }
+    return title ?: stringResource(entry.eventType.resId)
 }
 
 @Composable

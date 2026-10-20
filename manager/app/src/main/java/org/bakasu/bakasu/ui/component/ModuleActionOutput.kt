@@ -1,10 +1,13 @@
 package org.bakasu.bakasu.ui.component
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -99,20 +102,33 @@ fun ModuleActionOutput(
                 .blurSource(),
         ) {
             item {
-                Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
+                Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding() + 12.dp))
             }
             item {
-                Text(
-                    modifier = Modifier.padding(8.dp),
-                    text = output,
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                    fontFamily = monospaceFontFamily(),
-                    lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
-                )
+                CatalogCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Text(
+                        text = output,
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                        fontFamily = monospaceFontFamily(),
+                        lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
+                    )
+                }
             }
             item {
                 result?.let {
-                    Text(it, color = resultColor, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp))
+                    CatalogCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Text(
+                                it,
+                                color = resultColor,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
             }

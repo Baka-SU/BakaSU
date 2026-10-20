@@ -1,8 +1,13 @@
 package org.bakasu.bakasu.domain.model
 
+import androidx.annotation.StringRes
 import java.io.IOException
+import org.bakasu.bakasu.R
 
-enum class RepositoryApiType { KERNEL_SU, MMRL }
+enum class RepositoryApiType(@param:StringRes val resId: Int) {
+    KERNEL_SU(R.string.repo_api_kernel_su),
+    MMRL(R.string.repo_api_mmrl),
+}
 
 data class RepositorySource(
     val url: String,
@@ -21,7 +26,14 @@ data class RepositorySource(
     }
 }
 
-enum class RepositoryError { INVALID_URL, INVALID_FEED, UNSUPPORTED_FORMAT, NETWORK, OFFLINE, STORAGE }
+enum class RepositoryError(@param:StringRes val error: Int) {
+    INVALID_URL(R.string.repo_error_url),
+    INVALID_FEED(R.string.repo_error_feed),
+    UNSUPPORTED_FORMAT(R.string.repo_error_format),
+    NETWORK(R.string.repo_error_network),
+    OFFLINE(R.string.network_offline),
+    STORAGE(R.string.repo_error_storage),
+}
 
 class HttpStatusException(val statusCode: Int) : IOException("HTTP $statusCode")
 

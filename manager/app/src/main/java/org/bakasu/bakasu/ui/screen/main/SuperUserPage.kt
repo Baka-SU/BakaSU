@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.Article
-import androidx.compose.material.icons.twotone.Archive
 import androidx.compose.material.icons.twotone.ChevronRight
 import androidx.compose.material.icons.twotone.MoreVert
 import androidx.compose.material.icons.twotone.SearchOff
@@ -27,6 +26,7 @@ import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
@@ -67,10 +67,12 @@ import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.AllowlistOperationResult
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
+import org.bakasu.bakasu.domain.model.SuperUserLoadFailure
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.WarningCard
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
@@ -124,10 +126,6 @@ fun SuperUserPage(bottomPadding: Dp) {
     LaunchedEffect(viewModel) {
         viewModel.events.collectLatest { event ->
             when (event) {
-                is SuperUserUiEvent.Error -> if (event.message.isNotBlank()) {
-                    snackBarHostState.showReplacingSnackbar(event.message)
-                }
-
                 is SuperUserUiEvent.AllowlistOperationFinished -> {
                     val successMessage = if (event.restore) {
                         R.string.allowlist_restore_success
@@ -276,6 +274,15 @@ private fun Context.allowlistOperationMessage(
         )
 }
 
+@Composable
+private fun SuperUserLoadError(failure: SuperUserLoadFailure, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    val message = stringResource(failure.resId)
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        WarningCard(message = message)
+        FilledTonalButton(onClick = onRetry) { Text(stringResource(R.string.network_retry)) }
+    }
+}
+
 private fun createAllowlistBackupFileName(): String {
     val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     return "ksu_allowlist_backup_$timestamp.dat"
@@ -301,16 +308,21 @@ private fun SuperUserContent(
                 .blurSource(),
             contentAlignment = Alignment.Center,
         ) {
-            if (uiState.isRefreshing && uiState.search.isEmpty()) {
+            if (uiState.isRefreshing) {
                 LoadingIndicator()
+            } else if (uiState.loadFailure != null || uiState.search.isEmpty()) {
+                SuperUserLoadError(
+                    failure = uiState.loadFailure ?: SuperUserLoadFailure.PACKAGE_LOAD_FAILED,
+                    onRetry = { viewModel.dispatch(SuperUserUiAction.Refresh) },
+                    modifier = Modifier.padding(innerPadding).padding(16.dp),
+                )
             } else {
-                val isSearchEmpty = uiState.search.isNotEmpty()
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Icon(
-                        imageVector = if (isSearchEmpty) Icons.TwoTone.SearchOff else Icons.TwoTone.Archive,
+                        imageVector = Icons.TwoTone.SearchOff,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
@@ -318,11 +330,7 @@ private fun SuperUserContent(
                             .padding(bottom = 16.dp),
                     )
                     Text(
-                        text = if (isSearchEmpty) {
-                            stringResource(R.string.no_apps_found)
-                        } else {
-                            stringResource(R.string.no_apps_in_category)
-                        },
+                        text = stringResource(R.string.no_apps_found),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodyLarge,
                     )
@@ -357,6 +365,15 @@ private fun SuperUserContent(
         ) {
             item {
                 Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
+            }
+            uiState.loadFailure?.let { failure ->
+                item(key = "load-error") {
+                    SuperUserLoadError(
+                        failure = failure,
+                        onRetry = { viewModel.dispatch(SuperUserUiAction.Refresh) },
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
             }
             lazySegmentColumn(
                 items = uiState.appGroupList,

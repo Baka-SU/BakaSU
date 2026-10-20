@@ -5,6 +5,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.net.toUri
 import com.topjohnwu.superuser.io.SuFile
 import com.topjohnwu.superuser.io.SuFileInputStream
@@ -26,6 +27,7 @@ import org.bakasu.bakasu.domain.model.AllowlistOperationResult
 import org.bakasu.bakasu.domain.model.AllowlistRestoreResult
 import org.bakasu.bakasu.domain.model.InstalledApp
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
+import org.bakasu.bakasu.domain.model.SuperUserLoadFailure
 import org.bakasu.bakasu.domain.model.SuperUserState
 import org.bakasu.bakasu.domain.model.WEBVIEW_ZYGOTE_PROFILE_KEY
 import org.bakasu.bakasu.domain.model.WEBVIEW_ZYGOTE_UID
@@ -60,7 +62,7 @@ class SuperUserRepository(
     )
 
     suspend fun refresh(): Result<Unit> = refreshMutex.withLock {
-        mutableState.update { it.copy(refreshing = true, loadingProgress = 0f) }
+        mutableState.update { it.copy(refreshing = true, loadingProgress = 0f, loadFailure = null) }
         try {
             installedPackageRepository.refresh().getOrThrow()
             val packages = cache.packages.value
@@ -120,11 +122,16 @@ class SuperUserRepository(
                 groups = groups,
                 refreshing = false,
                 loadingProgress = 1f,
+                hasLoaded = true,
             )
             Result.success(Unit)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
+            Log.e("SuperUserRepository", "Failed to load applications", error)
+            mutableState.update {
+                it.copy(loadFailure = (error as? RootServiceException)?.reason ?: SuperUserLoadFailure.PACKAGE_LOAD_FAILED)
+            }
             Result.failure(error)
         } finally {
             mutableState.update { it.copy(refreshing = false) }

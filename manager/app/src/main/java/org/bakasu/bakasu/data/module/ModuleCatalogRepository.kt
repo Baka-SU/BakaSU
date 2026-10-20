@@ -1,5 +1,7 @@
 package org.bakasu.bakasu.data.module
 
+import java.io.IOException
+import java.util.Base64
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -20,6 +22,7 @@ import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.data.network.toDocument
 import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.DocumentFormat
 import org.bakasu.bakasu.domain.model.DocumentPolicy
 import org.bakasu.bakasu.domain.model.HttpStatusException
 import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
@@ -232,28 +235,75 @@ class ModuleCatalogRepository(
             .filterNot { it.isBuiltIn }
     }
 
-    suspend fun readme(module: CatalogModule): Result<ModuleReadme?> = attempt {
+    suspend fun readme(module: CatalogModule, retry: Boolean = false): Result<ModuleReadme?> = attempt {
         if (module.registryMetadata != null) return@attempt registry.forSource(module.repositoryUrl).readme(module)
         val policy = module.documentPolicy()
-        if (module.readmeUrl.isNotBlank()) return@attempt fetchReadme(module.readmeUrl, policy)
-        val source = module.sourceUrl.toHttpUrlOrNull()
-            ?.takeIf { it.scheme == "https" && it.host == "github.com" && it.username.isEmpty() && it.password.isEmpty() }
-            ?: return@attempt null
+        val readmeUrl = module.readmeUrl.toHttpUrlOrNull()
+        val readmeParts = readmeUrl?.pathSegments.orEmpty()
+        val githubReadme = readmeUrl?.host == "github.com" && readmeParts.size >= 4 && readmeParts[2] in setOf("blob", "raw")
+        val directUrl = if (githubReadme) {
+            readmeUrl.newBuilder().host("raw.githubusercontent.com")
+                .removePathSegment(2).query(null).fragment(null).build().toString()
+        } else {
+            module.readmeUrl
+        }
+        // A GitHub project page is a fallback source, not the README document itself.
+        val githubProject = readmeUrl?.host == "github.com" && readmeParts.filter(String::isNotBlank).size == 2
+        var documentFailure: IOException? = null
+        if (directUrl.isNotBlank() && !githubProject) {
+            try {
+                return@attempt fetchReadme(directUrl, policy, retry)
+            } catch (error: IOException) {
+                documentFailure = error
+            }
+        }
+        val source = readmeUrl?.takeIf { it.host in setOf("github.com", "raw.githubusercontent.com") }
+            ?: module.sourceUrl.toHttpUrlOrNull()
+                ?.takeIf { it.host == "github.com" }
+        if (source == null || !source.isHttps || source.port != 443 || source.username.isNotEmpty() || source.password.isNotEmpty()) {
+            documentFailure?.let { throw it }
+            return@attempt null
+        }
         val owner = source.pathSegments.getOrNull(0).orEmpty()
         val repo = source.pathSegments.getOrNull(1).orEmpty().removeSuffix(".git")
-        val apiUrl = "https://api.github.com/".toHttpUrlOrNull()!!.newBuilder()
-            .addPathSegment("repos").addPathSegment(owner).addPathSegment(repo).addPathSegment("readme").build().toString()
-        val response = networkRequestRepository.request(apiUrl, documentPolicy = policy).getOrElse { error ->
-            if (error is HttpStatusException && error.statusCode == 404) return@attempt null
+        if (owner.isBlank() || repo.isBlank()) return@attempt null
+        val api = "https://api.github.com/".toHttpUrlOrNull()!!.newBuilder()
+            .addPathSegment("repos").addPathSegment(owner).addPathSegment(repo)
+        val raw = directUrl.toHttpUrlOrNull()?.takeIf { it.host == "raw.githubusercontent.com" }
+        val parts = raw?.pathSegments.orEmpty()
+        val refIndex = if (parts.getOrNull(2) == "refs" && parts.getOrNull(3) in setOf("heads", "tags")) 4 else 2
+        if (raw != null && parts.size > refIndex + 1) {
+            api.addPathSegment("contents")
+            parts.drop(refIndex + 1).forEach { api.addPathSegment(it) }
+            api.addQueryParameter("ref", parts[refIndex])
+        } else {
+            api.addPathSegment("readme")
+        }
+        val apiUrl = api.build().toString()
+        val response = networkRequestRepository.request(
+            apiUrl,
+            headers = mapOf("Accept" to "application/vnd.github+json"),
+            forceNetwork = retry,
+            documentPolicy = policy,
+        ).getOrElse { error ->
+            if (error is HttpStatusException && error.statusCode == 404 && documentFailure == null) return@attempt null
             throw error
         }
-        val url = MmrlRepositoryParser.resourceUrl(apiUrl, JSONObject(response.body.orEmpty()).optString("download_url"))
+        val json = JSONObject(response.body.orEmpty())
+        val url = MmrlRepositoryParser.resourceUrl(apiUrl, json.optString("download_url"))
         if (url.isBlank()) throw RepositoryException(RepositoryError.INVALID_FEED)
-        fetchReadme(url, policy)
+        // Read GitHub's inline content so this fallback does not depend on the raw host
+        // that may have caused the original document request to fail.
+        if (json.optString("encoding") == "base64") {
+            val content = Base64.getDecoder().decode(json.getString("content").filterNot(Char::isWhitespace)).toString(Charsets.UTF_8)
+            val format = if (json.optString("name").substringAfterLast('.').lowercase() in setOf("html", "htm")) DocumentFormat.HTML else DocumentFormat.MARKDOWN
+            return@attempt ModuleReadme(content, url, format, policy)
+        }
+        fetchReadme(url, policy, retry)
     }
 
-    private suspend fun fetchReadme(url: String, policy: DocumentPolicy): ModuleReadme {
-        val response = networkRequestRepository.request(url, documentPolicy = policy).getOrThrow()
+    private suspend fun fetchReadme(url: String, policy: DocumentPolicy, retry: Boolean): ModuleReadme {
+        val response = networkRequestRepository.request(url, forceNetwork = retry, documentPolicy = policy).getOrThrow()
         return response.toDocument(policy)
     }
 

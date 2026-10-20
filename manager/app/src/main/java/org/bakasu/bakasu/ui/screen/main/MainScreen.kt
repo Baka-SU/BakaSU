@@ -37,12 +37,10 @@ import org.bakasu.bakasu.ui.activity.component.NavigationBar
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
 import org.bakasu.bakasu.ui.rememberMaterial3BlurBackdrop
 import org.bakasu.bakasu.ui.screen.BottomBarDestination
-import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalBlurState
 import org.bakasu.bakasu.ui.util.LocalHandlePageChange
-import org.bakasu.bakasu.ui.util.LocalPagerPage
 import org.bakasu.bakasu.ui.util.LocalPagerState
 import org.bakasu.bakasu.ui.util.LocalPortraitState
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
@@ -72,12 +70,6 @@ fun MainScreen(
         initialPage = uiSelectedPage,
         pageCount = { pages.size },
     )
-    val backgroundRenderState = LocalBackgroundRenderState.current
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.isScrollInProgress }.collect {
-            backgroundRenderState.pagerScrollActive = it
-        }
-    }
     var userScrollEnabled by remember { mutableStateOf(true) }
     var animating by remember { mutableStateOf(false) }
     var animateJob by remember { mutableStateOf<Job?>(null) }
@@ -152,7 +144,6 @@ fun MainScreen(
                     ),
                 state = pagerState,
                 userScrollEnabled = userScrollEnabled && !interceptPagerGestures,
-                beyondViewportPageCount = pages.size,
                 pageNestedScrollConnection = if (interceptPagerGestures) {
                     PagerGestureNestedScrollConnection
                 } else {
@@ -171,7 +162,6 @@ fun MainScreen(
                 val snackBarHostState = remember { SnackbarHostState() }
                 CompositionLocalProvider(
                     LocalSnackbarHost provides snackBarHostState,
-                    LocalPagerPage provides pageIndex,
                     LocalBlurState provides rememberMaterial3BlurBackdrop(
                         enableBlur = themeConfig.isEnableBlur,
                         pagerState = pagerState,

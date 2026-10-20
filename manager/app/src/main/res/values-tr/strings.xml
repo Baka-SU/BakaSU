@@ -261,7 +261,6 @@
     <string name="warning_of_meta_module_title">Meta modül gerektirir</string>
     <string name="warning_of_meta_module_summary">Bu modül, meta modül tarafından yönetilen /system bölümünü bağlamak istiyor. Bu modül meta modül olmadan çalışmayabilir</string>
     <string name="sort_usage_freq">Kullanım sıklığına göre</string>
-    <string name="no_apps_in_category">Bu kategoride uygulama yok</string>
     <string name="persistent">Kalıcı</string>
     <string name="temporary">Geçici</string>
     <string name="susfs_config_title">SuSFS Yapılandırması</string>

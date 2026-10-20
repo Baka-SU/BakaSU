@@ -449,14 +449,14 @@ private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, di
                     if (document != null) {
                         GithubMarkdown(
                             document = document,
-                            backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                         )
                     } else if (visuals.isMarkdown) {
                         MarkdownContent(content = visuals.content)
                     } else if (visuals.isHtml) {
                         GithubMarkdown(
                             document = ModuleReadme(visuals.content, "https://appassets.androidplatform.net/", DocumentFormat.HTML),
-                            backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                         )
                     } else {
                         Text(text = visuals.content)

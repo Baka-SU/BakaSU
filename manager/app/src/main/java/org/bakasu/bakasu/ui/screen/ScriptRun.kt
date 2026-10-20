@@ -5,7 +5,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -70,6 +76,7 @@ import org.bakasu.bakasu.ui.component.ModuleActionOutput
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.scriptLastRunText
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
+import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
 import org.bakasu.bakasu.ui.component.settings.SettingsDropdownWidget
 import org.bakasu.bakasu.ui.component.settings.SettingsSwitchWidget
@@ -129,11 +136,7 @@ fun ScriptRunScreen(route: Route.ScriptRun) {
                 }
             },
             result = if (finished) {
-                when (outcome) {
-                    ScriptOutcome.SUCCESS -> stringResource(R.string.script_result_success)
-                    ScriptOutcome.NOT_APPLICABLE -> stringResource(R.string.script_result_not_applicable)
-                    else -> stringResource(R.string.script_result_failed, state.exitCode ?: -1)
-                }
+                stringResource((outcome ?: ScriptOutcome.FAILURE).resId, state.exitCode ?: -1)
             } else {
                 null
             },
@@ -152,6 +155,7 @@ fun ScriptRunScreen(route: Route.ScriptRun) {
     val confirmButton = stringResource(R.string.script_run)
     val theme = koinInject<ThemeConfig>()
     val cards = koinInject<CardConfig>()
+    val layoutDirection = LocalLayoutDirection.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         topBar = {
@@ -159,6 +163,7 @@ fun ScriptRunScreen(route: Route.ScriptRun) {
                 modifier = Modifier.blurEffect(),
                 title = { Text(stringResource(R.string.script_run_title)) },
                 navigationIcon = { AppBackButton(onClick = { navigator.pop() }) },
+                windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = if (theme.isEnableBlur) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer.copy(cards.cardAlpha),
@@ -182,8 +187,13 @@ fun ScriptRunScreen(route: Route.ScriptRun) {
             val paramsTitle = if (prepared?.params?.params.isNullOrEmpty()) null else stringResource(R.string.script_params)
             LazyColumn(
                 modifier = Modifier.fillMaxSize().imePadding().nestedScroll(scrollBehavior.nestedScrollConnection).blurSource(),
-                contentPadding = padding,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(
+                    start = padding.calculateStartPadding(layoutDirection),
+                    top = padding.calculateTopPadding() + 12.dp,
+                    end = padding.calculateEndPadding(layoutDirection),
+                    bottom = padding.calculateBottomPadding(),
+                ),
+                verticalArrangement = Arrangement.spacedBy(if (theme.isEnableBlurExp) 0.dp else 8.dp),
             ) {
                 if (failure != null) {
                     item {
@@ -198,7 +208,6 @@ fun ScriptRunScreen(route: Route.ScriptRun) {
                         SettingsBaseWidget(
                             title = manifest.name,
                             description = listOfNotNull(
-                                stringResource(R.string.repo_module_id_value, manifest.id),
                                 listOfNotNull(manifest.version.takeIf { it.isNotBlank() }, manifest.versionCode?.let { "($it)" }).joinToString(" ").takeIf { it.isNotBlank() },
                                 manifest.author.takeIf { it.isNotBlank() }?.let { "${stringResource(R.string.module_author)}: $it" },
                                 manifest.description.takeIf { it.isNotBlank() },
@@ -207,7 +216,12 @@ fun ScriptRunScreen(route: Route.ScriptRun) {
                         )
                     }
                     lazySegmentColumn(items = listOf(state.lastRun)) { _, last ->
-                        SettingsBaseWidget(title = stringResource(R.string.script_notice), titleStyle = MaterialTheme.typography.bodyMedium, description = scriptLastRunText(last), iconPlaceholder = false)
+                        SettingsBaseWidget(
+                            title = stringResource(R.string.script_notice),
+                            titleStyle = MaterialTheme.typography.bodyMedium,
+                            description = scriptLastRunText(last),
+                            iconPlaceholder = false,
+                        )
                     }
                     lazySegmentColumn(items = prepared.params.params, title = paramsTitle, key = { _, param -> param.key }) { _, param ->
                         ScriptParamField(param, state, viewModel::setValue)
@@ -277,25 +291,41 @@ private fun ScriptParamField(param: ScriptParam, state: ScriptRunUiState, onValu
 @Composable
 private fun ScriptSource(prepared: PreparedScript) {
     var expanded by rememberSaveable(prepared.sha256) { mutableStateOf(false) }
-    Column(Modifier.padding(horizontal = 16.dp)) {
-        SettingsBaseWidget(
-            title = stringResource(R.string.script_source),
-            description = if (prepared.actionSourceTruncated) stringResource(R.string.script_source_truncated) else null,
-            iconPlaceholder = false,
-            onClick = { expanded = !expanded },
-        ) {
-            Icon(if (expanded) Icons.TwoTone.ExpandLess else Icons.TwoTone.ExpandMore, contentDescription = stringResource(if (expanded) R.string.script_collapse_source else R.string.script_expand_source))
+    val colors = ShellHighlightColors.forBackground(MaterialTheme.colorScheme.surfaceBright)
+    var highlighted by remember(prepared.sha256, colors) { mutableStateOf<AnnotatedString?>(null) }
+    LaunchedEffect(prepared.actionSource, colors, expanded) {
+        if (expanded && highlighted == null) {
+            highlighted = withContext(Dispatchers.Default) { highlightShell(prepared.actionSource, colors) }
         }
-        if (expanded) {
-            val colors = ShellHighlightColors.forBackground(MaterialTheme.colorScheme.surfaceContainer)
-            var highlighted by remember(prepared.sha256, colors) { mutableStateOf<AnnotatedString?>(null) }
-            LaunchedEffect(prepared.actionSource, colors) { highlighted = withContext(Dispatchers.Default) { highlightShell(prepared.actionSource, colors) } }
-            if (highlighted == null) {
-                LoadingIndicator()
-            } else {
-                SelectionContainer {
-                    Text(highlighted!!, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, softWrap = false, modifier = Modifier.horizontalScroll(rememberScrollState()).padding(16.dp))
+    }
+    SegmentedColumn {
+        expandableItem(
+            expanded = expanded,
+            topContent = {
+                SettingsBaseWidget(
+                    title = stringResource(R.string.script_source),
+                    description = if (prepared.actionSourceTruncated) stringResource(R.string.script_source_truncated) else null,
+                    iconPlaceholder = false,
+                    onClick = { expanded = !expanded },
+                ) {
+                    Icon(if (expanded) Icons.TwoTone.ExpandLess else Icons.TwoTone.ExpandMore, contentDescription = stringResource(if (expanded) R.string.script_collapse_source else R.string.script_expand_source))
                 }
+            },
+        ) {
+            item {
+                SettingsBaseWidget(
+                    title = null,
+                    iconPlaceholder = false,
+                    descriptionColumnContent = {
+                        if (highlighted == null) {
+                            if (expanded) LoadingIndicator()
+                        } else {
+                            SelectionContainer {
+                                Text(highlighted!!, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, softWrap = false, modifier = Modifier.horizontalScroll(rememberScrollState()))
+                            }
+                        }
+                    },
+                )
             }
         }
     }
@@ -303,13 +333,10 @@ private fun ScriptSource(prepared: PreparedScript) {
 
 @Composable
 private fun paramErrorText(param: ScriptParam, error: ParamError): String = when (error) {
-    ParamError.REQUIRED -> stringResource(R.string.script_param_required)
-    ParamError.TOO_LONG -> stringResource(R.string.script_param_too_long, (param as? ScriptParam.Text)?.maxLength ?: 0)
-    ParamError.INVALID_CHARACTERS -> stringResource(R.string.script_param_invalid_characters)
-    ParamError.NOT_AN_INTEGER -> stringResource(R.string.script_param_not_integer)
-    ParamError.BELOW_MIN -> stringResource(R.string.script_param_below_min, (param as? ScriptParam.Integer)?.min ?: 0)
-    ParamError.ABOVE_MAX -> stringResource(R.string.script_param_above_max, (param as? ScriptParam.Integer)?.max ?: 0)
-    ParamError.INVALID_OPTION, ParamError.INVALID_BOOLEAN -> stringResource(R.string.script_param_invalid)
+    ParamError.TOO_LONG -> stringResource(error.resId, (param as? ScriptParam.Text)?.maxLength ?: 0)
+    ParamError.BELOW_MIN -> stringResource(error.resId, (param as? ScriptParam.Integer)?.min ?: 0)
+    ParamError.ABOVE_MAX -> stringResource(error.resId, (param as? ScriptParam.Integer)?.max ?: 0)
+    else -> stringResource(error.resId)
 }
 
 @Composable
@@ -318,16 +345,10 @@ private fun scriptErrorText(error: Throwable): String = when (error) {
 
     is DownloadVerificationException -> stringResource(R.string.script_error_verify_failed)
 
-    is ScriptPackageException -> when (error.reason) {
-        ScriptPackageException.Reason.CORRUPT -> stringResource(R.string.script_error_corrupt)
-        ScriptPackageException.Reason.UNSAFE_ENTRY -> stringResource(R.string.script_error_unsafe)
-        ScriptPackageException.Reason.TOO_LARGE -> stringResource(R.string.script_error_too_large)
-        ScriptPackageException.Reason.MISSING_MODULE_PROP -> stringResource(R.string.script_error_missing_prop)
-        ScriptPackageException.Reason.NOT_ONESHOT -> stringResource(R.string.script_error_not_oneshot)
-        ScriptPackageException.Reason.INVALID_ID -> stringResource(R.string.script_error_invalid_id)
-        ScriptPackageException.Reason.ID_MISMATCH -> stringResource(R.string.script_error_id_mismatch)
-        ScriptPackageException.Reason.MISSING_ACTION -> stringResource(R.string.script_error_missing_action)
-        ScriptPackageException.Reason.INVALID_PARAMS -> stringResource(R.string.script_error_params, error.cause?.message ?: error.message.orEmpty())
+    is ScriptPackageException -> if (error.reason == ScriptPackageException.Reason.INVALID_PARAMS) {
+        stringResource(error.reason.resId, error.cause?.message ?: error.message.orEmpty())
+    } else {
+        stringResource(error.reason.resId)
     }
 
     else -> stringResource(R.string.script_error_generic, error.message.orEmpty())
