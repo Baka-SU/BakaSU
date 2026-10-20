@@ -37,6 +37,9 @@ class KsuCliRepository(context: Context) {
     }
 
     private val nativeLibraryDir = context.applicationInfo.nativeLibraryDir
+    private val shellLock = Any()
+    private var rootShell: Shell? = null
+    private var globalMountShell: Shell? = null
 
     private fun getNativeLibraryPath(name: String): String {
         val library = File(nativeLibraryDir, System.mapLibraryName(name))
@@ -48,22 +51,32 @@ class KsuCliRepository(context: Context) {
 
     fun getKsuDaemonPath(): String = getNativeLibraryPath("ksud")
 
-    fun getRootShell(globalMnt: Boolean = false): Shell = createRootShell(globalMnt)
+    /** Shared shells belong to this repository; callers must not close them. */
+    fun getRootShell(globalMnt: Boolean = false): Shell = synchronized(shellLock) {
+        val cached = if (globalMnt) globalMountShell else rootShell
+        if (cached != null && cached.isAlive) {
+            cached
+        } else {
+            createRootShell(globalMnt).also {
+                if (globalMnt) globalMountShell = it else rootShell = it
+            }
+        }
+    }
 
     fun generateMainShellBuilder(): Shell.Builder {
         val builder = Shell.Builder.create()
         try {
             builder.setCommands(getKsuDaemonPath(), "debug", "su")
-            builder.build()
+            builder.build().close()
         } catch (e: Throwable) {
             Log.w(TAG, "ksu failed: ", e)
             try {
                 builder.setCommands("su")
-                builder.build()
+                builder.build().close()
             } catch (e: Throwable) {
                 Log.e(TAG, "su failed: ", e)
                 builder.setCommands("sh")
-                builder.build()
+                builder.build().close()
             }
         }
 
