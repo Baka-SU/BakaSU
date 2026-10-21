@@ -73,7 +73,6 @@ __maybe_static struct page *fake_status = NULL;
 static struct mutex *ksu_selinux_status_lock = NULL;
 __maybe_static void initialize_fake_status();
 
-#ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
 enum sel_inos {
     SEL_ROOT_INO = 2,
     SEL_LOAD, /* load policy */
@@ -235,7 +234,7 @@ static inline u32 current_sid(void)
 }
 #endif
 
-static ssize_t my_write_context(struct file *file, char *buf, size_t size)
+__maybe_static ssize_t my_write_context(struct file *file, char *buf, size_t size)
 {
     // apply to all app uids
     if (likely(ksu_get_uid_t(current_uid()) < 10000)) {
@@ -299,7 +298,7 @@ out:
     return length;
 }
 
-static ssize_t my_write_access(struct file *file, char *buf, size_t size)
+__maybe_static ssize_t my_write_access(struct file *file, char *buf, size_t size)
 {
     // apply to all app uids
     if (likely(ksu_get_uid_t(current_uid()) < 10000)) {
@@ -449,6 +448,7 @@ int __nocfi ksu_handle_selinux_setprocattr(const char *name, void *value, size_t
 int __nocfi ksu_handle_selinux_setprocattr(struct task_struct *p, char *name, void *value, size_t size)
 #endif
 {
+#ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
     if (likely(ksu_get_uid_t(current_uid()) < 10000)) {
         goto call_orig;
     }
@@ -456,6 +456,7 @@ int __nocfi ksu_handle_selinux_setprocattr(struct task_struct *p, char *name, vo
     if (strcmp(name, "current")) {
         goto call_orig;
     }
+#endif
 
     struct ksu_task_security_struct *tsec;
     struct cred *new;
@@ -537,6 +538,7 @@ abort_change:
     abort_creds(new);
     return error;
 
+#ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
 call_orig:
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
     return ((setprocattr_fn)selinux_setprocattr_hook.original)(name, value, size);
@@ -545,8 +547,17 @@ call_orig:
 #else
     return ksu_orig_setprocattr(p, name, value, size);
 #endif
+#endif
 }
 
+#ifdef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
+int __nocfi my_setprocattr(const char *name, void *value, size_t size)
+{
+    return ksu_handle_selinux_setprocattr(name, value, size);
+}
+#endif
+
+#ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
 typedef int (*sel_open_handle_status_fn)(struct inode *inode, struct file *filp);
 static sel_open_handle_status_fn orig_sel_open_handle_status, *sel_open_handle_status_slot;
 static int my_sel_open_handle_status(struct inode *inode, struct file *filp)
@@ -1066,7 +1077,6 @@ out:
     mutex_unlock(ksu_selinux_status_lock);
 }
 
-#ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
 /*
  * Caveat:  Mutates scontext.
  */
@@ -1829,4 +1839,3 @@ allow:
     avd->allowed = 0xffffffff;
     goto out;
 }
-#endif
