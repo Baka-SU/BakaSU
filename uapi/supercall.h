@@ -18,7 +18,7 @@
 // 3: scoped su-session driver fd
 // 4: add KSU_GET_INFO_FLAG_BUNDLED
 // 5: add EVENT_SERVICES with a start/skip result
-static const __u32 KERNEL_SU_UAPI_VERSION = 5;
+static const __u32 KERNEL_SU_UAPI_VERSION = 6;
 
 /* Magic numbers for reboot hook to install fd */
 DEFINE_KSU_UAPI_CONST(__u32, KSU_INSTALL_MAGIC1, 0xDEADBEEF)
@@ -38,6 +38,7 @@ DEFINE_KSU_UAPI_CONST(__u32, KSU_GET_INFO_FLAG_MANAGER, (1U << 1))
 DEFINE_KSU_UAPI_CONST(__u32, KSU_GET_INFO_FLAG_LATE_LOAD, (1U << 2))
 DEFINE_KSU_UAPI_CONST(__u32, KSU_GET_INFO_FLAG_PR_BUILD, (1U << 3))
 DEFINE_KSU_UAPI_CONST(__u32, KSU_GET_INFO_FLAG_BUNDLED, (1U << 4))
+DEFINE_KSU_UAPI_CONST(__u32, KSU_GET_INFO_FLAG_PREINIT, (1U << 5))
 
 struct ksu_get_info_cmd {
     __u32 version; /* Output: KERNEL_SU_VERSION */
@@ -208,6 +209,15 @@ struct ksu_get_kernel_patch_implement {
     __u8 type; // Output: Current Kernel Patch Implement
 };
 
+/* Batched kernel symbol lookup for the preinit runner. */
+struct ksu_lookup_symbols_cmd {
+    __aligned_u64 names;
+    __aligned_u64 addrs;
+    __u32 count;
+    __u32 flags;
+};
+DEFINE_KSU_UAPI_CONST(__u32, KSU_LOOKUP_SYMBOLS_MAX, 1024)
+
 /* IOCTL command definitions */
 DEFINE_KSU_UAPI_CONST(__u32, KSU_IOCTL_GRANT_ROOT, _IOC(_IOC_NONE, 'K', 1, 0))
 DEFINE_KSU_UAPI_CONST(__u32, KSU_IOCTL_GET_INFO, _IOR('K', 2, struct ksu_get_info_cmd))
@@ -236,6 +246,7 @@ DEFINE_KSU_UAPI_CONST(__u32, KSU_IOCTL_MANAGE_TRY_UMOUNT, _IOC(_IOC_WRITE, 'K', 
 DEFINE_KSU_UAPI_CONST(__u32, KSU_IOCTL_SET_INIT_PGRP, _IO('K', 19))
 DEFINE_KSU_UAPI_CONST(__u32, KSU_IOCTL_GET_SULOG_FD, _IOW('K', 20, struct ksu_get_sulog_fd_cmd))
 DEFINE_KSU_UAPI_CONST(__u32, KSU_IOCTL_DISABLE_ESCAPE_TO_ROOT, _IO('K', 21))
+DEFINE_KSU_UAPI_CONST(__u32, KSU_IOCTL_LOOKUP_SYMBOLS, _IOW('K', 22, struct ksu_lookup_symbols_cmd))
 
 // Downstream add IOCTL command definitions
 DEFINE_KSU_UAPI_CONST(__u32, KSU_IOCTL_GET_FULL_VERSION, _IOC(_IOC_READ, 'K', 100, 0))

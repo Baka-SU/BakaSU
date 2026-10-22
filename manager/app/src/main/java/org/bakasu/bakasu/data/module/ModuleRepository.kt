@@ -45,7 +45,10 @@ class ModuleRepository(
                 } else {
                     previous.mapTo(mutableSetOf()) { it.id + it.versionCode }
                 }
-                val modules = parseModules(ksuCliRepository.listModules())
+                val preinitStatuses = readPreinitStatuses()
+                val modules = parseModules(ksuCliRepository.listModules()).map { m ->
+                    m.copy(preinitStatus = preinitStatuses[m.id])
+                }
                 val requiresMount = coroutineScope {
                     modules.map { module ->
                         async(Dispatchers.IO) {
@@ -157,6 +160,19 @@ class ModuleRepository(
                 )
             }
         }
+    }
+
+    private fun readPreinitStatuses(): Map<String, String> {
+        val lines = ArrayList<String>()
+        val success = ksuCliRepository.getRootShell().newJob()
+            .add("cat /data/adb/ksu/preinit_status")
+            .to(lines, null)
+            .exec().isSuccess
+        if (!success) return emptyMap()
+        return lines.mapNotNull { line ->
+            val parts = line.split(' ', limit = 3)
+            if (parts.size >= 2) parts[0] to parts[1] else null
+        }.toMap()
     }
 
     private fun parseModules(raw: String): List<InstalledModule> {

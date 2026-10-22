@@ -187,6 +187,10 @@ pub fn is_lkm() -> bool {
     get_info().flags & uapi::KSU_GET_INFO_FLAG_LKM != 0
 }
 
+pub fn is_preinit_supported() -> bool {
+    get_info().flags & uapi::KSU_GET_INFO_FLAG_PREINIT_RUST != 0
+}
+
 pub const fn uapi_version() -> u32 {
     uapi::KERNEL_SU_UAPI_VERSION
 }

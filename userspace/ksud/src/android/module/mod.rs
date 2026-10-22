@@ -470,14 +470,24 @@ pub fn prune_modules() -> Result<()> {
     Ok(())
 }
 
-const METADATA_FILE_CON: &str = "u:object_r:metadata_file:s0";
-
-// Prefer /metadata/watchdog/ when present, else /metadata.
-fn preinit_ksu_dir() -> &'static str {
-    if Path::new("/metadata/watchdog").is_dir() {
+// Preferred preinit storage, consistent with the upstream runner.
+pub fn preinit_ksu_dir() -> &'static str {
+    if ksucalls::get_info().uapi_version >= 6
+        && Path::new("/metadata/vold").is_dir()
+    {
+        defs::PREINIT_DIR_VOLD
+    } else if Path::new("/metadata/watchdog").is_dir() {
         defs::PREINIT_DIR_WATCHDOG
     } else {
         defs::PREINIT_DIR_DEFAULT
+    }
+}
+
+fn preinit_con(dir: &str) -> &'static str {
+    if dir == defs::PREINIT_DIR_VOLD {
+        defs::VOLD_METADATA_FILE_CON
+    } else {
+        defs::METADATA_FILE_CON
     }
 }
 
@@ -576,7 +586,7 @@ pub fn regenerate_preinit_rc() -> Result<()> {
     })?;
 
     // SELinux label so the kernel's filp_open in init context can read it.
-    if let Err(e) = crate::android::restorecon::lsetfilecon(out_path, METADATA_FILE_CON) {
+    if let Err(e) = crate::android::restorecon::lsetfilecon(out_path, preinit_con(preinit_str)) {
         debug!("set context on {} failed: {e}", out_path.display());
     }
 
@@ -589,6 +599,43 @@ pub fn regenerate_preinit_rc() -> Result<()> {
     std::fs::remove_file(Path::new(stale_dir).join(defs::MODULES_RC_FILE)).ok();
 
     Ok(())
+}
+
+fn next_boot_modules() -> BTreeMap<String, PathBuf> {
+    let mut modules: BTreeMap<String, Option<PathBuf>> = BTreeMap::new();
+    for src in [defs::MODULE_UPDATE_DIR, defs::MODULE_DIR] {
+        let Ok(entries) = std::fs::read_dir(src) else { continue };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() { continue; }
+            let Some(id) = path.file_name().and_then(|s| s.to_str()) else { continue };
+            let id = id.to_owned();
+            if path.join(defs::DISABLE_FILE_NAME).exists()
+                || path.join(defs::REMOVE_FILE_NAME).exists() {
+                modules.insert(id, None);
+            } else {
+                modules.entry(id).or_insert(Some(path));
+            }
+        }
+    }
+    modules.into_iter().filter_map(|(id, p)| p.map(|p| (id, p))).collect()
+}
+
+pub fn regenerate_preinit() -> Result<()> {
+    let selected = preinit_ksu_dir();
+    let stale: Vec<&Path> = [
+        defs::PREINIT_DIR_VOLD,
+        defs::PREINIT_DIR_WATCHDOG,
+        defs::PREINIT_DIR_DEFAULT,
+    ].into_iter().filter(|dir| *dir != selected).map(Path::new).collect();
+
+    // Retain BakaSU's existing initrc injection in addition to module preinit.
+    let rc = regenerate_preinit_rc();
+    let preinit = crate::android::preinit::sync(
+        Path::new(selected), &stale, &next_boot_modules(),
+        preinit_con(selected), ksucalls::is_preinit_supported(),
+    );
+    rc.and(preinit)
 }
 
 pub fn handle_updated_modules() -> Result<()> {
@@ -784,7 +831,7 @@ pub fn install_module(zip: &str) -> Result<()> {
     let result = install_module_to_system(zip);
     if let Err(ref e) = result {
         println!("- Error: {e}");
-    } else if let Err(e) = regenerate_preinit_rc() {
+    } else if let Err(e) = regenerate_preinit() {
         warn!("regenerate preinit rc failed: {e}");
     }
     result
@@ -804,7 +851,7 @@ pub fn undo_uninstall_module(id: &str) -> Result<()> {
         info!("Removed the remove mark for module {id}");
     }
 
-    if let Err(e) = regenerate_preinit_rc() {
+    if let Err(e) = regenerate_preinit() {
         warn!("regenerate preinit rc failed: {e}");
     }
 
@@ -823,7 +870,7 @@ pub fn uninstall_module(id: &str) -> Result<()> {
 
     info!("Module {id} marked for removal");
 
-    if let Err(e) = regenerate_preinit_rc() {
+    if let Err(e) = regenerate_preinit() {
         warn!("regenerate preinit rc failed: {e}");
     }
 
@@ -853,7 +900,7 @@ pub fn enable_module(id: &str) -> Result<()> {
         info!("Module {id} enabled");
     }
 
-    if let Err(e) = regenerate_preinit_rc() {
+    if let Err(e) = regenerate_preinit() {
         warn!("regenerate preinit rc failed: {e}");
     }
 
@@ -871,7 +918,7 @@ pub fn disable_module(id: &str) -> Result<()> {
 
     info!("Module {id} disabled");
 
-    if let Err(e) = regenerate_preinit_rc() {
+    if let Err(e) = regenerate_preinit() {
         warn!("regenerate preinit rc failed: {e}");
     }
 
@@ -880,7 +927,7 @@ pub fn disable_module(id: &str) -> Result<()> {
 
 pub fn disable_all_modules() -> Result<()> {
     mark_all_modules(defs::DISABLE_FILE_NAME)?;
-    if let Err(e) = regenerate_preinit_rc() {
+    if let Err(e) = regenerate_preinit() {
         warn!("regenerate preinit rc failed: {e}");
     }
     Ok(())
@@ -889,7 +936,7 @@ pub fn disable_all_modules() -> Result<()> {
 pub fn uninstall_all_modules() -> Result<()> {
     info!("Uninstalling all modules");
     mark_all_modules(defs::REMOVE_FILE_NAME)?;
-    if let Err(e) = regenerate_preinit_rc() {
+    if let Err(e) = regenerate_preinit() {
         warn!("regenerate preinit rc failed: {e}");
     }
     Ok(())

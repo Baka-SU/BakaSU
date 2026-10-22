@@ -8,7 +8,7 @@ use log::{LevelFilter, error, info};
 use crate::{
     android::{
         debug, dynamic_manager, feature, init_event, ksucalls,
-        module::{self, module_config, regenerate_preinit_rc},
+        module::{self, module_config},
         profile, sepolicy, su, sulog, susfs, uapi, umount_config, utils,
     },
     anykernel3::{self, Slot},
@@ -168,6 +168,12 @@ enum Commands {
 
     /// Manage susfs component
     Susfs(susfs::cli::SusfsArgs),
+
+    /// Manage early-boot module preinit.
+    Preinit {
+        #[command(subcommand)]
+        command: Preinit,
+    },
 
     /// Manage initrc injection
     Initrc {
@@ -565,6 +571,14 @@ enum UmountOp {
 }
 
 #[derive(clap::Subcommand, Debug)]
+enum Preinit {
+    /// Show preinit boot and module status.
+    Status,
+    /// Reset bootloop protection.
+    Reset,
+}
+
+#[derive(clap::Subcommand, Debug)]
 enum Initrc {
     /// Regenerate preinit rc file
     Refresh,
@@ -930,8 +944,15 @@ pub fn run() -> Result<()> {
                 Ok(())
             }
         },
+        Commands::Preinit { command } => match command {
+            Preinit::Status => {
+                crate::android::preinit::print_status();
+                Ok(())
+            }
+            Preinit::Reset => crate::android::preinit::reset_bootcount(),
+        },
         Commands::Initrc { command } => match command {
-            Initrc::Refresh => regenerate_preinit_rc(),
+            Initrc::Refresh => module::regenerate_preinit(),
         },
     };
 
