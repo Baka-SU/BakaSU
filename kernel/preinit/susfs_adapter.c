@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* SUSFS preinit interface for BakaSU built-in kernels.
- * Only PID 1 ever enters this path. See patch_susfs_exec.py for early-error
- * handling in the *separate* target Linux kernel's fs/exec.c.
+ * Only PID 1 enters this path. The target kernel's SUSFS exec hook
+ * must handle early exec failures and restore the original init path.
  */
 #include <linux/compat.h>
 #include <linux/err.h>
