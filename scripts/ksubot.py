@@ -80,34 +80,40 @@ except:
     print_exc()
     commit_message = f'(Unexpected Error! So no commit message)'
 
+def escape_markdown_v2(text: str) -> str:
+    return re.sub(r'([_*\[\]()~`>#+\-=|{}.!\\])', r'\\\1', text)
+
+def escape_markdown_code(text: str) -> str:
+    return text.replace('\\', '\\\\').replace('`', '\\`')
+
+def escape_markdown_url(url: str) -> str:
+    return url.replace('\\', '\\\\').replace(')', '\\)')
+
 if 'compare' in GITHUB_EVENT:
     commit_url = GITHUB_EVENT['compare']
-    commit_line = '<a href="' + commit_url + '">Compare</a>'
+    commit_line = '[Compare](' + escape_markdown_url(commit_url) + ')'
 elif 'head_commit' in GITHUB_EVENT:
     commit_url = GITHUB_EVENT['head_commit']['url']
-    commit_line = '<a href="' + commit_url + '">Commit</a>'
+    commit_line = '[Commit](' + escape_markdown_url(commit_url) + ')'
 else:
     commit_line = ''
 
 MSG_TEMPLATE = """
-<b>{title}</b>
+*{title}*
 Branch: {branch}
-#ci_{version}
-<pre>
+\\#ci\\_{version}
+```
 {commit_message}
-</pre>
+```
 {commit_line}
-<a href="{run_url}">Workflow run</a>
-<a href="https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main/Manager-debug.zip">Get latest main Debug build</a>
+[Workflow run]({run_url})
+[Get latest main Debug build](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main/Manager-debug.zip)
 """.strip()
 
 MAIN_UPDATED_MSG ="""
 main branch updated, manager in there may outdated 
 main 分支已更新，此 topic 的管理器可能已过时
 """.strip()
-
-def escape_telegram_html(text: str) -> str:
-    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#39;")
 
 async def start_bot_api():
     print("[+] Starting Telegram Bot API")
@@ -141,30 +147,30 @@ async def wait_for_bot_api():
 
 def get_caption():
     msg = MSG_TEMPLATE.format(
-        title=TITLE,
-        branch=BRANCH,
-        version=VERSION,
-        commit_message=escape_telegram_html(commit_message),
+        title=escape_markdown_v2(TITLE),
+        branch=escape_markdown_v2(BRANCH),
+        version=escape_markdown_v2(VERSION),
+        commit_message=escape_markdown_code(commit_message),
         commit_line=commit_line,
-        run_url=RUN_URL,
+        run_url=escape_markdown_url(RUN_URL),
     )
     if BRANCH != "main" and GITHUB_REF_TYPE != "tag":
-        msg += "\n⚠️⚠️<b>DEV VERSION, PLEASE BACKUP BEFORE INSTALLATION</b>⚠️⚠️"
-        msg += "\n⚠️⚠️<b>测试版，安装前请备份</b>⚠️⚠️"
+        msg += "\n⚠️⚠️*DEV VERSION, PLEASE BACKUP BEFORE INSTALLATION*⚠️⚠️"
+        msg += "\n⚠️⚠️*测试版，安装前请备份*⚠️⚠️"
     return msg
 
 def get_caption_for_debug():
     msg = MSG_TEMPLATE.format(
-        title=f"{TITLE}-Debug",
-        branch=BRANCH,
-        version=VERSION,
-        commit_message=escape_telegram_html(commit_message),
+        title=escape_markdown_v2(f"{TITLE}-Debug"),
+        branch=escape_markdown_v2(BRANCH),
+        version=escape_markdown_v2(VERSION),
+        commit_message=escape_markdown_code(commit_message),
         commit_line=commit_line,
-        run_url=RUN_URL,
+        run_url=escape_markdown_url(RUN_URL),
     )
     if BRANCH != "main" and GITHUB_REF_TYPE != "tag":
-        msg += "\n⚠️⚠️<b>DEV VERSION, PLEASE BACKUP BEFORE INSTALLATION</b>⚠️⚠️"
-        msg += "\n⚠️⚠️<b>测试版，安装前请备份</b>⚠️⚠️"
+        msg += "\n⚠️⚠️*DEV VERSION, PLEASE BACKUP BEFORE INSTALLATION*⚠️⚠️"
+        msg += "\n⚠️⚠️*测试版，安装前请备份*⚠️⚠️"
     return msg
 
 def check_environ():
@@ -212,7 +218,7 @@ def check_environ():
 async def send_message(bot: Bot, chat_id: int, text: str, message_thread_id=None):
     try:
         await asyncio.sleep(random.uniform(0.2, 0.8))
-        return await bot.send_message(chat_id=chat_id, text=text, parse_mode=ParseMode.HTML, message_thread_id=message_thread_id,
+        return await bot.send_message(chat_id=chat_id, text=text, parse_mode=ParseMode.MARKDOWN_V2, message_thread_id=message_thread_id,
                                        read_timeout=350,write_timeout=350,connect_timeout=350,pool_timeout=350,disable_web_page_preview=True)
     except RetryAfter as e:
         print(f"[-] Hit Telegram flood limit, retrying after {e.retry_after} seconds...")
@@ -258,7 +264,7 @@ async def main():
             continue
         elif index == len(files) - 1:
             # Only add caption to the last file
-            upload_release_files.append(InputMediaDocument(media=open(file, "rb"), filename=os.path.basename(file), caption=f"{caption if not no_caption else '<b>Release Manager</b>'}", parse_mode=ParseMode.HTML))
+            upload_release_files.append(InputMediaDocument(media=open(file, "rb"), filename=os.path.basename(file), caption=f"{caption if not no_caption else '*Release Manager*'}", parse_mode=ParseMode.MARKDOWN_V2))
             continue
         upload_release_files.append(InputMediaDocument(media=open(file, "rb"), filename=os.path.basename(file)))
 
