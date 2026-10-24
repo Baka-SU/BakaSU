@@ -59,6 +59,7 @@ import org.bakasu.bakasu.ui.screen.susfs.subpages.SusMapTab
 import org.bakasu.bakasu.ui.screen.susfs.subpages.SusPathTab
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
@@ -229,8 +230,9 @@ fun SuSFSConfigScreen() {
     Scaffold(
         topBar = {
             TopBarScrim {
-                // The scrim is the sole background layer: a blur here would paint a second
-                // full-width rectangle over it, which is the surface this replaces.
+                // The scrim covers the title row, so this column paints nothing - a blur here
+                // would lay a second full-width rectangle over it. The tab row sits past where
+                // the scrim has faded out, so it carries its own backdrop instead.
                 Column {
                     TopAppBar(
                         title = {
@@ -260,7 +262,9 @@ fun SuSFSConfigScreen() {
                             },
                         edgePadding = 0.dp,
                         minTabWidth = 0.dp,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .blurEffect(),
                     ) {
                         subpages.forEachIndexed { index, subpage ->
                             val tabVisible = !subpage.requirePersist || configEnabled == true

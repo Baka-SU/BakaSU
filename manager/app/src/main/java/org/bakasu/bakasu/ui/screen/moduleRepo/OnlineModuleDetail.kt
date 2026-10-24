@@ -109,6 +109,7 @@ import org.bakasu.bakasu.ui.component.transparentTopAppBarColors
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Navigator
 import org.bakasu.bakasu.ui.navigation.Route
+import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
@@ -207,8 +208,9 @@ private fun OnlineModuleDetailContent(module: CatalogModule, viewModel: ModuleDe
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            // The scrim is the sole background layer here: a blur or tint on this column would
-            // paint a second full-width rectangle over it, which is the surface this replaces.
+            // The scrim covers the title row, so this column paints nothing - a blur or tint
+            // here would lay a second full-width rectangle over it. The tab row sits past where
+            // the scrim has faded out, so it carries its own backdrop instead.
             TopBarScrim {
                 Column {
                     TopAppBar(
@@ -237,7 +239,9 @@ private fun OnlineModuleDetailContent(module: CatalogModule, viewModel: ModuleDe
                     PrimaryTabRow(
                         selectedTabIndex = pagerState.currentPage,
                         containerColor = Color.Transparent,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .blurEffect(),
                     ) {
                         tabTitles.forEachIndexed { index, title ->
                             Tab(

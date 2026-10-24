@@ -81,6 +81,7 @@ import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.rememberMaterial3BlurBackdrop
 import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalBlurState
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
@@ -787,8 +788,9 @@ private fun TopBar(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
 ) {
-    // The scrim behind this bar is the sole background layer: a blur here would paint a
-    // second full-width rectangle over it, which is the surface this replaces.
+    // The scrim behind the bar covers the title row, so this column paints nothing - a blur
+    // here would lay a second full-width rectangle over it. The tab row sits past where the
+    // scrim has faded out, so it carries its own backdrop instead.
     Column {
         TopAppBar(
             title = {
@@ -809,7 +811,9 @@ private fun TopBar(
         PrimaryTabRow(
             selectedTabIndex = selectedTab.coerceAtMost(1),
             containerColor = Color.Transparent,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .blurEffect(),
         ) {
             Tab(
                 selected = selectedTab == 0,
