@@ -59,7 +59,6 @@ import org.bakasu.bakasu.ui.screen.susfs.subpages.SusMapTab
 import org.bakasu.bakasu.ui.screen.susfs.subpages.SusPathTab
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
-import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
@@ -230,7 +229,9 @@ fun SuSFSConfigScreen() {
     Scaffold(
         topBar = {
             TopBarScrim {
-                Column(modifier = Modifier.blurEffect()) {
+                // The scrim is the sole background layer: a blur here would paint a second
+                // full-width rectangle over it, which is the surface this replaces.
+                Column {
                     TopAppBar(
                         title = {
                             TopBarTitlePill {

@@ -81,7 +81,6 @@ import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.rememberMaterial3BlurBackdrop
 import org.bakasu.bakasu.ui.theme.ThemeConfig
-import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalBlurState
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
@@ -788,7 +787,9 @@ private fun TopBar(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
 ) {
-    Column(modifier = Modifier.blurEffect()) {
+    // The scrim behind this bar is the sole background layer: a blur here would paint a
+    // second full-width rectangle over it, which is the surface this replaces.
+    Column {
         TopAppBar(
             title = {
                 TopBarTitlePill {
