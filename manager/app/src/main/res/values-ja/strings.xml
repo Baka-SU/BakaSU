@@ -89,7 +89,6 @@
     <string name="app_profile_template_sync">オンラインテンプレートの同期</string>
     <string name="app_profile_template_save_failed">テンプレートの保存に失敗しました</string>
     <string name="app_profile_template_import_empty">クリップボードが空です！</string>
-    <string name="module_changelog_failed">変更ログの取得に失敗しました: %s</string>
     <string name="grant_root_failed">root の付与に失敗しました！</string>
     <string name="action">アクション</string>
     <string name="close">閉じる</string>
@@ -159,11 +158,8 @@
     <string name="horizon_flashing">カーネルをフラッシュ中…</string>
     <string name="horizon_flash_complete_status">フラッシュが完了しました</string>
     <string name="select_slot_title">フラッシュ先のスロットを選択</string>
-    <string name="select_slot_description">フラッシュする boot のターゲットスロットを選択</string>
     <string name="slot_a">スロット A</string>
     <string name="slot_b">スロット B</string>
-    <string name="selected_slot">選択したスロット: %1$s</string>
-    <string name="current_slot">現在のシステムデフォルトスロット: %1$s</string>
     <string name="horizon_copy_failed">コピーに失敗しました</string>
     <string name="horizon_unknown_error">不明なエラー</string>
     <string name="flash_failed_message">フラッシュに失敗しました</string>
@@ -196,7 +192,6 @@
     <string name="check_log">ログを確認してください</string>
     <string name="installing_module">モジュールをインストール中: %1$d/%2$d</string>
     <string name="module_failed_count">%d モジュールのインストールに失敗しました</string>
-    <string name="kernel_flashing">カーネルをフラッシュ中</string>
     <string name="warning_of_meta_module_title">メタモジュールが必要です</string>
     <string name="warning_of_meta_module_summary">このモジュールは /system をマウントしようとしますが、メタモジュールがそれを処理します。そうでなければ動作しない可能性があります</string>
     <string name="sort_usage_freq">使用頻度</string>

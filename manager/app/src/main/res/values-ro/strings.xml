@@ -81,7 +81,6 @@
     <string name="app_profile_template_sync">Sincronizează șabloanele online</string>
     <string name="app_profile_template_save_failed">Nu s-a salvat șablonul</string>
     <string name="app_profile_template_import_empty">Clipboard-ul este gol!</string>
-    <string name="module_changelog_failed">Preluarea jurnalului de modificări a eșuat: %s</string>
     <string name="grant_root_failed">Nu s-a acordat acces root!</string>
     <string name="direct_install">Instalare directă (recomandat)</string>
     <string name="select_file">Selectează un fișier</string>

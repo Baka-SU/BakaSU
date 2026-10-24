@@ -87,7 +87,6 @@
     <string name="app_profile_template_sync">ซิงค์เทมเพลตออนไลน์</string>
     <string name="app_profile_template_save_failed">ไม่สามารถบันทึกเทมเพลต</string>
     <string name="app_profile_template_import_empty">คลิปบอร์ดว่างเปล่า!</string>
-    <string name="module_changelog_failed">ดึงข้อมูลบันทึกการเปลี่ยนแปลงล้มเหลว: %s</string>
     <string name="grant_root_failed">ไม่สามารถให้สิทธิ์รูทได้!</string>
     <string name="action">คำสั่ง</string>
     <string name="close">Close</string>

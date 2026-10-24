@@ -84,7 +84,6 @@
     <string name="app_profile_template_sync">Sinhronizēt tiešsaistes veidnes</string>
     <string name="app_profile_template_save_failed">Neizdevās saglabāt veidni</string>
     <string name="app_profile_template_import_empty">Starpliktuve ir tukša!</string>
-    <string name="module_changelog_failed">Izmaiņu žurnāla iegūšana neizdevās: %s</string>
     <string name="grant_root_failed">Neizdevās piešķirt sakni!</string>
     <string name="direct_install">Tiešā instalēšana (Ieteicams)</string>
     <string name="select_file">Izvēlieties failu</string>

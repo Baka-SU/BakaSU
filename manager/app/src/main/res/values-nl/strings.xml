@@ -79,7 +79,6 @@
     <string name="app_profile_template_sync">Synchroniseer online-sjablonen</string>
     <string name="app_profile_template_save_failed">Mislukt naar opslaan sjabloon</string>
     <string name="app_profile_template_import_empty">Klembord is leeg!</string>
-    <string name="module_changelog_failed">Ophalen van wijzigingslogboek mislukt: %s</string>
     <string name="grant_root_failed">Kan geen root verlenen!</string>
     <string name="action">Actie</string>
     <string name="direct_install">Directe installatie (aanbevolen)</string>

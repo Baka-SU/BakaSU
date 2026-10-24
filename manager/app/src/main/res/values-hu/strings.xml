@@ -81,7 +81,6 @@
     <string name="app_profile_template_sync">Online sablonok szinkronizálása</string>
     <string name="app_profile_template_save_failed">Sablon mentése sikertelen</string>
     <string name="app_profile_template_import_empty">A vágólap üres!</string>
-    <string name="module_changelog_failed">Változtatásnapló lekérése nem sikerült: %s</string>
     <string name="grant_root_failed">Root felhatalmazás sikertelen!</string>
     <string name="action">Művelet</string>
     <string name="direct_install">Közvetlen telepítés (Ajánlott)</string>
@@ -225,11 +224,8 @@
     <string name="horizon_flashing">Kernel telepítése…</string>
     <string name="horizon_flash_complete_status">Telepítés befejeződött</string>
     <string name="select_slot_title">Telepítendő Slot (A/B)</string>
-    <string name="select_slot_description">Telepítendő célslot kiválasztása (boot partíció)</string>
     <string name="slot_a">A Slot</string>
     <string name="slot_b">B Slot</string>
-    <string name="selected_slot">Jelenleg kiválasztott slot: %1$s</string>
-    <string name="current_slot">Jelenleg rendszeralapértelmezett slot: %1$s</string>
     <string name="horizon_copy_failed">Másolás meghiúsult</string>
     <string name="horizon_unknown_error">Hiba ismeretlen</string>
     <string name="flash_failed_message">Telepítés sikertelen</string>
@@ -274,7 +270,6 @@
     <string name="check_log">Ellenőrizd a naplót</string>
     <string name="installing_module">Modul telepítése %1$d/%2$d</string>
     <string name="module_failed_count">%d modul telepítése nem sikerült</string>
-    <string name="kernel_flashing">Kernel telepítés</string>
     <string name="warning_of_meta_module_title">Metamodul szükséges</string>
     <string name="warning_of_meta_module_summary">Ez a modul adatot akar csatolni a fájlrendszer /system névterébe, ehhez metamodul szükséges. Másképp a megfelelő működés nem garantált</string>
     <string name="sort_usage_freq">Leggyakrabban használtak</string>
@@ -365,15 +360,10 @@
     <string name="network_retry">Újra</string>
     <string name="please_check_network">Ellenőrizd az internet hozzáférésed és próbáld újra</string>
     <string name="confirm_install_module_title">Akarod hogy a %s modul telepítve legyen?</string>
-    <string name="assets_multiple_select_dialog_title">Válaszd ki a telepítendő tételeket</string>
-    <string name="assets_multiple_select_dialog_content_description">Méret: %1$s, Folyamatban: %2$s</string>
-    <string name="assets_multiple_select_dialog_warning">Tétel nem lett kiválasztva</string>
-    <string name="installed">Telepítve</string>
     <string name="open_module_home_page">Modul kezdőlapjának megnyitása böngészőben</string>
     <string name="readme">Olvass el</string>
     <string name="release">Végfelhasználói kiadások</string>
     <string name="info">Infók</string>
-    <string name="author_link">Modul fejlesztő(k) webes felülete</string>
     <string name="source_code">Forráskód</string>
     <string name="local">helyi</string>
     <string name="remote">távoli</string>
