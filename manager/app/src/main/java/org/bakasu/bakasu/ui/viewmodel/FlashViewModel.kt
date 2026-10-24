@@ -31,6 +31,11 @@ data class FlashState(
     val status: FlashingStatus = FlashingStatus.FLASHING,
     val output: String = "",
     val showReboot: Boolean = false,
+    /**
+     * Title used instead of [FlashingStatus.resId] once the operation succeeded, so each flow can
+     * report "module flashed" / "kernel flashed" / "patch completed" instead of generic success.
+     */
+    @param:StringRes val successTitleRes: Int? = null,
 )
 
 data class ModuleInstallStatus(

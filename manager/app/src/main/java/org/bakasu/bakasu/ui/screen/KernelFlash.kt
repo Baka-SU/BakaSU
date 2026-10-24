@@ -91,6 +91,7 @@ fun KernelFlashScreen(
         },
         output = logText,
         showReboot = flashState.isCompleted,
+        successTitleRes = R.string.kernel_flash_complete,
     )
     FlashOutputScreen(
         state = commonState,

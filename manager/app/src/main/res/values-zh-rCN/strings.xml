@@ -185,6 +185,11 @@
     <string name="flashing">刷写中</string>
     <string name="flash_success">刷写完成</string>
     <string name="flash_failed">刷写失败</string>
+    <string name="module_flash_complete">模块刷写完成</string>
+    <string name="kernel_flash_complete">内核刷写完成</string>
+    <string name="patch_complete">修补完成</string>
+    <string name="settings_flash_card_background">刷写界面卡片背景</string>
+    <string name="settings_flash_card_background_summary">在刷写日志下方绘制卡片背景；启用自定义背景时强制开启</string>
     <string name="save_log">保存日志</string>
     <string name="log_saved">日志已保存</string>
     <string name="unknown_module">未知模块</string>

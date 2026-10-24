@@ -35,20 +35,21 @@ fun CatalogCard(
     onClick: (() -> Unit)? = null,
     shape: Shape = RoundedCornerShape(16.dp),
     containerColor: Color? = null,
+    backgroundEnabled: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val themeConfig = koinInject<ThemeConfig>()
     val cardConfig = koinInject<CardConfig>()
     Surface(
-        color = if (themeConfig.isEnableBlurExp) {
+        color = if (!backgroundEnabled || themeConfig.isEnableBlurExp) {
             Color.Transparent
         } else {
             (containerColor ?: MaterialTheme.colorScheme.surfaceBright).copy(cardConfig.cardAlpha)
         },
         modifier = modifier.clip(shape)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .renderBackgroundBlur(),
+            .then(if (backgroundEnabled) Modifier.renderBackgroundBlur() else Modifier),
     ) {
         Column(Modifier.padding(contentPadding), content = content)
     }

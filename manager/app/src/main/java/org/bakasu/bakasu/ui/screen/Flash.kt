@@ -414,11 +414,23 @@ fun FlashScreen(flashIt: FlashIt) {
         viewModel.dispatch(ModuleUiAction.Refresh())
     }
 
+    val successTitleRes = when (flashIt) {
+        is FlashIt.FlashModule,
+        is FlashIt.FlashModules,
+        is FlashIt.FlashModuleUpdate,
+        -> R.string.module_flash_complete
+
+        is FlashIt.FlashBoot -> R.string.patch_complete
+
+        else -> null
+    }
+
     FlashOutputScreen(
         state = FlashState(
             status = flashUiState.flashingStatus,
             output = text,
             showReboot = showFloatAction,
+            successTitleRes = successTitleRes,
         ),
         logFilePrefix = "KernelSU_install_log",
         logContent = logContent.toString(),
@@ -526,10 +538,16 @@ fun ModuleInstallProgressBar(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .renderBackgroundBlur(MaterialTheme.colorScheme.surfaceBright),
+            .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
+            .then(
+                if (cardConfig.flashCardBackgroundEnabled) {
+                    Modifier.renderBackgroundBlur(MaterialTheme.colorScheme.surfaceBright)
+                } else {
+                    Modifier
+                },
+            ),
         colors = CardDefaults.cardColors(
-            containerColor = if (themeConfig.isEnableBlurExp) {
+            containerColor = if (themeConfig.isEnableBlurExp || !cardConfig.flashCardBackgroundEnabled) {
                 Color.Transparent
             } else {
                 MaterialTheme.colorScheme.surfaceBright.copy(
@@ -541,7 +559,7 @@ fun ModuleInstallProgressBar(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
             // 模块名称和进度
             Row(

@@ -80,6 +80,7 @@ data class SettingsUiState(
     val cardAlpha: Float = 1f,
     val backgroundDim: Float = 0f,
     val isCustomBackgroundEnabled: Boolean = false,
+    val isFlashCardBackgroundEnabled: Boolean = true,
     val systemDpi: Int = 0,
     val currentDpi: Int = 0,
     val tempDpi: Int = 0,
@@ -127,6 +128,7 @@ sealed interface SettingsUiAction {
     data object RemoveCustomBackground : SettingsUiAction
     data class SetCardAlpha(val value: Float) : SettingsUiAction
     data class SetBackgroundDim(val value: Float) : SettingsUiAction
+    data class SetFlashCardBackground(val enabled: Boolean) : SettingsUiAction
     data object SaveCardConfig : SettingsUiAction
     data class SetLanguageDialogVisible(val visible: Boolean) : SettingsUiAction
     data class SetLanguage(val localeTag: String) : SettingsUiAction
@@ -338,6 +340,11 @@ class SettingsViewModel(
         updateAppearanceAsync(AppearanceSetting.BackgroundDim(value))
     }
 
+    fun handleFlashCardBackgroundChange(enabled: Boolean) {
+        mutableState.update { it.copy(isFlashCardBackgroundEnabled = enabled) }
+        updateAppearanceAsync(AppearanceSetting.FlashCardBackground(enabled))
+    }
+
     fun saveCardConfig() = updateAppearanceAsync(AppearanceSetting.SaveCardConfig)
 
     fun handleIconChange(enabled: Boolean) {
@@ -485,6 +492,9 @@ class SettingsViewModel(
 
             is SettingsUiAction.SetBackgroundDim -> handleBackgroundDimChange(action.value)
 
+            is SettingsUiAction.SetFlashCardBackground ->
+                handleFlashCardBackgroundChange(action.enabled)
+
             SettingsUiAction.SaveCardConfig -> saveCardConfig()
 
             is SettingsUiAction.SetLanguageDialogVisible -> setLanguageDialogVisible(action.visible)
@@ -581,6 +591,7 @@ class SettingsViewModel(
                 cardAlpha = snapshot.cardAlpha,
                 backgroundDim = snapshot.backgroundDim,
                 isCustomBackgroundEnabled = snapshot.customBackgroundEnabled,
+                isFlashCardBackgroundEnabled = snapshot.flashCardBackgroundEnabled,
                 systemDpi = snapshot.systemDpi,
                 currentDpi = snapshot.currentDpi,
                 tempDpi = if (resetTempDpi) snapshot.currentDpi else current.tempDpi,

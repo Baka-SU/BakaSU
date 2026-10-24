@@ -194,6 +194,11 @@
     <string name="flashing">Flashing</string>
     <string name="flash_success">Flash success</string>
     <string name="flash_failed">Flash failed</string>
+    <string name="module_flash_complete">Module flashed</string>
+    <string name="kernel_flash_complete">Kernel flashed</string>
+    <string name="patch_complete">Patch completed</string>
+    <string name="settings_flash_card_background">Card background in flash screen</string>
+    <string name="settings_flash_card_background_summary">Draw a card background behind the flashing log. Always on while a custom background is set</string>
     <string name="save_log">Save logs</string>
     <string name="log_saved">Logs saved</string>
     <string name="unknown_module">Unknown module</string>

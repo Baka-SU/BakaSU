@@ -688,6 +688,20 @@ private fun AppearanceSettings(
                 )
             },
         )
+
+        item(topPadding = 1.dp) {
+            // 刷写/输出界面卡片背景。启用自定义背景后强制开启，避免日志文字压在背景图上。
+            SettingsSwitchWidget(
+                icon = Icons.TwoTone.Wallpaper,
+                title = stringResource(id = R.string.settings_flash_card_background),
+                description = stringResource(id = R.string.settings_flash_card_background_summary),
+                enabled = !state.isCustomBackgroundEnabled,
+                checked = state.isCustomBackgroundEnabled || state.isFlashCardBackgroundEnabled,
+                onCheckedChange = { isChecked ->
+                    viewModel.dispatch(SettingsUiAction.SetFlashCardBackground(isChecked))
+                },
+            )
+        }
     }
 }
 
