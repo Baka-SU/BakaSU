@@ -46,7 +46,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
@@ -110,6 +109,8 @@ import org.bakasu.bakasu.ui.component.NetworkRefreshContent
 import org.bakasu.bakasu.ui.component.RepositoryEmptyContent
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
 import org.bakasu.bakasu.ui.component.moduleAssetDetails
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.component.rememberRepositoryInstallDialog
@@ -123,6 +124,7 @@ import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Navigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.screen.LabelText
+import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
 import org.bakasu.bakasu.ui.util.LocalBackgroundBlurProvided
@@ -155,7 +157,7 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
     val snackBarHost = LocalSnackbarHost.current
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState),
+        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState),
     )
     val moduleListState = key(uiState.repositoryUrl, uiState.sortStargazerCountFirst, uiState.search) {
         rememberLazyListState()
@@ -231,42 +233,44 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
 
     Scaffold(
         topBar = {
-            SearchAppBar(
-                title = stringResource(R.string.module_repo),
-                searchText = uiState.search,
-                onSearchTextChange = { query ->
-                    viewModel.dispatch(ModuleRepoUiAction.Search(query))
-                },
-                dropdownContent = {
-                    ModuleRepositorySelector(
-                        sources = uiState.sources,
-                        selectedRepository = uiState.repositoryUrl,
-                        onSelect = viewModel::selectRepository,
-                        onManage = { navigator.push(Route.AddRepository) },
-                    )
-                    Box {
-                        IconButton(onClick = { showSortDropdown = true }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.TwoTone.Sort,
-                                contentDescription = stringResource(R.string.repo_sort),
+            TopBarScrim {
+                SearchAppBar(
+                    title = stringResource(R.string.module_repo),
+                    searchText = uiState.search,
+                    onSearchTextChange = { query ->
+                        viewModel.dispatch(ModuleRepoUiAction.Search(query))
+                    },
+                    dropdownContent = {
+                        ModuleRepositorySelector(
+                            sources = uiState.sources,
+                            selectedRepository = uiState.repositoryUrl,
+                            onSelect = viewModel::selectRepository,
+                            onManage = { navigator.push(Route.AddRepository) },
+                        )
+                        Box {
+                            TopBarIconPill(onClick = { showSortDropdown = true }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.TwoTone.Sort,
+                                    contentDescription = stringResource(R.string.repo_sort),
+                                )
+                            }
+                            ModuleRepoSortDropdown(
+                                expanded = showSortDropdown,
+                                onDismissRequest = { showSortDropdown = false },
+                                viewModel = viewModel,
+                                uiState = uiState,
                             )
                         }
-                        ModuleRepoSortDropdown(
-                            expanded = showSortDropdown,
-                            onDismissRequest = { showSortDropdown = false },
-                            viewModel = viewModel,
-                            uiState = uiState,
-                        )
-                    }
-                },
-                onBackClick = {
-                    navigator.pop()
-                },
-                scrollBehavior = scrollBehavior,
-                searchBarPlaceHolderText = stringResource(R.string.search_modules),
-                preserveStateOnNavigation = true,
-                searchContext = uiState.repositoryUrl,
-            )
+                    },
+                    onBackClick = {
+                        navigator.pop()
+                    },
+                    scrollBehavior = scrollBehavior,
+                    searchBarPlaceHolderText = stringResource(R.string.search_modules),
+                    preserveStateOnNavigation = true,
+                    searchContext = uiState.repositoryUrl,
+                )
+            }
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -295,9 +299,9 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                     state = moduleListState,
                     modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
                     contentPadding = PaddingValues(
-                        start = innerPadding.calculateStartPadding(layoutDirection) + 16.dp,
+                        start = innerPadding.calculateStartPadding(layoutDirection) + ScreenEdgePadding,
                         top = innerPadding.calculateTopPadding(),
-                        end = innerPadding.calculateEndPadding(layoutDirection) + 16.dp,
+                        end = innerPadding.calculateEndPadding(layoutDirection) + ScreenEdgePadding,
                         bottom = innerPadding.calculateBottomPadding() + 16.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -405,7 +409,7 @@ private fun ModuleRepositorySelector(
 ) {
     var showSheet by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    IconButton(onClick = { showSheet = true }, modifier = modifier) {
+    TopBarIconPill(onClick = { showSheet = true }, modifier = modifier) {
         Icon(Icons.TwoTone.Settings, contentDescription = stringResource(R.string.repo_manage))
     }
     if (showSheet) {

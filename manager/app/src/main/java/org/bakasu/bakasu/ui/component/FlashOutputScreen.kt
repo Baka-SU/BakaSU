@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,11 +22,10 @@ import androidx.compose.material.icons.twotone.Save
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
@@ -52,8 +49,6 @@ import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.theme.CardConfig
-import org.bakasu.bakasu.ui.theme.ThemeConfig
-import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.theme.monospaceFontFamily
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
@@ -81,25 +76,22 @@ fun FlashOutputScreen(
     val savedTemplate = stringResource(R.string.log_saved)
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
-        rememberTopAppBarState(
-            initialHeightOffset = -154f,
-            initialHeightOffsetLimit = -154f, // from debugger
-        ),
-    )
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val canGoBack = state.status != FlashingStatus.FLASHING
     val cardBackgroundEnabled = cardConfig.flashCardBackgroundEnabled
 
     Scaffold(
         topBar = {
-            FlashOutputTopBar(state.status, state.successTitleRes, { if (canGoBack) onBack() }, {
-                scope.launch {
-                    val date = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.getDefault()).format(Date())
-                    val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "${logFilePrefix}_$date.log")
-                    file.writeText(logContent)
-                    snackbarHost.showReplacingSnackbar(savedTemplate.format(file.absolutePath))
-                }
-            }, scrollBehavior)
+            TopBarScrim {
+                FlashOutputTopBar(state.status, state.successTitleRes, { if (canGoBack) onBack() }, {
+                    scope.launch {
+                        val date = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.getDefault()).format(Date())
+                        val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "${logFilePrefix}_$date.log")
+                        file.writeText(logContent)
+                        snackbarHost.showReplacingSnackbar(savedTemplate.format(file.absolutePath))
+                    }
+                }, scrollBehavior)
+            }
         },
         floatingActionButton = {
             if (state.showReboot) {
@@ -208,9 +200,6 @@ private fun FlashOutputTopBar(
     onSave: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
-    val themeConfig: ThemeConfig = koinInject()
-    val cardConfig: CardConfig = koinInject()
-    val containerColor = if (themeConfig.isEnableBlur) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
     val color = when (status) {
         FlashingStatus.FLASHING -> MaterialTheme.colorScheme.primary
         FlashingStatus.SUCCESS -> MaterialTheme.colorScheme.tertiary
@@ -221,18 +210,19 @@ private fun FlashOutputTopBar(
     } else {
         status.resId
     }
-    LargeFlexibleTopAppBar(
-        modifier = Modifier.blurEffect(),
+    TopAppBar(
         title = {
-            Text(
-                stringResource(titleRes),
-                color = color,
-            )
+            TopBarTitlePill {
+                Text(
+                    stringResource(titleRes),
+                    color = color,
+                )
+            }
         },
         navigationIcon = { AppBackButton(onClick = onBack) },
-        actions = { IconButton(onClick = onSave) { Icon(Icons.TwoTone.Save, stringResource(R.string.save_log)) } },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor, scrolledContainerColor = containerColor),
-        windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
+        actions = { TopBarIconPill(onClick = onSave) { Icon(Icons.TwoTone.Save, stringResource(R.string.save_log)) } },
+        colors = transparentTopAppBarColors(),
+        windowInsets = pillTopAppBarWindowInsets(),
         scrollBehavior = scrollBehavior,
     )
 }

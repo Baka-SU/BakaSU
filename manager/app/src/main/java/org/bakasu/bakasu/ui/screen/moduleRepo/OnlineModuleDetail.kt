@@ -1,15 +1,12 @@
 package org.bakasu.bakasu.ui.screen.moduleRepo
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.defaultMinSize
@@ -36,8 +33,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
@@ -45,6 +40,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -97,19 +93,22 @@ import org.bakasu.bakasu.ui.component.CatalogCard
 import org.bakasu.bakasu.ui.component.GithubMarkdown
 import org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarIconPill
+import org.bakasu.bakasu.ui.component.TopBarScrim
+import org.bakasu.bakasu.ui.component.TopBarTitlePill
 import org.bakasu.bakasu.ui.component.WarningCard
 import org.bakasu.bakasu.ui.component.moduleAssetDetails
+import org.bakasu.bakasu.ui.component.pillTopAppBarWindowInsets
 import org.bakasu.bakasu.ui.component.rememberRepositoryInstallDialog
 import org.bakasu.bakasu.ui.component.repositoryErrorText
 import org.bakasu.bakasu.ui.component.scriptLastRunText
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
 import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
+import org.bakasu.bakasu.ui.component.transparentTopAppBarColors
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Navigator
 import org.bakasu.bakasu.ui.navigation.Route
-import org.bakasu.bakasu.ui.theme.CardConfig
-import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
@@ -142,33 +141,25 @@ fun OnlineModuleDetailScreen(
     val module = state.module
     if (module == null) {
         val navigator = LocalNavigator.current
-        val theme = koinInject<ThemeConfig>()
-        val cards = koinInject<CardConfig>()
-        val scroll = null ?: TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
-            rememberTopAppBarState(
-                initialHeightOffset = -154f,
-                initialHeightOffsetLimit = -154f, // from debugger
-            ),
-        )
-        val barColor = if (theme.isEnableBlur) {
-            Color.Transparent
-        } else {
-            MaterialTheme.colorScheme.surfaceContainer.copy(cards.cardAlpha)
-        }
+        val scroll = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
         Scaffold(
             modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
             topBar = {
-                Column(Modifier.blurEffect().background(barColor)) {
-                    LargeFlexibleTopAppBar(
-                        title = { Text(stringResource(R.string.module_repo), maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                TopBarScrim {
+                    TopAppBar(
+                        title = {
+                            TopBarTitlePill {
+                                Text(
+                                    stringResource(R.string.module_repo),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        },
                         navigationIcon = { AppBackButton(onClick = { navigator.pop() }) },
-                        actions = { },
-                        windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
+                        windowInsets = pillTopAppBarWindowInsets(),
                         scrollBehavior = scroll,
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent,
-                            scrolledContainerColor = Color.Transparent,
-                        ),
+                        colors = transparentTopAppBarColors(),
                     )
                 }
             },
@@ -208,70 +199,58 @@ private fun OnlineModuleDetailContent(module: CatalogModule, viewModel: ModuleDe
     val tabTitles = listOf(stringResource(R.string.readme), stringResource(R.string.release), stringResource(R.string.info))
     val uriHandler = LocalUriHandler.current
     val pagerState = rememberPagerState(pageCount = { tabTitles.size })
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
-        rememberTopAppBarState(
-            initialHeightOffset = -154f,
-            initialHeightOffsetLimit = -154f, // from debugger
-        ),
-    )
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
     BackHandler(pagerState.currentPage != 0) {
         coroutineScope.launch { pagerState.animateScrollToPage(0) }
     }
     val navigator = LocalNavigator.current
-    val theme = koinInject<ThemeConfig>()
-    val cards = koinInject<CardConfig>()
-    val scroll = scrollBehavior ?: TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
-        rememberTopAppBarState(
-            initialHeightOffset = -154f,
-            initialHeightOffsetLimit = -154f, // from debugger
-        ),
-    )
-    val barColor = if (theme.isEnableBlur) {
-        Color.Transparent
-    } else {
-        MaterialTheme.colorScheme.surfaceContainer.copy(cards.cardAlpha)
-    }
     Scaffold(
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            Column(Modifier.blurEffect().background(barColor)) {
-                LargeFlexibleTopAppBar(
-                    title = {
-                        Text(
-                            text = module.moduleName,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    navigationIcon = { AppBackButton(onClick = { navigator.pop() }) },
-                    actions = {
-                        IconButton(onClick = { uriHandler.openUri(module.pageUrl) }) {
-                            Icon(
-                                imageVector = Icons.TwoTone.OpenInBrowser,
-                                contentDescription = stringResource(R.string.open_module_home_page),
+            // The scrim covers the title row, so this column paints nothing - a blur or tint
+            // here would lay a second full-width rectangle over it. The tab row sits past where
+            // the scrim has faded out, so it carries its own backdrop instead.
+            TopBarScrim {
+                Column {
+                    TopAppBar(
+                        title = {
+                            TopBarTitlePill {
+                                Text(
+                                    text = module.moduleName,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        },
+                        navigationIcon = { AppBackButton(onClick = { navigator.pop() }) },
+                        actions = {
+                            TopBarIconPill(onClick = { uriHandler.openUri(module.pageUrl) }) {
+                                Icon(
+                                    imageVector = Icons.TwoTone.OpenInBrowser,
+                                    contentDescription = stringResource(R.string.open_module_home_page),
+                                )
+                            }
+                        },
+                        windowInsets = pillTopAppBarWindowInsets(),
+                        scrollBehavior = scrollBehavior,
+                        colors = transparentTopAppBarColors(),
+                    )
+                    PrimaryTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        containerColor = Color.Transparent,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .blurEffect(),
+                    ) {
+                        tabTitles.forEachIndexed { index, title ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                text = { Text(title) },
                             )
                         }
-                    },
-                    windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
-                    scrollBehavior = scroll,
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        scrolledContainerColor = Color.Transparent,
-                    ),
-                )
-                PrimaryTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    containerColor = Color.Transparent,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    tabTitles.forEachIndexed { index, title ->
-                        Tab(
-                            selected = pagerState.currentPage == index,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            text = { Text(title) },
-                        )
                     }
                 }
             }
