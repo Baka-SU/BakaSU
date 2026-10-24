@@ -358,3 +358,13 @@ ifeq ($(shell grep -q "KERNEL_PARAM_FL_NOARG" $(srctree)/include/linux/modulepar
 $(info -- $(REPO_NAME)/compat: found KERNEL_PARAM_FL_NOARG)
 ccflags-y += -DKSU_COMPAT_HAS_KERNEL_PARAM_FL_NOARG
 endif
+
+ifeq ($(shell grep -q "ksu_handle_init_module" $(srctree)/kernel/module/main.c 2>/dev/null; echo $$?),0)
+  $(info -- $(REPO_NAME)/compat: found ksu_handle_init_module)
+  ifeq ($(shell grep -q "ksu_handle_finit_module" $(srctree)/kernel/module/main.c 2>/dev/null; echo $$?),0)
+    $(info -- $(REPO_NAME)/compat: found ksu_handle_finit_module)
+    ccflags-y += -DKSU_COMPAT_HAS_INSMOD_HOOK
+  else
+    $(error You must hook both init_module and finit_module if you want module blacklist)
+  endif
+endif
