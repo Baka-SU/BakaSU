@@ -86,7 +86,6 @@
     <string name="app_profile_template_sync">Sincronizar plantillas en línea</string>
     <string name="app_profile_template_save_failed">No se ha podido guardar la plantilla</string>
     <string name="app_profile_template_import_empty">¡El portapapeles está vacío!</string>
-    <string name="module_changelog_failed">Fallo en la obtención del registro de cambios: %s</string>
     <string name="grant_root_failed">¡No se ha podido conceder el acceso root!</string>
     <string name="action">Aktion</string>
     <string name="close">Cerrar</string>
@@ -149,9 +148,6 @@
     <string name="horizon_flashing">Flashear kernel…</string>
     <string name="horizon_flash_complete_status">Flash completado</string>
     <string name="select_slot_title">Seleccionar Ranura Flash</string>
-    <string name="select_slot_description">Por favor, seleccione la ranura de destino para flashear el arranque</string>
-    <string name="selected_slot">Slot seleccionado: %1$s</string>
-    <string name="current_slot">Ranura predeterminada del sistema actual：%1$s</string>
     <string name="horizon_copy_failed">Hubo un fallo al copiar</string>
     <string name="horizon_unknown_error">Error desconocido</string>
     <string name="flash_failed_message">Flash falló</string>
@@ -340,7 +336,6 @@
     <string name="settings_language">Lenguaje de la aplicacion</string>
     <string name="language_system_default">Seguir sistema (Por Defecto)</string>
     <string name="settings_background_dim">Ajuste de la opacidad de fondo</string>
-    <string name="kernel_flashing">Flashes de Kernel</string>
     <string name="sort_name">Nombre</string>
     <string name="sort_install_time">Tiempo de instalación</string>
     <string name="sort_update_time">Hora de actualización</string>
@@ -409,12 +404,10 @@
     <string name="confirm_delete_umount_path">Seguro que quieres borrar la ruta %s?</string>
     <string name="umount_path_added">Ruta Umount añadida</string>
     <string name="umount_path_removed">Ruta Umount quitada</string>
-    <string name="installed">Instalado</string>
     <string name="open_module_home_page">Abrir pagina del módulo en el navegador</string>
     <string name="readme">Léeme</string>
     <string name="release">Versiones</string>
     <string name="info">Info</string>
-    <string name="author_link">Link del autor del módulo</string>
     <string name="source_code">Código fuente</string>
     <string name="assert_support_content">%1$s,%2$d descargas</string>
     <string name="show_detail_or_hide_detail">Mostrar u ocultar detalles</string>

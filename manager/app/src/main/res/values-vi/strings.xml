@@ -97,7 +97,6 @@
     <string name="app_profile_template_sync">Đồng bộ hoá các mẫu trực tuyến</string>
     <string name="app_profile_template_save_failed">Lưu mẫu thất bại</string>
     <string name="app_profile_template_import_empty">Bộ nhớ tạm đang trống!</string>
-    <string name="module_changelog_failed">Lấy nhật ký thay đổi thất bại: %s</string>
     <string name="grant_root_failed">Cấp quyền root thất bại!</string>
     <string name="action">Khởi chạy</string>
     <string name="close">Đóng</string>
@@ -167,9 +166,6 @@
     <string name="horizon_flashing">Đang flash kernel…</string>
     <string name="horizon_flash_complete_status">Flash hoàn tất</string>
     <string name="select_slot_title">Chọn Slot Flash</string>
-    <string name="select_slot_description">Vui lòng chọn Slot để Flash Boot</string>
-    <string name="selected_slot">Slot đã chọn: %1$s</string>
-    <string name="current_slot">Slot hiện tại: %1$s</string>
     <string name="horizon_copy_failed">Sao chép thất bại</string>
     <string name="horizon_unknown_error">Lỗi không xác định</string>
     <string name="flash_failed_message">Flash thất bại</string>
@@ -349,7 +345,6 @@
     <string name="predictive_back_exit_direction_always_right">Luôn là bên phải</string>
     <string name="predictive_back_exit_direction_always_left">Luôn là bên trái</string>
     <string name="settings_background_dim">Điều chỉnh Độ tối Nền</string>
-    <string name="kernel_flashing">Flash Kernel</string>
     <string name="temporary">Tạm thời</string>
     <string name="search_modules">Tìm kiếm mô-đun</string>
     <string name="module_package">Mô-đun</string>
@@ -364,11 +359,8 @@
     <string name="network_retry">Thử lại</string>
     <string name="please_check_network">Hãy kiểm tra lại kết nối mạng và thử lại</string>
     <string name="confirm_install_module_title">Bạn có muốn cài đặt mô-đun %s?</string>
-    <string name="assets_multiple_select_dialog_content_description">Kích cỡ: %1$s., số lần tải xuống: %2$s</string>
-    <string name="installed">Đã cài đặt</string>
     <string name="open_module_home_page">Mở trang chủ của mô-đun trong trình duyệt</string>
     <string name="info">Thông tin</string>
-    <string name="author_link">Liên kết của tác giả mô-đun</string>
     <string name="source_code">Mã nguồn</string>
     <string name="show_detail_or_hide_detail">Hiển thị hoặc ẩn chi tiết</string>
     <string name="module_shortcut_title">Tạo lối tắt</string>
@@ -474,8 +466,6 @@
     <string name="require_manager_version">Yêu cầu cập nhật trình quản lý</string>
     <string name="require_kernel_version">Yêu cầu cập nhật kernel. Nhấn để cài đặt.</string>
     <string name="require_kernel_version_gki">Yêu cầu cập nhật kernel</string>
-    <string name="assets_multiple_select_dialog_title">Chọn nội dung bạn muốn cài đặt</string>
-    <string name="assets_multiple_select_dialog_warning">Không có nội dung nào được chọn</string>
     <string name="readme">Readme</string>
     <string name="release">Các bản phát hành</string>
     <string name="assert_support_content">%1$s,%2$d lượt tải xuống</string>
@@ -568,14 +558,10 @@
     <string name="script_downloading">Đang tải xuống tập lệnh: %s</string>
     <string name="repo_add_repository">Thêm kho</string>
     <string name="repo_configure">Cài đặt kho</string>
-    <string name="repo_server_settings">Các kho</string>
     <string name="repo_api_type">Kiểu API</string>
     <string name="repo_api_kernel_su">API Mô-đun KernelSU</string>
     <string name="repo_api_mmrl">API MMRL</string>
     <string name="repo_server_url">URL Máy chủ</string>
-    <string name="repo_url_kernel_su_hint">https://modules.kernelsu.org/</string>
-    <string name="repo_url_mmrl_hint">https://gr.dergoogler.com/gmr/</string>
-    <string name="repo_configured_sources">Đã cấu hình các kho</string>
     <string name="repo_sort">Sắp xếp</string>
     <string name="repo_manage">Quản lý các kho</string>
     <string name="repo_select_repository">Chọn kho</string>
