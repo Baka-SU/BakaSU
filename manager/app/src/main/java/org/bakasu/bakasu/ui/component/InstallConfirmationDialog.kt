@@ -2,6 +2,8 @@ package org.bakasu.bakasu.ui.component
 
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,19 +32,125 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import java.io.InputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.file.withInstallArchive
+import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.DownloadStatus
+import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
+import org.bakasu.bakasu.domain.model.RepositorySource
+import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
+import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
+import org.bakasu.bakasu.ui.util.downloader.download
+import org.bakasu.bakasu.ui.util.downloader.downloadFailureMessage
+import org.koin.compose.koinInject
 
-enum class ZipType {
-    MODULE,
-    KERNEL,
-    UNKNOWN,
+val LocalRepositoryModuleInstall = staticCompositionLocalOf<(Uri, CatalogModule, ModuleReleaseAsset, () -> Boolean) -> Unit> {
+    error("Repository module installation is unavailable")
+}
+
+@Composable
+fun rememberRepositoryInstallDialog(): (CatalogModule, ModuleReleaseAsset, () -> Boolean) -> Unit {
+    val context = LocalContext.current
+    val permission = LocalPermissionRequestInterface.current
+    val installRepositoryModule = LocalRepositoryModuleInstall.current
+    val enqueueDownload = koinInject<EnqueueDownloadUseCase>()
+    val observeDownload = koinInject<ObserveDownloadUseCase>()
+    val observeAssetDownload = koinInject<ObserveAssetDownloadUseCase>()
+    val getReleaseDetails = koinInject<GetModuleReleaseDetailsUseCase>()
+    val isUriAccessible = koinInject<IsModuleUriAccessibleUseCase>()
+    val scope = rememberCoroutineScope()
+    val dialog = rememberConfirmDialog()
+    val loading = rememberLoadingDialog()
+    val title = stringResource(R.string.confirm_install_module_title)
+    val downloading = stringResource(R.string.module_downloading)
+    val downloadingScript = stringResource(R.string.script_downloading)
+    var busy by remember { mutableStateOf(false) }
+    fun isDownloading(asset: ModuleReleaseAsset): Boolean = observeAssetDownload.current(asset)?.status.let {
+        it == DownloadStatus.PENDING || it == DownloadStatus.DOWNLOADING
+    }
+    return { module, asset, canEnqueue ->
+        scope.launch {
+            if (busy || !canEnqueue() || isDownloading(asset)) return@launch
+            if ((module.isScript || asset.verificationRequired || module.repositoryUrl == RepositorySource.KERNEL_SU_URL) && asset.expected == null) {
+                Toast.makeText(context, R.string.repo_update_unverifiable, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            busy = true
+            val confirmed = try {
+                if (module.isScript) {
+                    val cached = observeAssetDownload.current(asset)?.takeIf { it.status == DownloadStatus.COMPLETED }?.resultUri
+                    if (cached != null && withContext(Dispatchers.IO) { isUriAccessible(cached) }) {
+                        if (canEnqueue()) installRepositoryModule(cached.toUri(), module, asset, canEnqueue)
+                        return@launch
+                    }
+                    true
+                } else {
+                    val release = module.releases.firstOrNull { release -> release.assets.any { it.hasSameIdentity(asset) } }
+                        ?: return@launch
+                    val notes = loading.withLoading { getReleaseDetails.notes(module, release) }
+                    val content = notes?.content ?: module.summary
+                    if (!canEnqueue()) return@launch
+                    dialog.awaitConfirm(
+                        title = title.format(module.moduleName),
+                        content = content,
+                        document = notes,
+                    ) == ConfirmResult.Confirmed
+                }
+            } finally {
+                busy = false
+            }
+            if (!confirmed || !canEnqueue() || isDownloading(asset)) return@launch
+            withContext(Dispatchers.IO) {
+                download(
+                    context = context,
+                    permissionRequestInterface = permission,
+                    url = asset.downloadUrl,
+                    fileName = asset.name,
+                    enqueueDownload = enqueueDownload,
+                    observeDownload = observeDownload,
+                    canEnqueue = { canEnqueue() && !isDownloading(asset) },
+                    expected = asset.expected,
+                    onFailed = { state -> Toast.makeText(context, downloadFailureMessage(context, state), Toast.LENGTH_LONG).show() },
+                    onDownloaded = { uri ->
+                        if (canEnqueue()) installRepositoryModule(uri, module, asset, canEnqueue)
+                    },
+                    onDownloading = {
+                        launch(Dispatchers.Main) {
+                            val message = if (module.isScript) downloadingScript else downloading
+                            Toast.makeText(context, message.format(module.moduleName), Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+enum class ZipType(@param:StringRes val resId: Int, @param:StringRes val unknownNameResId: Int) {
+    MODULE(R.string.module_package, R.string.unknown_module),
+    KERNEL(R.string.kernel_package, R.string.unknown_kernel),
+    UNKNOWN(R.string.unknown_package, R.string.unknown_file),
     ;
 
     companion object {
@@ -285,22 +393,14 @@ fun InstallItemCard(zipFile: ZipFileInfo) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = zipFile.name.ifEmpty {
-                            when (zipFile.type) {
-                                ZipType.MODULE -> stringResource(R.string.unknown_module)
-                                ZipType.KERNEL -> stringResource(R.string.unknown_kernel)
-                                else -> stringResource(R.string.unknown_file)
-                            }
+                            stringResource(zipFile.type.unknownNameResId)
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = when (zipFile.type) {
-                            ZipType.MODULE -> stringResource(R.string.module_package)
-                            ZipType.KERNEL -> stringResource(R.string.kernel_package)
-                            else -> stringResource(R.string.unknown_package)
-                        },
+                        text = stringResource(zipFile.type.resId),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -308,7 +408,7 @@ fun InstallItemCard(zipFile: ZipFileInfo) {
             }
 
             // 详细信息
-            if (zipFile.version.isNotEmpty() || zipFile.author.isNotEmpty() ||
+            if (zipFile.version.isNotEmpty() || zipFile.versionCode.isNotEmpty() || zipFile.author.isNotEmpty() ||
                 zipFile.description.isNotEmpty() || zipFile.supported.isNotEmpty()
             ) {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -319,10 +419,14 @@ fun InstallItemCard(zipFile: ZipFileInfo) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // 版本信息
-                if (zipFile.version.isNotEmpty()) {
+                if (zipFile.version.isNotEmpty() || zipFile.versionCode.isNotEmpty()) {
                     InfoRow(
                         label = stringResource(R.string.version),
-                        value = zipFile.version + if (zipFile.versionCode.isNotEmpty()) " (${zipFile.versionCode})" else "",
+                        value = if (zipFile.version.isEmpty()) {
+                            zipFile.versionCode
+                        } else {
+                            zipFile.version + if (zipFile.versionCode.isNotEmpty()) " (${zipFile.versionCode})" else ""
+                        },
                     )
                 }
 

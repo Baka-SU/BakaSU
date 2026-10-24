@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.viewmodel
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.materialkolor.PaletteStyle
@@ -25,16 +26,17 @@ import org.bakasu.bakasu.domain.usecase.LoadSettingsPlatformUseCase
 import org.bakasu.bakasu.domain.usecase.SetDefaultUmountModulesUseCase
 import org.bakasu.bakasu.domain.usecase.SetKernelUmountEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetSelinuxHideEnabledUseCase
+import org.bakasu.bakasu.domain.usecase.SetShellSuAdbOnlyEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetSuEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.UpdateAppearanceUseCase
 import org.bakasu.bakasu.domain.usecase.UpdatePlatformSettingUseCase
 
-enum class PredictiveBackAnimation(val value: String) {
-    None("none"),
-    AOSP("aosp"),
-    MIUIX("miuix"),
-    Scale("scale"),
-    KernelSUClassic("ksu_classic"),
+enum class PredictiveBackAnimation(val value: String, @param:StringRes val resId: Int) {
+    None("none", R.string.predictive_back_animation_none),
+    AOSP("aosp", R.string.predictive_back_animation_aosp),
+    MIUIX("miuix", R.string.predictive_back_animation_miuix),
+    Scale("scale", R.string.predictive_back_animation_scale),
+    KernelSUClassic("ksu_classic", R.string.predictive_back_animation_ksu_classic),
     ;
 
     companion object {
@@ -42,10 +44,10 @@ enum class PredictiveBackAnimation(val value: String) {
     }
 }
 
-enum class PredictiveBackExitDirection(val value: String) {
-    FOLLOW_GESTURE("follow_gesture"),
-    ALWAYS_RIGHT("always_right"),
-    ALWAYS_LEFT("always_left"),
+enum class PredictiveBackExitDirection(val value: String, @param:StringRes val resId: Int) {
+    FOLLOW_GESTURE("follow_gesture", R.string.predictive_back_exit_direction_follow_gesture),
+    ALWAYS_RIGHT("always_right", R.string.predictive_back_exit_direction_always_right),
+    ALWAYS_LEFT("always_left", R.string.predictive_back_exit_direction_always_left),
     ;
 
     companion object {
@@ -78,6 +80,7 @@ data class SettingsUiState(
     val cardAlpha: Float = 1f,
     val backgroundDim: Float = 0f,
     val isCustomBackgroundEnabled: Boolean = false,
+    val isFlashCardBackgroundEnabled: Boolean = true,
     val systemDpi: Int = 0,
     val currentDpi: Int = 0,
     val tempDpi: Int = 0,
@@ -93,6 +96,8 @@ data class SettingsUiState(
     val autoJailbreakEnabled: Boolean = false,
     val adbRootStatus: String = "",
     val isAdbRootEnabled: Boolean = false,
+    val shellSuAdbOnlyStatus: String = "",
+    val isShellSuAdbOnlyEnabled: Boolean = false,
     val sulogStatus: String = "",
     val isSuLogEnabled: Boolean = false,
     val selinuxHideStatus: String = "",
@@ -123,6 +128,7 @@ sealed interface SettingsUiAction {
     data object RemoveCustomBackground : SettingsUiAction
     data class SetCardAlpha(val value: Float) : SettingsUiAction
     data class SetBackgroundDim(val value: Float) : SettingsUiAction
+    data class SetFlashCardBackground(val enabled: Boolean) : SettingsUiAction
     data object SaveCardConfig : SettingsUiAction
     data class SetLanguageDialogVisible(val visible: Boolean) : SettingsUiAction
     data class SetLanguage(val localeTag: String) : SettingsUiAction
@@ -138,6 +144,7 @@ sealed interface SettingsUiAction {
     data class SetAutoJailbreak(val enabled: Boolean) : SettingsUiAction
     data class SetSelinuxHide(val enabled: Boolean) : SettingsUiAction
     data class SetAdbRoot(val enabled: Boolean) : SettingsUiAction
+    data class SetShellSuAdbOnly(val enabled: Boolean) : SettingsUiAction
     data class SetSuLog(val enabled: Boolean) : SettingsUiAction
     data class SetDefaultUmountModules(val enabled: Boolean) : SettingsUiAction
     data class SetUseSoftReboot(val enabled: Boolean) : SettingsUiAction
@@ -159,6 +166,7 @@ class SettingsViewModel(
     private val getKernelFeatureSettings: GetKernelFeatureSettingsUseCase,
     private val setSuEnabled: SetSuEnabledUseCase,
     private val setKernelUmountEnabled: SetKernelUmountEnabledUseCase,
+    private val setShellSuAdbOnlyEnabled: SetShellSuAdbOnlyEnabledUseCase,
     private val setSuLogEnabled: ConfigureSuLogUseCase,
     private val setSelinuxHideEnabled: SetSelinuxHideEnabledUseCase,
     private val setDefaultUmountModules: SetDefaultUmountModulesUseCase,
@@ -186,15 +194,20 @@ class SettingsViewModel(
         viewModelScope.launch {
             val features = getKernelFeatureSettings()
             val platform = getPlatformFeatureStatus()
-            val suCompatMode = platform.suCompatPersistValue?.let { value ->
-                if (value == 0L) {
-                    2
-                } else if (!features.suEnabled) {
-                    1
-                } else {
-                    0
-                }
-            } ?: if (!features.suEnabled) 1 else 0
+            // A forced feature value overrides the persisted configuration.
+            val suCompatMode = if (platform.suStatus == "forced") {
+                if (features.suEnabled) 0 else 2
+            } else {
+                platform.suCompatPersistValue?.let { value ->
+                    if (value == 0L) {
+                        2
+                    } else if (!features.suEnabled) {
+                        1
+                    } else {
+                        0
+                    }
+                } ?: if (!features.suEnabled) 1 else 0
+            }
             mutableState.update {
                 it.copy(
                     suCompatMode = suCompatMode,
@@ -202,9 +215,23 @@ class SettingsViewModel(
                     kernelUmountStatus = platform.kernelUmountStatus,
                     isKernelUmountEnabled = features.kernelUmountEnabled,
                     adbRootStatus = platform.adbRootStatus,
-                    isAdbRootEnabled = platform.adbRootEnabled,
+                    isAdbRootEnabled = if (platform.adbRootStatus == "forced") {
+                        platform.adbRootValue == 1L
+                    } else {
+                        platform.adbRootEnabled
+                    },
+                    shellSuAdbOnlyStatus = platform.shellSuAdbOnlyStatus,
+                    isShellSuAdbOnlyEnabled = if (platform.shellSuAdbOnlyStatus == "forced") {
+                        platform.shellSuAdbOnlyValue == 1L
+                    } else {
+                        platform.shellSuAdbOnlyPersistValue == 1L
+                    },
                     sulogStatus = platform.sulogStatus,
-                    isSuLogEnabled = features.suLogEnabled,
+                    isSuLogEnabled = if (platform.sulogStatus == "forced") {
+                        platform.sulogValue == 1L
+                    } else {
+                        features.suLogEnabled
+                    },
                     selinuxHideStatus = platform.selinuxHideStatus,
                     isSelinuxHideEnabled = features.selinuxHideEnabled,
                     defaultUmountModules = features.defaultUmountModules,
@@ -313,6 +340,11 @@ class SettingsViewModel(
         updateAppearanceAsync(AppearanceSetting.BackgroundDim(value))
     }
 
+    fun handleFlashCardBackgroundChange(enabled: Boolean) {
+        mutableState.update { it.copy(isFlashCardBackgroundEnabled = enabled) }
+        updateAppearanceAsync(AppearanceSetting.FlashCardBackground(enabled))
+    }
+
     fun saveCardConfig() = updateAppearanceAsync(AppearanceSetting.SaveCardConfig)
 
     fun handleIconChange(enabled: Boolean) {
@@ -378,6 +410,14 @@ class SettingsViewModel(
     fun handleAdbRootChange(checked: Boolean) {
         mutableState.update { it.copy(isAdbRootEnabled = checked) }
         updatePlatformAsync(PlatformSetting.AdbRoot(checked))
+    }
+
+    fun handleShellSuAdbOnlyChange(checked: Boolean) {
+        viewModelScope.launch {
+            if (setShellSuAdbOnlyEnabled(checked)) {
+                mutableState.update { it.copy(isShellSuAdbOnlyEnabled = checked) }
+            }
+        }
     }
 
     fun handleSuLogChange(checked: Boolean) {
@@ -452,6 +492,9 @@ class SettingsViewModel(
 
             is SettingsUiAction.SetBackgroundDim -> handleBackgroundDimChange(action.value)
 
+            is SettingsUiAction.SetFlashCardBackground ->
+                handleFlashCardBackgroundChange(action.enabled)
+
             SettingsUiAction.SaveCardConfig -> saveCardConfig()
 
             is SettingsUiAction.SetLanguageDialogVisible -> setLanguageDialogVisible(action.visible)
@@ -481,6 +524,8 @@ class SettingsViewModel(
             is SettingsUiAction.SetSelinuxHide -> handleSelinuxHideChange(action.enabled)
 
             is SettingsUiAction.SetAdbRoot -> handleAdbRootChange(action.enabled)
+
+            is SettingsUiAction.SetShellSuAdbOnly -> handleShellSuAdbOnlyChange(action.enabled)
 
             is SettingsUiAction.SetSuLog -> handleSuLogChange(action.enabled)
 
@@ -546,6 +591,7 @@ class SettingsViewModel(
                 cardAlpha = snapshot.cardAlpha,
                 backgroundDim = snapshot.backgroundDim,
                 isCustomBackgroundEnabled = snapshot.customBackgroundEnabled,
+                isFlashCardBackgroundEnabled = snapshot.flashCardBackgroundEnabled,
                 systemDpi = snapshot.systemDpi,
                 currentDpi = snapshot.currentDpi,
                 tempDpi = if (resetTempDpi) snapshot.currentDpi else current.tempDpi,

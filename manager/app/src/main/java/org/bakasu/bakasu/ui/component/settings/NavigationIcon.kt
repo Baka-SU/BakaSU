@@ -29,15 +29,15 @@ fun AppBackButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     icon: ImageVector = Icons.AutoMirrored.TwoTone.ArrowBack, // Default icon is ArrowBack
-    contentDescription: String = stringResource(id = R.string.back)
+    contentDescription: String = stringResource(id = R.string.back),
 ) {
     TopBarIconPill(
         onClick = onClick,
-        modifier = modifier.padding(start = TopBarIconEdgeInset)
+        modifier = modifier.padding(start = TopBarIconEdgeInset),
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = contentDescription
+            contentDescription = contentDescription,
         )
     }
 }

@@ -48,9 +48,15 @@ class SulogRepository(
                 }
                 val lines = selectedFile?.let { readFile(it.path) }.orEmpty()
                 currentCoroutineContext().ensureActive()
+                val status = ksuCliRepository.getFeatureStatus("sulog")
+                val enabled = if (status == "forced") {
+                    ksuCliRepository.getFeatureValue("sulog") == 1L
+                } else {
+                    ksuCliRepository.getFeaturePersistValue("sulog") == 1L
+                }
                 mutableState.value = SulogState(
-                    status = ksuCliRepository.getFeatureStatus("sulog"),
-                    enabled = ksuCliRepository.getFeaturePersistValue("sulog") == 1L,
+                    status = status,
+                    enabled = enabled,
                     files = files,
                     selectedFilePath = selectedFile?.path,
                     entries = parseSulogLines(

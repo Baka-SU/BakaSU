@@ -6,11 +6,14 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageInfo
 import android.os.IBinder
+import android.os.RemoteException
 import androidx.core.content.ContextCompat
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
+import java.io.IOException
 import kotlin.coroutines.resume
-import kotlin.time.Duration.Companion.milliseconds
+import kotlin.coroutines.resumeWithException
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -19,82 +22,129 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import org.bakasu.bakasu.data.shell.KsuCliRepository
+import org.bakasu.bakasu.domain.model.SuperUserLoadFailure
 import org.bakasu.rootService.IKsuInterface
+
+class RootServiceException(val reason: SuperUserLoadFailure, cause: Throwable? = null) : IOException(reason.name, cause)
 
 class RootServiceRepository(
     private val application: Application,
+    private val ksuCliRepository: KsuCliRepository,
 ) {
     private val requestMutex = Mutex()
+    private val mainExecutor = ContextCompat.getMainExecutor(application)
+
+    private data class Binding(val binder: IBinder, val connection: ServiceConnection)
 
     suspend fun getInstalledPackages(): List<PackageInfo> = requestMutex.withLock {
-        val intent = Intent(application, KsuService::class.java)
-        try {
-            val binder = withTimeoutOrNull(10000.milliseconds) {
-                connectService(intent)
-            } ?: throw IllegalStateException("Root service unavailable")
+        withContext(Dispatchers.IO) {
+            val shell = try {
+                ksuCliRepository.createRootShell()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                throw RootServiceException(SuperUserLoadFailure.SERVICE_START_FAILED, error)
+            }
+            shell.use {
+                if (!shell.isRoot) throw RootServiceException(SuperUserLoadFailure.ROOT_ACCESS_REQUIRED)
+                var binding = connectService(shell)
+                try {
+                    try {
+                        readPackages(binding.binder)
+                    } catch (_: RemoteException) {
+                        // Retry the complete snapshot rather than combining pages from two services.
+                        unbind(binding.connection)
+                        binding = connectService(shell)
+                        readPackages(binding.binder)
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: RootServiceException) {
+                    throw error
+                } catch (error: Exception) {
+                    throw RootServiceException(SuperUserLoadFailure.PACKAGE_LOAD_FAILED, error)
+                } finally {
+                    unbind(binding.connection)
+                }
+            }
+        }
+    }
 
-            withContext(Dispatchers.IO) {
-                val service = IKsuInterface.Stub.asInterface(binder)
-                val total = service.packageCount
-                buildList {
-                    var start = 0
-                    while (start < total) {
-                        val page = service.getPackages(start, 100)
-                        if (page.isEmpty()) break
-                        addAll(page)
-                        start += page.size
+    private fun readPackages(binder: IBinder): List<PackageInfo> {
+        val service = IKsuInterface.Stub.asInterface(binder)
+        val total = service.packageCount
+        check(total > 0) { "Root service returned no installed packages" }
+        return buildList {
+            while (size < total) {
+                val page = service.getPackages(size, minOf(100, total - size))
+                check(page.isNotEmpty() && page.size <= total - size) { "Root service returned an incomplete package snapshot" }
+                addAll(page)
+            }
+        }
+    }
+
+    private suspend fun connectService(shell: Shell): Binding = withTimeoutOrNull(30.seconds) {
+        withContext(Dispatchers.Main.immediate) {
+            suspendCancellableCoroutine { continuation ->
+                val connection = object : ServiceConnection {
+                    private fun fail() {
+                        unbindOnMain(this)
+                        if (continuation.isActive) continuation.resumeWithException(RootServiceException(SuperUserLoadFailure.SERVICE_START_FAILED))
+                    }
+
+                    override fun onServiceDisconnected(name: ComponentName?) {
+                        if (continuation.isActive) fail()
+                    }
+
+                    override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+                        if (binder == null) {
+                            fail()
+                        } else if (continuation.isActive) {
+                            continuation.resume(Binding(binder, this))
+                        } else {
+                            unbindOnMain(this)
+                        }
+                    }
+
+                    override fun onNullBinding(name: ComponentName?) = fail()
+
+                    override fun onBindingDied(name: ComponentName?) {
+                        if (continuation.isActive) fail()
                     }
                 }
-            }
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            throw IllegalStateException("Root service unavailable", error)
-        } finally {
-            stopService(intent)
-        }
-    }
-
-    private suspend fun connectService(intent: Intent): IBinder? = withContext(Dispatchers.Main.immediate) {
-        suspendCancellableCoroutine { continuation ->
-            val connection = object : ServiceConnection {
-                override fun onServiceDisconnected(name: ComponentName?) {
-                    if (continuation.isActive) continuation.resume(null)
-                }
-
-                override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-                    if (continuation.isActive) {
-                        continuation.resume(binder)
-                    } else {
-                        stopServiceOnMain(intent)
+                continuation.invokeOnCancellation { unbindOnMain(connection) }
+                fun fail(error: Exception) {
+                    mainExecutor.execute {
+                        if (continuation.isActive) {
+                            unbindOnMain(connection)
+                            continuation.resumeWithException(RootServiceException(SuperUserLoadFailure.SERVICE_START_FAILED, error))
+                        }
                     }
                 }
-
-                override fun onNullBinding(name: ComponentName?) {
-                    if (continuation.isActive) continuation.resume(null)
-                }
-
-                override fun onBindingDied(name: ComponentName?) {
-                    if (continuation.isActive) continuation.resume(null)
+                try {
+                    val task = RootService.bindOrTask(Intent(application, KsuService::class.java), mainExecutor, connection)
+                    if (task != null) {
+                        Shell.EXECUTOR.execute {
+                            try {
+                                shell.execTask(task)
+                            } catch (error: Exception) {
+                                fail(error)
+                            }
+                        }
+                    }
+                } catch (error: Exception) {
+                    fail(error)
                 }
             }
-
-            continuation.invokeOnCancellation { stopServiceOnMain(intent) }
-            runCatching {
-                RootService.bind(intent, Shell.EXECUTOR, connection)
-            }.onFailure {
-                if (continuation.isActive) continuation.resume(null)
-            }
         }
+    } ?: throw RootServiceException(SuperUserLoadFailure.SERVICE_START_FAILED)
+
+    private suspend fun unbind(connection: ServiceConnection) = withContext(NonCancellable + Dispatchers.Main.immediate) {
+        runCatching { RootService.unbind(connection) }
     }
 
-    private suspend fun stopService(intent: Intent) = withContext(NonCancellable + Dispatchers.Main.immediate) {
-        runCatching { RootService.stop(intent) }
-    }
-
-    private fun stopServiceOnMain(intent: Intent) {
-        ContextCompat.getMainExecutor(application).execute {
-            runCatching { RootService.stop(intent) }
-        }
+    private fun unbindOnMain(connection: ServiceConnection) {
+        mainExecutor.execute { runCatching { RootService.unbind(connection) } }
     }
 }

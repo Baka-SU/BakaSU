@@ -22,6 +22,10 @@ class SetKernelUmountEnabledUseCase(private val repository: KernelRepository) {
     suspend operator fun invoke(enabled: Boolean) = repository.setKernelUmountEnabled(enabled)
 }
 
+class SetShellSuAdbOnlyEnabledUseCase(private val repository: KernelRepository) {
+    suspend operator fun invoke(enabled: Boolean) = repository.setShellSuAdbOnlyEnabled(enabled)
+}
+
 class ConfigureSuLogUseCase(private val repository: KernelRepository) {
     suspend operator fun invoke(enabled: Boolean) = repository.setSuLogEnabled(enabled)
 }

@@ -15,7 +15,6 @@ mod android {
     pub const KSU_SUSFS: &str = concatcp!(BINARY_DIR, "ksu_susfs");
     pub const BUSYBOX_PATH: &str = concatcp!(BINARY_DIR, "busybox");
     pub const BOOTCTL_PATH: &str = concatcp!(BINARY_DIR, "bootctl");
-    pub const MKBOOTFS_PATH: &str = concatcp!(BINARY_DIR, "mkbootfs");
 
     /// Create the ksu_susfs -> ksud hard link (it shares the same inode as ksud).
     pub fn ensure_susfs_link() -> anyhow::Result<()> {

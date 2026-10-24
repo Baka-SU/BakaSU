@@ -139,7 +139,7 @@ fun TemplateEditorScreen(
                     onSave = {
                         viewModel.dispatch(TemplateEditorUiAction.Save)
                     },
-                    scrollBehavior = scrollBehavior
+                    scrollBehavior = scrollBehavior,
                 )
             }
         },
@@ -302,7 +302,7 @@ private fun TopBar(
         title = {
             TopBarTitlePill {
                 Text(
-                    text = title
+                    text = title,
                 )
             }
         },
@@ -337,7 +337,7 @@ private fun TopBar(
         },
         colors = transparentTopAppBarColors(),
         windowInsets = pillTopAppBarWindowInsets(),
-        scrollBehavior = scrollBehavior
+        scrollBehavior = scrollBehavior,
     )
 }
 

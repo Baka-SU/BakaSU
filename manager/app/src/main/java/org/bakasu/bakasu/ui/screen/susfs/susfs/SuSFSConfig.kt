@@ -215,7 +215,6 @@ fun SuSFSConfigScreen() {
         .indexOfFirst { it.index == pagerState.currentPage }
         .coerceAtLeast(0)
 
-
     ActivityResumeEffect(refreshCoordinator) {
         refreshCoordinator.refresh(forceRefresh = true) { config ->
             configEnabled = config.enabled
@@ -243,7 +242,7 @@ fun SuSFSConfigScreen() {
                             AppBackButton(
                                 onClick = {
                                     navigator.pop()
-                                }
+                                },
                             )
                         },
                         colors = transparentTopAppBarColors(),
@@ -253,13 +252,14 @@ fun SuSFSConfigScreen() {
                     PrimaryScrollableTabRow(
                         selectedTabIndex = selectedTabIndex,
                         containerColor =
-                            if (themeConfig.isEnableBlur)
+                            if (themeConfig.isEnableBlur) {
                                 Color.Transparent
-                            else
-                                MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
+                            },
                         edgePadding = 0.dp,
                         minTabWidth = 0.dp,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         subpages.forEachIndexed { index, subpage ->
                             val tabVisible = !subpage.requirePersist || configEnabled == true
@@ -276,24 +276,23 @@ fun SuSFSConfigScreen() {
                                         }
                                     },
                                     modifier = Modifier.widthIn(
-                                        min = TabRowDefaults.ScrollableTabRowMinTabWidth
+                                        min = TabRowDefaults.ScrollableTabRowMinTabWidth,
                                     ),
                                     unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    text = { Text(subpage.title) }
+                                    text = { Text(subpage.title) },
                                 )
                             }
                         }
                     }
 
                     BackHandler(
-                        enabled = pagerState.currentPage != defaultPage
+                        enabled = pagerState.currentPage != defaultPage,
                     ) {
                         coroutineScope.launch {
                             pagerState.animateScrollToPage(defaultPage)
                         }
                     }
                 }
-        
             }
         },
         containerColor = Color.Transparent,

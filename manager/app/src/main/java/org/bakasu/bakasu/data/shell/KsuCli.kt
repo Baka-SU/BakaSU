@@ -12,11 +12,18 @@ import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ShellUtils
 import com.topjohnwu.superuser.io.SuFile
 import java.io.File
+import java.io.IOException
 import java.util.Properties
+import java.util.concurrent.Executor
+import java.util.zip.ZipFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.Natives
+import org.bakasu.bakasu.R
+import org.bakasu.bakasu.data.module.registry.DownloadVerificationException
+import org.bakasu.bakasu.data.module.registry.RegistryDownloadStore
+import org.bakasu.bakasu.data.module.registry.copyForInstall
 import org.bakasu.bakasu.domain.model.LkmSelection
 import org.json.JSONArray
 import org.json.JSONObject
@@ -28,9 +35,13 @@ import org.json.JSONObject
 class KsuCliRepository(context: Context) {
     private companion object {
         const val TAG = "KsuCli"
+        val MODULE_ID_REGEX = Regex("^[a-zA-Z][a-zA-Z0-9._-]+$")
     }
 
     private val nativeLibraryDir = context.applicationInfo.nativeLibraryDir
+    private val shellLock = Any()
+    private var rootShell: Shell? = null
+    private var globalMountShell: Shell? = null
 
     private fun getNativeLibraryPath(name: String): String {
         val library = File(nativeLibraryDir, System.mapLibraryName(name))
@@ -42,22 +53,32 @@ class KsuCliRepository(context: Context) {
 
     fun getKsuDaemonPath(): String = getNativeLibraryPath("ksud")
 
-    fun getRootShell(globalMnt: Boolean = false): Shell = createRootShell(globalMnt)
+    /** Shared shells belong to this repository; callers must not close them. */
+    fun getRootShell(globalMnt: Boolean = false): Shell = synchronized(shellLock) {
+        val cached = if (globalMnt) globalMountShell else rootShell
+        if (cached != null && cached.isAlive) {
+            cached
+        } else {
+            createRootShell(globalMnt).also {
+                if (globalMnt) globalMountShell = it else rootShell = it
+            }
+        }
+    }
 
     fun generateMainShellBuilder(): Shell.Builder {
         val builder = Shell.Builder.create()
         try {
             builder.setCommands(getKsuDaemonPath(), "debug", "su")
-            builder.build()
+            builder.build().close()
         } catch (e: Throwable) {
             Log.w(TAG, "ksu failed: ", e)
             try {
                 builder.setCommands("su")
-                builder.build()
+                builder.build().close()
             } catch (e: Throwable) {
                 Log.e(TAG, "su failed: ", e)
                 builder.setCommands("sh")
-                builder.build()
+                builder.build().close()
             }
         }
 
@@ -162,10 +183,15 @@ class KsuCliRepository(context: Context) {
         out.firstOrNull()?.trim().orEmpty()
     }
 
-    suspend fun getFeaturePersistValue(feature: String): Long? = withContext(Dispatchers.IO) {
+    suspend fun getFeaturePersistValue(feature: String): Long? = readFeatureValue("--config $feature")
+
+    // Current value in kernel
+    suspend fun getFeatureValue(feature: String): Long? = readFeatureValue(feature)
+
+    private suspend fun readFeatureValue(args: String): Long? = withContext(Dispatchers.IO) {
         val shell = getRootShell()
         val out = shell.newJob()
-            .add("${getKsuDaemonPath()} feature get --config $feature")
+            .add("${getKsuDaemonPath()} feature get $args")
             .to(ArrayList<String>(), null)
             .exec().out
         val valueLine =
@@ -252,21 +278,45 @@ class KsuCliRepository(context: Context) {
         onStdout: (String) -> Unit,
         onStderr: (String) -> Unit,
     ): Boolean {
-        val resolver = context.contentResolver
-        with(resolver.openInputStream(uri)) {
-            val file = File(context.cacheDir, "module.zip")
-            file.outputStream().use { output ->
-                this?.copyTo(output)
+        val root = File(context.filesDir, RegistryDownloadStore.DIR_NAME)
+        val expected = if (uri.scheme == "file") uri.path?.let { RegistryDownloadStore.expectedFor(root, File(it)) } else null
+        val file = File.createTempFile("module-", ".zip", context.cacheDir)
+        try {
+            try {
+                val input = context.contentResolver.openInputStream(uri) ?: throw IOException("Cannot open module")
+                input.use { copyForInstall(it, file, expected) }
+            } catch (error: IOException) {
+                if (error is DownloadVerificationException) uri.path?.let { RegistryDownloadStore.delete(root, File(it)) }
+                onStderr(context.getString(if (error is DownloadVerificationException) R.string.repo_install_verify_failed else R.string.repo_error_module_archive))
+                onFinish(false, 1)
+                return false
             }
             val cmd = "module install ${file.absolutePath}"
             val result = flashWithIO("${getKsuDaemonPath()} $cmd", onStdout, onStderr)
             Log.i("KernelSU", "install module $uri result: $result")
 
-            file.delete()
-
-            onFinish(result.isSuccess, result.code)
+            onFinish(result.isSuccess && moduleNeedsReboot(file), result.code)
             return result.isSuccess
+        } finally {
+            file.delete()
         }
+    }
+
+    private fun moduleNeedsReboot(zip: File): Boolean {
+        val id = runCatching {
+            ZipFile(zip).use { archive ->
+                val entry = archive.getEntry("module.prop") ?: return@use null
+                archive.getInputStream(entry).bufferedReader().useLines { lines ->
+                    lines.map { it.trim() }.firstOrNull { it.startsWith("id=") }
+                        ?.substringAfter('=')?.trim()
+                }
+            }
+        }.getOrNull()
+        if (id == null || !MODULE_ID_REGEX.matches(id)) return true
+        val dir = shellQuote("/data/adb/modules/$id")
+        return runCatching {
+            !ShellUtils.fastCmdResult(getRootShell(), "[ -d $dir ] && [ ! -e $dir/update ]")
+        }.getOrDefault(true)
     }
 
     fun flashAnyKernel(
@@ -311,6 +361,23 @@ class KsuCliRepository(context: Context) {
         Log.i("KernelSU", "Module runAction result: $result")
 
         return result.isSuccess
+    }
+
+    /** A dedicated shell keeps the script out of the manager's command stream. */
+    fun runOneshotScript(command: String, onStdout: (String) -> Unit, onStderr: (String) -> Unit): Int = withNewRootShell(globalMnt = true) {
+        check(isRoot) { "Root access is unavailable" }
+        val direct = Executor { it.run() }
+        val stdout = object : CallbackList<String?>(direct, null) {
+            override fun onAddElement(s: String?) = onStdout(s.orEmpty())
+        }
+        val stderr = object : CallbackList<String?>(direct, null) {
+            override fun onAddElement(s: String?) = onStderr(s.orEmpty())
+        }
+        newJob().add(command).to(stdout, stderr).exec().code
+    }
+
+    fun removeScriptDirectory(path: String): Boolean = withNewRootShell {
+        isRoot && ShellUtils.fastCmdResult(this, "rm -rf -- ${shellQuote(path)}")
     }
 
     fun restoreBoot(

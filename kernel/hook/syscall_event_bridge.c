@@ -7,6 +7,7 @@
 #ifdef CONFIG_COMPAT
 #include <linux/compat.h>
 #endif
+#include <linux/fcntl.h>
 #include <linux/ptrace.h>
 #include <linux/static_key.h>
 
@@ -21,6 +22,7 @@
 #include "hook/syscall_hook.h"
 #include "hook/syscall_event_bridge.h"
 #include "feature/adb_root.h"
+#include "preinit/preinit.h"
 
 #include "compat/kernel_compat.h"
 
@@ -94,6 +96,10 @@ static long __nocfi ksu_hook_execve_common(int orig_nr, const struct pt_regs *re
             ksu_execve_hook_ksud(regs);
         }
     }
+
+    if (unlikely(current->pid == 1) && (!execveat || !(PT_REGS_NATIVE_PARM5(regs) & AT_EMPTY_PATH)) &&
+        ksu_preinit_handle_execve_tracepoint(filename_user, argv_user, orig_nr, (struct pt_regs *)regs, &ret))
+        return ret;
 
     if (ksu_get_uid_t(current_euid()) == 0)
         pending_root_execve = ksu_sulog_capture_root_execve_tracepoint(filename, argv_user, GFP_KERNEL);

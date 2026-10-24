@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.ui.navigation
 
 import android.os.Parcelable
+import java.util.UUID
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
 import top.yukonga.miuix.kmp.nav.core.NavKey
@@ -67,7 +68,15 @@ sealed interface Route :
 
     @Parcelize
     @Serializable
-    data class ModuleRepoDetail(val moduleId: String) : Route
+    data class ModuleRepoDetail(val moduleId: String, val repositoryUrl: String) : Route
+
+    @Parcelize
+    @Serializable
+    data class RepositoryModules(val repositoryUrl: String) : Route
+
+    @Parcelize
+    @Serializable
+    data object AddRepository : Route
 
     @Parcelize
     @Serializable
@@ -129,6 +138,18 @@ sealed interface Route :
     @Parcelize
     @Serializable
     data class ExecuteModuleAction(val moduleId: String, val fromShortcut: Boolean) : Route
+
+    @Parcelize
+    @Serializable
+    data class ScriptRun(
+        val uri: String,
+        val registryId: String? = null,
+        val expectedSize: Long? = null,
+        val expectedSha256: String? = null,
+        val offerInstall: Boolean = false,
+        val displayName: String? = null,
+        val visitId: String = UUID.randomUUID().toString(),
+    ) : Route
 
     @Parcelize
     @Serializable

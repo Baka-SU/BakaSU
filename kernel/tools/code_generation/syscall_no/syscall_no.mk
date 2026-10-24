@@ -1,10 +1,7 @@
 hostprogs += tools/code_generation/syscall_no/syscall_no
 hostprogs-y += tools/code_generation/syscall_no/syscall_no
 
-# `obj` is absolute with some external-module/Kbuild combinations and
-# relative with others. Normalize it once so an absolute output directory is
-# never appended to `objtree` a second time.
-KSU_OBJ := $(if $(filter /%,$(obj)),$(obj),$(objtree)/$(obj))
+KSU_OBJ := $(abspath $(obj))
 
 KSU_SYSCALL_NO_H := $(KSU_OBJ)/compat/syscall_no.h
 # Kbuild prefixes target names with the external-module output directory.

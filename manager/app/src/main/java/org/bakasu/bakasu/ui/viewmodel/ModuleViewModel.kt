@@ -17,12 +17,15 @@ import kotlinx.coroutines.launch
 import org.bakasu.bakasu.data.module.ModulePreferencesRepository
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.MetaModuleStatus
+import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
 import org.bakasu.bakasu.domain.usecase.CalculateInstalledModuleSizeUseCase
 import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleUpdateChangelogUseCase
 import org.bakasu.bakasu.domain.usecase.IsSoftRebootPreferredUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveInstalledModulesUseCase
 import org.bakasu.bakasu.domain.usecase.RebootUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshInstalledModulesUseCase
+import org.bakasu.bakasu.domain.usecase.ResolveModuleUpdateUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleRemovedUseCase
 import org.bakasu.bakasu.domain.usecase.TransliterateTextUseCase
@@ -79,7 +82,7 @@ private data class ModuleControls(
 )
 
 class ModuleViewModel(
-    observeInstalledModules: ObserveInstalledModulesUseCase,
+    private val observeInstalledModules: ObserveInstalledModulesUseCase,
     private val modulePreferences: ModulePreferencesRepository,
     private val refreshInstalledModules: RefreshInstalledModulesUseCase,
     private val calculateModuleSize: CalculateInstalledModuleSizeUseCase,
@@ -90,6 +93,8 @@ class ModuleViewModel(
     private val setModuleRemoved: SetModuleRemovedUseCase,
     private val reboot: RebootUseCase,
     private val isSoftRebootPreferred: IsSoftRebootPreferredUseCase,
+    private val resolveModuleUpdate: ResolveModuleUpdateUseCase,
+    private val getModuleUpdateChangelog: GetModuleUpdateChangelogUseCase,
 ) : ViewModel() {
     private val controls = MutableStateFlow(ModuleControls())
     private val mutableEvents = MutableSharedFlow<ModuleUiEvent>(extraBufferCapacity = 1)
@@ -120,6 +125,18 @@ class ModuleViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ModuleUiState())
     val uiState: StateFlow<ModuleUiState> = state
+
+    suspend fun resolveUpdate(module: InstalledModule): ModuleUpdateVerification {
+        val update = module.moduleUpdate ?: return ModuleUpdateVerification.Rejected
+        return resolveModuleUpdate(module.id, module.updateJson, update.zipUrl, update.versionCode)
+    }
+
+    suspend fun loadUpdateChangelog(url: String, configuredSource: String) = getModuleUpdateChangelog(url, configuredSource)
+
+    fun isUpdateCurrent(module: InstalledModule, update: ModuleUpdateVerification.Registry): Boolean = resolveModuleUpdate.isCurrent(update) && observeInstalledModules().value.modules.any {
+        it.id == module.id && !it.remove && it.versionCode == module.versionCode &&
+            it.updateJson == module.updateJson && it.moduleUpdate == module.moduleUpdate
+    }
 
     fun dispatch(action: ModuleUiAction) {
         when (action) {

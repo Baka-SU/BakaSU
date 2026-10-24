@@ -284,7 +284,6 @@
     <string name="warning_of_meta_module_title">Требуется мета-модуль</string>
     <string name="warning_of_meta_module_summary">Этот модуль пытается смонтировать /system, что обрабатывается мета-модулем. Без него модуль может не работать</string>
     <string name="sort_usage_freq">Частота использования</string>
-    <string name="no_apps_in_category">В этой категории нет приложений</string>
     <string name="persistent">Постоянный</string>
     <string name="temporary">Временный</string>
     <string name="susfs_config_title">Конфигурация SuSFS</string>

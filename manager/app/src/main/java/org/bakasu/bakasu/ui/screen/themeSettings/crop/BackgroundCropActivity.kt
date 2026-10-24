@@ -298,7 +298,7 @@ private fun BackgroundCropScreen(
                     },
                     colors = transparentTopAppBarColors(),
                     windowInsets = pillTopAppBarWindowInsets(),
-                    scrollBehavior = scrollBehavior
+                    scrollBehavior = scrollBehavior,
                 )
             }
         },
@@ -313,7 +313,7 @@ private fun BackgroundCropScreen(
                         .fillMaxWidth()
                         .wrapContentHeight()
                         .navigationBarsPadding()
-                        .padding(horizontal = ScreenEdgePadding, vertical = 12.dp)
+                        .padding(horizontal = ScreenEdgePadding, vertical = 12.dp),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -482,7 +482,7 @@ private fun CropTooltipIconButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: @Composable () -> Unit
+    icon: @Composable () -> Unit,
 ) {
     TooltipBox(
         positionProvider = remember { BelowAnchorTooltipPositionProvider() },
@@ -496,7 +496,7 @@ private fun CropTooltipIconButton(
         TopBarIconPill(
             onClick = onClick,
             modifier = modifier,
-            enabled = enabled
+            enabled = enabled,
         ) {
             icon()
         }

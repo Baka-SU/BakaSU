@@ -95,7 +95,6 @@ fun UmountManagerScreen() {
 
     val confirmDelete = stringResource(R.string.confirm_delete)
 
-
     LaunchedEffect(viewModel) {
         viewModel.events.collectLatest { event ->
             when (event) {
@@ -129,7 +128,8 @@ fun UmountManagerScreen() {
                     },
                     windowInsets = pillTopAppBarWindowInsets(),
                     scrollBehavior = scrollBehavior,
-                    colors = transparentTopAppBarColors())
+                    colors = transparentTopAppBarColors(),
+                )
             }
         },
         floatingActionButton = {

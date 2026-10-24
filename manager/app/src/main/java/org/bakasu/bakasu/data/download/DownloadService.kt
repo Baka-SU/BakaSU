@@ -18,18 +18,29 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.data.module.registry.DownloadVerificationException
+import org.bakasu.bakasu.data.module.registry.DownloadVerifier
+import org.bakasu.bakasu.data.module.registry.RegistryDownloadStore
+import org.bakasu.bakasu.data.module.registry.RegistryUrls
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
 import org.bakasu.bakasu.data.update.ManagerUpdateRepository
 import org.bakasu.bakasu.data.update.ZipRangeArchive
+import org.bakasu.bakasu.domain.model.DownloadStatus
+import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
+import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.ui.MainActivity
 import org.koin.android.ext.android.inject
 
@@ -55,6 +66,8 @@ class DownloadService : Service() {
         const val EXTRA_MANAGER_SOURCE = "managerSource"
         const val EXTRA_MANAGER_ABI = "managerAbi"
         const val EXTRA_MANAGER_EXPECTED_VERSION_CODE = "managerExpectedVersionCode"
+        const val EXTRA_EXPECTED_SIZE = "expectedSize"
+        const val EXTRA_EXPECTED_SHA256 = "expectedSha256"
 
         const val SOURCE_DIRECT_APK = "direct_apk"
         const val SOURCE_NIGHTLY_ARTIFACT = "nightly_artifact"
@@ -63,6 +76,22 @@ class DownloadService : Service() {
     }
 
     private val activeJobs = ConcurrentHashMap<Int, Job>()
+    private val activeRegistryCalls = ConcurrentHashMap<Int, Call>()
+    private val registryClient by lazy {
+        httpClient.newBuilder().followSslRedirects(true).addNetworkInterceptor { chain ->
+            if (!RegistryUrls.isAllowedDownloadHop(chain.request().url.toString())) {
+                throw DownloadVerificationException(DownloadVerificationException.Reason.URL_NOT_ALLOWED, "Download redirect not allowed")
+            }
+            chain.proceed(chain.request())
+        }.addInterceptor { chain ->
+            val response = chain.proceed(chain.request())
+            if (!RegistryUrls.isAllowedDownloadHop(response.request.url.toString())) {
+                response.close()
+                throw DownloadVerificationException(DownloadVerificationException.Reason.URL_NOT_ALLOWED, "Download redirect not allowed")
+            }
+            response
+        }.build()
+    }
     private val lastNotifiedProgress = ConcurrentHashMap<Int, Int>()
     private val serviceScope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
     private lateinit var notificationManager: NotificationManager
@@ -83,8 +112,18 @@ class DownloadService : Service() {
                 val downloadId = intent.getIntExtra(EXTRA_DOWNLOAD_ID, -1)
                 if (downloadId == -1) return START_NOT_STICKY
 
+                val expected = if (intent.hasExtra(EXTRA_EXPECTED_SIZE) || intent.hasExtra(EXTRA_EXPECTED_SHA256)) {
+                    ExpectedFile(intent.getLongExtra(EXTRA_EXPECTED_SIZE, -1L), intent.getStringExtra(EXTRA_EXPECTED_SHA256).orEmpty())
+                } else {
+                    null
+                }
+                if (expected != null && runCatching { DownloadVerifier(expected) }.isFailure) {
+                    val reason = if (expected.size <= 0) DownloadVerificationFailure.SIZE_MISMATCH else DownloadVerificationFailure.SHA256_MISMATCH
+                    downloadRepository.markFailed(downloadId, "Invalid verification metadata", reason)
+                    return START_NOT_STICKY
+                }
                 startForegroundDownload(downloadId, fileName)
-                startDownload(downloadId, url, fileName)
+                startDownload(downloadId, url, fileName, expected)
             }
 
             ACTION_DOWNLOAD_MANAGER_APK -> {
@@ -118,6 +157,7 @@ class DownloadService : Service() {
             ACTION_CANCEL -> {
                 val downloadId = intent.getIntExtra(EXTRA_DOWNLOAD_ID, -1)
                 if (downloadId != -1) {
+                    activeRegistryCalls.remove(downloadId)?.cancel()
                     activeJobs[downloadId]?.cancel()
                     activeJobs.remove(downloadId)
                     lastNotifiedProgress.remove(downloadId)
@@ -134,14 +174,23 @@ class DownloadService : Service() {
                     notificationManager.cancel(COMPLETION_NOTIFICATION_ID_BASE + downloadId)
                 }
                 if (!filePath.isNullOrEmpty()) {
-                    File(filePath).delete()
+                    val file = File(filePath)
+                    if (RegistryDownloadStore.expectedFor(registryStoreRoot(), file) != null) {
+                        RegistryDownloadStore.delete(registryStoreRoot(), file)
+                    } else {
+                        file.delete()
+                    }
                 }
             }
         }
         return START_NOT_STICKY
     }
 
-    private fun startDownload(id: Int, url: String, fileName: String) {
+    private fun startDownload(id: Int, url: String, fileName: String, expected: ExpectedFile? = null) {
+        if (expected != null) {
+            startRegistryDownload(id, url, fileName, expected)
+            return
+        }
         val job = serviceScope.launch {
             val target = resolveAvailableTarget(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
@@ -175,6 +224,62 @@ class DownloadService : Service() {
             }
         }
         activeJobs[id] = job
+    }
+
+    private fun registryStoreRoot() = File(filesDir, RegistryDownloadStore.DIR_NAME)
+
+    private fun startRegistryDownload(id: Int, url: String, fileName: String, expected: ExpectedFile) {
+        val job = serviceScope.launch(start = CoroutineStart.LAZY) {
+            var stored: File? = null
+            try {
+                if (!RegistryUrls.isAllowedReleaseDownloadUrl(url)) {
+                    throw DownloadVerificationException(DownloadVerificationException.Reason.URL_NOT_ALLOWED, "Download URL not allowed")
+                }
+                val root = registryStoreRoot()
+                runCatching { RegistryDownloadStore.cleanup(root, 7L * 24 * 60 * 60 * 1000) }
+                val call = registryClient.newCall(Request.Builder().url(url).build())
+                activeRegistryCalls[id] = call
+                ensureActive()
+                val file = call.execute().use { response ->
+                    if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+                    val body = response.body ?: throw IOException("Empty body")
+                    RegistryDownloadStore.download(
+                        input = body.byteStream(),
+                        root = root,
+                        expected = expected,
+                        fileName = fileName,
+                        onProgress = { bytes -> reportProgress(id, fileName, ((bytes * 100L) / expected.size).toInt().coerceIn(0, 100)) },
+                        checkActive = { ensureActive() },
+                    )
+                }
+                stored = file
+                ensureActive()
+                val uri = Uri.fromFile(file)
+                downloadRepository.markCompleted(id, uri.toString())
+                notificationManager.cancel(id)
+                notificationManager.notify(COMPLETION_NOTIFICATION_ID_BASE + id, buildModuleCompletionNotification(id, file.name, uri))
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                if (!isActive) throw CancellationException("Registry download cancelled", error)
+                val reason = (error as? DownloadVerificationException)?.reason?.let { DownloadVerificationFailure.valueOf(it.name) }
+                downloadRepository.markFailed(id, "Download failed", reason)
+                notificationManager.cancel(id)
+                notificationManager.notify(COMPLETION_NOTIFICATION_ID_BASE + id, buildFailureNotification(fileName, reason))
+            } finally {
+                if (!isActive || downloadRepository.downloads.value[id]?.status != DownloadStatus.COMPLETED) {
+                    stored?.let { RegistryDownloadStore.delete(registryStoreRoot(), it) }
+                    if (downloadRepository.downloads.value[id]?.status != DownloadStatus.FAILED) downloadRepository.markFailed(id, "Cancelled")
+                    notificationManager.cancel(id)
+                }
+                activeRegistryCalls.remove(id)?.cancel()
+                activeJobs.remove(id)
+                lastNotifiedProgress.remove(id)
+                stopForegroundIfIdle()
+            }
+        }
+        activeJobs[id] = job
+        job.start()
     }
 
     private fun startManagerApkDownload(
@@ -432,9 +537,11 @@ class DownloadService : Service() {
             .build()
     }
 
-    private fun buildFailureNotification(fileName: String) = NotificationCompat.Builder(this, CHANNEL_ID)
+    private fun buildFailureNotification(fileName: String, verificationFailure: DownloadVerificationFailure? = null) = NotificationCompat.Builder(this, CHANNEL_ID)
         .setContentTitle(getString(R.string.download_failed_title))
-        .setContentText(getString(R.string.download_failed_content, fileName))
+        .setContentText(
+            getString(verificationFailure?.resId ?: R.string.download_failed_content, fileName),
+        )
         .setSmallIcon(android.R.drawable.stat_notify_error)
         .setAutoCancel(true)
         .build()
@@ -469,6 +576,7 @@ class DownloadService : Service() {
     }
 
     override fun onDestroy() {
+        activeRegistryCalls.values.forEach { it.cancel() }
         serviceScope.cancel()
         super.onDestroy()
     }

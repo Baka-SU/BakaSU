@@ -118,10 +118,10 @@ import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalPagerPage
-import org.bakasu.bakasu.ui.util.LocalTopBarOwner
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
+import org.bakasu.bakasu.ui.util.LocalTopBarOwner
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.downloader.downloadManagerUpdate
 import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
@@ -171,11 +171,11 @@ fun HomePage(
     val topBarHeight = LocalTopBarSlot.current?.heightFor(LocalPagerPage.current) ?: 0.dp
 
     ProvideTopBar(active = LocalPagerPage.current == LocalTopBarOwner.current) {
-            TopBar(
-                uiState = uiState,
-                onReboot = { viewModel.dispatch(HomeUiAction.Reboot(it)) },
-                scrollBehavior = scrollBehavior,
-            )
+        TopBar(
+            uiState = uiState,
+            onReboot = { viewModel.dispatch(HomeUiAction.Reboot(it)) },
+            scrollBehavior = scrollBehavior,
+        )
     }
 
     Scaffold(
@@ -201,7 +201,7 @@ fun HomePage(
                 .padding(
                     top = topBarHeight + 2.dp,
                     start = ScreenEdgePadding,
-                    end = ScreenEdgePadding
+                    end = ScreenEdgePadding,
                 ),
             verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
@@ -509,7 +509,7 @@ private fun TopBar(
         title = {
             TopBarTitlePill {
                 Text(
-                    text = stringResource(R.string.app_name)
+                    text = stringResource(R.string.app_name),
                 )
             }
         },
@@ -571,7 +571,7 @@ private fun TopBar(
             }
         },
         windowInsets = pillTopAppBarWindowInsets(),
-        scrollBehavior = scrollBehavior
+        scrollBehavior = scrollBehavior,
     )
 }
 

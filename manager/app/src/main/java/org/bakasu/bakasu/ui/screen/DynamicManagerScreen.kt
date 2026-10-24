@@ -82,7 +82,7 @@ fun DynamicManagerScreen() {
     val viewModel = koinViewModel<DynamicManagerViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
-        TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+        TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState()),
     )
     val pullToRefreshState = rememberPullToRefreshState()
     val snackbarHost = LocalSnackbarHost.current
@@ -163,7 +163,6 @@ fun DynamicManagerScreen() {
                     scrollBehavior = scrollBehavior,
                     searchBarPlaceHolderText = stringResource(R.string.search_apps),
                 )
-        
             }
         },
         snackbarHost = { SwipeableSnackbarHost(hostState = snackbarHost) },

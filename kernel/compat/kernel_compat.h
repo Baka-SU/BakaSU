@@ -11,6 +11,9 @@
 #include <linux/key.h>
 #include <linux/ptrace.h>
 #include <linux/syscalls.h>
+#ifdef CONFIG_COMPAT
+#include <asm/compat.h>
+#endif
 #include "arch.h"
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
@@ -108,12 +111,7 @@ static_assert(1 == 0, "Unsupported architecture!");
 #define ksyscall(...) __ksyscall_exp(ksyscall_, __ksyscall_count_args(__VA_ARGS__))(__VA_ARGS__)
 
 #define ksu_close_fd(fd) ({ ksyscall(close, fd); })
-#define ksu_sys_setns(fd, flags) ({ ksyscall(setns, fd, flags); })
 #define ksu_sys_umount(mnt, flags) ({ ksyscall(umount, (char __user *)mnt, flags); })
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
-#define ksys_unshare(flags) ({ ksyscall(unshare, flags); })
-#endif
 
 /*
  * Leagcy Huawei Hisi Devices info Start
@@ -496,4 +494,102 @@ static inline struct file *ksu_filp_open_nonotify(const char *path, int flags)
 #define symtab_insert(s, name, datum) hashtab_insert((s)->table, name, datum)
 #endif
 
+// Add in 3.16, https://github.com/torvalds/linux/commit/11d200e95f3e84c1102e4cc9863a3614fd41f3ad
+/**
+ * strchrnul - Find and return a character in a string, or end of string
+ * @s: The string to be searched
+ * @c: The character to search for
+ *
+ * Returns pointer to first occurrence of 'c' in s. If c is not found, then
+ * return a pointer to the null byte at the end of s.
+ */
+__weak char *strchrnul(const char *s, int c)
+{
+    while (*s && *s != (char)c)
+        s++;
+    return (char *)s;
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
+static void __user *userspace_stack_buffer(const void *d, size_t len)
+{
+    // To avoid having to mmap a page in userspace, just write below the stack
+    // pointer.
+    char __user *p = (void __user *)current_user_stack_pointer() - len;
+
+    return copy_to_user(p, d, len) ? NULL : p;
+}
+#else
+static void __user *userspace_stack_buffer(const void *d, size_t len)
+{
+    if (!current->mm)
+        return NULL;
+
+    volatile unsigned long start_stack = current->mm->start_stack;
+    unsigned int step = 32;
+    char __user *p = NULL;
+
+    do {
+        p = (void __user *)(start_stack - step - len);
+        if (!copy_to_user(p, d, len)) {
+            /* pr_info("%s: start_stack: %lx p: %lx len: %zu\n",
+                                __func__, start_stack, (unsigned long)p, len ); */
+            return p;
+        }
+        step = step + step;
+    } while (step <= 2048);
+    return NULL;
+}
+#endif
+
+#define MAX_ARG_STRINGS 0x7FFFFFFF
+struct user_arg_ptr {
+#ifdef CONFIG_COMPAT
+    bool is_compat;
+#endif
+    union {
+        const char __user *const __user *native;
+#ifdef CONFIG_COMPAT
+        const compat_uptr_t __user *compat;
+#endif
+    } ptr;
+};
+
+static const char __user *get_user_arg_ptr(struct user_arg_ptr argv, int nr)
+{
+    const char __user *native;
+
+#ifdef CONFIG_COMPAT
+    if (unlikely(argv.is_compat)) {
+        compat_uptr_t compat;
+
+        if (get_user(compat, argv.ptr.compat + nr))
+            return ERR_PTR(-EFAULT);
+
+        return compat_ptr(compat);
+    }
+#endif
+
+    if (get_user(native, argv.ptr.native + nr))
+        return ERR_PTR(-EFAULT);
+
+    return native;
+}
+
+static struct user_arg_ptr ksu_take_user_argv(const char __user *const __user *argv_user)
+{
+    struct user_arg_ptr argv;
+
+#ifdef CONFIG_COMPAT
+    if (in_compat_syscall()) {
+        argv.is_compat = true;
+        argv.ptr.compat = (const compat_uptr_t __user *)argv_user;
+        return argv;
+    }
+
+    argv.is_compat = false;
+#endif
+    argv.ptr.native = argv_user;
+    return argv;
+}
 #endif

@@ -183,7 +183,6 @@ fun AppProfileTemplateScreen() {
                     },
                     scrollBehavior = scrollBehavior,
                 )
-        
             }
         },
         floatingActionButton = {
@@ -418,7 +417,7 @@ private fun TopBar(
             }
         },
         windowInsets = pillTopAppBarWindowInsets(),
-        scrollBehavior = scrollBehavior
+        scrollBehavior = scrollBehavior,
     )
 }
 

@@ -32,8 +32,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
@@ -89,7 +89,7 @@ val TopBarIconEdgeInset = ScreenEdgePadding - TopAppBarIconRowPadding - PillHori
 private fun TopBarPill(
     modifier: Modifier = Modifier,
     shadowRadius: Dp = 10.dp,
-    content: @Composable BoxScope.() -> Unit
+    content: @Composable BoxScope.() -> Unit,
 ) {
     val themeConfig: ThemeConfig = koinInject()
     val cardConfig: CardConfig = koinInject()
@@ -132,10 +132,10 @@ private fun TopBarPill(
                     )
                 } else {
                     Modifier.background(containerColor, CircleShape)
-                }
+                },
             ),
         contentAlignment = Alignment.Center,
-        content = content
+        content = content,
     )
 }
 
@@ -167,7 +167,7 @@ class TopBarPillSize {
     internal fun sizeFor(
         target: IntSize,
         spec: FiniteAnimationSpec<IntSize>,
-        scope: CoroutineScope
+        scope: CoroutineScope,
     ): IntSize {
         val animation = animated
             ?: Animatable(target, IntSize.VectorConverter).also { animated = it }
@@ -225,7 +225,7 @@ private fun Modifier.animatePillSize(pillSize: TopBarPillSize?): Modifier {
 @Composable
 fun TopBarTitlePill(
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val swipeDelta = LocalTopBarSwipeDelta.current
     val shiftPx = with(LocalDensity.current) { TopBarSwipeShift.toPx() }
@@ -240,7 +240,7 @@ fun TopBarTitlePill(
                     val delta = swipeDelta()
                     translationX = -delta * shiftPx
                     alpha = topBarSwipeAlpha(delta)
-                }
+                },
         ) {
             content()
         }
@@ -253,7 +253,7 @@ fun TopBarIconPill(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val swipeDelta = LocalTopBarSwipeDelta.current
     val shiftPx = with(LocalDensity.current) { TopBarSwipeShift.toPx() }
@@ -266,13 +266,13 @@ fun TopBarIconPill(
                 translationX = -delta * shiftPx
                 alpha = topBarSwipeAlpha(delta)
             },
-        shadowRadius = 4.dp
+        shadowRadius = 4.dp,
     ) {
         IconButton(
             onClick = onClick,
             modifier = Modifier.size(40.dp),
             enabled = enabled,
-            content = content
+            content = content,
         )
     }
 }
@@ -294,13 +294,13 @@ fun transparentTopAppBarColors(): TopAppBarColors = TopAppBarDefaults.topAppBarC
  */
 @Composable
 fun pillTopAppBarWindowInsets(
-    base: WindowInsets = TopAppBarDefaults.windowInsets
+    base: WindowInsets = TopAppBarDefaults.windowInsets,
 ): WindowInsets = base.add(
     if (LocalLayoutDirection.current == LayoutDirection.Ltr) {
         WindowInsets(right = TopBarIconEdgeInset)
     } else {
         WindowInsets(left = TopBarIconEdgeInset)
-    }
+    },
 )
 
 /** Steps used to approximate the eased fade; enough that the ramp reads as smooth. */
@@ -385,7 +385,7 @@ fun TopBarScrim(content: @Composable () -> Unit) {
                 // reach zero and the scrim never resizes when the bar behind it changes
                 .layout { measurable, constraints ->
                     val placeable = measurable.measure(
-                        constraints.copy(minHeight = scrimPx, maxHeight = scrimPx)
+                        constraints.copy(minHeight = scrimPx, maxHeight = scrimPx),
                     )
                     layout(placeable.width, constraints.maxHeight) { placeable.place(0, 0) }
                 }
@@ -400,12 +400,14 @@ fun TopBarScrim(content: @Composable () -> Unit) {
                     val stops = Array(TopBarScrimAlphas.size + 2) { index ->
                         when (index) {
                             0 -> 0f to Color.Black
+
                             TopBarScrimAlphas.size + 1 -> 1f to Color.Transparent
+
                             else -> {
                                 val step = index - 1
                                 val t = step / TopBarScrimSteps.toFloat()
                                 solidStop + (1f - solidStop) * t to
-                                        Color.Black.copy(alpha = TopBarScrimAlphas[step])
+                                    Color.Black.copy(alpha = TopBarScrimAlphas[step])
                             }
                         }
                     }
@@ -416,7 +418,7 @@ fun TopBarScrim(content: @Composable () -> Unit) {
                         drawRect(brush = brush, blendMode = BlendMode.DstIn)
                     }
                 }
-                .blurEffect()
+                .blurEffect(),
         )
         content()
     }

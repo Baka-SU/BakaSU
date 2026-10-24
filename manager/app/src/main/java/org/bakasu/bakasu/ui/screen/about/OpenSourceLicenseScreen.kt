@@ -74,7 +74,6 @@ fun OpenSourceLicenseScreen() {
     val navigator = LocalNavigator.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
-
     // from https://github.com/mikepenz/AboutLibraries#setup
     val context = LocalContext.current
     val libraries by produceState(initialValue = Libs(emptyList(), emptySet()), context) {
@@ -105,12 +104,11 @@ fun OpenSourceLicenseScreen() {
                     navigationIcon = {
                         AppBackButton(
                             onClick = { navigator.pop() },
-                            icon = Icons.AutoMirrored.TwoTone.ArrowBack
+                            icon = Icons.AutoMirrored.TwoTone.ArrowBack,
                         )
                     },
                     colors = transparentTopAppBarColors(),
                 )
-        
             }
         },
     ) { paddingValues ->

@@ -126,13 +126,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
+import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.model.DocumentPolicy
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.MetaModuleStatus
+import org.bakasu.bakasu.domain.model.ModuleReadme
+import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleNameUseCase
-import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
 import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
 import org.bakasu.bakasu.domain.usecase.TakeModuleUriPermissionUseCase
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.InstallConfirmationDialog
@@ -163,13 +167,14 @@ import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
 import org.bakasu.bakasu.ui.util.LocalPagerPage
-import org.bakasu.bakasu.ui.util.LocalTopBarOwner
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
+import org.bakasu.bakasu.ui.util.LocalTopBarOwner
 import org.bakasu.bakasu.ui.util.Shortcut
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.downloader.download
+import org.bakasu.bakasu.ui.util.downloader.downloadFailureMessage
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
 import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiAction
@@ -197,6 +202,7 @@ fun ModulePage(bottomPadding: Dp) {
     val takeModuleUriPermission = koinInject<TakeModuleUriPermissionUseCase>()
     val extractModuleName = koinInject<ExtractModuleNameUseCase>()
     val zipFileDetector = koinInject<ZipFileDetector>()
+    val peekScript = koinInject<PeekOneshotScriptUseCase>()
     val navigator = LocalNavigator.current
     val context = LocalContext.current
     val viewModel = koinViewModel<ModuleViewModel>()
@@ -270,6 +276,12 @@ fun ModulePage(bottomPadding: Dp) {
                     snackBarHost.showReplacingSnackbar("Unable to access selected module files")
                     return@launch
                 }
+                selectedModules.singleOrNull()?.let { uri ->
+                    peekScript(uri.toString())?.let { manifest ->
+                        navigator.push(Route.ScriptRun(uri.toString(), offerInstall = true, displayName = manifest.name))
+                        return@launch
+                    }
+                }
                 selectedModules.forEach { it ->
                     val info =
                         withContext(Dispatchers.IO) { zipFileDetector.parseModuleInfo(context, it) }
@@ -289,6 +301,11 @@ fun ModulePage(bottomPadding: Dp) {
                     }
 
                     takeModuleUriPermission(uriString)
+
+                    peekScript(uriString)?.let { manifest ->
+                        navigator.push(Route.ScriptRun(uriString, offerInstall = true, displayName = manifest.name))
+                        return@launch
+                    }
 
                     val info = withContext(Dispatchers.IO) {
                         zipFileDetector.parseModuleInfo(
@@ -320,7 +337,7 @@ fun ModulePage(bottomPadding: Dp) {
 
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
-        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
+        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState),
     )
 
     val topBarHeight = LocalTopBarSlot.current?.heightFor(LocalPagerPage.current) ?: 0.dp
@@ -330,43 +347,43 @@ fun ModulePage(bottomPadding: Dp) {
     val fieldVisibleFraction = rememberSearchFieldVisibleFraction(scrollBehavior)
 
     ProvideTopBar(active = LocalPagerPage.current == LocalTopBarOwner.current) {
-            SearchAppBar(
-                title = stringResource(R.string.module),
-                searchText = uiState.search,
-                onSearchTextChange = { query ->
-                    viewModel.dispatch(ModuleUiAction.Search(query))
-                },
-                dropdownContent = {
-                    TopBarIconPill(onClick = { navigator.push(Route.ModuleRepo) }) {
-                        Icon(
-                            imageVector = Icons.TwoTone.Cloud,
-                            contentDescription = stringResource(id = R.string.module_repo),
-                        )
-                    }
-                    TopBarIconPill(
-                        onClick = { showDropdown = true },
-                    ) {
-                        Icon(
-                            imageVector = Icons.TwoTone.MoreVert,
-                            contentDescription = stringResource(id = R.string.settings),
-                        )
+        SearchAppBar(
+            title = stringResource(R.string.module),
+            searchText = uiState.search,
+            onSearchTextChange = { query ->
+                viewModel.dispatch(ModuleUiAction.Search(query))
+            },
+            dropdownContent = {
+                TopBarIconPill(onClick = { navigator.push(Route.ModuleRepo) }) {
+                    Icon(
+                        imageVector = Icons.TwoTone.Cloud,
+                        contentDescription = stringResource(id = R.string.module_repo),
+                    )
+                }
+                TopBarIconPill(
+                    onClick = { showDropdown = true },
+                ) {
+                    Icon(
+                        imageVector = Icons.TwoTone.MoreVert,
+                        contentDescription = stringResource(id = R.string.settings),
+                    )
 
-                        ModuleDropdown(
-                            expanded = showDropdown,
-                            onDismissRequest = { showDropdown = false },
-                            viewModel = viewModel,
-                            uiState = uiState,
-                        )
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                searchBarPlaceHolderText = stringResource(R.string.search_modules),
-                    visibleFraction = fieldVisibleFraction,
-                    contentScrolled = {
-                        listState.firstVisibleItemIndex > 0 ||
-                            listState.firstVisibleItemScrollOffset > 0
-                    },
-            )
+                    ModuleDropdown(
+                        expanded = showDropdown,
+                        onDismissRequest = { showDropdown = false },
+                        viewModel = viewModel,
+                        uiState = uiState,
+                    )
+                }
+            },
+            scrollBehavior = scrollBehavior,
+            searchBarPlaceHolderText = stringResource(R.string.search_modules),
+            visibleFraction = fieldVisibleFraction,
+            contentScrolled = {
+                listState.firstVisibleItemIndex > 0 ||
+                    listState.firstVisibleItemScrollOffset > 0
+            },
+        )
     }
 
     Scaffold(
@@ -564,12 +581,7 @@ private fun getMetaModuleWarningText(
     if (!showWarning) return null
     if (!hasModuleRequireMount) return null
 
-    return when (status) {
-        MetaModuleStatus.MISSING -> context.getString(R.string.no_meta_module_installed)
-        MetaModuleStatus.REMOVED -> context.getString(R.string.meta_module_removed)
-        MetaModuleStatus.DISABLED -> context.getString(R.string.meta_module_disabled)
-        MetaModuleStatus.ACTIVE -> null
-    }
+    return status.resId?.let { context.getString(it) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -612,7 +624,6 @@ private fun ModuleList(
     val shortcut = koinInject<Shortcut>()
     val settings = koinInject<SettingsPlatformRepository>()
     var showMetaModuleWarning by rememberSaveable { mutableStateOf(true) }
-    val fetchRemoteText = koinInject<FetchRemoteTextUseCase>()
     val enqueueDownload = koinInject<EnqueueDownloadUseCase>()
     val observeDownload = koinInject<ObserveDownloadUseCase>()
     val permissionRequestInterface = LocalPermissionRequestInterface.current
@@ -633,7 +644,6 @@ private fun ModuleList(
     val changelogText = stringResource(R.string.module_changelog)
     val downloadingText = stringResource(R.string.module_downloading)
     val startDownloadingText = stringResource(R.string.module_start_downloading)
-    val fetchChangeLogFailed = stringResource(R.string.module_changelog_failed)
 
     LaunchedEffect(viewModel) {
         viewModel.events.collectLatest { event ->
@@ -792,10 +802,6 @@ private fun ModuleList(
         downloadUrl: String,
         fileName: String,
     ) {
-        val changelogResult = loadingDialog.withLoading {
-            fetchRemoteText(changelogUrl)
-        }
-
         val showToast: suspend (String) -> Unit = { msg ->
             withContext(Dispatchers.Main) {
                 Toast.makeText(
@@ -806,19 +812,42 @@ private fun ModuleList(
             }
         }
 
+        val verification = loadingDialog.withLoading { viewModel.resolveUpdate(module) }
+        if (verification == ModuleUpdateVerification.Rejected) {
+            showToast(context.getString(R.string.repo_update_unverifiable))
+            return
+        }
+        val registry = verification as? ModuleUpdateVerification.Registry
+        val canInstall = { registry == null || viewModel.isUpdateCurrent(module, registry) }
+        val changelogResult = if (registry != null) {
+            Result.success(
+                ModuleReadme(
+                    registry.release.descriptionHTML.ifBlank { module.description },
+                    registry.repositoryUrl,
+                    if (registry.release.descriptionHTML.isNotBlank()) DocumentFormat.HTML else DocumentFormat.MARKDOWN,
+                    DocumentPolicy.SameOrigin(registry.repositoryUrl),
+                ),
+            )
+        } else {
+            loadingDialog.withLoading { viewModel.loadUpdateChangelog(changelogUrl, module.updateJson) }
+        }
         val changelog = changelogResult.getOrElse {
-            showToast(fetchChangeLogFailed.format(it.message))
+            showToast(context.getString(R.string.repo_document_error))
             return
         }
 
         val confirmResult = confirmDialog.awaitConfirm(
             changelogText,
-            content = changelog,
-            markdown = true,
+            content = changelog.content,
+            document = changelog,
             confirm = updateText,
         )
 
         if (confirmResult != ConfirmResult.Confirmed) {
+            return
+        }
+        if (!canInstall()) {
+            showToast(context.getString(R.string.repo_update_unverifiable))
             return
         }
 
@@ -829,12 +858,15 @@ private fun ModuleList(
             download(
                 context,
                 permissionRequestInterface,
-                downloadUrl,
+                registry?.zipUrl ?: downloadUrl,
                 fileName,
                 enqueueDownload,
                 observeDownload,
+                expected = registry?.expected,
+                canEnqueue = canInstall,
+                onFailed = { failed -> Toast.makeText(context, downloadFailureMessage(context, failed), Toast.LENGTH_LONG).show() },
                 onDownloaded = { uri ->
-                    onUpdateModule(uri)
+                    if (canInstall()) onUpdateModule(uri)
                 },
                 onDownloading = {
                     launch(Dispatchers.Main) {
@@ -928,7 +960,7 @@ private fun ModuleList(
                     start = ScreenEdgePadding,
                     top = 0.dp,
                     end = ScreenEdgePadding,
-                    bottom = 72.dp + 5.dp + 5.dp // FAB + bottom padding of FAB
+                    bottom = 72.dp + 5.dp + 5.dp, // FAB + bottom padding of FAB
                 )
             },
         ) {
@@ -1261,7 +1293,7 @@ fun ModuleItem(
                     }
                 }
                 .padding(horizontal = ScreenEdgePadding)
-                .padding(top = 12.dp)
+                .padding(top = 12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

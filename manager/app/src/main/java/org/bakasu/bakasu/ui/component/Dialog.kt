@@ -4,7 +4,6 @@ import android.graphics.text.LineBreaker
 import android.os.Build
 import android.os.Parcelable
 import android.text.Layout
-import android.text.method.LinkMovementMethod
 import android.util.Log
 import android.view.ViewGroup
 import android.widget.TextView
@@ -42,6 +41,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.noties.markwon.Markwon
+import io.noties.markwon.ext.tables.TableAwareMovementMethod
+import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.utils.NoCopySpannableFactory
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CancellableContinuation
@@ -55,6 +56,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
+import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.model.ModuleReadme
 
 private const val TAG = "DialogComponent"
 
@@ -65,6 +68,7 @@ interface ConfirmDialogVisuals : Parcelable {
     val isHtml: Boolean
     val confirm: String?
     val dismiss: String?
+    val document: ModuleReadme?
 }
 
 @Parcelize
@@ -75,6 +79,7 @@ private data class ConfirmDialogVisualsImpl(
     override val isHtml: Boolean,
     override val confirm: String?,
     override val dismiss: String?,
+    override val document: ModuleReadme? = null,
 ) : ConfirmDialogVisuals {
     companion object {
         val Empty: ConfirmDialogVisuals = ConfirmDialogVisualsImpl(
@@ -115,6 +120,7 @@ interface ConfirmDialogHandle : DialogHandle {
         html: Boolean = false,
         confirm: String? = null,
         dismiss: String? = null,
+        document: ModuleReadme? = null,
     )
 
     suspend fun awaitConfirm(
@@ -124,6 +130,7 @@ interface ConfirmDialogHandle : DialogHandle {
         html: Boolean = false,
         confirm: String? = null,
         dismiss: String? = null,
+        document: ModuleReadme? = null,
     ): ConfirmResult
 }
 
@@ -277,9 +284,10 @@ private class ConfirmDialogHandleImpl(
         html: Boolean,
         confirm: String?,
         dismiss: String?,
+        document: ModuleReadme?,
     ) {
         coroutineScope.launch {
-            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss))
+            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss, document))
             show()
         }
     }
@@ -291,9 +299,10 @@ private class ConfirmDialogHandleImpl(
         html: Boolean,
         confirm: String?,
         dismiss: String?,
+        document: ModuleReadme?,
     ): ConfirmResult {
         coroutineScope.launch {
-            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss))
+            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss, document))
             show()
         }
         return awaitResult()
@@ -436,12 +445,18 @@ private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, di
                     .heightIn(max = 325.dp),
             ) {
                 item {
-                    if (visuals.isMarkdown) {
+                    val document = visuals.document
+                    if (document != null) {
+                        GithubMarkdown(
+                            document = document,
+                            backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
+                        )
+                    } else if (visuals.isMarkdown) {
                         MarkdownContent(content = visuals.content)
                     } else if (visuals.isHtml) {
                         GithubMarkdown(
-                            content = visuals.content,
-                            backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            document = ModuleReadme(visuals.content, "https://appassets.androidplatform.net/", DocumentFormat.HTML),
+                            backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                         )
                     } else {
                         Text(text = visuals.content)
@@ -463,7 +478,7 @@ private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, di
 }
 
 @Composable
-private fun MarkdownContent(content: String) {
+internal fun MarkdownContent(content: String) {
     val contentColor = LocalContentColor.current
 
     Column(
@@ -474,7 +489,7 @@ private fun MarkdownContent(content: String) {
         AndroidView(
             factory = { context ->
                 TextView(context).apply {
-                    movementMethod = LinkMovementMethod.getInstance()
+                    movementMethod = TableAwareMovementMethod.create()
                     setSpannableFactory(NoCopySpannableFactory.getInstance())
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         breakStrategy = LineBreaker.BREAK_STRATEGY_SIMPLE
@@ -487,7 +502,10 @@ private fun MarkdownContent(content: String) {
                 }
             },
             update = {
-                Markwon.create(it.context).setMarkdown(it, content)
+                Markwon.builder(it.context)
+                    .usePlugin(TablePlugin.create(it.context))
+                    .build()
+                    .setMarkdown(it, content)
                 it.setTextColor(contentColor.toArgb())
             },
         )

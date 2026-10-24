@@ -25,8 +25,12 @@ import org.bakasu.bakasu.data.logging.BugreportRepository
 import org.bakasu.bakasu.data.logging.SulogRepository
 import org.bakasu.bakasu.data.module.ModuleActionRepository
 import org.bakasu.bakasu.data.module.ModuleCatalogRepository
+import org.bakasu.bakasu.data.module.ModuleIconRepository
 import org.bakasu.bakasu.data.module.ModulePreferencesRepository
+import org.bakasu.bakasu.data.module.ModuleReleaseRepository
 import org.bakasu.bakasu.data.module.ModuleRepository
+import org.bakasu.bakasu.data.module.RepositorySourceStore
+import org.bakasu.bakasu.data.module.registry.KernelSuRegistryRepository
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.data.network.WebResourceRepository
@@ -37,6 +41,7 @@ import org.bakasu.bakasu.data.packageinfo.RootServiceRepository
 import org.bakasu.bakasu.data.packageinfo.SuperUserRepository
 import org.bakasu.bakasu.data.profile.ProfileRepository
 import org.bakasu.bakasu.data.profile.ProfileTemplateRepository
+import org.bakasu.bakasu.data.script.ScriptRepository
 import org.bakasu.bakasu.data.settings.LocaleHelper
 import org.bakasu.bakasu.data.settings.LocaleRepository
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
@@ -54,6 +59,7 @@ import org.bakasu.bakasu.data.theme.ThemeRepository
 import org.bakasu.bakasu.data.update.ManagerUpdateRepository
 import org.bakasu.bakasu.data.webui.WebUiRepository
 import org.bakasu.bakasu.domain.text.TextTransliterator
+import org.bakasu.bakasu.domain.usecase.AddModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.AddUmountPathUseCase
 import org.bakasu.bakasu.domain.usecase.ApplyLanguageUseCase
 import org.bakasu.bakasu.domain.usecase.BackupAllowlistUseCase
@@ -85,7 +91,11 @@ import org.bakasu.bakasu.domain.usecase.GetHomeBasicInfoUseCase
 import org.bakasu.bakasu.domain.usecase.GetInstallEnvironmentUseCase
 import org.bakasu.bakasu.domain.usecase.GetKernelFeatureSettingsUseCase
 import org.bakasu.bakasu.domain.usecase.GetKernelStatusUseCase
+import org.bakasu.bakasu.domain.usecase.GetLastScriptRunUseCase
 import org.bakasu.bakasu.domain.usecase.GetManagerRuntimeInfoUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleReadmeUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
+import org.bakasu.bakasu.domain.usecase.GetModuleUpdateChangelogUseCase
 import org.bakasu.bakasu.domain.usecase.GetPlatformFeatureStatusUseCase
 import org.bakasu.bakasu.domain.usecase.GetProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
@@ -95,27 +105,32 @@ import org.bakasu.bakasu.domain.usecase.GetSuperUserAppGroupUseCase
 import org.bakasu.bakasu.domain.usecase.ImportAllowlistUseCase
 import org.bakasu.bakasu.domain.usecase.ImportProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.InitializeApplicationUseCase
+import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
 import org.bakasu.bakasu.domain.usecase.IsLateLoadModeUseCase
 import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
 import org.bakasu.bakasu.domain.usecase.IsNetworkAvailableUseCase
 import org.bakasu.bakasu.domain.usecase.IsSoftRebootPreferredUseCase
 import org.bakasu.bakasu.domain.usecase.IsSystemLanguageSettingsUseCase
 import org.bakasu.bakasu.domain.usecase.LaunchSystemLanguageSettingsUseCase
+import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
 import org.bakasu.bakasu.domain.usecase.LoadSettingsPlatformUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDynamicManagerStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveInstalledModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveKernelFlashUseCase
-import org.bakasu.bakasu.domain.usecase.ObserveModuleCatalogOfflineUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveModuleCatalogRefreshingUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplateOfflineUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplateRefreshingUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplatesUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveStartupStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveSulogStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveSuperUserStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveUmountStateUseCase
+import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
+import org.bakasu.bakasu.domain.usecase.PrepareScriptUseCase
 import org.bakasu.bakasu.domain.usecase.RebootUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshDynamicManagerUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshInstalledModulesUseCase
@@ -124,8 +139,13 @@ import org.bakasu.bakasu.domain.usecase.RefreshProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshSulogUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshSuperUsersUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshUmountPathsUseCase
+import org.bakasu.bakasu.domain.usecase.ReleaseScriptUseCase
+import org.bakasu.bakasu.domain.usecase.RemoveModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.RemovePreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveUmountPathUseCase
+import org.bakasu.bakasu.domain.usecase.RenameModuleRepositoryUseCase
+import org.bakasu.bakasu.domain.usecase.ResolveModuleUpdateUseCase
+import org.bakasu.bakasu.domain.usecase.RunScriptUseCase
 import org.bakasu.bakasu.domain.usecase.SaveModuleActionLogUseCase
 import org.bakasu.bakasu.domain.usecase.SaveProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.SelectDynamicManagerUseCase
@@ -138,6 +158,7 @@ import org.bakasu.bakasu.domain.usecase.SetManualDynamicManagerUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleRemovedUseCase
 import org.bakasu.bakasu.domain.usecase.SetSelinuxHideEnabledUseCase
+import org.bakasu.bakasu.domain.usecase.SetShellSuAdbOnlyEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetStringPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.SetStringSetPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.SetSuEnabledUseCase
@@ -166,6 +187,8 @@ import org.bakasu.bakasu.ui.viewmodel.MainIntentViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
+import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
+import org.bakasu.bakasu.ui.viewmodel.ScriptRunViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.SulogViewModel
@@ -247,7 +270,6 @@ val repositoryModule = module {
             applicationScope = get(applicationScopeQualifier),
             flashRepository = get(),
             ksuCliRepository = get(),
-            monetCompatColorSource = get(),
         )
     }
     singleOf(::ManagerUpdateRepository)
@@ -264,9 +286,14 @@ val repositoryModule = module {
     singleOf(::BugreportRepository)
     singleOf(::UmountRepository)
     singleOf(::ModuleCatalogRepository)
+    single { ModuleReleaseRepository(get(), get(applicationScopeQualifier)) }
+    singleOf(::ModuleIconRepository)
+    single { KernelSuRegistryRepository(get(), get(), get(), get()) }
+    singleOf(::RepositorySourceStore)
     singleOf(::ModuleRepository)
     singleOf(::ModulePreferencesRepository)
     singleOf(::ModuleActionRepository)
+    single { ScriptRepository(androidApplication(), get(), get(applicationScopeQualifier)) }
     singleOf(::WebResourceRepository)
     singleOf(::WebUiRepository)
     singleOf(::ModuleFileRepository)
@@ -308,6 +335,7 @@ val useCaseModule = module {
     factoryOf(::EnqueueDownloadUseCase)
     factoryOf(::EnqueueManagerUpdateUseCase)
     factoryOf(::ObserveDownloadUseCase)
+    factoryOf(::ObserveAssetDownloadUseCase)
     factoryOf(::GetKernelStatusUseCase)
     factoryOf(::GetInstallEnvironmentUseCase)
     factoryOf(::ExecuteFlashOperationUseCase)
@@ -316,6 +344,7 @@ val useCaseModule = module {
     factoryOf(::GetKernelFeatureSettingsUseCase)
     factoryOf(::SetSuEnabledUseCase)
     factoryOf(::SetKernelUmountEnabledUseCase)
+    factoryOf(::SetShellSuAdbOnlyEnabledUseCase)
     factoryOf(::ConfigureSuLogUseCase)
     factoryOf(::SetSelinuxHideEnabledUseCase)
     factoryOf(::SetDefaultUmountModulesUseCase)
@@ -337,9 +366,18 @@ val useCaseModule = module {
     factoryOf(::GetSuperUserAppGroupUseCase)
     factoryOf(::ObserveCatalogModulesUseCase)
     factoryOf(::ObserveModuleCatalogRefreshingUseCase)
-    factoryOf(::ObserveModuleCatalogOfflineUseCase)
     factoryOf(::RefreshModuleCatalogUseCase)
     factoryOf(::GetCatalogModuleUseCase)
+    factoryOf(::IsCatalogModuleCurrentUseCase)
+    factoryOf(::GetModuleReadmeUseCase)
+    factoryOf(::GetModuleReleaseDetailsUseCase)
+    factoryOf(::LoadModuleIconUseCase)
+    factoryOf(::ResolveModuleUpdateUseCase)
+    factoryOf(::GetModuleUpdateChangelogUseCase)
+    factoryOf(::ObserveRepositorySourcesUseCase)
+    factoryOf(::AddModuleRepositoryUseCase)
+    factoryOf(::RenameModuleRepositoryUseCase)
+    factoryOf(::RemoveModuleRepositoryUseCase)
     factoryOf(::ObserveProfileTemplatesUseCase)
     factoryOf(::ObserveProfileTemplateRefreshingUseCase)
     factoryOf(::ObserveProfileTemplateOfflineUseCase)
@@ -385,6 +423,11 @@ val useCaseModule = module {
     factoryOf(::CalculateInstalledModuleSizeUseCase)
     factoryOf(::UpdateCachedModuleEnabledUseCase)
     factoryOf(::ExecuteModuleActionUseCase)
+    factoryOf(::PeekOneshotScriptUseCase)
+    factoryOf(::PrepareScriptUseCase)
+    factoryOf(::ReleaseScriptUseCase)
+    factoryOf(::RunScriptUseCase)
+    factoryOf(::GetLastScriptRunUseCase)
     factoryOf(::SaveModuleActionLogUseCase)
     factoryOf(::SetModuleEnabledUseCase)
     factoryOf(::SetModuleRemovedUseCase)
@@ -392,6 +435,7 @@ val useCaseModule = module {
 }
 
 val viewModelModule = module {
+    viewModel { parameters -> ScriptRunViewModel(parameters[0], get(), get(), get(), get(), get()) }
     viewModel { parameters ->
         AppProfileViewModel(
             uid = parameters[0],
@@ -414,8 +458,9 @@ val viewModelModule = module {
     viewModelOf(::ModuleViewModel)
     viewModelOf(::SuperUserViewModel)
     viewModelOf(::SuSFSViewModel)
-    viewModelOf(::ModuleRepoViewModel)
-    viewModel { parameters -> ModuleDetailViewModel(parameters[0], get()) }
+    viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
+    viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get(), get()) }
+    viewModelOf(::RepositorySourcesViewModel)
     viewModelOf(::TemplateViewModel)
     viewModel { parameters ->
         TemplateEditorViewModel(

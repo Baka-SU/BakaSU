@@ -309,7 +309,6 @@
     <string name="warning_of_meta_module_title">Módulo Meta necessário</string>
     <string name="warning_of_meta_module_summary">Este módulo deseja montar /system, o que é gerenciado pelo metamódulo. Sem ele, o módulo pode não funcionar</string>
     <string name="sort_usage_freq">Frequência de utilização</string>
-    <string name="no_apps_in_category">Não há candidaturas nesta categoria</string>
     <string name="persistent">Persistente</string>
     <string name="temporary">Temporário</string>
     <string name="susfs_config_title">Configuração do SuSFS</string>

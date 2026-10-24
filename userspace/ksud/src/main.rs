@@ -11,6 +11,7 @@ mod boot_patch;
 #[cfg(not(target_os = "android"))]
 mod cli_non_android;
 mod defs;
+mod feature_id;
 mod lkm_image;
 mod lkm_image_btf;
 

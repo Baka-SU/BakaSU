@@ -51,7 +51,6 @@ import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalBlurState
 import org.bakasu.bakasu.ui.util.LocalHandlePageChange
-import org.bakasu.bakasu.ui.util.LocalPagerPage
 import org.bakasu.bakasu.ui.util.LocalPagerPages
 import org.bakasu.bakasu.ui.util.LocalPagerState
 import org.bakasu.bakasu.ui.util.LocalPortraitState
@@ -212,7 +211,7 @@ fun MainScreen(
             val distance = navDistance
             if (distance > 0f) raw / distance else raw
         },
-        LocalTopBarSlot provides topBarSlot
+        LocalTopBarSlot provides topBarSlot,
     ) {
         val content = @Composable { paddingBottom: Dp ->
             HorizontalPagerWithInteraction(
@@ -226,7 +225,6 @@ fun MainScreen(
                     ),
                 state = pagerState,
                 userScrollEnabled = userScrollEnabled && !interceptPagerGestures,
-                beyondViewportPageCount = if (homeState.isInitialDataLoaded) 1 else 0,
                 pageNestedScrollConnection = if (interceptPagerGestures) {
                     PagerGestureNestedScrollConnection
                 } else {
@@ -245,7 +243,6 @@ fun MainScreen(
                 val snackBarHostState = remember { SnackbarHostState() }
                 CompositionLocalProvider(
                     LocalSnackbarHost provides snackBarHostState,
-                    LocalPagerPage provides pageIndex,
                     LocalBlurState provides rememberMaterial3BlurBackdrop(
                         enableBlur = themeConfig.isEnableBlur,
                         pagerState = pagerState,
@@ -275,14 +272,14 @@ fun MainScreen(
             ) { innerPadding ->
                 Box(Modifier.fillMaxSize()) {
                     Box(
-                        modifier = Modifier.blurSource()
+                        modifier = Modifier.blurSource(),
                     ) {
                         content(innerPadding.calculateBottomPadding())
                     }
                     Box(
                         modifier = Modifier.onSizeChanged {
                             topBarSlot.height = with(density) { it.height.toDp() }
-                        }
+                        },
                     ) {
                         TopBarScrim {
                             topBarSlot.content?.invoke()

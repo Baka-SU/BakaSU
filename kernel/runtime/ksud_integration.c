@@ -42,11 +42,14 @@
 #include "ksud.h"
 #include "ksud_boot.h"
 #include "compat/kernel_compat.h"
+#include "policy/feature.h"
 #include "selinux/selinux.h"
 #include "manager/throne_tracker.h"
 #ifdef CONFIG_KSU_TRACEPOINT_HOOK
 #include "hook/syscall_hook.h"
+#include "hook/syscall_event_bridge.h"
 #endif
+#include "preinit/preinit.h"
 
 // clang-format off
 static const char KERNEL_SU_RC[] = 
@@ -177,27 +180,6 @@ static void stop_execve_hook(void);
 #endif
 // clang-format on
 
-static const char __user *get_user_arg_ptr(struct user_arg_ptr argv, int nr)
-{
-    const char __user *native;
-
-#ifdef CONFIG_COMPAT
-    if (unlikely(argv.is_compat)) {
-        compat_uptr_t compat;
-
-        if (get_user(compat, argv.ptr.compat + nr))
-            return ERR_PTR(-EFAULT);
-
-        return compat_ptr(compat);
-    }
-#endif
-
-    if (get_user(native, argv.ptr.native + nr))
-        return ERR_PTR(-EFAULT);
-
-    return native;
-}
-
 /*
  * count() counts the number of strings in array ARGV.
  */
@@ -257,7 +239,7 @@ fail:
 }
 
 // IMPORTANT NOTE: the call from execve_handler_pre WON'T provided correct value for envp and flags in GKI version
-void ksu_handle_execveat_ksud(const char *filename, struct user_arg_ptr *argv, struct user_arg_ptr *envp, int *flags)
+void ksu_handle_execveat_ksud(char *filename, struct user_arg_ptr *argv, struct user_arg_ptr *envp, int *flags)
 {
     static const char app_process[] = "/system/bin/app_process";
     static bool first_zygote = true;
@@ -274,10 +256,13 @@ void ksu_handle_execveat_ksud(const char *filename, struct user_arg_ptr *argv, s
         char buf[16];
         if (!init_second_stage_executed && check_argv(*argv, 1, "second_stage", buf, sizeof(buf))) {
             pr_info("/system/bin/init second_stage executed via argv1 check\n");
+            ksu_preinit_release();
             ksu_selinux_hide_handle_second_stage();
             apply_kernelsu_rules();
             cache_sid();
             setup_ksu_cred();
+            // after apply_kernelsu_rules, so that selinux_hide has its sepolicy backup
+            ksu_feature_apply_forced();
             init_second_stage_executed = true;
         }
     } else if (unlikely(!memcmp(filename, old_system_init, sizeof(old_system_init) - 1) && argv)) {
@@ -344,6 +329,7 @@ void ksu_handle_execveat_ksud(const char *filename, struct user_arg_ptr *argv, s
         char buf[16];
         if (check_argv(*argv, 1, "-Xzygote", buf, sizeof(buf))) {
             pr_info("exec zygote, /data prepared, second_stage: %d\n", init_second_stage_executed);
+            ksu_preinit_release();
             on_post_fs_data();
             first_zygote = false;
             ksu_stop_ksud_execve_hook();
@@ -359,7 +345,8 @@ static struct file_operations fops_proxy;
 static ssize_t ksu_rc_pos = 0;
 const size_t ksu_rc_len = sizeof(KERNEL_SU_RC) - 1;
 
-// Prefer /metadata/watchdog/ when present, else /metadata.
+// Prefer /metadata/vold, else /metadata/watchdog, else /metadata.
+#define MODULE_RC_PATH_VOLD "/metadata/vold/ksu/modules.rc"
 #define MODULE_RC_PATH_WATCHDOG "/metadata/watchdog/ksu/modules.rc"
 #define MODULE_RC_PATH_DEFAULT "/metadata/ksu/modules.rc"
 static char *module_rc_buf;
@@ -368,7 +355,12 @@ static ssize_t module_rc_pos;
 
 static struct file *open_module_rc(const char **chosen_path)
 {
-    struct file *f = filp_open(MODULE_RC_PATH_WATCHDOG, O_RDONLY, 0);
+    struct file *f = filp_open(MODULE_RC_PATH_VOLD, O_RDONLY, 0);
+    if (!IS_ERR(f)) {
+        *chosen_path = MODULE_RC_PATH_VOLD;
+        return f;
+    }
+    f = filp_open(MODULE_RC_PATH_WATCHDOG, O_RDONLY, 0);
     if (!IS_ERR(f)) {
         *chosen_path = MODULE_RC_PATH_WATCHDOG;
         return f;
@@ -577,11 +569,7 @@ static bool is_init_rc(struct file *fp)
         return false;
     }
 
-    const char *short_name = fp->f_path.dentry->d_name.name;
-    if (strcmp(short_name, "init.rc")) {
-        // we are only interested in the `init.rc` file name.
-        return false;
-    }
+    // Bind mounts retain the source dentry name, so match the mounted path.
     char path[256];
     char *dpath = d_path(&fp->f_path, path, sizeof(path));
 

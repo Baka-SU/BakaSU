@@ -39,7 +39,7 @@ class WebUiRepository(
     }
 
     fun openFile(path: String) = runCatching {
-        val file = SuFile(path).apply { shell = ksuCliRepository.createRootShell(true) }
+        val file = SuFile(path).apply { shell = ksuCliRepository.getRootShell(true) }
         SuFileInputStream.open(file)
     }.getOrNull()
 

@@ -119,7 +119,7 @@ fun AboutScreen() {
                 Box(
                     modifier = Modifier
                         .padding(horizontal = ScreenEdgePadding)
-                        .padding(top = 8.dp, bottom = 12.dp)
+                        .padding(top = 8.dp, bottom = 12.dp),
                 ) {
                     StatusCard()
                 }

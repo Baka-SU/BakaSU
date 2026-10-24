@@ -6,6 +6,7 @@
 #include <linux/version.h>
 
 #include "policy/allowlist.h"
+#include "policy/feature.h"
 #include "klog.h" // IWYU pragma: keep
 #include "runtime/ksud_boot.h"
 #include "runtime/ksud.h"
@@ -30,6 +31,9 @@ void on_post_fs_data(void)
     // sanity check, this may influence the performance
     ksu_stop_input_hook_runtime();
     ksu_selinux_hide_handle_post_fs_data();
+
+    // retry forced features which failed at second stage
+    ksu_feature_apply_forced();
 
     // scan manager
     pr_info("post-fs-data triggered, scanning manager...");

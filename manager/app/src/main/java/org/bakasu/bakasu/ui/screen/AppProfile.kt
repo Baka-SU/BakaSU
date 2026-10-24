@@ -167,7 +167,7 @@ fun AppProfileScreen(
                     colors = transparentTopAppBarColors(),
                     navigationIcon = {
                         AppBackButton(
-                            onClick = dropUnlessResumed { navigator.pop() }
+                            onClick = dropUnlessResumed { navigator.pop() },
                         )
                     },
                     windowInsets = pillTopAppBarWindowInsets(),
@@ -527,6 +527,7 @@ private fun ProfileBox(
             description = mode.text,
             isOnBackground = false,
             containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         )
 
         Row(

@@ -8,8 +8,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import org.bakasu.bakasu.data.module.registry.RegistryUrls
+import org.bakasu.bakasu.data.module.registry.canShareDownload
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
+import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
+import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.domain.model.ManagerApkSource
 import org.bakasu.bakasu.domain.model.ManagerUpdateInfo
 
@@ -22,10 +26,10 @@ class DownloadRepository(
     private val _downloads = MutableStateFlow<Map<Int, DownloadState>>(emptyMap())
     val downloads: StateFlow<Map<Int, DownloadState>> = _downloads.asStateFlow()
 
-    fun enqueue(url: String, fileName: String): Int {
+    fun enqueue(url: String, fileName: String, expected: ExpectedFile? = null): Int {
         synchronized(enqueueLock) {
             val existing = _downloads.value.values.find {
-                it.url == url && (it.status == DownloadStatus.PENDING || it.status == DownloadStatus.DOWNLOADING)
+                canShareDownload(url, expected, it.url, it.expected) && (it.status == DownloadStatus.PENDING || it.status == DownloadStatus.DOWNLOADING)
             }
             if (existing != null) return existing.id
 
@@ -36,14 +40,23 @@ class DownloadRepository(
                         id = id,
                         fileName = fileName,
                         url = url,
+                        expected = expected,
                     )
                     )
+            }
+            if (expected != null && !RegistryUrls.isAllowedReleaseDownloadUrl(url)) {
+                markFailed(id, "Download URL not allowed", DownloadVerificationFailure.URL_NOT_ALLOWED)
+                return id
             }
             val intent = Intent(application, DownloadService::class.java).apply {
                 action = DownloadService.ACTION_DOWNLOAD
                 putExtra(DownloadService.EXTRA_DOWNLOAD_ID, id)
                 putExtra(DownloadService.EXTRA_URL, url)
                 putExtra(DownloadService.EXTRA_FILE_NAME, fileName)
+                if (expected != null) {
+                    putExtra(DownloadService.EXTRA_EXPECTED_SIZE, expected.size)
+                    putExtra(DownloadService.EXTRA_EXPECTED_SHA256, expected.sha256)
+                }
             }
             ContextCompat.startForegroundService(application, intent)
             return id
@@ -54,7 +67,7 @@ class DownloadRepository(
         synchronized(enqueueLock) {
             val url = update.source.url
             val existing = _downloads.value.values.find {
-                it.url == url && (it.status == DownloadStatus.PENDING || it.status == DownloadStatus.DOWNLOADING)
+                it.url == url && it.expected == null && (it.status == DownloadStatus.PENDING || it.status == DownloadStatus.DOWNLOADING)
             }
             if (existing != null) return existing.id
 
@@ -113,10 +126,10 @@ class DownloadRepository(
         }
     }
 
-    fun markFailed(id: Int, error: String) {
+    fun markFailed(id: Int, error: String, verificationFailure: DownloadVerificationFailure? = null) {
         _downloads.update { map ->
             val state = map[id] ?: return@update map
-            map + (id to state.copy(status = DownloadStatus.FAILED, error = error))
+            map + (id to state.copy(status = DownloadStatus.FAILED, error = error, verificationFailure = verificationFailure))
         }
     }
 }

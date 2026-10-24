@@ -278,7 +278,6 @@
     <string name="warning_of_meta_module_title">Metamodul szükséges</string>
     <string name="warning_of_meta_module_summary">Ez a modul adatot akar csatolni a fájlrendszer /system névterébe, ehhez metamodul szükséges. Másképp a megfelelő működés nem garantált</string>
     <string name="sort_usage_freq">Leggyakrabban használtak</string>
-    <string name="no_apps_in_category">Ebben a kategóriában applikáció nem található</string>
     <string name="sulog_search_placeholder">Keresés naplóban</string>
     <string name="reboot_soft">Háttérrendszer újraindítása</string>
     <string name="visit_home_page">Kezdőlap megtekintése</string>
