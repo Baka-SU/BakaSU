@@ -690,4 +690,12 @@
     <string name="repo_module_author_value">Автор: %1$s</string>
     <string name="superuser_root_access_required">Для завантаження додатків потрібен root-доступ.</string>
     <string name="superuser_service_start_failed">Не вдалося запустити RootService. Повторіть спробу завантажити додатки.</string>
+    <string name="settings_shell_su_adb_only">Обмежити root доступ оболонки ADB</string>
+    <string name="settings_shell_su_adb_only_summary">Увімкнути додаткові перевірки для оболонок:\nТільки процеси оболонки, ініційовані adbd або root процесом KernelSU, можуть отримати root-доступ</string>
+    <string name="module_flash_complete">Модуль прошито</string>
+    <string name="kernel_flash_complete">Ядро прошито</string>
+    <string name="patch_complete">Патч завершено</string>
+    <string name="settings_flash_card_background">Фон картки на екрані прошивки</string>
+    <string name="settings_flash_card_background_summary">Намалювати фон картки за журналом прошивки. Завжди ввімкнено, коли встановлено власний фон</string>
+    <string name="feature_status_forced_summary">Ця функція примусово вмикається конфігурацією завантаження і не може бути змінена.</string>
 </resources>

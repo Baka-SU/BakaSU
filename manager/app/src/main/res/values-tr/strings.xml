@@ -541,7 +541,7 @@
     <string name="enable_floating_bottom_bar">Yüzen alt çubuk</string>
     <string name="enable_floating_bottom_bar_summary">Apple tarzı yüzen alt çubuğu kullan.</string>
     <string name="advanced_options">Gelişmiş Seçenekler</string>
-    <string name="allow_shell">Kabuğ\'a her zaman kök erişimi ver</string>
+    <string name="allow_shell">Shell\'e her zaman Root erişimi ver</string>
     <string name="allow_shell_summary">Her zaman ADB Shell\'in root komutuna erişmesine izin vermek. Gerekli olmadığı sürece bunu etkinleştirmeyiniz.</string>
     <string name="enable_adb">Zorla adb\'yi başlangıç sürecinde etkinleştirmek</string>
     <string name="enable_adb_summary">USB hata ayıklamayı ve adb doğrulamasını kapat. Gerekli olmadığı sürece bunu etkinleştirmeyiniz.</string>
@@ -688,4 +688,12 @@
     <string name="superuser_root_access_required">Uygulamaları yüklemek için Root erişimi gereklidir.</string>
     <string name="superuser_service_start_failed">RootService başlatılamadı. Uygulamaları yüklemek için tekrar deneyin.</string>
     <string name="superuser_packages_load_failed">Uygulamalar RootService üzerinden yüklenemedi. Lütfen tekrar deneyin.</string>
+    <string name="settings_shell_su_adb_only">Shell root erişimini ADB ile sınırla</string>
+    <string name="settings_shell_su_adb_only_summary">Shell\'ler için ek kontrolleri etkinleştir: Yalnızca adbd veya bir KernelSU root işlemi tarafından başlatılan shell işlemleri root erişimi alabilir</string>
+    <string name="module_flash_complete">Modül yüklendi</string>
+    <string name="kernel_flash_complete">Kernel yüklendi</string>
+    <string name="patch_complete">Yama tamamlandı</string>
+    <string name="settings_flash_card_background">Yükleme ekranında panel arka planı</string>
+    <string name="settings_flash_card_background_summary">Yükleme günlüğünün arkasına bir panel arka planı ekler. Özel bir arka plan ayarlandığında her zaman gösterilir</string>
+    <string name="feature_status_forced_summary">Bu özellik önyükleme yapılandırması tarafından zorunlu kılınmıştır ve değiştirilemez</string>
 </resources>
