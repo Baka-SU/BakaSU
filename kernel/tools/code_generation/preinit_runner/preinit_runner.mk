@@ -3,10 +3,14 @@
 # (CONFIG_HEADERS_INSTALL, enabled by gki_defconfig).
 KSU_UAPI_INC := $(objtree)/usr/include
 
+# headers_install creates generated headers in the source tree for in-tree
+# builds. Do not run it as a parse-time side effect while cleaning that tree.
+ifeq ($(filter clean mrproper distclean,$(MAKECMDGOALS)),)
 ifeq ($(wildcard $(KSU_UAPI_INC)/linux/unistd.h),)
 KSU_HEADERS_INSTALL_OUTPUT := $(shell $(MAKE) -s -C "$(abspath $(srctree))" \
 	O="$(abspath $(objtree))" ARCH="$(ARCH)" \
 	headers_install INSTALL_HDR_PATH="$(abspath $(objtree))/usr")
+endif
 endif
 
 ifneq ($(wildcard $(KSU_UAPI_INC)/linux/unistd.h),)
