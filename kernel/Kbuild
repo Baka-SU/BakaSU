@@ -219,7 +219,7 @@ ifndef CONFIG_KSU_TRACEPOINT_HOOK
 endif
 
 include $(KSU_SRC)/tools/kernel_compat.mk
-ifeq ($(CONFIG_KSU),y)
+ifneq ($(CONFIG_KSU),)
 include $(KSU_SRC)/tools/code_generation/code_generation.mk
 endif
 
