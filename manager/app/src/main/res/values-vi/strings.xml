@@ -63,12 +63,12 @@
     <string name="profile_custom">Tuỳ chỉnh</string>
     <string name="profile_groups">Nhóm</string>
     <string name="profile_capabilities">Tính tương thích</string>
-    <string name="profile_selinux_context">Bối cảnh SELinux</string>
+    <string name="profile_selinux_context">Ngữ cảnh SELinux</string>
     <string name="failed_to_update_app_profile">Cập nhật Hồ sơ Ứng dụng cho %s thất bại</string>
     <string name="settings_umount_modules_default">Umount mô-đun theo mặc định</string>
     <string name="settings_umount_modules_default_summary">Giá trị mặc định chung cho tùy chọn \"Umount mô-đun\" trong Hồ sơ Ứng dụng. Nếu được bật, tùy chọn này sẽ loại bỏ mọi sửa đổi mô-đun đối với hệ thống áp dụng cho các ứng dụng chưa có một hồ sơ được đặt</string>
     <string name="profile_umount_modules_summary">Bật tùy chọn này sẽ cho phép KernelSU khôi phục bất kỳ tệp nào đã được sửa đổi bởi các mô-đun cho ứng dụng này</string>
-    <string name="profile_selinux_domain">Tên miền</string>
+    <string name="profile_selinux_domain">Miền SELinux</string>
     <string name="profile_selinux_rules">Quy tắc</string>
     <string name="module_update">Cập nhật</string>
     <string name="module_downloading">Đang tải xuống mô-đun: %s</string>
@@ -185,7 +185,7 @@
     <string name="icon_switch_title">Biểu tượng thay thế</string>
     <string name="icon_switch_summary">Thay đổi biểu tượng trình khởi chạy thành biểu tượng của KernelSU</string>
     <string name="icon_switched">Đã thay đổi icon</string>
-    <string name="app_dpi_title">Tuỳ chỉnh DPI</string>
+    <string name="app_dpi_title">DPI được Áp dụng</string>
     <string name="app_dpi_summary">Điều chỉnh mật độ hiển thị màn hình cho ứng dụng hiện tại duy nhất</string>
     <string name="dpi_size_small">Nhỏ</string>
     <string name="dpi_size_medium">Vừa</string>
@@ -237,7 +237,7 @@
     <string name="multi_manager_list">Trình quản lý đang hoạt động</string>
     <string name="no_active_manager">Trình quản lý đang không hoạt động</string>
     <string name="home_zygisk_implement">Triển khai Zygisk</string>
-    <string name="home_meta_module_implement">Triển khai Siêu Mô-đun</string>
+    <string name="home_meta_module_implement">Triển khai Meta Module</string>
     <string name="sus_loop_paths_description_title">Cấu hình Đường dẫn Vòng lặp</string>
     <string name="sus_loop_paths_description_text">Đường dẫn Vòng lặp được đổi tên thành SUS_PATH mỗi khi một ứng dụng không phải root hoặc dịch vụ cô lập được khởi động. Điều này giúp giải quyết vấn đề đường dẫn đã thêm có thể trở nên không hợp lệ do trạng thái inode được đặt lại hoặc inode được tạo lại trong Kernel</string>
     <string name="home_hook_type">Loại Hook</string>
@@ -299,10 +299,10 @@
     <string name="settings_selinux_hide_summary">Ngăn chặn các ứng dụng khỏi phát hiện các sửa đổi SELinux</string>
     <string name="settings_selinux_hide_reboot_required">Khởi động lại để áp dụng thay đổi</string>
     <string name="settings_selinux_hide_failed">Lỗi: %d</string>
-    <string name="profile_namespace">Namespace gắn kết</string>
-    <string name="profile_namespace_inherited">Được thừa kế</string>
-    <string name="profile_namespace_global">Toàn cầu</string>
-    <string name="profile_namespace_individual">Cá nhân</string>
+    <string name="profile_namespace">Mount namespace</string>
+    <string name="profile_namespace_inherited">Kế thừa</string>
+    <string name="profile_namespace_global">Toàn cục</string>
+    <string name="profile_namespace_individual">Riêng biệt</string>
     <string name="profile_flags_desc_no_new_privs">Ngăn chặn việc leo thang đặc quyền thêm nữa thông qua KernelSU từ trong bối cảnh của cấu hình root này.</string>
     <string name="conflict_with_apatch">Phát hiện APatch, tất cả mọi thứ có thể dừng hoạt động.</string>
     <string name="unofficial_version_notice">Trình quản lý mà bạn đang sử dụng không phải là trình quản lý %s chính thức, và bạn có thể không thể xin được quyền.</string>
@@ -344,7 +344,7 @@
     <string name="predictive_back_animation_ksu_classic">KernelSU Cổ điển</string>
     <string name="no_such_module">Mô-đun %s không tồn tại</string>
     <string name="module_unavailable">Mô-đun %s đã tắt, hoặc đang chờ gỡ bỏ</string>
-    <string name="dpi_applied_success">DPI đã được thiết lập với mức %1$d</string>
+    <string name="dpi_applied_success">DPI đã được đặt ở %1$d</string>
     <string name="predictive_back_exit_direction_follow_gesture">Theo cử chỉ</string>
     <string name="predictive_back_exit_direction_always_right">Luôn là bên phải</string>
     <string name="predictive_back_exit_direction_always_left">Luôn là bên trái</string>
@@ -357,8 +357,8 @@
     <string name="no_any_umount_path">Không có đường dẫn umount nào tồn tại</string>
     <string name="umount_flags_hint">0=Unmount bình thường, 2=MNT_DETACH</string>
     <string name="changes_take_effect_immediately">Tất cả các thay đổi sẽ có hiệu lực ngay lập tức.</string>
-    <string name="meta_module_disabled">mô-đun chưa được gắn kết, bởi vì siêu mô-đun đã bị tắt</string>
-    <string name="meta_module_removed">mô-đun chưa được gắn kết, bởi vì siêu mô-đun đang bị xóa</string>
+    <string name="meta_module_disabled">mô-đun không được mount, bởi vì metamodule đã bị vô hiệu hóa</string>
+    <string name="meta_module_removed">mô-đun không được mount, bởi vì metamodule đang bị xóa</string>
     <string name="no_meta_module_installed">mô-đun chưa được gắn kết, bởi vì siêu mô-đun chưa được cài đặt</string>
     <string name="network_offline">Bạn đang ngoại tuyến</string>
     <string name="network_retry">Thử lại</string>
@@ -476,7 +476,7 @@
     <string name="require_kernel_version_gki">Yêu cầu cập nhật kernel</string>
     <string name="assets_multiple_select_dialog_title">Chọn nội dung bạn muốn cài đặt</string>
     <string name="assets_multiple_select_dialog_warning">Không có nội dung nào được chọn</string>
-    <string name="readme">Đọc tôi</string>
+    <string name="readme">Readme</string>
     <string name="release">Các bản phát hành</string>
     <string name="assert_support_content">%1$s,%2$d lượt tải xuống</string>
     <string name="local">cục bộ</string>
@@ -565,4 +565,18 @@
     <string name="search_no_any_match">Không có nội dung nào khớp</string>
     <string name="manager_update_stable">Bản cập nhật ổn định</string>
     <string name="manager_update_details">Phiên bản: %1$s (%2$d)\nKiến trúc: %3$s</string>
+    <string name="script_downloading">Đang tải xuống tập lệnh: %s</string>
+    <string name="repo_add_repository">Thêm kho</string>
+    <string name="repo_configure">Cài đặt kho</string>
+    <string name="repo_server_settings">Các kho</string>
+    <string name="repo_api_type">Kiểu API</string>
+    <string name="repo_api_kernel_su">API Mô-đun KernelSU</string>
+    <string name="repo_api_mmrl">API MMRL</string>
+    <string name="repo_server_url">URL Máy chủ</string>
+    <string name="repo_url_kernel_su_hint">https://modules.kernelsu.org/</string>
+    <string name="repo_url_mmrl_hint">https://gr.dergoogler.com/gmr/</string>
+    <string name="repo_configured_sources">Đã cấu hình các kho</string>
+    <string name="repo_sort">Sắp xếp</string>
+    <string name="repo_manage">Quản lý các kho</string>
+    <string name="repo_select_repository">Chọn kho</string>
 </resources>
