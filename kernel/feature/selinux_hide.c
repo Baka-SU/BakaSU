@@ -570,10 +570,7 @@ static sel_open_handle_status_fn orig_sel_open_handle_status, *sel_open_handle_s
 static int my_sel_open_handle_status(struct inode *inode, struct file *filp)
 {
     if (likely(ksu_get_uid_t(current_uid()) >= 10000 && ksu_selinux_hide_enabled)) {
-        void *data;
-        mutex_lock(ksu_selinux_status_lock);
-        data = fake_status;
-        mutex_unlock(ksu_selinux_status_lock);
+        void *data = fake_status;
         if (data) {
             filp->private_data = data;
             return 0;
