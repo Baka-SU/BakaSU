@@ -87,7 +87,6 @@
     <string name="app_profile_template_sync">Sincronizar modelos on-line</string>
     <string name="app_profile_template_save_failed">Falha ao salvar o modelo</string>
     <string name="app_profile_template_import_empty">A área de transferência está vazia!</string>
-    <string name="module_changelog_failed">Falha ao buscar o registro de alterações: %s</string>
     <string name="grant_root_failed">Falha ao conceder acesso root!</string>
     <string name="action">Ações</string>
     <string name="close">Fechar</string>
@@ -157,11 +156,8 @@
     <string name="horizon_flashing">Flasheando kernel…</string>
     <string name="horizon_flash_complete_status">Flash completo</string>
     <string name="select_slot_title">Selecionar Slot em Flash</string>
-    <string name="select_slot_description">Por favor, selecione o slot de destino para flashear a inicialização</string>
     <string name="slot_a">Slot B</string>
     <string name="slot_b">Slot B</string>
-    <string name="selected_slot">Slot selecionado: %1$s</string>
-    <string name="current_slot">Slot padrão do sistema atual：%1$s</string>
     <string name="horizon_copy_failed">Falha ao copiar</string>
     <string name="horizon_unknown_error">Você parece estar convertendo de um formato com degradação para um sem perdas. Esteja ciente que a perda de qualidade não pode ser desfeita, então este processo não melhorará a qualidade do áudio e provavelmente aumentará o tamanho do arquivo. Continuar assim mesmo?</string>
     <string name="flash_failed_message">Flash falhou</string>

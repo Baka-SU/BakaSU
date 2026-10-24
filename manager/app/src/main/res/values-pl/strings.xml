@@ -86,7 +86,6 @@
     <string name="app_profile_template_sync">Synchronizuj internetowe szablony</string>
     <string name="app_profile_template_save_failed">Nie udało się zapisać szablonu</string>
     <string name="app_profile_template_import_empty">Schowek jest pusty!</string>
-    <string name="module_changelog_failed">Pobranie dziennika zmian nie powiodło się: %s</string>
     <string name="grant_root_failed">Nie udało się przyznać roota!</string>
     <string name="action">Akcja</string>
     <string name="direct_install">Instalacja bezpośrednia (zalecane)</string>
@@ -247,11 +246,8 @@
     <string name="horizon_flashing">Wgrywanie jądra…</string>
     <string name="horizon_flash_complete_status">Wgrywanie zakończone</string>
     <string name="select_slot_title">Wybierz slot do wgrywania</string>
-    <string name="select_slot_description">Wybierz slot do wgrywania boota</string>
     <string name="slot_a">Slot A</string>
     <string name="slot_b">Slot B</string>
-    <string name="selected_slot">Wybrany slot: %1$s</string>
-    <string name="current_slot">Domyślny slot aktualnego systemu: %1$s</string>
     <string name="horizon_copy_failed">Kopiowanie nie powiodło się</string>
     <string name="horizon_unknown_error">Nieznany błąd</string>
     <string name="flash_failed_message">Wgrywanie nie powiodło się</string>
@@ -259,7 +255,6 @@
     <string name="GKI_install_methods">Wgrywanie AnyKernel3</string>
     <string name="predictive_back_animation_ksu_classic">KernelSU Classic</string>
     <string name="icon_switch_summary">Zmień ikonę launchera na ikonę KernelSU</string>
-    <string name="kernel_flashing">Wgrywanie jądra</string>
     <string name="configuration">Konfiguruj</string>
     <string name="app_settings">Ustawienia aplikacji</string>
     <string name="tools">Narzędzia</string>
@@ -380,15 +375,10 @@
     <string name="network_retry">Spróbuj ponownie</string>
     <string name="please_check_network">Sprawdź połączenie internetowe i spróbuj ponownie</string>
     <string name="confirm_install_module_title">Czy chcesz zainstalować moduł %s?</string>
-    <string name="assets_multiple_select_dialog_title">Wybierz zasoby, które chcesz zainstalować</string>
-    <string name="assets_multiple_select_dialog_content_description">Rozmiar: %1$s, Pobrania: %2$s</string>
-    <string name="assets_multiple_select_dialog_warning">Żadne zasoby nie zostały wybrane</string>
-    <string name="installed">Zainstalowany</string>
     <string name="open_module_home_page">Otwórz stronę główną modułu w przegladarce</string>
     <string name="readme">Readme</string>
     <string name="release">Wydania</string>
     <string name="info">Informacje</string>
-    <string name="author_link">Link autora</string>
     <string name="source_code">Kod źródłowy</string>
     <string name="assert_support_content">%1$s, %2$d pobrań</string>
     <string name="show_detail_or_hide_detail">Pokaż lub ukryj detale</string>

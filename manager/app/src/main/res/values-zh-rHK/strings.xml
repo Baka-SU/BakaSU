@@ -143,7 +143,6 @@
     <string name="app_profile_template_save_failed">範本儲存失敗</string>
     <string name="app_profile_template_import_empty">剪貼簿為空！</string>
     <string name="affected_applications">受影響嘅應用程式</string>
-    <string name="module_changelog_failed">獲取更新日誌失敗：%s</string>
     <string name="settings_check_manager_update">檢查管理器更新</string>
     <string name="settings_check_manager_update_summary">自動檢查管理器更新</string>
     <string name="settings_check_module_update">檢查模組更新</string>
@@ -222,11 +221,8 @@
     <string name="horizon_flashing">刷寫核心中…</string>
     <string name="horizon_flash_complete_status">刷寫完成</string>
     <string name="select_slot_title">選擇刷寫槽位</string>
-    <string name="select_slot_description">請選擇要刷寫 boot 嘅目標槽位</string>
     <string name="slot_a">A 槽位</string>
     <string name="slot_b">B 槽位</string>
-    <string name="selected_slot">已選擇槽位: %1$s</string>
-    <string name="current_slot">當前系統預設槽位：%1$s</string>
     <string name="horizon_copy_failed">複製失敗</string>
     <string name="horizon_unknown_error">未知錯誤</string>
     <string name="flash_failed_message">刷寫失敗</string>
@@ -264,7 +260,6 @@
     <string name="check_log">請檢視日誌</string>
     <string name="installing_module">正在安裝模組 %1$d/%2$d</string>
     <string name="module_failed_count">%d 個模組安裝失敗</string>
-    <string name="kernel_flashing">核心刷寫</string>
     <string name="warning_of_meta_module_title">需要元模組</string>
     <string name="warning_of_meta_module_summary">此模組想掛載 /system，此操作由 meta 模組處理。若缺少它，模組可能無法正常運作</string>
     <string name="sort_usage_freq">使用頻率</string>
@@ -345,15 +340,10 @@
     <string name="network_retry">重試</string>
     <string name="please_check_network">請檢查你嘅網路連線，然後再試一次</string>
     <string name="confirm_install_module_title">要安裝模組 %s 嗎?</string>
-    <string name="assets_multiple_select_dialog_title">請選擇你想安裝嘅附件</string>
-    <string name="assets_multiple_select_dialog_content_description">大小: %1$s, 下載數: %2$s</string>
-    <string name="assets_multiple_select_dialog_warning">冇任何附件被選擇</string>
-    <string name="installed">已安裝</string>
     <string name="open_module_home_page">喺瀏覽器中打開模組主頁</string>
     <string name="readme">自述檔案</string>
     <string name="release">版本</string>
     <string name="info">資訊</string>
-    <string name="author_link">模組作者連結</string>
     <string name="source_code">程式碼</string>
     <string name="assert_support_content">%1$s,%2$d 下載</string>
     <string name="show_detail_or_hide_detail">顯示或隱藏詳情</string>

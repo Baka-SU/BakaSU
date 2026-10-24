@@ -246,7 +246,7 @@ int ksu_setup_preinit_file(struct filename **filename_ptr, struct user_arg_ptr *
     len = snprintf(fd_path, sizeof(fd_path), "/proc/self/fd/%d", fd);
     if (kern_path(fd_path, LOOKUP_FOLLOW, &path)) {
         pr_err("preinit: %s not reachable, booting without preinit\n", fd_path);
-        close_fd(fd);
+        ksu_close_fd(fd);
         return -EINVAL;
     }
     path_put(&path);

@@ -81,7 +81,6 @@
     <string name="app_profile_template_sync">Sinhroniziraj predloge iz spleta</string>
     <string name="app_profile_template_save_failed">Napaka pri shranjevanju predloge</string>
     <string name="app_profile_template_import_empty">Odložišče je prazno!</string>
-    <string name="module_changelog_failed">Napaka pri pridobivanju dnevnika sprememb: %s</string>
     <string name="save_log">Shrani Dnevnike</string>
     <string name="settings_sucompat">Preusmeri su binarno datoteko</string>
     <string name="settings_sucompat_summary">Preusmeri /system/bin/su na ksud za aplikacije z dovoljenjem Superuporabnika v profilu aplikacije; velja samo za nove procese.</string>

@@ -86,7 +86,6 @@
     <string name="app_profile_template_sync">Sünkrooni võrgumallid</string>
     <string name="app_profile_template_save_failed">Malli salvestamine ebaõnnestus</string>
     <string name="app_profile_template_import_empty">Lõikelaud on tühi!</string>
-    <string name="module_changelog_failed">Muudatuste logi hankimine ebaõnnestus: %s</string>
     <string name="grant_root_failed">Juurkasutaja andmine ebaõnnestus!</string>
     <string name="direct_install">Otsene paigaldus (soovitatud)</string>
     <string name="select_file">Vali fail</string>
