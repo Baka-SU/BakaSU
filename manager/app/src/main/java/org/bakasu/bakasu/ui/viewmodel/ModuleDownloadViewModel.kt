@@ -69,7 +69,7 @@ class ModuleDownloadViewModel(
                 when {
                     result.status == DownloadStatus.FAILED || uri == null -> ModuleDownloadPhase.FAILED
 
-                    verify(uri, asset.size, asset.sha256) -> {
+                    verify(uri, asset.expected?.size ?: 0L, asset.expected?.sha256.orEmpty()) -> {
                         mutableState.update { it.copy(resultUri = uri) }
                         ModuleDownloadPhase.COMPLETED
                     }

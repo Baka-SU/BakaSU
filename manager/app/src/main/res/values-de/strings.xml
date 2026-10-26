@@ -78,7 +78,6 @@
     <string name="app_profile_template_sync">Online-Vorlagen synchronisieren</string>
     <string name="app_profile_template_save_failed">Schlug beim Speichern der Vorlage fehl</string>
     <string name="app_profile_template_import_empty">Zwischenablage ist leer!</string>
-    <string name="module_changelog_failed">Konnte Veränderungs-Protokoll nicht laden: %s</string>
     <string name="grant_root_failed">Root-Zugriff konnte nicht gewährt werden!</string>
     <string name="action">Aktion</string>
     <string name="close">Schließen</string>
@@ -139,10 +138,7 @@
     <string name="horizon_flashing">Flashen des Kernels…</string>
     <string name="horizon_flash_complete_status">Blitz abgeschlossen</string>
     <string name="select_slot_title">Wähle Flash Slot</string>
-    <string name="select_slot_description">Bitte wählen Sie den Ziel-Slot zum Blinken des Boots aus</string>
     <string name="slot_b">Steckplatz B</string>
-    <string name="selected_slot">Wähle LKM: %1$s</string>
-    <string name="current_slot">Aktueller Standard-Slot des Systems：%1$s</string>
     <string name="horizon_copy_failed">Kopieren fehlgeschlagen</string>
     <string name="horizon_unknown_error">Ein unbekannter Fehler ist aufgetreten</string>
     <string name="flash_failed_message">Schreiben fehlgeschlagen</string>
@@ -173,5 +169,4 @@
     <string name="check_log">Bitte überprüfen Sie das Log</string>
     <string name="installing_module">Modul wird installiert %1$d/%2$d</string>
     <string name="module_failed_count">%d Fehler bei der Installation eines neuen Moduls</string>
-    <string name="kernel_flashing">Kernel-Flashen</string>
 </resources>

@@ -68,6 +68,7 @@ import org.bakasu.bakasu.domain.model.FlashOperation
 import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.LkmSelection
+import org.bakasu.bakasu.domain.model.SuperUserLoadFailure
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
@@ -89,7 +90,6 @@ import org.bakasu.bakasu.ui.viewmodel.SulogUiAction
 import org.bakasu.bakasu.ui.viewmodel.SulogUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SulogViewModel
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiAction
-import org.bakasu.bakasu.ui.viewmodel.SuperUserUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearLinkEvent
@@ -140,12 +140,13 @@ fun WearManagerScreen() {
     var settingsError by remember { mutableStateOf<String?>(null) }
     var settingsMessageResource by remember { mutableStateOf<Pair<Int, Int?>?>(null) }
     var moduleError by remember { mutableStateOf<String?>(null) }
-    var superuserError by remember { mutableStateOf<String?>(null) }
     var homeError by remember { mutableStateOf<String?>(null) }
     var logError by remember { mutableStateOf<String?>(null) }
     val operationFailedText = stringResource(R.string.operation_failed)
-    val loadFailedText = stringResource(R.string.wear_load_failed)
-    // Shown only after a list load confirmed that root was refused, not for other load failures.
+    // Missing root shows as a dialog; other list load failures show on the list.
+    val superuserError = superuser.loadFailure
+        ?.takeIf { it != SuperUserLoadFailure.ROOT_ACCESS_REQUIRED }
+        ?.let { stringResource(R.string.wear_load_failed) }
     val rootDeniedDialog = rememberCustomDialog { dismiss ->
         AlertDialog(
             visible = true,
@@ -233,17 +234,9 @@ fun WearManagerScreen() {
     LaunchedEffect(homeViewModel) {
         homeViewModel.events.collect { event -> if (event is HomeUiEvent.Error) homeError = event.message }
     }
-    LaunchedEffect(superUserViewModel, loadFailedText) {
-        superUserViewModel.events.collect { event ->
-            when (event) {
-                // A list that failed for another reason is not reported as missing root.
-                is SuperUserUiEvent.Error -> superuserError = loadFailedText
-
-                SuperUserUiEvent.RootDenied -> rootDeniedDialog.show()
-
-                else -> Unit
-            }
-        }
+    // Each refresh clears the failure, so a retry that is refused again shows the dialog again.
+    LaunchedEffect(superuser.loadFailure) {
+        if (superuser.loadFailure == SuperUserLoadFailure.ROOT_ACCESS_REQUIRED) rootDeniedDialog.show()
     }
     LaunchedEffect(moduleViewModel, operationFailedText) {
         moduleViewModel.events.collect { event ->
@@ -335,10 +328,7 @@ fun WearManagerScreen() {
                                         if (action is HomeUiAction.Refresh) homeError = null
                                         homeViewModel.dispatch(action)
                                     },
-                                    onSuperUser = { action ->
-                                        if (action == SuperUserUiAction.Refresh) superuserError = null
-                                        superUserViewModel.dispatch(action)
-                                    },
+                                    onSuperUser = superUserViewModel::dispatch,
                                     onModule = { action ->
                                         if (action is ModuleUiAction.Refresh) moduleError = null
                                         moduleViewModel.dispatch(action)
@@ -374,7 +364,7 @@ fun WearManagerScreen() {
                                 WearFlashPage(FlashOperation.Module(route.uri), ::back, installer.onInstalled)
                             }
                             entry<WearRoute.ModuleRepo> {
-                                WearModuleRepoPage(moduleRepoViewModel, ::back, { open(WearRoute.ModuleRepoSearch) }) { open(WearRoute.OnlineModule(it)) }
+                                WearModuleRepoPage(moduleRepoViewModel, ::back, { open(WearRoute.ModuleRepoSearch) }) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
                             }
                             entry<WearRoute.ModuleRepoSearch> {
                                 WearModuleRepoSearchPage(moduleRepoViewModel, ::back)
@@ -382,14 +372,15 @@ fun WearManagerScreen() {
                             entry<WearRoute.OnlineModule> { route ->
                                 WearOnlineModulePage(
                                     route.id,
+                                    route.repositoryUrl,
                                     ::back,
                                     linkViewModel::open,
-                                    { open(WearRoute.OnlineModuleSection(route.id, it)) },
+                                    { open(WearRoute.OnlineModuleSection(route.id, route.repositoryUrl, it)) },
                                     installer,
                                 )
                             }
                             entry<WearRoute.OnlineModuleSection> { route ->
-                                WearOnlineModuleSectionPage(route.id, route.section, ::back, installer)
+                                WearOnlineModuleSectionPage(route.id, route.repositoryUrl, route.section, ::back, installer)
                             }
                             entry<WearRoute.OnlineModuleDownload> { route ->
                                 WearModuleDownloadPage(route) { installer.downloaded(route, it) }

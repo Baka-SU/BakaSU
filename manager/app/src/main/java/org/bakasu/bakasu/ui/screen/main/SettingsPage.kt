@@ -7,6 +7,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.twotone.Security
 import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.material.icons.twotone.Share
 import androidx.compose.material.icons.twotone.Update
+import androidx.compose.material.icons.twotone.VerifiedUser
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -207,6 +209,7 @@ fun SettingsPage(bottomPadding: Dp) {
                                 val suSummary = when (uiState.suStatus) {
                                     "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
                                     "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                    "forced" -> stringResource(id = R.string.feature_status_forced_summary)
                                     else -> stringResource(id = R.string.settings_sucompat_summary)
                                 }
                                 SettingsChooseWidget(
@@ -230,6 +233,7 @@ fun SettingsPage(bottomPadding: Dp) {
                                 val umountSummary = when (uiState.kernelUmountStatus) {
                                     "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
                                     "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                    "forced" -> stringResource(id = R.string.feature_status_forced_summary)
                                     else -> stringResource(id = R.string.settings_kernel_umount_summary)
                                 }
                                 SettingsSwitchWidget(
@@ -266,12 +270,11 @@ fun SettingsPage(bottomPadding: Dp) {
                                 )
                             }
 
-                            item(
-                                visible = Build.VERSION.SDK_INT > Build.VERSION_CODES.Q,
-                            ) {
+                            item {
                                 val adbRootSummary = when (uiState.adbRootStatus) {
                                     "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
                                     "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                    "forced" -> stringResource(id = R.string.feature_status_forced_summary)
                                     else -> stringResource(id = R.string.settings_adb_root_summary)
                                 }
 
@@ -287,6 +290,25 @@ fun SettingsPage(bottomPadding: Dp) {
                                                 enabled,
                                             ),
                                         )
+                                    },
+                                )
+                            }
+
+                            item {
+                                val shellSuAdbOnlySummary = when (uiState.shellSuAdbOnlyStatus) {
+                                    "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
+                                    "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                    "forced" -> stringResource(id = R.string.feature_status_forced_summary)
+                                    else -> stringResource(id = R.string.settings_shell_su_adb_only_summary)
+                                }
+                                SettingsSwitchWidget(
+                                    icon = Icons.TwoTone.VerifiedUser,
+                                    title = stringResource(id = R.string.settings_shell_su_adb_only),
+                                    description = shellSuAdbOnlySummary,
+                                    enabled = uiState.shellSuAdbOnlyStatus == "supported",
+                                    checked = uiState.isShellSuAdbOnlyEnabled,
+                                    onCheckedChange = { enabled ->
+                                        settingsViewModel.dispatch(SettingsUiAction.SetShellSuAdbOnly(enabled))
                                     },
                                 )
                             }
@@ -313,6 +335,7 @@ fun SettingsPage(bottomPadding: Dp) {
                                 val sulogSummary = when (uiState.sulogStatus) {
                                     "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
                                     "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                    "forced" -> stringResource(id = R.string.feature_status_forced_summary)
                                     else -> stringResource(id = R.string.settings_sulog_summary)
                                 }
                                 SettingsSwitchWidget(
@@ -331,6 +354,7 @@ fun SettingsPage(bottomPadding: Dp) {
                                 val selinuxHideSummary = when (uiState.selinuxHideStatus) {
                                     "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
                                     "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                    "forced" -> stringResource(id = R.string.feature_status_forced_summary)
                                     else -> stringResource(id = R.string.settings_selinux_hide_summary)
                                 }
                                 SettingsSwitchWidget(
@@ -565,7 +589,6 @@ private fun LogBottomSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceBright,
     ) {
         Row(
             modifier = Modifier
@@ -673,7 +696,7 @@ fun UninstallItem(
     )
 }
 
-enum class UninstallType(val title: Int, val message: Int, val icon: ImageVector) {
+enum class UninstallType(@param:StringRes val title: Int, @param:StringRes val message: Int, val icon: ImageVector) {
     TEMPORARY(
         R.string.settings_uninstall_temporary,
         R.string.settings_uninstall_temporary_message,

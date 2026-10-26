@@ -16,6 +16,7 @@ data class SettingsPlatformSnapshot(
     val cardAlpha: Float = 1f,
     val backgroundDim: Float = 0f,
     val customBackgroundEnabled: Boolean = false,
+    val flashCardBackgroundEnabled: Boolean = true,
     val systemDpi: Int = 0,
     val currentDpi: Int = 0,
     val checkManagerUpdate: Boolean = true,
@@ -34,7 +35,12 @@ data class PlatformFeatureStatus(
     val kernelUmountStatus: String = "",
     val adbRootStatus: String = "",
     val adbRootEnabled: Boolean = false,
+    val adbRootValue: Long? = null,
+    val shellSuAdbOnlyStatus: String = "",
+    val shellSuAdbOnlyPersistValue: Long? = null,
+    val shellSuAdbOnlyValue: Long? = null,
     val sulogStatus: String = "",
+    val sulogValue: Long? = null,
     val selinuxHideStatus: String = "",
 )
 
@@ -48,6 +54,7 @@ sealed interface AppearanceSetting {
     data object RemoveCustomBackground : AppearanceSetting
     data class CardAlpha(val value: Float) : AppearanceSetting
     data class BackgroundDim(val value: Float) : AppearanceSetting
+    data class FlashCardBackground(val enabled: Boolean) : AppearanceSetting
     data object SaveCardConfig : AppearanceSetting
 }
 

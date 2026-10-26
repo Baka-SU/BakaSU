@@ -150,8 +150,12 @@ fun HomePage(
 
     ReportDrawnWhen { uiState.isInitialDataLoaded }
 
-    val topAppBarState = rememberTopAppBarState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        rememberTopAppBarState(
+            initialHeightOffset = -154f,
+            initialHeightOffsetLimit = -154f, // from debugger
+        ),
+    )
     val scrollState = rememberScrollState()
     val navigator = LocalNavigator.current
     val loadingDialog = rememberLoadingDialog()

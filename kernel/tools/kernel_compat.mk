@@ -118,6 +118,12 @@ $(info -- $(REPO_NAME)/compat: modern dentry_open found)
 ccflags-y += -DKSU_COMPAT_HAS_MODERN_DENTRY_OPEN
 endif
 
+# Linux 6.11 renamed the arm64 compat syscall count and table declarations.
+ifeq ($(shell grep -q "__NR_compat32_syscalls" $(srctree)/arch/arm64/kernel/sys32.c 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found __NR_compat32_syscalls)
+ccflags-y += -DKSU_COMPAT_HAS_NR_COMPAT32_SYSCALLS
+endif
+
 # UL, look for "ext4_unregister_sysfs" on fs/ext4
 ifeq ($(shell grep -q "^extern void ext4_unregister_sysfs" $(srctree)/fs/ext4/ext4.h 2>/dev/null; echo $$?),0)
 $(info -- $(REPO_NAME)/compat: ext4_unregister_sysfs found)
@@ -337,4 +343,28 @@ endif
 ifeq ($(shell grep -q "^int context_add_hash" $(srctree)/security/selinux/ss/services.c 2>/dev/null; echo $$?),0)
 $(info -- $(REPO_NAME)/compat: found hash indexed sidtab)
 ccflags-y += -DKSU_COMPAT_HAS_CONTEXT_ADD_HASH
+endif
+
+# https://github.com/torvalds/linux/commit/6a4c264313c4ae32dc53821a9c57e0dc9696fb81
+# 3.18+
+ifeq ($(shell grep -q "KERNEL_PARAM_OPS_FL_NOARG" $(srctree)/include/linux/moduleparam.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found KERNEL_PARAM_OPS_FL_NOARG)
+ccflags-y += -DKSU_COMPAT_HAS_KERNEL_PARAM_OPS_FL_NOARG
+endif
+
+# https://github.com/torvalds/linux/commit/ab013c5f60b7ead254863c75b9adc2a47992d01b
+# 3.12+
+ifeq ($(shell grep -q "KERNEL_PARAM_FL_NOARG" $(srctree)/include/linux/moduleparam.h 2>/dev/null; echo $$?),0)
+$(info -- $(REPO_NAME)/compat: found KERNEL_PARAM_FL_NOARG)
+ccflags-y += -DKSU_COMPAT_HAS_KERNEL_PARAM_FL_NOARG
+endif
+
+ifeq ($(shell grep -q "ksu_handle_init_module" $(srctree)/kernel/module/main.c 2>/dev/null; echo $$?),0)
+  $(info -- $(REPO_NAME)/compat: found ksu_handle_init_module)
+  ifeq ($(shell grep -q "ksu_handle_finit_module" $(srctree)/kernel/module/main.c 2>/dev/null; echo $$?),0)
+    $(info -- $(REPO_NAME)/compat: found ksu_handle_finit_module)
+    ccflags-y += -DKSU_COMPAT_HAS_INSMOD_HOOK
+  else
+    $(error You must hook both init_module and finit_module if you want module blacklist)
+  endif
 endif

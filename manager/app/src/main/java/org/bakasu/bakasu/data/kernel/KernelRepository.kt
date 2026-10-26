@@ -81,6 +81,10 @@ class KernelRepository(
         Natives.setKernelUmountEnabled(enabled)
     }
 
+    suspend fun setShellSuAdbOnlyEnabled(enabled: Boolean): Boolean = saveFeature {
+        ksuCliRepository.execKsud("feature set shell_su_adb_only ${if (enabled) 1 else 0}", true)
+    }
+
     suspend fun setSuLogEnabled(enabled: Boolean): Boolean = saveFeature {
         Natives.setSuLogEnabled(enabled)
     }

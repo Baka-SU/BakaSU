@@ -75,7 +75,7 @@ fun NavigationBar(
     val handlePageChange = LocalHandlePageChange.current
     val pagerState = LocalPagerState.current
 
-    if (isBottomBar && themeConfig.bottomBarStyle == BottomBarStyle.FLOATING && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    if (isBottomBar && themeConfig.bottomBarStyle == BottomBarStyle.FLOATING) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -101,22 +101,21 @@ fun NavigationBar(
                         modifier = Modifier.defaultMinSize(minWidth = 76.dp),
                     ) {
                         val contentColor = LocalContentColor.current
-                        val count = when (destination) {
-                            BottomBarDestination.SuperUser -> superuserCount
-                            BottomBarDestination.Module -> moduleCount
-                            else -> 0
-                        }
-                        val icon: @Composable () -> Unit = {
+                        BadgedBox(
+                            badge = {
+                                DestinationBadge(
+                                    dest = destination,
+                                    superUser = superuserCount,
+                                    module = moduleCount,
+                                    show = showNavigationBarBadge,
+                                )
+                            },
+                        ) {
                             Icon(
                                 imageVector = destination.iconSelected,
                                 contentDescription = stringResource(destination.label),
                                 tint = contentColor,
                             )
-                        }
-                        if (count > 0 && showNavigationBarBadge) {
-                            BadgedBox(badge = { Badge { Text(count.toString()) } }) { icon() }
-                        } else {
-                            icon()
                         }
                         Text(
                             text = stringResource(destination.label),

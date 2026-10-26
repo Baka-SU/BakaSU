@@ -145,7 +145,6 @@
     <string name="app_profile_template_save_failed">Не удалось сохранить шаблон</string>
     <string name="app_profile_template_import_empty">Буфер обмена пуст!</string>
     <string name="affected_applications">Затрагиваемые приложения</string>
-    <string name="module_changelog_failed">Не удалось получить список изменений: %s</string>
     <string name="grant_root_failed">Не удалось выдать права root!</string>
     <string name="home_pr_build_warning">Это debug-сборка из PR. Не рекомендуется для публичного релиза</string>
     <string name="action">Действие</string>
@@ -229,11 +228,8 @@
     <string name="horizon_flashing">Прошивка ядра…</string>
     <string name="horizon_flash_complete_status">Прошивка завершена</string>
     <string name="select_slot_title">Выберите слот для прошивки</string>
-    <string name="select_slot_description">Пожалуйста, выберите целевой слот для прошивки раздела boot</string>
     <string name="slot_a">Слот A</string>
     <string name="slot_b">Слот B</string>
-    <string name="selected_slot">Выбран LKM: %1$s</string>
-    <string name="current_slot">Текущий слот по умолчанию：%1$s</string>
     <string name="horizon_copy_failed">Копирование не удалось</string>
     <string name="horizon_unknown_error">Неизвестная ошибка</string>
     <string name="flash_failed_message">Установка не выполнена</string>
@@ -280,11 +276,9 @@
     <string name="check_log">Пожалуйста, проверьте журнал</string>
     <string name="installing_module">Модуль устанавливается %1$d/%2$d</string>
     <string name="module_failed_count">%d не удалось установить новый модуль</string>
-    <string name="kernel_flashing">Прошить ядро</string>
     <string name="warning_of_meta_module_title">Требуется мета-модуль</string>
     <string name="warning_of_meta_module_summary">Этот модуль пытается смонтировать /system, что обрабатывается мета-модулем. Без него модуль может не работать</string>
     <string name="sort_usage_freq">Частота использования</string>
-    <string name="no_apps_in_category">В этой категории нет приложений</string>
     <string name="persistent">Постоянный</string>
     <string name="temporary">Временный</string>
     <string name="susfs_config_title">Конфигурация SuSFS</string>
@@ -362,14 +356,9 @@
     <string name="network_retry">Повторить</string>
     <string name="please_check_network">Проверьте подключение к сети и повторите попытку</string>
     <string name="confirm_install_module_title">Вы хотите установить модуль %s?</string>
-    <string name="assets_multiple_select_dialog_title">Выберите нужный ассет</string>
-    <string name="assets_multiple_select_dialog_content_description">Размер: %1$s, Количество загрузок: %2$s</string>
-    <string name="assets_multiple_select_dialog_warning">Ничего не выбрано</string>
-    <string name="installed">Установлено</string>
     <string name="open_module_home_page">Открыть страницу модуля в браузере</string>
     <string name="release">Релизы</string>
     <string name="info">Информация</string>
-    <string name="author_link">Ссылка на автора модуля</string>
     <string name="source_code">Исходный код</string>
     <string name="assert_support_content">%1$s, %2$d загрузок</string>
     <string name="show_detail_or_hide_detail">Показать/Скрыть подробности</string>

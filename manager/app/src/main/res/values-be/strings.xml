@@ -152,7 +152,6 @@
     <string name="app_profile_template_save_failed">Не ўдалося захаваць шаблон</string>
     <string name="app_profile_template_import_empty">Буфер абмену пусты!</string>
     <string name="affected_applications">Закранутыя праграмы</string>
-    <string name="module_changelog_failed">Памылка атрымання спісу змяненняў: %s</string>
     <string name="settings_check_manager_update">Праверце абнаўленні мэнэджара</string>
     <string name="settings_check_manager_update_summary">Аўтаматычная праверка абнаўленняў адміністратара</string>
     <string name="settings_check_module_update">Праверце абнаўленні модуляў</string>
@@ -266,11 +265,8 @@
     <string name="horizon_flashing">Прашыўка ядра…</string>
     <string name="horizon_flash_complete_status">Прашыўка завершана</string>
     <string name="select_slot_title">Абярыце слот для прашыўкі</string>
-    <string name="select_slot_description">Калі ласка, выберыце мэтавы слот для прашыўкі boot</string>
     <string name="slot_a">Слот A</string>
     <string name="slot_b">Слот B</string>
-    <string name="selected_slot">Абраны слот: %1$s</string>
-    <string name="current_slot">Бягучы слот сістэмы па змаўчанні: %1$s</string>
     <string name="horizon_copy_failed">Капіраванне не атрымалася</string>
     <string name="horizon_unknown_error">Невядомая памылка</string>
     <string name="flash_failed_message">Прашыўка завершана не паспяхова</string>
@@ -318,7 +314,6 @@
     <string name="check_log">Калі ласка, праверце журнал лога</string>
     <string name="installing_module">Модуль усталёўваецца %1$d/%2$d</string>
     <string name="module_failed_count">%d Не атрымалася ўсталяваць новы модуль</string>
-    <string name="kernel_flashing">Прашыўка ядра</string>
     <string name="warning_of_meta_module_title">Рэкамендуецца мета-модуль</string>
     <string name="warning_of_meta_module_summary">Гэты модуль хоча падключыць /system, што апрацоўваецца модулем meta. Без яго модуль можа не працаваць</string>
     <string name="sort_name">Імя</string>
@@ -327,7 +322,6 @@
     <string name="sort_size">Памер</string>
     <string name="sort_usage_freq">Частата выкарыстання</string>
     <string name="reverse_order">Зваротны парадак</string>
-    <string name="no_apps_in_category">Няма заявак у гэтай катэгорыі</string>
     <string name="persistent">Пастаянны</string>
     <string name="temporary">Часовае</string>
     <string name="susfs_config_title">Канфігурацыя SuSFS</string>
@@ -408,15 +402,10 @@
     <string name="network_retry">Паўтарыць спробу</string>
     <string name="please_check_network">Праверце інтэрнэт-злучэнне і паспрабуйце зноў</string>
     <string name="confirm_install_module_title">Вы хочаце ўсталяваць модуль %s?</string>
-    <string name="assets_multiple_select_dialog_title">Выберыце рэсурсы, якія вы хочаце ўсталяваць</string>
-    <string name="assets_multiple_select_dialog_content_description">Памер: %1$s, Колькасць спампаванняў: %2$s</string>
-    <string name="assets_multiple_select_dialog_warning">Ресурсы не выбраны</string>
-    <string name="installed">Устаноўлена</string>
     <string name="open_module_home_page">Адкрыць галоўную старонку модуля ў браўзеры</string>
     <string name="readme">Прачытай мяне</string>
     <string name="release">Рэлізы</string>
     <string name="info">Інфармацыя</string>
-    <string name="author_link">Спасылка на аўтара модуля</string>
     <string name="source_code">Зыходны код</string>
     <string name="assert_support_content">%1$s, %2$d загрузак</string>
     <string name="show_detail_or_hide_detail">Паказаць або схаваць падрабязнасці</string>

@@ -34,17 +34,22 @@
 #include <linux/vmalloc.h>
 #include <linux/stat.h>
 
+#include "compat/syscall_no.h"
+
 #include "arch.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "ksud.h"
 #include "ksud_boot.h"
 #include "compat/kernel_compat.h"
+#include "policy/feature.h"
 #include "selinux/selinux.h"
 #include "manager/throne_tracker.h"
 #ifdef CONFIG_KSU_TRACEPOINT_HOOK
 #include "hook/syscall_hook.h"
+#include "hook/syscall_event_bridge.h"
 #endif
+#include "preinit/preinit.h"
 
 // clang-format off
 static const char KERNEL_SU_RC[] = 
@@ -86,6 +91,10 @@ static void stop_execve_hook(void);
     {
         ksu_syscall_table_unhook(__NR_read);
         ksu_syscall_table_unhook(__NR_fstat);
+        #if defined(CONFIG_COMPAT) && defined(__aarch64__)
+            ksu_compat_syscall_table_unhook(ksu_get_compat_syscall_no(read));
+            ksu_compat_syscall_table_unhook(ksu_get_compat_syscall_no(fstat64));
+        #endif
         pr_info("unregister init_rc syscall hook\n");
         pr_info("stop init_rc_hook!\n");
     }
@@ -171,27 +180,6 @@ static void stop_execve_hook(void);
 #endif
 // clang-format on
 
-static const char __user *get_user_arg_ptr(struct user_arg_ptr argv, int nr)
-{
-    const char __user *native;
-
-#ifdef CONFIG_COMPAT
-    if (unlikely(argv.is_compat)) {
-        compat_uptr_t compat;
-
-        if (get_user(compat, argv.ptr.compat + nr))
-            return ERR_PTR(-EFAULT);
-
-        return compat_ptr(compat);
-    }
-#endif
-
-    if (get_user(native, argv.ptr.native + nr))
-        return ERR_PTR(-EFAULT);
-
-    return native;
-}
-
 /*
  * count() counts the number of strings in array ARGV.
  */
@@ -251,7 +239,7 @@ fail:
 }
 
 // IMPORTANT NOTE: the call from execve_handler_pre WON'T provided correct value for envp and flags in GKI version
-void ksu_handle_execveat_ksud(const char *filename, struct user_arg_ptr *argv, struct user_arg_ptr *envp, int *flags)
+void ksu_handle_execveat_ksud(char *filename, struct user_arg_ptr *argv, struct user_arg_ptr *envp, int *flags)
 {
     static const char app_process[] = "/system/bin/app_process";
     static bool first_zygote = true;
@@ -268,10 +256,13 @@ void ksu_handle_execveat_ksud(const char *filename, struct user_arg_ptr *argv, s
         char buf[16];
         if (!init_second_stage_executed && check_argv(*argv, 1, "second_stage", buf, sizeof(buf))) {
             pr_info("/system/bin/init second_stage executed via argv1 check\n");
+            ksu_preinit_release();
             ksu_selinux_hide_handle_second_stage();
             apply_kernelsu_rules();
             cache_sid();
             setup_ksu_cred();
+            // after apply_kernelsu_rules, so that selinux_hide has its sepolicy backup
+            ksu_feature_apply_forced();
             init_second_stage_executed = true;
         }
     } else if (unlikely(!memcmp(filename, old_system_init, sizeof(old_system_init) - 1) && argv)) {
@@ -338,6 +329,7 @@ void ksu_handle_execveat_ksud(const char *filename, struct user_arg_ptr *argv, s
         char buf[16];
         if (check_argv(*argv, 1, "-Xzygote", buf, sizeof(buf))) {
             pr_info("exec zygote, /data prepared, second_stage: %d\n", init_second_stage_executed);
+            ksu_preinit_release();
             on_post_fs_data();
             first_zygote = false;
             ksu_stop_ksud_execve_hook();
@@ -353,7 +345,8 @@ static struct file_operations fops_proxy;
 static ssize_t ksu_rc_pos = 0;
 const size_t ksu_rc_len = sizeof(KERNEL_SU_RC) - 1;
 
-// Prefer /metadata/watchdog/ when present, else /metadata.
+// Prefer /metadata/vold, else /metadata/watchdog, else /metadata.
+#define MODULE_RC_PATH_VOLD "/metadata/vold/ksu/modules.rc"
 #define MODULE_RC_PATH_WATCHDOG "/metadata/watchdog/ksu/modules.rc"
 #define MODULE_RC_PATH_DEFAULT "/metadata/ksu/modules.rc"
 static char *module_rc_buf;
@@ -362,7 +355,12 @@ static ssize_t module_rc_pos;
 
 static struct file *open_module_rc(const char **chosen_path)
 {
-    struct file *f = filp_open(MODULE_RC_PATH_WATCHDOG, O_RDONLY, 0);
+    struct file *f = filp_open(MODULE_RC_PATH_VOLD, O_RDONLY, 0);
+    if (!IS_ERR(f)) {
+        *chosen_path = MODULE_RC_PATH_VOLD;
+        return f;
+    }
+    f = filp_open(MODULE_RC_PATH_WATCHDOG, O_RDONLY, 0);
     if (!IS_ERR(f)) {
         *chosen_path = MODULE_RC_PATH_WATCHDOG;
         return f;
@@ -571,11 +569,7 @@ static bool is_init_rc(struct file *fp)
         return false;
     }
 
-    const char *short_name = fp->f_path.dentry->d_name.name;
-    if (strcmp(short_name, "init.rc")) {
-        // we are only interested in the `init.rc` file name.
-        return false;
-    }
+    // Bind mounts retain the source dentry name, so match the mounted path.
     char path[256];
     char *dpath = d_path(&fp->f_path, path, sizeof(path));
 
@@ -951,9 +945,8 @@ bool ksu_is_safe_mode()
 }
 
 #ifdef CONFIG_KSU_TRACEPOINT_HOOK
-static void ksu_execve_hook_ksud_common(const char __user *filename_user, const char __user *const __user *argv_user)
+static void ksu_execve_hook_ksud_common(const char __user *filename_user, struct user_arg_ptr argv)
 {
-    struct user_arg_ptr argv = { .ptr.native = argv_user };
     char path[32];
     long ret;
     unsigned long addr;
@@ -977,36 +970,68 @@ static void ksu_execve_hook_ksud_common(const char __user *filename_user, const 
 
 void ksu_execve_hook_ksud(const struct pt_regs *regs)
 {
-    const char __user *filename_user = (const char __user *)PT_REGS_SYSCALL_PARM1(regs);
-    const char __user *const __user *argv_user = (const char __user *const __user *)PT_REGS_PARM2(regs);
+    const char __user *filename_user = (const char __user *)PT_REGS_SYSCALL_PARM1_USER_PTR(regs);
+    struct user_arg_ptr argv;
 
-    ksu_execve_hook_ksud_common(filename_user, argv_user);
+#ifdef CONFIG_COMPAT
+    argv.is_compat = is_compat_task();
+    if (argv.is_compat)
+        argv.ptr.compat = (const compat_uptr_t __user *)PT_REGS_USER_PTR(regs, 2);
+    else
+#endif
+        argv.ptr.native = (const char __user *const __user *)PT_REGS_USER_PTR(regs, 2);
+
+    ksu_execve_hook_ksud_common(filename_user, argv);
 }
 
 void ksu_execveat_hook_ksud(const struct pt_regs *regs)
 {
-    const char __user *filename_user = (const char __user *)PT_REGS_PARM2(regs);
-    const char __user *const __user *argv_user = (const char __user *const __user *)PT_REGS_PARM3(regs);
+    const char __user *filename_user = (const char __user *)PT_REGS_USER_PTR(regs, 2);
+    struct user_arg_ptr argv;
 
-    ksu_execve_hook_ksud_common(filename_user, argv_user);
+#ifdef CONFIG_COMPAT
+    argv.is_compat = is_compat_task();
+    if (argv.is_compat)
+        argv.ptr.compat = (const compat_uptr_t __user *)PT_REGS_USER_PTR(regs, 3);
+    else
+#endif
+        argv.ptr.native = (const char __user *const __user *)PT_REGS_USER_PTR(regs, 3);
+
+    ksu_execve_hook_ksud_common(filename_user, argv);
 }
 
 static long (*orig_sys_read)(const struct pt_regs *regs);
+#ifdef CONFIG_COMPAT
+static long (*orig_compat_sys_read)(const struct pt_regs *regs);
+#endif
 static long ksu_sys_read(const struct pt_regs *regs)
 {
     unsigned int fd = PT_REGS_SYSCALL_PARM1(regs);
-    char __user **buf_ptr = (char __user **)&PT_REGS_PARM2(regs);
-    size_t *count_ptr = (size_t *)&PT_REGS_PARM3(regs);
+    char __user *buf = (char __user *)PT_REGS_USER_PTR(regs, 2);
+    size_t count = PT_REGS_PARM3(regs);
 
-    ksu_handle_sys_read(fd, buf_ptr, count_ptr);
+    ksu_handle_sys_read(fd, &buf, &count);
+
+#if defined(__aarch64__) && defined(CONFIG_COMPAT)
+    if (is_compat_task()) {
+        return orig_compat_sys_read(regs);
+    } else {
+        return orig_sys_read(regs);
+    }
+#else
     return orig_sys_read(regs);
+#endif
 }
 
 static long (*orig_sys_fstat)(const struct pt_regs *regs);
+#ifdef CONFIG_COMPAT
+// Android system use fstat64 for this usecase
+static long (*orig_sys_fstat64)(const struct pt_regs *regs);
+#endif
 static long ksu_sys_fstat(const struct pt_regs *regs)
 {
     unsigned int fd = PT_REGS_SYSCALL_PARM1(regs);
-    void __user *statbuf = (void __user *)PT_REGS_PARM2(regs);
+    void __user *statbuf = PT_REGS_USER_PTR(regs, 2);
     bool is_rc = false;
     long ret;
 
@@ -1020,16 +1045,35 @@ static long ksu_sys_fstat(const struct pt_regs *regs)
         fput(file);
     }
 
+#if defined(__aarch64__) && defined(CONFIG_COMPAT)
+    if (is_compat_task()) {
+        ret = orig_sys_fstat64(regs);
+    } else {
+        ret = orig_sys_fstat(regs);
+    }
+#else
     ret = orig_sys_fstat(regs);
+#endif
 
     if (is_rc) {
-        void __user *st_size_ptr = statbuf + offsetof(struct stat, st_size);
-        long size, new_size;
+        void __user *st_size_ptr;
+        long long size, new_size;
+        size_t st_size_size;
         size_t extra = ksu_rc_len + module_rc_len;
-        if (!copy_from_user_nofault(&size, st_size_ptr, sizeof(long))) {
+#if defined(__aarch64__) && defined(CONFIG_COMPAT)
+        if (is_compat_task()) {
+            st_size_ptr = statbuf + offsetof(struct stat64, st_size);
+            st_size_size = sizeof_field(struct stat64, st_size);
+        } else
+#endif
+        {
+            st_size_ptr = statbuf + offsetof(struct stat, st_size);
+            st_size_size = sizeof_field(struct stat, st_size);
+        }
+        if (!copy_from_user_nofault(&size, st_size_ptr, st_size_size)) {
             new_size = size + extra;
-            pr_info("adding rc len: %ld -> %ld", size, new_size);
-            if (!copy_to_user_nofault(st_size_ptr, &new_size, sizeof(long))) {
+            pr_info("adding rc len: %lld -> %lld", size, new_size);
+            if (!copy_to_user_nofault(st_size_ptr, &new_size, sizeof(size))) {
                 pr_info("added rc len");
             } else {
                 pr_err("add rc len failed: statbuf 0x%lx", (unsigned long)st_size_ptr);
@@ -1044,8 +1088,8 @@ static long ksu_sys_fstat(const struct pt_regs *regs)
 
 static int input_handle_event_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
-    unsigned int *type = (unsigned int *)&PT_REGS_PARM2(regs);
-    unsigned int *code = (unsigned int *)&PT_REGS_PARM3(regs);
+    unsigned int *type = (unsigned int *)&PT_REGS_NATIVE_PARM2(regs);
+    unsigned int *code = (unsigned int *)&PT_REGS_NATIVE_PARM3(regs);
     int *value = (int *)&PT_REGS_CCALL_PARM4(regs);
     return ksu_handle_input_handle_event(type, code, value);
 }
@@ -1079,6 +1123,11 @@ void __init ksu_ksud_init(void)
 
     ksu_syscall_table_hook(__NR_read, ksu_sys_read, &orig_sys_read);
     ksu_syscall_table_hook(__NR_fstat, ksu_sys_fstat, &orig_sys_fstat);
+
+#if defined(CONFIG_COMPAT) && defined(__aarch64__)
+    ksu_compat_syscall_table_hook(ksu_get_compat_syscall_no(read), ksu_sys_read, &orig_compat_sys_read);
+    ksu_compat_syscall_table_hook(ksu_get_compat_syscall_no(fstat64), ksu_sys_fstat, &orig_sys_fstat64);
+#endif
 
     ret = register_kprobe(&input_event_kp);
     pr_info("ksud: input_event_kp: %d\n", ret);

@@ -537,6 +537,7 @@ private fun ProfileBox(
             description = mode.text,
             isOnBackground = false,
             containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         )
 
         Row(

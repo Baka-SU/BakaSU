@@ -56,8 +56,12 @@ import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.confirmationDialogCurvedText
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.DocumentFormat
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
+import org.bakasu.bakasu.domain.model.RepositoryError
+import org.bakasu.bakasu.domain.model.RepositoryFailure
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
@@ -65,7 +69,6 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
-import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.formatFileSize
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
@@ -87,20 +90,21 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 @Composable
-internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Unit, onSearch: () -> Unit, onOpen: (String) -> Unit) {
+internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Unit, onSearch: () -> Unit, onOpen: (CatalogModule) -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     // Opening the repository loads its index, which also checks that the watch can reach it over
     // any network: the paired phone, the watch Wi-Fi or its mobile data.
-    var failure by remember { mutableStateOf<ModuleRepoUiEvent?>(null) }
-    LaunchedEffect(viewModel) {
-        viewModel.dispatch(ModuleRepoUiAction.Refresh)
-        viewModel.events.collect { failure = it }
+    var failure by remember { mutableStateOf<RepositoryFailure?>(null) }
+    LaunchedEffect(viewModel) { viewModel.dispatch(ModuleRepoUiAction.Refresh) }
+    // A refresh that ends with a failure of this repository reports it once.
+    LaunchedEffect(state.isRefreshing) {
+        if (!state.isRefreshing) failure = state.failures[state.repositoryUrl]
     }
     fun retry() {
         failure = null
         viewModel.dispatch(ModuleRepoUiAction.Refresh)
     }
-    val failureReason = stringResource(if (failure is ModuleRepoUiEvent.Offline) R.string.wear_no_internet else R.string.wear_repo_unreachable)
+    val failureReason = stringResource(if (failure?.reason == RepositoryError.OFFLINE) R.string.wear_no_internet else R.string.wear_repo_unreachable)
     // Without a list there is nothing to show, so the failure asks to retry or leave.
     val connectDialog = rememberCustomDialog { dismiss ->
         val leave = {
@@ -175,11 +179,11 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
         item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_modules), onSearch, icon = Icons.Rounded.Search, description = state.search.ifBlank { null }) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_star_first), state.sortStargazerCountFirst, { viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it)) }) }
         if (state.modules.isEmpty() && !state.isRefreshing && failure == null) item { WearInfoCard(spec) { Text(stringResource(R.string.wear_catalog_empty)) } }
-        LazySegmentedColumn(state.modules, { it.moduleId }) { module ->
+        LazySegmentedColumn(state.modules, { it.catalogId }) { module ->
             WearSettingsJumpPageWidget(
                 spec,
                 module.moduleName,
-                { onOpen(module.moduleId) },
+                { onOpen(module) },
                 icon = Icons.Rounded.Cloud,
                 description = module.summary.ifBlank { module.moduleId },
             )
@@ -204,10 +208,10 @@ internal fun WearModuleRepoSearchPage(viewModel: ModuleRepoViewModel, onBack: ()
  * loading the module again; each route has its own ViewModel store, so it lives in the activity's.
  */
 @Composable
-private fun catalogModuleViewModel(moduleId: String): ModuleDetailViewModel = koinViewModel(
+private fun catalogModuleViewModel(moduleId: String, repositoryUrl: String): ModuleDetailViewModel = koinViewModel(
     viewModelStoreOwner = LocalActivity.current as ComponentActivity,
-    key = "wear-catalog-$moduleId",
-    parameters = { parametersOf(moduleId) },
+    key = "wear-catalog-$repositoryUrl#$moduleId",
+    parameters = { parametersOf(moduleId, repositoryUrl) },
 )
 
 /** The download confirmation; confirming opens the download route for the chosen file. */
@@ -225,7 +229,7 @@ private fun rememberModuleDownload(moduleName: String, installer: WearModuleInst
             title = { Text(stringResource(R.string.wear_download_confirm_title)) },
             text = {
                 if (asset != null) {
-                    Text(stringResource(R.string.wear_catalog_summary, asset.name, formatFileSize(asset.size)) + "\n" + thenInstall)
+                    Text(stringResource(R.string.wear_catalog_summary, asset.name, formatFileSize(asset.size ?: 0L)) + "\n" + thenInstall)
                 }
             },
             confirmButton = {
@@ -250,12 +254,13 @@ private fun rememberModuleDownload(moduleName: String, installer: WearModuleInst
 @Composable
 internal fun WearOnlineModulePage(
     moduleId: String,
+    repositoryUrl: String,
     onBack: () -> Unit,
     onLink: (String) -> Unit,
     onSection: (String) -> Unit,
     installer: WearModuleInstaller,
 ) {
-    val viewModel = catalogModuleViewModel(moduleId)
+    val viewModel = catalogModuleViewModel(moduleId, repositoryUrl)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val module = state.module
     val requestDownload = rememberModuleDownload(module?.moduleName.orEmpty(), installer)
@@ -343,22 +348,45 @@ internal fun WearOnlineModulePage(
 
 /** The README, releases or information of a repository module, each opened as its own route. */
 @Composable
-internal fun WearOnlineModuleSectionPage(moduleId: String, section: String, onBack: () -> Unit, installer: WearModuleInstaller) {
-    val viewModel = catalogModuleViewModel(moduleId)
+internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String, section: String, onBack: () -> Unit, installer: WearModuleInstaller) {
+    val viewModel = catalogModuleViewModel(moduleId, repositoryUrl)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val module = state.module
     val requestDownload = rememberModuleDownload(module?.moduleName.orEmpty(), installer)
-    WearList(isLoading = state.loading, onBack = onBack) { spec ->
+    // The README is its own document, loaded once the module details are.
+    val readme = module?.let { state.documents[it.readmeUrl.ifBlank { it.sourceUrl }] }
+    LaunchedEffect(module?.catalogId, module?.detailLoaded, module?.registryMetadata?.buildId) {
+        if (section == "readme" && module?.detailLoaded == true) viewModel.loadReadme()
+    }
+    val readmeLoading = section == "readme" && module != null && (!module.detailLoaded || readme == null || readme.loading) && state.error == null
+    WearList(isLoading = state.loading || readmeLoading, onBack = onBack) { spec ->
         item { WearPageHeader(spec, module?.moduleName ?: stringResource(R.string.module_repo)) }
         if (state.error != null) item { WearActionButton(spec, Icons.Rounded.Cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
         if (module != null) {
             when (section) {
-                "readme" -> {
-                    val text = HtmlCompat.fromHtml(module.readme, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
-                    // The whole README reads as one card, like a license text.
-                    item {
-                        WearInfoCard(spec) {
-                            Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                "readme" -> when {
+                    readmeLoading -> Unit
+
+                    readme?.failed == true -> item {
+                        WearActionButton(spec, Icons.Rounded.Cloud, stringResource(R.string.network_retry), { viewModel.loadReadme(retry = true) })
+                    }
+
+                    else -> {
+                        val document = readme?.document
+                        val text = when {
+                            document == null || document.content.isBlank() -> null
+                            document.format == DocumentFormat.HTML -> HtmlCompat.fromHtml(document.content, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
+                            else -> document.content.trim()
+                        }
+                        // The whole README reads as one card, like a license text.
+                        item {
+                            WearInfoCard(spec) {
+                                Text(
+                                    text ?: stringResource(R.string.repo_no_readme),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
@@ -379,7 +407,7 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, section: String, onBa
                                 Icons.Rounded.Download,
                                 asset.name,
                                 { requestDownload(release, asset) },
-                                secondaryText = formatFileSize(asset.size),
+                                secondaryText = asset.size?.let(::formatFileSize),
                             )
                         }
                     }

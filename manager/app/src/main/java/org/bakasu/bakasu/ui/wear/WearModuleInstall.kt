@@ -37,6 +37,7 @@ import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.file.ZipFileDetector
 import org.bakasu.bakasu.data.file.ZipFileInfo
+import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
@@ -78,8 +79,8 @@ class WearModuleInstaller internal constructor(
             moduleName,
             asset.name,
             asset.downloadUrl,
-            asset.size,
-            asset.sha256,
+            asset.expected?.size ?: 0L,
+            asset.expected?.sha256.orEmpty(),
             release.name.ifBlank { release.tagName },
         ),
     )
@@ -109,7 +110,7 @@ class WearModuleInstaller internal constructor(
 }
 
 /** The file to download, as the download page starts it; a blank SHA-256 skips the check. */
-internal fun WearRoute.OnlineModuleDownload.asset() = ModuleReleaseAsset(fileName, url, size, 0, sha256)
+internal fun WearRoute.OnlineModuleDownload.asset() = ModuleReleaseAsset(fileName, url, size, 0, expected = sha256.ifBlank { null }?.let { ExpectedFile(size, it) })
 
 @Composable
 internal fun rememberWearModuleInstaller(navigator: WearNavigator, onPickFailed: () -> Unit, onInstalled: () -> Unit): WearModuleInstaller {

@@ -25,24 +25,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
 import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
+import org.bakasu.bakasu.ui.util.LocalBackgroundBlurProvided
 import org.koin.compose.koinInject
 
 private const val PADDING_HORIZONTAL = 16
@@ -156,6 +156,7 @@ fun SegmentedColumn(
     content: SegmentedColumnScope.() -> Unit,
 ) {
     val themeConfig: ThemeConfig = koinInject()
+    val backgroundBlurProvided = LocalBackgroundBlurProvided.current
     val scope = SegmentedColumnScope().apply(content)
     val allItems = scope.items
 
@@ -194,112 +195,111 @@ fun SegmentedColumn(
         val focusManager = LocalFocusManager.current
 
         Layout(
+            modifier = if (themeConfig.isEnableBlurExp) {
+                Modifier.clip(RoundedCornerShape(16.dp)).renderBackgroundBlur()
+            } else {
+                Modifier
+            },
             content = {
-                allItems.forEachIndexed { index, itemData ->
-                    key(itemData.key ?: index) {
-                        val isFirst =
-                            index == firstVisibleIndex || (index == 0 && !itemData.visible)
-                        val isLast =
-                            index == lastVisibleIndex || (index == allItems.lastIndex && !itemData.visible)
+                CompositionLocalProvider(
+                    LocalBackgroundBlurProvided provides (backgroundBlurProvided || themeConfig.isEnableBlurExp),
+                ) {
+                    allItems.forEachIndexed { index, itemData ->
+                        key(itemData.key ?: index) {
+                            val isFirst =
+                                index == firstVisibleIndex || (index == 0 && !itemData.visible)
+                            val isLast =
+                                index == lastVisibleIndex || (index == allItems.lastIndex && !itemData.visible)
 
-                        val baseTopRadius = if (isFirst) 16.dp else 5.dp
-                        val baseBottomRadius = if (isLast) 16.dp else 5.dp
+                            val baseTopRadius = if (isFirst) 16.dp else 5.dp
+                            val baseBottomRadius = if (isLast) 16.dp else 5.dp
 
-                        // Blurred backgrounds must be rendered as one continuous group. Keep
-                        // only the outer corners rounded, regardless of item-level overrides.
-                        val forceFlatTop =
-                            if (themeConfig.isEnableBlurExp) !isFirst else itemData.forceFlatTop
-                        val forceFlatBottom =
-                            if (themeConfig.isEnableBlurExp) !isLast else itemData.forceFlatBottom
+                            // Blurred backgrounds must be rendered as one continuous group. Keep
+                            // only the outer corners rounded, regardless of item-level overrides.
+                            val forceFlatTop =
+                                if (themeConfig.isEnableBlurExp) !isFirst else itemData.forceFlatTop
+                            val forceFlatBottom =
+                                if (themeConfig.isEnableBlurExp) !isLast else itemData.forceFlatBottom
 
-                        val targetTopRadius = if (forceFlatTop) 0.dp else baseTopRadius
-                        val targetBottomRadius =
-                            if (forceFlatBottom) 0.dp else baseBottomRadius
+                            val targetTopRadius = if (forceFlatTop) 0.dp else baseTopRadius
+                            val targetBottomRadius =
+                                if (forceFlatBottom) 0.dp else baseBottomRadius
 
-                        val isDynamicDpSupported =
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                        val currentTopRadius = if (isDynamicDpSupported) {
-                            animateDpAsState(targetTopRadius, dpSpring, label = "TopRadius").value
-                        } else {
-                            targetTopRadius
-                        }
-                        val currentBottomRadius = if (isDynamicDpSupported) {
-                            animateDpAsState(
-                                targetBottomRadius,
-                                dpSpring,
-                                label = "BottomRadius",
-                            ).value
-                        } else {
-                            targetBottomRadius
-                        }
-
-                        val shape = RoundedCornerShape(
-                            topStart = max(0.dp, currentTopRadius),
-                            topEnd = max(0.dp, currentTopRadius),
-                            bottomStart = max(0.dp, currentBottomRadius),
-                            bottomEnd = max(0.dp, currentBottomRadius),
-                        )
-
-                        val targetTopPadding =
-                            if (themeConfig.isEnableBlurExp) {
-                                0.dp
-                            } else { // No segmented allowed in blured
-                                itemData.customTopPadding
-                                    ?: (if (isFirst) 0.dp else ListItemDefaults.SegmentedGap)
+                            val isDynamicDpSupported =
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                            val currentTopRadius = if (isDynamicDpSupported) {
+                                animateDpAsState(targetTopRadius, dpSpring, label = "TopRadius").value
+                            } else {
+                                targetTopRadius
                             }
-                        val currentTopPadding = if (isDynamicDpSupported) {
-                            animateDpAsState(targetTopPadding, dpSpring, label = "TopPadding").value
-                        } else {
-                            targetTopPadding
-                        }
-
-                        var hasFocus by remember { mutableStateOf(false) }
-
-                        LaunchedEffect(itemData.visible) {
-                            if (!itemData.visible && hasFocus) {
-                                focusManager.clearFocus()
+                            val currentBottomRadius = if (isDynamicDpSupported) {
+                                animateDpAsState(
+                                    targetBottomRadius,
+                                    dpSpring,
+                                    label = "BottomRadius",
+                                ).value
+                            } else {
+                                targetBottomRadius
                             }
-                        }
 
-                        Box(
-                            modifier = Modifier
-                                .zIndex(if (itemData.visible) (allItems.size - index).toFloat() else -index.toFloat())
-                                .onFocusChanged { hasFocus = it.hasFocus }
-                                .semantics {
-                                    if (!itemData.visible) hideFromAccessibility()
+                            val shape = RoundedCornerShape(
+                                topStart = max(0.dp, currentTopRadius),
+                                topEnd = max(0.dp, currentTopRadius),
+                                bottomStart = max(0.dp, currentBottomRadius),
+                                bottomEnd = max(0.dp, currentBottomRadius),
+                            )
+
+                            val targetTopPadding =
+                                if (themeConfig.isEnableBlurExp) {
+                                    0.dp
+                                } else { // No segmented allowed in blured
+                                    itemData.customTopPadding
+                                        ?: (if (isFirst) 0.dp else ListItemDefaults.SegmentedGap)
                                 }
-                                .graphicsLayer {
-                                    val currentProgress = progresses[index].value
-                                    val safeProgress = currentProgress.coerceAtLeast(0f)
+                            val currentTopPadding = if (isDynamicDpSupported) {
+                                animateDpAsState(targetTopPadding, dpSpring, label = "TopPadding").value
+                            } else {
+                                targetTopPadding
+                            }
 
-                                    clip = true
-                                    this.shape = object : Shape {
-                                        override fun createOutline(
-                                            size: Size,
-                                            layoutDirection: LayoutDirection,
-                                            density: Density,
-                                        ) = Outline.Rectangle(
-                                            Rect(
-                                                0f,
-                                                0f,
-                                                size.width,
-                                                size.height * safeProgress,
-                                            ),
-                                        )
+                            var hasFocus by remember { mutableStateOf(false) }
+                            val currentProgress = progresses[index].value
+
+                            LaunchedEffect(itemData.visible) {
+                                if (!itemData.visible && hasFocus) {
+                                    focusManager.clearFocus()
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .zIndex(if (itemData.visible) (allItems.size - index).toFloat() else -index.toFloat())
+                                    .onFocusChanged { hasFocus = it.hasFocus }
+                                    .semantics {
+                                        if (!itemData.visible) hideFromAccessibility()
                                     }
-                                    alpha = (currentProgress * 1.5f).coerceIn(0f, 1f)
-                                },
-                        ) {
-                            CompositionLocalProvider(LocalSegmentedItemShape provides shape) {
-                                Column(
-                                    modifier = Modifier.padding(
-                                        top = max(
-                                            currentTopPadding,
-                                            0.dp,
+                                    .clipToBounds()
+                                    .layout { measurable, constraints ->
+                                        val placeable = measurable.measure(constraints)
+                                        val height = (placeable.height * currentProgress.coerceAtLeast(0f)).roundToInt()
+                                        layout(placeable.width, height) {
+                                            if (height > 0) {
+                                                placeable.placeRelative(0, 0)
+                                            }
+                                        }
+                                    },
+                            ) {
+                                CompositionLocalProvider(LocalSegmentedItemShape provides shape) {
+                                    Column(
+                                        modifier = Modifier.padding(
+                                            top = max(
+                                                currentTopPadding,
+                                                0.dp,
+                                            ),
                                         ),
-                                    ),
-                                ) {
-                                    itemData.content(shape)
+                                    ) {
+                                        itemData.content(shape)
+                                    }
                                 }
                             }
                         }
@@ -307,14 +307,15 @@ fun SegmentedColumn(
                 }
             },
         ) { measurables, constraints ->
-            val placeables = measurables.map { it.measure(constraints) }
+            val placeables = ArrayList<Placeable>(measurables.size)
             var currentY = 0f
-            val positions = mutableListOf<Int>()
+            val positions = ArrayList<Int>(measurables.size)
 
-            placeables.forEachIndexed { index, placeable ->
+            measurables.forEachIndexed { index, measurable ->
+                val placeable = measurable.measure(constraints)
+                placeables += placeable
                 positions.add(currentY.roundToInt())
-                val progress = progresses[index].value
-                currentY += placeable.height * progress
+                currentY += placeable.height
             }
 
             layout(constraints.maxWidth, currentY.roundToInt().coerceAtLeast(0)) {

@@ -1,5 +1,8 @@
 package org.bakasu.bakasu.domain.model
 
+import androidx.annotation.StringRes
+import org.bakasu.bakasu.R
+
 data class InstalledModule(
     val id: String,
     val name: String,
@@ -34,9 +37,9 @@ data class ModulePreferences(
     val showMoreModuleInfo: Boolean = false,
 )
 
-enum class MetaModuleStatus {
+enum class MetaModuleStatus(@param:StringRes val resId: Int? = null) {
     ACTIVE,
-    MISSING,
-    REMOVED,
-    DISABLED,
+    MISSING(R.string.no_meta_module_installed),
+    REMOVED(R.string.meta_module_removed),
+    DISABLED(R.string.meta_module_disabled),
 }

@@ -15,7 +15,6 @@ mod android {
     pub const KSU_SUSFS: &str = concatcp!(BINARY_DIR, "ksu_susfs");
     pub const BUSYBOX_PATH: &str = concatcp!(BINARY_DIR, "busybox");
     pub const BOOTCTL_PATH: &str = concatcp!(BINARY_DIR, "bootctl");
-    pub const MKBOOTFS_PATH: &str = concatcp!(BINARY_DIR, "mkbootfs");
 
     /// Create the ksu_susfs -> ksud hard link (it shares the same inode as ksud).
     pub fn ensure_susfs_link() -> anyhow::Result<()> {
@@ -111,6 +110,17 @@ struct Asset;
 #[folder = "bin/arm"]
 struct Asset;
 
+#[cfg(all(target_arch = "arm", target_os = "android"))]
+#[derive(RustEmbed)]
+#[folder = "bin/aarch64"]
+#[include = "*.ko"]
+struct AssetAarch64;
+
+#[cfg(all(target_arch = "arm", target_os = "android"))]
+fn use_arm64_ko() -> bool {
+    rustix::system::uname().machine().to_bytes() == b"armv8l"
+}
+
 #[cfg(all(target_arch = "riscv64", target_os = "android"))]
 #[derive(RustEmbed)]
 #[folder = "bin/riscv64"]
@@ -124,7 +134,14 @@ struct Asset;
 
 pub fn list_supported_kmi() -> std::vec::Vec<std::string::String> {
     let mut list = Vec::new();
-    for file in Asset::iter() {
+    let assets = <Asset as RustEmbed>::iter();
+    #[cfg(all(target_arch = "arm", target_os = "android"))]
+    let assets = if use_arm64_ko() {
+        <AssetAarch64 as RustEmbed>::iter()
+    } else {
+        assets
+    };
+    for file in assets {
         // kmi_name = "xxx_kernelsu.ko"
         if let Some(kmi) = file.strip_suffix("_kernelsu.ko") {
             list.push(kmi.to_string());
@@ -134,6 +151,14 @@ pub fn list_supported_kmi() -> std::vec::Vec<std::string::String> {
 }
 
 pub fn get_asset(name: &str) -> Result<std::borrow::Cow<'static, [u8]>> {
-    let asset = Asset::get(name).ok_or_else(|| anyhow::anyhow!("asset not found: {name}"))?;
+    #[cfg(all(target_arch = "arm", target_os = "android"))]
+    let asset = if name.ends_with(".ko") && use_arm64_ko() {
+        AssetAarch64::get(name)
+    } else {
+        Asset::get(name)
+    };
+    #[cfg(not(all(target_arch = "arm", target_os = "android")))]
+    let asset = Asset::get(name);
+    let asset = asset.ok_or_else(|| anyhow::anyhow!("asset not found: {name}"))?;
     Ok(asset.data)
 }

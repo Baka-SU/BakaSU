@@ -79,7 +79,7 @@ static void ksu_handle_bprm_committed_creds(const struct linux_binprm *bprm)
 static void ksu_handle_bprm_committed_creds(struct linux_binprm *bprm)
 #endif
 {
-    ksu_handle_post_execve(NULL, NULL, NULL, NULL, NULL, NULL);
+    ksu_handle_post_execve_common(NULL, NULL, NULL, NULL, NULL, NULL);
 }
 #endif
 

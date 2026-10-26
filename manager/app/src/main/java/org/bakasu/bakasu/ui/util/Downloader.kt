@@ -11,7 +11,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
+import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.domain.model.ManagerUpdateInfo
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.EnqueueManagerUpdateUseCase
@@ -32,6 +34,9 @@ fun download(
     onDownloaded: (Uri) -> Unit = {},
     onDownloading: () -> Unit = {},
     onProgress: (Int) -> Unit = {},
+    canEnqueue: () -> Boolean = { true },
+    expected: ExpectedFile? = null,
+    onFailed: (DownloadState) -> Unit = {},
 ) {
     fun startDownloadFile(
         url: String,
@@ -40,9 +45,10 @@ fun download(
         onDownloading: () -> Unit,
         onProgress: (Int) -> Unit,
     ) {
+        if (!canEnqueue()) return
         onDownloading()
 
-        val downloadId = enqueueDownload(url, fileName)
+        val downloadId = enqueueDownload(url, fileName, expected)
 
         CoroutineScope(Dispatchers.Main).launch {
             observeDownload(downloadId).collect { state ->
@@ -51,7 +57,11 @@ fun download(
                 if (state.status == DownloadStatus.COMPLETED ||
                     state.status == DownloadStatus.FAILED
                 ) {
-                    state.resultUri?.let { onDownloaded(it.toUri()) }
+                    if (state.status == DownloadStatus.COMPLETED) {
+                        state.resultUri?.let { onDownloaded(it.toUri()) }
+                    } else {
+                        onFailed(state)
+                    }
                     cancel()
                 }
             }
@@ -79,6 +89,11 @@ fun downloadManagerUpdate(
         enqueueManagerUpdate(update)
     }
 }
+
+fun downloadFailureMessage(context: Context, state: DownloadState): String = context.getString(
+    state.verificationFailure?.resId ?: R.string.download_failed_content,
+    state.fileName,
+)
 
 private fun requestDownloadPermissions(
     context: Context,

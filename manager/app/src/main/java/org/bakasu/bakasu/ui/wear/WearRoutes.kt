@@ -47,13 +47,13 @@ sealed interface WearRoute : NavKey {
     data object ModuleRepoSearch : WearRoute, NeedsRoot
 
     @Serializable
-    data class OnlineModule(val id: String) :
+    data class OnlineModule(val id: String, val repositoryUrl: String) :
         WearRoute,
         NeedsRoot
 
     /** The README, releases or information of a repository module. */
     @Serializable
-    data class OnlineModuleSection(val id: String, val section: String) :
+    data class OnlineModuleSection(val id: String, val repositoryUrl: String, val section: String) :
         WearRoute,
         NeedsRoot
 

@@ -24,6 +24,7 @@ val LocalHandlePageChange = compositionLocalOf<(Int) -> Unit> { error("No handle
 val LocalSelectedPage = compositionLocalOf<Int> { error("No selected page") }
 
 val LocalBackgroundBlurAnchor = staticCompositionLocalOf<LayoutCoordinates?> { null }
+val LocalBackgroundBlurProvided = compositionLocalOf { false }
 val LocalStretchOverscrollCompensationState =
     staticCompositionLocalOf<StretchOverscrollCompensationState?> { null }
 

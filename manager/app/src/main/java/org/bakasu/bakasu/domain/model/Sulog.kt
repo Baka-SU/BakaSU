@@ -1,29 +1,35 @@
 package org.bakasu.bakasu.domain.model
 
+import androidx.annotation.StringRes
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import org.bakasu.bakasu.R
 
 data class SulogFile(
     val name: String,
     val path: String,
 )
 
-enum class SulogEventType {
-    RootExecve,
-    SuCompat,
-    IoctlGrantRoot,
-    DaemonEvent,
-    Dropped,
-    Unknown,
+enum class SulogEventType(@param:StringRes val resId: Int) {
+    RootExecve(R.string.sulog_filter_root_execve),
+    SuCompat(R.string.sulog_filter_sucompat),
+    IoctlGrantRoot(R.string.sulog_filter_ioctl_grant_root),
+    DaemonEvent(R.string.sulog_filter_daemon_restart),
+    Dropped(R.string.sulog_event_dropped),
+    Unknown(R.string.sulog_entry_unknown_event),
 }
 
-enum class SulogEventFilter(val eventType: SulogEventType?) {
+enum class SulogEventFilter(val eventType: SulogEventType) {
     RootExecve(SulogEventType.RootExecve),
     SuCompat(SulogEventType.SuCompat),
     IoctlGrantRoot(SulogEventType.IoctlGrantRoot),
     DaemonEvent(SulogEventType.DaemonEvent),
+    ;
+
+    @get:StringRes
+    val resId: Int get() = eventType.resId
 }
 
 data class SulogEntry(

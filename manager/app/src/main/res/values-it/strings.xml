@@ -81,7 +81,6 @@
     <string name="app_profile_template_sync">Sincronizza i modelli remoti</string>
     <string name="app_profile_template_save_failed">Impossibile salvare il modello</string>
     <string name="app_profile_template_import_empty">Gli appunti sono vuoti!</string>
-    <string name="module_changelog_failed">Impossibile reperire il changelog: %s</string>
     <string name="grant_root_failed">Impossibile ottenere l\'accesso root!</string>
     <string name="direct_install">Installazione diretta (Consigliata)</string>
     <string name="select_file">Scegli un file</string>
@@ -265,11 +264,8 @@
     <string name="horizon_flashing">Flash kernel in corso...</string>
     <string name="horizon_flash_complete_status">Flash completato</string>
     <string name="select_slot_title">Selezione lo Slot di Flash</string>
-    <string name="select_slot_description">Per favore selezione lo slot su cui flashare boot</string>
     <string name="slot_a">Slot A</string>
     <string name="slot_b">Slot B</string>
-    <string name="selected_slot">Slot selezionato: %1$s</string>
-    <string name="current_slot">Slot predefinito di sistema attuale: %1$s</string>
     <string name="horizon_copy_failed">Copia fallita</string>
     <string name="horizon_unknown_error">Errore sconosciuto</string>
     <string name="flash_failed_message">Flash fallito</string>
@@ -317,7 +313,6 @@
     <string name="check_log">Per favore controlla il log</string>
     <string name="installing_module">Modulo in installazione %1$d/%2$d</string>
     <string name="module_failed_count">%d Installazione del nuovo modulo fallita</string>
-    <string name="kernel_flashing">Flashing del Kernel</string>
     <string name="warning_of_meta_module_title">Richiede modulo Meta</string>
     <string name="warning_of_meta_module_summary">Questo modulo vuole montare /system, gestito dal modulo meta. Se non è presente, il modulo potrebbe non funzionare</string>
     <string name="sort_name">Nome</string>
@@ -326,7 +321,6 @@
     <string name="sort_size">Dimensione</string>
     <string name="sort_usage_freq">Frequenza d\'utilizzo</string>
     <string name="reverse_order">Ordine inverso</string>
-    <string name="no_apps_in_category">Nessuna applicazione in questa categoria</string>
     <string name="persistent">Persistente</string>
     <string name="temporary">Temporaneo</string>
     <string name="susfs_config_title">Configurazione SuSFS</string>
@@ -407,15 +401,10 @@
     <string name="network_retry">Riprova</string>
     <string name="please_check_network">Per favore controlla la tua connessione ad internet e riprova</string>
     <string name="confirm_install_module_title">Vuoi installare %s moduli?</string>
-    <string name="assets_multiple_select_dialog_title">Seleziona gli oggetti che vuoi installare</string>
-    <string name="assets_multiple_select_dialog_content_description">Dimensione: %1$s, Conteggio Scaricamenti: %2$s</string>
-    <string name="assets_multiple_select_dialog_warning">Nessun oggetto selezionato</string>
-    <string name="installed">Installato</string>
     <string name="open_module_home_page">Apri homepage del modulo nel browser</string>
     <string name="readme">Leggimi</string>
     <string name="release">Rilasci</string>
     <string name="info">Info</string>
-    <string name="author_link">Link dell\'autore del modulo</string>
     <string name="source_code">Codice sorgente</string>
     <string name="assert_support_content">%1$s,%2$d scaricamenti</string>
     <string name="show_detail_or_hide_detail">Nascondi o mostra dettagli</string>

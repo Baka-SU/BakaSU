@@ -12,8 +12,8 @@
     <string name="home_manager_version">マネージャー バージョン</string>
     <string name="home_selinux_status">SELinux の状態</string>
     <string name="selinux_status_disabled">無効</string>
-    <string name="selinux_status_enforcing">Enforcing</string>
-    <string name="selinux_status_permissive">Permissive</string>
+    <string name="selinux_status_enforcing">強制</string>
+    <string name="selinux_status_permissive">許容</string>
     <string name="unknown">不明</string>
     <string name="superuser">スーパーユーザー</string>
     <string name="module_failed_to_enable">%s モジュールを ON にできませんでした</string>
@@ -89,7 +89,6 @@
     <string name="app_profile_template_sync">オンラインテンプレートの同期</string>
     <string name="app_profile_template_save_failed">テンプレートの保存に失敗しました</string>
     <string name="app_profile_template_import_empty">クリップボードが空です！</string>
-    <string name="module_changelog_failed">変更ログの取得に失敗しました: %s</string>
     <string name="grant_root_failed">root の付与に失敗しました！</string>
     <string name="action">アクション</string>
     <string name="close">閉じる</string>
@@ -159,11 +158,8 @@
     <string name="horizon_flashing">カーネルをフラッシュ中…</string>
     <string name="horizon_flash_complete_status">フラッシュが完了しました</string>
     <string name="select_slot_title">フラッシュ先のスロットを選択</string>
-    <string name="select_slot_description">フラッシュする boot のターゲットスロットを選択</string>
     <string name="slot_a">スロット A</string>
     <string name="slot_b">スロット B</string>
-    <string name="selected_slot">選択したスロット: %1$s</string>
-    <string name="current_slot">現在のシステムデフォルトスロット: %1$s</string>
     <string name="horizon_copy_failed">コピーに失敗しました</string>
     <string name="horizon_unknown_error">不明なエラー</string>
     <string name="flash_failed_message">フラッシュに失敗しました</string>
@@ -196,11 +192,9 @@
     <string name="check_log">ログを確認してください</string>
     <string name="installing_module">モジュールをインストール中: %1$d/%2$d</string>
     <string name="module_failed_count">%d モジュールのインストールに失敗しました</string>
-    <string name="kernel_flashing">カーネルをフラッシュ中</string>
     <string name="warning_of_meta_module_title">メタモジュールが必要です</string>
     <string name="warning_of_meta_module_summary">このモジュールは /system をマウントしようとしますが、メタモジュールがそれを処理します。そうでなければ動作しない可能性があります</string>
     <string name="sort_usage_freq">使用頻度</string>
-    <string name="no_apps_in_category">このカテゴリーにアプリはありません</string>
     <string name="susfs_config_title">SuSFS の構成</string>
     <string name="susfs_config_setting_title">SuSFS の構成</string>
     <string name="module_update_json">更新用の JSON</string>
@@ -260,11 +254,11 @@
     <string name="operation_failed">操作が失敗しました</string>
     <string name="group_contains_apps">%d 個のアプリが含まれています</string>
     <string name="home_seccomp_status">Seccomp のステータス</string>
-    <string name="seccomp_status_not_supported">Not supported</string>
-    <string name="seccomp_status_disabled">Disabled</string>
-    <string name="seccomp_status_strict">Strict</string>
-    <string name="seccomp_status_filter">Filter</string>
-    <string name="seccomp_status_unknown">Unknown</string>
+    <string name="seccomp_status_not_supported">サポートされていません</string>
+    <string name="seccomp_status_disabled">無効</string>
+    <string name="seccomp_status_strict">厳密</string>
+    <string name="seccomp_status_filter">フィルター</string>
+    <string name="seccomp_status_unknown">不明</string>
     <string name="sulog">SU ログ</string>
     <string name="sulog_log_files">ログファイル</string>
     <string name="sulog_failed_to_load">SU ログの読み込みに失敗しました</string>
@@ -275,4 +269,6 @@
     <string name="sulog_clean_title">ログを消去</string>
     <string name="sulog_filter_ioctl_grant_root">Root権限の付与</string>
     <string name="sulog_filter_daemon_restart">デーモンの再起動</string>
+    <string name="sulog_filter_root_execve">root権限による実行</string>
+    <string name="sulog_filter_sucompat">SU互換</string>
 </resources>

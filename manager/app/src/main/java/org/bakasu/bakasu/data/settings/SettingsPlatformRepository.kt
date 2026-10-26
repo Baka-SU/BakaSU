@@ -79,6 +79,7 @@ class SettingsPlatformRepository(
             cardAlpha = cardConfig.cardAlpha,
             backgroundDim = themeConfig.backgroundDim,
             customBackgroundEnabled = customBackground,
+            flashCardBackgroundEnabled = cardConfig.isFlashCardBackgroundEnabled,
             systemDpi = systemDpi,
             currentDpi = currentDpi,
             checkManagerUpdate = settings.getBoolean("check_update", true),
@@ -151,6 +152,13 @@ class SettingsPlatformRepository(
 
             is AppearanceSetting.BackgroundDim ->
                 backgroundManager.saveBackgroundDim(setting.value)
+
+            is AppearanceSetting.FlashCardBackground -> {
+                cardConfig.isFlashCardBackgroundEnabled = setting.enabled
+                // Persist only this flag: CardConfig.save() rewrites cardAlpha with the resolved
+                // value and would clobber a stored custom alpha.
+                settings.putBoolean("flash_card_background_enabled", setting.enabled)
+            }
 
             AppearanceSetting.SaveCardConfig -> cardConfig.save()
         }
@@ -240,9 +248,24 @@ class SettingsPlatformRepository(
             adbRootEnabled = runCatching {
                 ksuCliRepository.getFeaturePersistValue("adb_root") == 1L
             }.getOrDefault(false),
+            adbRootValue = runCatching {
+                ksuCliRepository.getFeatureValue("adb_root")
+            }.getOrNull(),
+            shellSuAdbOnlyStatus = runCatching {
+                ksuCliRepository.getFeatureStatus("shell_su_adb_only")
+            }.getOrDefault(""),
+            shellSuAdbOnlyPersistValue = runCatching {
+                ksuCliRepository.getFeaturePersistValue("shell_su_adb_only")
+            }.getOrNull(),
+            shellSuAdbOnlyValue = runCatching {
+                ksuCliRepository.getFeatureValue("shell_su_adb_only")
+            }.getOrNull(),
             sulogStatus = runCatching {
                 ksuCliRepository.getFeatureStatus("sulog")
             }.getOrDefault(""),
+            sulogValue = runCatching {
+                ksuCliRepository.getFeatureValue("sulog")
+            }.getOrNull(),
             selinuxHideStatus = runCatching {
                 ksuCliRepository.getFeatureStatus("selinux_hide")
             }.getOrDefault(""),

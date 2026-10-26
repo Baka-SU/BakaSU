@@ -1,5 +1,8 @@
 #include <linux/capability.h>
 #include <linux/cred.h>
+#include <linux/kallsyms.h>
+#include <linux/mm.h>
+#include <linux/string.h>
 #include <linux/slab.h>
 #include <linux/kprobes.h>
 #include <linux/syscalls.h>
@@ -9,6 +12,7 @@
 #include <linux/susfs_def.h>
 #endif
 
+#include <linux/vmalloc.h>
 #include <linux/thread_info.h>
 #include "uapi/supercall.h"
 #include "supercall/internal.h"
@@ -40,6 +44,8 @@
 #include "sulog/event.h"
 #include "sulog/fd.h"
 #include "supercall/supercall.h"
+#include "infra/symbol_resolver.h"
+#include "preinit/preinit.h"
 
 static int do_grant_root(void __user *arg)
 {
@@ -78,6 +84,10 @@ static int do_get_info(void __user *arg)
     }
     if (ksu_late_loaded) {
         cmd.flags |= KSU_GET_INFO_FLAG_LATE_LOAD;
+    }
+    // preinit can not execute in late_load mode
+    else if (ksu_preinit_enabled_param()) {
+        cmd.flags |= KSU_GET_INFO_FLAG_PREINIT;
     }
     cmd.features = KSU_FEATURE_MAX;
     cmd.uapi_version = KERNEL_SU_UAPI_VERSION;
@@ -338,7 +348,7 @@ static int do_uid_granted_root(void __user *arg)
         return -EFAULT;
     }
 
-    cmd.granted = ksu_is_allow_uid_for_current(cmd.uid);
+    cmd.granted = ksu_is_uid_granted_root(cmd.uid);
 
     if (copy_to_user(arg, &cmd, sizeof(cmd))) {
         pr_err("uid_granted_root: copy_to_user failed\n");
@@ -447,7 +457,7 @@ static int do_set_app_profile(void __user *arg)
 static int do_get_feature(void __user *arg)
 {
     struct ksu_get_feature_cmd cmd;
-    bool supported;
+    bool supported = false;
     int ret;
 
     if (copy_from_user(&cmd, arg, sizeof(cmd))) {
@@ -456,7 +466,13 @@ static int do_get_feature(void __user *arg)
     }
 
     ret = ksu_get_feature(cmd.feature_id, &cmd.value, &supported);
-    cmd.supported = supported ? 1 : 0;
+    cmd.supported = 0;
+    if (supported) {
+        cmd.supported |= KSU_FEATURE_FLAG_SUPPORTED;
+        if (ksu_feature_is_forced(cmd.feature_id)) {
+            cmd.supported |= KSU_FEATURE_FLAG_FORCED;
+        }
+    }
 
     if (ret && supported) {
         pr_err("get_feature: failed for feature %u: %d\n", cmd.feature_id, ret);
@@ -883,6 +899,90 @@ static int do_disable_escape_to_root(void __user *arg)
 {
     set_thread_flag(TIF_KSU_DISABLE_ESCAPE_WITH_ROOT);
     return 0;
+}
+
+/*
+ * Resolve symbols of the running kernel image, exported or not, matching
+ * them like ksuinit's /proc/kallsyms walk. Userspace uses this to bind a
+ * module's undefined symbols before init_module, so the kernel never parses
+ * the module ELF itself.
+ */
+static int do_lookup_symbols(void __user *arg)
+{
+    struct ksu_lookup_symbols_cmd cmd;
+    const u64 __user *unames;
+    u64 __user *uaddrs;
+    char **names;
+    unsigned long *addrs;
+    int ret = 0;
+    u32 i;
+
+    if (copy_from_user(&cmd, arg, sizeof(cmd)))
+        return -EFAULT;
+
+    if (cmd.flags) {
+        pr_err("lookup_symbols: unsupported flags 0x%x\n", cmd.flags);
+        return -EINVAL;
+    }
+    if (!cmd.count || cmd.count > KSU_LOOKUP_SYMBOLS_MAX)
+        return -EINVAL;
+
+    // TODO overflow check backport
+    names = vzalloc(cmd.count * sizeof(*names));
+    if (!names) {
+        return -ENOMEM;
+    }
+
+    addrs = vzalloc(cmd.count * sizeof(*addrs));
+    if (!addrs) {
+        vfree(names);
+        return -ENOMEM;
+    }
+
+    unames = (const u64 __user *)(uintptr_t)cmd.names;
+    uaddrs = (u64 __user *)(uintptr_t)cmd.addrs;
+    for (i = 0; i < cmd.count; i++) {
+        u64 uname;
+        char *name;
+
+        if (get_user(uname, unames + i)) {
+            ret = -EFAULT;
+            goto out;
+        }
+        name = strndup_user((const char __user *)(uintptr_t)uname, KSYM_NAME_LEN);
+        if (IS_ERR(name)) {
+            // An overlong name cannot be a kernel symbol: report it missing.
+            if (PTR_ERR(name) == -EINVAL)
+                continue;
+            ret = PTR_ERR(name);
+            goto out;
+        }
+        if (!*name) {
+            kfree(name);
+            continue;
+        }
+        names[i] = name;
+    }
+
+    ret = ksu_lookup_kernel_symbols((const char *const *)names, addrs, cmd.count);
+    if (ret < 0)
+        goto out;
+
+    for (i = 0; i < cmd.count; i++) {
+        if (put_user((u64)addrs[i], uaddrs + i)) {
+            ret = -EFAULT;
+            goto out;
+        }
+    }
+
+out:
+    if (names) {
+        for (i = 0; i < cmd.count; i++)
+            kfree(names[i]);
+    }
+    vfree(names);
+    vfree(addrs);
+    return ret;
 }
 
 // 100. GET_FULL_VERSION - Get full version string
@@ -1350,12 +1450,18 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
         .handler = do_get_sulog_fd,
         .perm_check = only_root
     },
-    { 
-        .cmd = KSU_IOCTL_DISABLE_ESCAPE_TO_ROOT, 
-        .name = "DISABLE_ESCAPE_TO_ROOT", 
-        .handler = do_disable_escape_to_root, 
+    {
+        .cmd = KSU_IOCTL_DISABLE_ESCAPE_TO_ROOT,
+        .name = "DISABLE_ESCAPE_TO_ROOT",
+        .handler = do_disable_escape_to_root,
         .perm_check = only_root,
         .allow_su_session = true
+    },
+    {
+        .cmd = KSU_IOCTL_LOOKUP_SYMBOLS,
+        .name = "LOOKUP_SYMBOLS",
+        .handler = do_lookup_symbols,
+        .perm_check = only_root
     },
     // downstream begin
     { 

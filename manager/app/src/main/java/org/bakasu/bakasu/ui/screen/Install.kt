@@ -80,7 +80,6 @@ import org.bakasu.bakasu.ui.component.settings.SettingsChooseWidget
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.rememberMaterial3BlurBackdrop
-import org.bakasu.bakasu.ui.screen.kernelFlash.component.SlotSelectionDialog
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.blurSource
@@ -107,8 +106,13 @@ fun InstallScreen(
     val navigator = LocalNavigator.current
     val isGKI = environment.isGki
 
-    LaunchedEffect(isGKI) {
-        if (!isGKI) pagerState.scrollToPage(0)
+    LaunchedEffect(installState.loading, isGKI, preselectedKernelUri) {
+        if (installState.loading) return@LaunchedEffect
+
+        when {
+            preselectedKernelUri != null -> pagerState.scrollToPage(1)
+            !isGKI -> pagerState.scrollToPage(0)
+        }
     }
 
     val failedReboot = stringResource(R.string.failed_reboot)
@@ -590,7 +594,6 @@ private fun Anykernel3InstallPage(
     var ak3InstallMethod by remember { mutableStateOf<InstallMethod?>(null) }
     var skipKsud by remember { mutableStateOf(false) }
     var showSlotSelectionDialog by remember { mutableStateOf(false) }
-    var tempKernelUri by remember { mutableStateOf<Uri?>(null) }
     var advancedOptionsShown by remember { mutableStateOf(false) }
 
     val ak3AdvRotation by animateFloatAsState(
@@ -603,15 +606,7 @@ private fun Anykernel3InstallPage(
     ) {
         if (it.resultCode == Activity.RESULT_OK) {
             it.data?.data?.let { uri ->
-                if (isAbDevice) {
-                    tempKernelUri = uri
-                    showSlotSelectionDialog = true
-                } else {
-                    ak3InstallMethod = InstallMethod.HorizonKernel(
-                        uri = uri,
-                        summary = summary,
-                    )
-                }
+                ak3InstallMethod = InstallMethod.HorizonKernel(uri = uri, summary = summary)
             }
         }
     }
@@ -620,16 +615,10 @@ private fun Anykernel3InstallPage(
         preselectedKernelUri?.let { uriString ->
             try {
                 val preselectedUri = uriString.toUri()
-                tempKernelUri = preselectedUri
-
-                if (isAbDevice) {
-                    showSlotSelectionDialog = true
-                } else {
-                    ak3InstallMethod = InstallMethod.HorizonKernel(
-                        uri = preselectedUri,
-                        summary = summary,
-                    )
-                }
+                ak3InstallMethod = InstallMethod.HorizonKernel(
+                    uri = preselectedUri,
+                    summary = summary,
+                )
             } catch (_: Exception) {
             }
         }
@@ -638,29 +627,41 @@ private fun Anykernel3InstallPage(
     val onClickNext = {
         (ak3InstallMethod as? InstallMethod.HorizonKernel)?.let { method ->
             method.uri?.let { uri ->
-                navigator.push(
-                    Route.KernelFlash(
-                        kernelUri = uri.toString(),
-                        selectedSlot = method.slot,
-                        skipKsud = skipKsud,
-                    ),
-                )
+                if (isAbDevice) {
+                    showSlotSelectionDialog = true
+                } else {
+                    navigator.push(
+                        Route.KernelFlash(
+                            kernelUri = uri.toString(),
+                            selectedSlot = null,
+                            skipKsud = skipKsud,
+                        ),
+                    )
+                }
             }
         }
     }
 
-    SlotSelectionDialog(
+    SettingsChooseDialog(
         show = showSlotSelectionDialog && isAbDevice,
-        currentSlot = activeSlotSuffix.removePrefix("_")
-            .takeIf { it == "a" || it == "b" },
+        title = stringResource(R.string.select_slot_title),
+        items = listOf(stringResource(R.string.slot_a), stringResource(R.string.slot_b)),
+        selectedIndex = when (activeSlotSuffix.removePrefix("_")) {
+            "b" -> 1
+            else -> 0
+        },
         onDismiss = { showSlotSelectionDialog = false },
-        onSlotSelected = { slot ->
-            showSlotSelectionDialog = false
-            ak3InstallMethod = InstallMethod.HorizonKernel(
-                uri = tempKernelUri,
-                slot = slot,
-                summary = summary,
-            )
+        onSelectedIndexChange = { index ->
+            val method = ak3InstallMethod as? InstallMethod.HorizonKernel
+            method?.uri?.let { uri ->
+                navigator.push(
+                    Route.KernelFlash(
+                        kernelUri = uri.toString(),
+                        selectedSlot = if (index == 1) "b" else "a",
+                        skipKsud = skipKsud,
+                    ),
+                )
+            }
         },
     )
 
@@ -694,22 +695,6 @@ private fun Anykernel3InstallPage(
                                 )
                             },
                         )
-                    }
-
-                    (ak3InstallMethod as? InstallMethod.HorizonKernel)?.slot?.let { slot ->
-                        item {
-                            SettingsBaseWidget(
-                                title = stringResource(
-                                    id = R.string.selected_slot,
-                                    if (slot == "a") {
-                                        stringResource(id = R.string.slot_a)
-                                    } else {
-                                        stringResource(id = R.string.slot_b)
-                                    },
-                                ),
-                                onClick = null,
-                            )
-                        }
                     }
                 }
             }

@@ -2,13 +2,14 @@ package org.bakasu.bakasu.data.file
 
 import android.content.Context
 import android.net.Uri
+import androidx.annotation.StringRes
 import java.io.InputStream
 import org.bakasu.bakasu.R
 
-enum class ZipType {
-    MODULE,
-    KERNEL,
-    UNKNOWN,
+enum class ZipType(@param:StringRes val resId: Int, @param:StringRes val unknownNameResId: Int) {
+    MODULE(R.string.module_package, R.string.unknown_module),
+    KERNEL(R.string.kernel_package, R.string.unknown_kernel),
+    UNKNOWN(R.string.unknown_package, R.string.unknown_file),
     ;
 
     companion object {

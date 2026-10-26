@@ -41,7 +41,6 @@ import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalBlurState
 import org.bakasu.bakasu.ui.util.LocalHandlePageChange
-import org.bakasu.bakasu.ui.util.LocalPagerPage
 import org.bakasu.bakasu.ui.util.LocalPagerState
 import org.bakasu.bakasu.ui.util.LocalPortraitState
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
@@ -145,7 +144,6 @@ fun MainScreen(
                     ),
                 state = pagerState,
                 userScrollEnabled = userScrollEnabled && !interceptPagerGestures,
-                beyondViewportPageCount = if (homeState.isInitialDataLoaded) 1 else 0,
                 pageNestedScrollConnection = if (interceptPagerGestures) {
                     PagerGestureNestedScrollConnection
                 } else {
@@ -164,7 +162,6 @@ fun MainScreen(
                 val snackBarHostState = remember { SnackbarHostState() }
                 CompositionLocalProvider(
                     LocalSnackbarHost provides snackBarHostState,
-                    LocalPagerPage provides pageIndex,
                     LocalBlurState provides rememberMaterial3BlurBackdrop(
                         enableBlur = themeConfig.isEnableBlur,
                         pagerState = pagerState,
