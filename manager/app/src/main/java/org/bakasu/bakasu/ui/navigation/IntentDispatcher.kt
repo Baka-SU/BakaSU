@@ -19,7 +19,7 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import org.bakasu.bakasu.Natives
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.download.DownloadService
-import org.bakasu.bakasu.data.file.ZipFileDetector
+import org.bakasu.bakasu.data.file.ModuleUtils
 import org.bakasu.bakasu.data.file.ZipFileInfo
 import org.bakasu.bakasu.data.file.ZipType
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
@@ -60,7 +60,7 @@ private fun buildInternalWebUiUri(moduleId: String): Uri = Uri.Builder()
     .appendQueryParameter(PARAM_ID, moduleId)
     .build()
 
-private fun resolveIntent(context: Context, intent: Intent, intentToken: String, zipFileDetector: ZipFileDetector): PendingAction? {
+private fun resolveIntent(context: Context, intent: Intent, intentToken: String, zipFileDetector: ModuleUtils): PendingAction? {
     if (intent.action == DownloadService.ACTION_INSTALL_MODULE) {
         val token = intent.getStringExtra(DownloadService.EXTRA_TOKEN)?.takeIf { it.isNotBlank() } ?: return null
         if (token != intentToken) return null
@@ -181,7 +181,7 @@ fun IntentDispatcher(intentChannel: ReceiveChannel<Intent>) {
     val isManager = Natives.isManager
     var pendingZipFiles by remember { mutableStateOf<List<ZipFileInfo>>(emptyList()) }
     val settings: SettingsPlatformRepository = koinInject()
-    val zipFileDetector: ZipFileDetector = koinInject()
+    val zipFileDetector: ModuleUtils = koinInject()
     val peekScript = koinInject<PeekOneshotScriptUseCase>()
 
     InstallConfirmationDialog(

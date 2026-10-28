@@ -46,7 +46,6 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.data.file.ZipFileDetector
 import org.bakasu.bakasu.data.file.ZipFileInfo
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.ModuleUpdateMetadata

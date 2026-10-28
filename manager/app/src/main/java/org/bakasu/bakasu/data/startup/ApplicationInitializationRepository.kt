@@ -10,7 +10,6 @@ import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.data.flash.FlashRepository
-import org.bakasu.bakasu.data.haptics.CrownHapticsRepository
 import org.bakasu.bakasu.data.shell.KsuCliRepository
 
 class ApplicationInitializationRepository(
@@ -19,13 +18,10 @@ class ApplicationInitializationRepository(
     private val applicationScope: CoroutineScope,
     private val flashRepository: FlashRepository,
     private val ksuCliRepository: KsuCliRepository,
-    private val crownHapticsRepository: CrownHapticsRepository,
 ) {
     @SuppressLint("RestrictedApi")
     suspend fun initialize() {
         MainShell.setBuilder(ksuCliRepository.generateMainShellBuilder())
-        // Before any screen reads the crown haptic constants; settings are preloaded by now.
-        crownHapticsRepository.applyPolicy()
         Coil.setImageLoader(imageLoader)
         File(application.dataDir, "webroot").mkdirs()
         Os.setenv("TMPDIR", application.cacheDir.absolutePath, true)

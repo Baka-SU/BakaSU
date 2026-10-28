@@ -14,7 +14,7 @@ spotless {
 
     kotlin {
         target("**/src/**/*.kt")
-        targetExclude("**/build/**", "**/generated/**", "miwearhaptics/**")
+        targetExclude("**/build/**", "**/generated/**")
         ktlint(libs.versions.ktlint.get())
             .customRuleSets(listOf("io.nlopez.compose.rules:ktlint:${libs.versions.compose.rules.get()}"))
             .editorConfigOverride(
@@ -31,7 +31,7 @@ spotless {
 
     kotlinGradle {
         target("**/*.gradle.kts")
-        targetExclude("**/build/**", "**/.gradle/**", "miwearhaptics/**")
+        targetExclude("**/build/**", "**/.gradle/**")
         ktlint(libs.versions.ktlint.get())
     }
 }

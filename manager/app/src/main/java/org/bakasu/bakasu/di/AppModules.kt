@@ -18,10 +18,9 @@ import org.bakasu.bakasu.data.application.DynamicManagerRepository
 import org.bakasu.bakasu.data.count.CountRepository
 import org.bakasu.bakasu.data.download.DownloadRepository
 import org.bakasu.bakasu.data.file.ModuleFileRepository
+import org.bakasu.bakasu.data.file.ModuleUtils
 import org.bakasu.bakasu.data.file.WearFileRepository
-import org.bakasu.bakasu.data.file.ZipFileDetector
 import org.bakasu.bakasu.data.flash.FlashRepository
-import org.bakasu.bakasu.data.haptics.CrownHapticsRepository
 import org.bakasu.bakasu.data.kernel.KernelRepository
 import org.bakasu.bakasu.data.kernel.UmountRepository
 import org.bakasu.bakasu.data.logging.BugreportRepository
@@ -109,7 +108,6 @@ import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetStringSetPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetSuSFSStatusUseCase
 import org.bakasu.bakasu.domain.usecase.GetSuperUserAppGroupUseCase
-import org.bakasu.bakasu.domain.usecase.GetXiaomiWatch5ModeUseCase
 import org.bakasu.bakasu.domain.usecase.ImportAllowlistUseCase
 import org.bakasu.bakasu.domain.usecase.ImportProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.InitializeApplicationUseCase
@@ -119,7 +117,6 @@ import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
 import org.bakasu.bakasu.domain.usecase.IsNetworkAvailableUseCase
 import org.bakasu.bakasu.domain.usecase.IsSoftRebootPreferredUseCase
 import org.bakasu.bakasu.domain.usecase.IsSystemLanguageSettingsUseCase
-import org.bakasu.bakasu.domain.usecase.IsXiaomiWatch5UseCase
 import org.bakasu.bakasu.domain.usecase.LaunchSystemLanguageSettingsUseCase
 import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
 import org.bakasu.bakasu.domain.usecase.LoadSettingsPlatformUseCase
@@ -171,7 +168,6 @@ import org.bakasu.bakasu.domain.usecase.SetShellSuAdbOnlyEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetStringPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.SetStringSetPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.SetSuEnabledUseCase
-import org.bakasu.bakasu.domain.usecase.SetXiaomiWatch5ModeUseCase
 import org.bakasu.bakasu.domain.usecase.StartKernelFlashUseCase
 import org.bakasu.bakasu.domain.usecase.SuSFSConfigUseCase
 import org.bakasu.bakasu.domain.usecase.TakeModuleUriPermissionUseCase
@@ -285,10 +281,8 @@ val repositoryModule = module {
             applicationScope = get(applicationScopeQualifier),
             flashRepository = get(),
             ksuCliRepository = get(),
-            crownHapticsRepository = get(),
         )
     }
-    singleOf(::CrownHapticsRepository)
     singleOf(::ManagerUpdateRepository)
     singleOf(::ApplicationControlRepository)
     singleOf(::DownloadRepository)
@@ -335,7 +329,7 @@ val repositoryModule = module {
     singleOf(::ShortcutRepository)
     singleOf(::Shortcut)
     singleOf(::MonetColorsProvider)
-    singleOf(::ZipFileDetector)
+    singleOf(::ModuleUtils)
     single { HanziToPinyin.create() } bind TextTransliterator::class
 }
 
@@ -412,9 +406,6 @@ val useCaseModule = module {
     factoryOf(::GetBooleanPreferenceUseCase)
     factoryOf(::SetBooleanPreferenceUseCase)
     factoryOf(::GetStringPreferenceUseCase)
-    factoryOf(::IsXiaomiWatch5UseCase)
-    factoryOf(::GetXiaomiWatch5ModeUseCase)
-    factoryOf(::SetXiaomiWatch5ModeUseCase)
     factoryOf(::SetStringPreferenceUseCase)
     factoryOf(::GetStringSetPreferenceUseCase)
     factoryOf(::SetStringSetPreferenceUseCase)

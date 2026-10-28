@@ -45,6 +45,8 @@ class WearFileRepository(
      * permission (older releases) is granted.
      */
     suspend fun needsStoragePermission(): Boolean = withContext(Dispatchers.IO) {
+        // All-files access exists for watches without DocumentsUI; a phone uses its own picker.
+        if (!application.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) return@withContext false
         val granted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Environment.isExternalStorageManager()
         } else {

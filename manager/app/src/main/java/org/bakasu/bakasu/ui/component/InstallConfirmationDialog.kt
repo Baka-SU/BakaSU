@@ -263,14 +263,26 @@ fun InstallItemCard(zipFile: ZipFileInfo) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = zipFile.name.ifEmpty {
-                            stringResource(zipFile.type.unknownNameResId)
+                            stringResource(
+                                when (zipFile.type) {
+                                    ZipType.MODULE -> R.string.unknown_module
+                                    ZipType.KERNEL -> R.string.unknown_kernel
+                                    else -> R.string.unknown_file
+                                },
+                            )
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = stringResource(zipFile.type.resId),
+                        text = stringResource(
+                            when (zipFile.type) {
+                                ZipType.MODULE -> R.string.module_package
+                                ZipType.KERNEL -> R.string.kernel_package
+                                else -> R.string.unknown_package
+                            },
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

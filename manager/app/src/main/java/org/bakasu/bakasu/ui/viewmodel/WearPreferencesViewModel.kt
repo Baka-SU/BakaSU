@@ -5,10 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
-import org.bakasu.bakasu.domain.usecase.GetXiaomiWatch5ModeUseCase
-import org.bakasu.bakasu.domain.usecase.IsXiaomiWatch5UseCase
 import org.bakasu.bakasu.domain.usecase.SetStringPreferenceUseCase
-import org.bakasu.bakasu.domain.usecase.SetXiaomiWatch5ModeUseCase
 
 /**
  * @author Hanhan_awa
@@ -40,42 +37,28 @@ data class WearPreferences(
     val longPressHaptics: Boolean = true,
     val keepScreenOn: Boolean = false,
     val blockBackKey: Boolean = false,
-    /** The device was recognized as a Xiaomi Watch 5, which turns the mode on by itself. */
-    val xiaomiWatch5Detected: Boolean = false,
-    val xiaomiWatch5Mode: Boolean = false,
 )
 
 class WearPreferencesViewModel(
     private val getPreference: GetStringPreferenceUseCase,
     private val setPreference: SetStringPreferenceUseCase,
-    isXiaomiWatch5: IsXiaomiWatch5UseCase,
-    getXiaomiWatch5Mode: GetXiaomiWatch5ModeUseCase,
-    private val setXiaomiWatch5Mode: SetXiaomiWatch5ModeUseCase,
 ) : ViewModel() {
-    private val mutableState = MutableStateFlow(read(isXiaomiWatch5(), getXiaomiWatch5Mode()))
+    private val mutableState = MutableStateFlow(read())
     val state = mutableState.asStateFlow()
 
-    private fun read(xiaomiWatch5Detected: Boolean, xiaomiWatch5Mode: Boolean) = WearPreferences(
+    private fun read() = WearPreferences(
         getPreference.wear(WearPreference.Picker),
         getPreference.wear(WearPreference.Link),
         getPreference.wear(WearPreference.Shape),
         getPreference.wear(WearPreference.LongPressHaptics).toBoolean(),
         getPreference.wear(WearPreference.KeepScreenOn).toBoolean(),
         getPreference.wear(WearPreference.BlockBackKey).toBoolean(),
-        xiaomiWatch5Detected,
-        xiaomiWatch5Mode,
     )
 
     fun set(preference: WearPreference, value: String) {
         setPreference(preference.key, value)
-        mutableState.update { read(it.xiaomiWatch5Detected, it.xiaomiWatch5Mode) }
+        mutableState.update { read() }
     }
 
     fun set(preference: WearPreference, enabled: Boolean) = set(preference, enabled.toString())
-
-    /** Saved now; the crown haptics follow it after the app restarts. */
-    fun setXiaomiWatch5Mode(enabled: Boolean) {
-        setXiaomiWatch5Mode.invoke(enabled)
-        mutableState.update { it.copy(xiaomiWatch5Mode = enabled) }
-    }
 }
