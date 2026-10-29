@@ -270,6 +270,22 @@ class SuSFSConfigHelper(
 
     suspend fun removeSusMap(path: String): Boolean = executeConfigMutation("sus_map remove ${shellQuote(path)}")
 
+    suspend fun setPriorityUidFilter(packages: Set<String>): Boolean {
+        val apps = shellQuote(packages.sorted().joinToString(","))
+        return executeConfigMutation(
+            "priority_uid_filter add $apps",
+            currentKernelCommands = listOf("set_priority_uid_filter $apps"),
+        )
+    }
+
+    suspend fun setSusPathUidFilter(packages: Set<String>): Boolean {
+        val apps = shellQuote(packages.sorted().joinToString(","))
+        return executeConfigMutation(
+            "sus_path_uid_filter add $apps",
+            currentKernelCommands = listOf("set_sus_path_uid_filter $apps"),
+        )
+    }
+
     suspend fun showVersion(): String = loadStatusInfo().version
 
     suspend fun showEnabledFeatures(): String = loadStatusInfo().enabledFeatures
@@ -498,6 +514,10 @@ data class SuSFSConfig(
     val open_redirect: Set<OpenRedirectItem>,
     @SerializedName("sus_map")
     val sus_map: Set<String>,
+    @SerializedName("priority_uid_filter")
+    val priority_uid_filter: Set<String>? = emptySet(),
+    @SerializedName("sus_path_uid_filter")
+    val sus_path_uid_filter: Set<String>? = emptySet(),
 ) {
     companion object {
         fun createDefault(): SuSFSConfig = SuSFSConfig(

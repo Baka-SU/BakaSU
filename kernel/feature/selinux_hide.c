@@ -1272,7 +1272,7 @@ static int ksu_security_context_to_sid(struct policydb *orig_policydb, struct si
     if (orig_sid_p)
         *orig_sid_p = SECSID_NULL;
 
-        // removed: if (force)
+    // removed: if (force)
 retry:
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_SELINUX_POLICY_STRUCT)
     rcu_read_lock();

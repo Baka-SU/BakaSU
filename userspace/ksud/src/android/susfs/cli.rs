@@ -208,6 +208,16 @@ pub enum SuSFSSubCommands {
         enabled: bool,
     },
 
+    /// Replace the app package list whose UIDs are hidden from priority syscalls.
+    /// Pass an empty string to clear the filter. Only app UIDs 10000..19999 are supported.
+    #[command(name = "set_priority_uid_filter")]
+    SetPriorityUidFilter { apps: String },
+
+    /// Replace the comma-separated list of apps allowed to see SUS paths.
+    /// Only app UIDs 10000..19999 can be selected. Pass an empty string to clear.
+    #[command(name = "set_sus_path_uid_filter")]
+    SetSusPathUidFilter { apps: String },
+
     /// Show version, enabled_features, or variant info.
     Show {
         #[command(subcommand)]
@@ -339,6 +349,12 @@ pub fn run_main(args: SusfsArgs) -> Result<()> {
         }
         SuSFSSubCommands::EnableAvcLogSpoofing { enabled } => {
             api::enable_avc_log_spoofing(enabled)?;
+        }
+        SuSFSSubCommands::SetPriorityUidFilter { apps } => {
+            api::set_priority_uid_filter(&apps)?;
+        }
+        SuSFSSubCommands::SetSusPathUidFilter { apps } => {
+            api::set_sus_path_uid_filter(&apps)?;
         }
         SuSFSSubCommands::Show { info_type } => match info_type {
             ShowType::Version => {

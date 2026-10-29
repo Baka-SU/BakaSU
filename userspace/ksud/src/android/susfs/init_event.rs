@@ -75,7 +75,9 @@ pub fn on_boot_completed() {
     handle_result(config.apply_cmdline_or_bootconfig(), "sus_cmdline");
     handle_result(config.final_sus_kstat(), "finalize sus_kstat");
     handle_result(config.apply_sus_map(), "sus_map");
+    handle_result(config.apply_priority_uid_filter(), "priority_uid_filter");
     handle_result(config.apply_open_redirect(), "open_redirect");
+    handle_result(config.apply_sus_path_uid_filter(), "sus_path_uid_filter");
     handle_result(config.apply_sus_path(), "sus_path and sus_path_loop");
 
     log::info!("SUSFS finished");
