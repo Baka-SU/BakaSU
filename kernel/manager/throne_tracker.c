@@ -380,6 +380,10 @@ void track_throne(unsigned int flags)
 // for 6.8- kernel, we can use LSM hook in manual hook
 // 6.8+, we use pkg_observer
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0) && !defined(CONFIG_KSU_TRACEPOINT_HOOK)
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs.h>
+#endif
+
 void ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
 {
     // skip kernel threads
@@ -413,6 +417,11 @@ void ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
     }
 
     pr_info("renameat: %s -> %s, new path: %s\n", old_dentry->d_iname, new_dentry->d_iname, buf);
+
+#ifdef CONFIG_KSU_SUSFS
+    // Renew the getpriority uid bitmap filter
+    susfs_parse_priority_app_strings();
+#endif
 
     // after renameat hook, packages.list.tmp -> packages.list
     // don't async for it, or it will always have an race

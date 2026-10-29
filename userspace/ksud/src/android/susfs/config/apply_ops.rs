@@ -22,6 +22,22 @@ where
 }
 
 impl Config {
+    pub fn apply_priority_uid_filter(&self) -> Result<&Self> {
+        if !self.priority_uid_filter.is_empty() {
+            // One uninstalled package would make the kernel reject the entire list.
+            // Keep it in the persisted config, but only restore apps with a data directory.
+            let mut apps: Vec<_> = self
+                .priority_uid_filter
+                .iter()
+                .filter(|app| std::path::Path::new("/data/data").join(app).is_dir())
+                .cloned()
+                .collect();
+            apps.sort();
+            api::set_priority_uid_filter(&apps.join(","))?;
+        }
+        Ok(self)
+    }
+
     pub fn apply_cmdline_or_bootconfig(&self) -> Result<&Self> {
         api::set_cmdline_or_bootconfig(&self.cmdline_or_bootconfig)?;
         Ok(self)

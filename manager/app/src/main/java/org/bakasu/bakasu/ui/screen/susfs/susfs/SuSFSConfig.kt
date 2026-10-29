@@ -50,6 +50,7 @@ import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.screen.susfs.subpages.OpenRedirectTab
+import org.bakasu.bakasu.ui.screen.susfs.subpages.PriorityUidFilterTab
 import org.bakasu.bakasu.ui.screen.susfs.subpages.StandardFeaturesTab
 import org.bakasu.bakasu.ui.screen.susfs.subpages.StatusTab
 import org.bakasu.bakasu.ui.screen.susfs.subpages.SusKstatTab
@@ -195,6 +196,16 @@ fun SuSFSConfigScreen() {
             title = stringResource(R.string.susfs_tab_sus_map),
         ) { innerPadding, nestedScrollConnection ->
             SusMapTab(
+                nestedScrollConnection = nestedScrollConnection,
+                innerPadding = innerPadding,
+                onRegisterRefresh = onRegisterRefresh,
+            )
+        },
+        SuSFSConfigSubpage(
+            requirePersist = true,
+            title = stringResource(R.string.susfs_priority_uid_filter_title),
+        ) { innerPadding, nestedScrollConnection ->
+            PriorityUidFilterTab(
                 nestedScrollConnection = nestedScrollConnection,
                 innerPadding = innerPadding,
                 onRegisterRefresh = onRegisterRefresh,

@@ -27,6 +27,8 @@ pub struct Config {
     pub(super) sus_kstat: HashSet<SusKstatItem>,
     pub(super) open_redirect: HashSet<OpenRedirectItem>,
     pub(super) sus_map: HashSet<String>,
+    #[serde(default)]
+    pub(super) priority_uid_filter: HashSet<String>,
 }
 
 impl Default for Config {
@@ -46,6 +48,7 @@ impl Default for Config {
             sus_kstat: HashSet::new(),
             open_redirect: HashSet::new(),
             sus_map: HashSet::new(),
+            priority_uid_filter: HashSet::new(),
         }
     }
 }
@@ -104,3 +107,17 @@ pub struct OpenRedirectItem {
     pub uid_scheme: UidScheme,
 }
 impl_hashset_indexkey!(OpenRedirectItem, target_path);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reads_existing_v2_configs_without_priority_filter() {
+        let mut value = serde_json::to_value(Config::default()).unwrap();
+        value.as_object_mut().unwrap().remove("priority_uid_filter");
+        let config: Config = serde_json::from_value(value).unwrap();
+        assert_eq!(config.version, CURRENT_VERSION);
+        assert!(config.priority_uid_filter.is_empty());
+    }
+}

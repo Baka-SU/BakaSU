@@ -676,4 +676,8 @@
     <string name="superuser_root_access_required">Root access is required to load applications.</string>
     <string name="superuser_service_start_failed">RootService failed to start. Retry to load applications.</string>
     <string name="superuser_packages_load_failed">Failed to load applications from RootService. Please retry.</string>
+    <string name="susfs_priority_uid_filter_title">Priority UID filter</string>
+    <string name="susfs_priority_uid_filter_description">Select apps whose UIDs should be hidden from priority and I/O priority syscalls. Applies to app UIDs 10000–19999. Changes take effect immediately and are restored after reboot. Apps sharing a UID are affected together.</string>
+    <string name="susfs_priority_uid_filter_search">Search apps</string>
+    <string name="susfs_priority_uid_filter_loading">Loading apps…</string>
 </resources>

@@ -33,6 +33,11 @@ pub enum ConfigCommand {
         #[command(subcommand)]
         command: ToggleConfigCommand,
     },
+    #[command(name = "priority_uid_filter")]
+    PriorityUidFilter {
+        #[command(subcommand)]
+        command: StringConfigCommand,
+    },
     Logging {
         #[command(subcommand)]
         command: ToggleConfigCommand,
@@ -189,6 +194,15 @@ pub fn run(command: ConfigCommand) -> Result<()> {
         ConfigCommand::AvcLogSpoofing { command } => {
             run_boolean(BooleanField::AvcLogSpoofing, command)
         }
+        ConfigCommand::PriorityUidFilter { command } => match command {
+            StringConfigCommand::Add { value } => {
+                update_config(|config| config.set_priority_uid_filter(&value).map(|_| ()))
+            }
+            StringConfigCommand::Remove => {
+                update_config(|config| config.set_priority_uid_filter("").map(|_| ()))
+            }
+            StringConfigCommand::List => print_json(&Config::read_or_default().priority_uid_filter),
+        },
         ConfigCommand::Logging { command } => run_boolean(BooleanField::Logging, command),
         ConfigCommand::HideSusMntsForNonSuProcs { command } => {
             run_boolean(BooleanField::HideSusMntsForNonSuProcs, command)

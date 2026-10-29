@@ -1,6 +1,7 @@
 pub mod avc_spoofing;
 pub mod enable_log;
 pub mod open_redirect;
+pub mod priority_uid_filter;
 pub mod show;
 pub mod spoof_cmdline_or_bootconfig;
 pub mod spoof_uname;

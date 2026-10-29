@@ -78,4 +78,10 @@ data class SuSFSConfig(
     val sus_kstat: Set<SusKstatItem>,
     val open_redirect: Set<OpenRedirectItem>,
     val sus_map: Set<String>,
+    val priority_uid_filter: Set<String> = emptySet(),
+)
+
+data class SuSFSPriorityApp(
+    val packageName: String,
+    val label: String,
 )

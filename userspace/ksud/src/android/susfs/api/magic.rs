@@ -15,6 +15,8 @@ pub(super) const CMD_SUSFS_SHOW_VERSION: u64 = 0x555e1;
 pub(super) const CMD_SUSFS_SHOW_ENABLED_FEATURES: u64 = 0x555e2;
 pub(super) const CMD_SUSFS_SHOW_VARIANT: u64 = 0x555e3;
 pub(super) const CMD_SUSFS_ENABLE_AVC_LOG_SPOOFING: u64 = 0x60010;
+pub(super) const CMD_SUSFS_SET_PRIORITY_UID_FILTER: u64 = 0x60030;
+pub(super) const SUSFS_APP_STR_BUF_SIZE: usize = 65535;
 pub(super) const CMD_SUSFS_ADD_SUS_MAP: u64 = 0x60020;
 
 pub(super) const SUSFS_MAX_LEN_PATHNAME: usize = 256;

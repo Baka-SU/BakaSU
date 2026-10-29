@@ -31,6 +31,8 @@ class SuSFSConfigUseCase(private val repository: SuSFSRepository) {
     suspend fun removeOpenRedirect(targetPath: String) = repository.removeOpenRedirect(targetPath)
     suspend fun addSusMap(path: String) = repository.addSusMap(path)
     suspend fun removeSusMap(path: String) = repository.removeSusMap(path)
+    suspend fun setPriorityUidFilter(packages: Set<String>) = repository.setPriorityUidFilter(packages)
+    suspend fun loadPriorityApps() = repository.loadPriorityApps()
     suspend fun exportConfig(uri: String) = repository.exportConfig(uri)
     suspend fun importConfig(uri: String) = repository.importConfig(uri)
 }
