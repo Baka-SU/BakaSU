@@ -1273,8 +1273,8 @@ static int ksu_security_context_to_sid(struct policydb *orig_policydb, struct si
         *orig_sid_p = SECSID_NULL;
 
         // removed: if (force)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_SELINUX_POLICY_STRUCT)
 retry:
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_SELINUX_POLICY_STRUCT)
     rcu_read_lock();
     policydb = &policy->policydb;
     sidtab = policy->sidtab;
@@ -1320,15 +1320,17 @@ retry:
     context_destroy(&orig_context);
     if (!orig_rc && orig_sid_p)
         *orig_sid_p = orig_sid;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_SELINUX_POLICY_STRUCT)
     if (orig_rc == -ESTALE) {
         // retry after live policy reload
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_SELINUX_POLICY_STRUCT)
         rcu_read_unlock();
+#else
+        ksu_unlock_sepolicy_legacy();
+#endif
         memcpy(scontext2, scontext, scontext_len);
         scontext2[scontext_len] = '\0';
         goto retry;
     }
-#endif
 out_unlock:
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_SELINUX_POLICY_STRUCT)
     rcu_read_unlock();
