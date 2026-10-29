@@ -13,12 +13,15 @@ import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.SuSFSConfig
 import org.bakasu.bakasu.domain.model.SuSFSSlotInfo
 import org.bakasu.bakasu.domain.model.SuSFSStatusInfo
+import org.bakasu.bakasu.domain.model.SuSFSUidFilterApp
 import org.bakasu.bakasu.domain.model.SusKstatStatically
 import org.bakasu.bakasu.domain.model.UidScheme
 import org.bakasu.bakasu.domain.usecase.SuSFSConfigUseCase
 
 data class SuSFSUiState(
     val config: SuSFSConfig? = null,
+    val uidFilterApps: List<SuSFSUidFilterApp> = emptyList(),
+    val uidFilterAppsLoaded: Boolean = false,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val statusInfo: SuSFSStatusInfo? = null,
@@ -95,6 +98,17 @@ sealed interface SuSFSUiAction {
 
     data class AddSusMap(val path: String, val reply: SuSFSCommandReply? = null) : SuSFSUiAction
     data class RemoveSusMap(val path: String, val reply: SuSFSCommandReply? = null) : SuSFSUiAction
+    data object LoadUidFilterApps : SuSFSUiAction
+    data class SetPriorityUidFilter(
+        val packages: Set<String>,
+        val reply: SuSFSCommandReply? = null,
+    ) : SuSFSUiAction
+
+    data class SetSusPathUidFilter(
+        val packages: Set<String>,
+        val reply: SuSFSCommandReply? = null,
+    ) : SuSFSUiAction
+
     data class ExportConfig(val uri: String, val reply: SuSFSCommandReply? = null) : SuSFSUiAction
     data class ImportConfig(val uri: String, val reply: SuSFSCommandReply? = null) : SuSFSUiAction
 }
@@ -237,6 +251,22 @@ class SuSFSViewModel(
 
             is SuSFSUiAction.RemoveSusMap -> viewModelScope.launch {
                 executeBoolean(action.reply) { configUseCase.removeSusMap(action.path) }
+            }
+
+            SuSFSUiAction.LoadUidFilterApps -> viewModelScope.launch {
+                runCatching { configUseCase.loadUidFilterApps() }
+                    .onSuccess { apps ->
+                        mutableState.value = mutableState.value.copy(uidFilterApps = apps, uidFilterAppsLoaded = true)
+                    }
+                    .onFailure { mutableEvents.tryEmit(SuSFSUiEvent.Error(it.message.orEmpty())) }
+            }
+
+            is SuSFSUiAction.SetPriorityUidFilter -> viewModelScope.launch {
+                executeBoolean(action.reply) { configUseCase.setPriorityUidFilter(action.packages) }
+            }
+
+            is SuSFSUiAction.SetSusPathUidFilter -> viewModelScope.launch {
+                executeBoolean(action.reply) { configUseCase.setSusPathUidFilter(action.packages) }
             }
 
             is SuSFSUiAction.ExportConfig -> viewModelScope.launch {

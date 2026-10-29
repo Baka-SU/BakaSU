@@ -50,11 +50,13 @@ import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.screen.susfs.subpages.OpenRedirectTab
+import org.bakasu.bakasu.ui.screen.susfs.subpages.PriorityUidFilterTab
 import org.bakasu.bakasu.ui.screen.susfs.subpages.StandardFeaturesTab
 import org.bakasu.bakasu.ui.screen.susfs.subpages.StatusTab
 import org.bakasu.bakasu.ui.screen.susfs.subpages.SusKstatTab
 import org.bakasu.bakasu.ui.screen.susfs.subpages.SusMapTab
 import org.bakasu.bakasu.ui.screen.susfs.subpages.SusPathTab
+import org.bakasu.bakasu.ui.screen.susfs.subpages.SusPathUidFilterTab
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
@@ -195,6 +197,26 @@ fun SuSFSConfigScreen() {
             title = stringResource(R.string.susfs_tab_sus_map),
         ) { innerPadding, nestedScrollConnection ->
             SusMapTab(
+                nestedScrollConnection = nestedScrollConnection,
+                innerPadding = innerPadding,
+                onRegisterRefresh = onRegisterRefresh,
+            )
+        },
+        SuSFSConfigSubpage(
+            requirePersist = true,
+            title = stringResource(R.string.susfs_priority_uid_filter_title),
+        ) { innerPadding, nestedScrollConnection ->
+            PriorityUidFilterTab(
+                nestedScrollConnection = nestedScrollConnection,
+                innerPadding = innerPadding,
+                onRegisterRefresh = onRegisterRefresh,
+            )
+        },
+        SuSFSConfigSubpage(
+            requirePersist = true,
+            title = stringResource(R.string.susfs_sus_path_uid_filter_title),
+        ) { innerPadding, nestedScrollConnection ->
+            SusPathUidFilterTab(
                 nestedScrollConnection = nestedScrollConnection,
                 innerPadding = innerPadding,
                 onRegisterRefresh = onRegisterRefresh,
