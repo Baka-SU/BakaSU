@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -38,6 +39,7 @@ import org.bakasu.bakasu.ui.screen.sulogEntryTitle
 import org.bakasu.bakasu.ui.screen.sulogFilterLabel
 import org.bakasu.bakasu.ui.viewmodel.SulogUiState
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
@@ -117,7 +119,7 @@ internal fun WearLogsPage(
                 }
             }
             itemsIndexed(state.visibleEntries, key = { index, entry -> "$index:${entry.key}" }) { _, entry ->
-                val tags = (sulogEntrySummaryTags(entry) + listOfNotNull(sulogEntryStatus(entry))).joinToString(" · ")
+                val tags = sulogEntrySummaryTags(entry) + listOfNotNull(sulogEntryStatus(entry))
                 TitleCard(
                     onClick = { onEntry(entry) },
                     title = { Text(sulogEntryTitle(entry), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis) },
@@ -125,8 +127,14 @@ internal fun WearLogsPage(
                     transformation = SurfaceTransformation(spec),
                     // The clock time fits the time slot; the full date stays in the content.
                     time = entry.timestampText?.substringAfter(' ')?.let { { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
-                    subtitle = tags.takeIf { it.isNotEmpty() }?.let {
-                        { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                    subtitle = tags.takeIf { it.isNotEmpty() }?.let { labels ->
+                        {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                labels.forEach { label ->
+                                    WearBadge(label, containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+                                }
+                            }
+                        }
                     },
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
