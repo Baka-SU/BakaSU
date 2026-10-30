@@ -880,4 +880,6 @@
     <string name="wear_search_input">输入搜索内容</string>
     <string name="wear_search_advanced">高级搜索</string>
     <string name="wear_search_history">搜索历史</string>
+    <string name="wear_downloads">下载管理器</string>
+    <string name="wear_downloads_empty">暂无模块下载任务</string>
 </resources>

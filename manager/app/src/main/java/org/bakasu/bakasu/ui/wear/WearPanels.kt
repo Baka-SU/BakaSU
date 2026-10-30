@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Search
@@ -81,6 +82,7 @@ internal fun WearOperationsPanel(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.search_modules), onSearch),
             WearIconAction(Icons.Rounded.Add, stringResource(R.string.install), onInstall),
             WearIconAction(Icons.Rounded.Cloud, stringResource(R.string.module_repo), { onOpen(WearRoute.ModuleRepo) }),
+            WearIconAction(Icons.Rounded.Download, stringResource(R.string.wear_downloads), { onOpen(WearRoute.Downloads) }),
             WearIconAction(Icons.Rounded.Sort, stringResource(R.string.wear_sort), { onOpen(WearRoute.ModuleSort) }),
         )
 

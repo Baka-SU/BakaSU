@@ -82,6 +82,7 @@ class WearModuleInstaller internal constructor(
             asset.expected?.size ?: 0L,
             asset.expected?.sha256.orEmpty(),
             release.name.ifBlank { release.tagName },
+            verificationRequired = asset.verificationRequired,
         ),
     )
 
@@ -109,8 +110,15 @@ class WearModuleInstaller internal constructor(
     }
 }
 
-/** The file to download, as the download page starts it; a blank SHA-256 skips the check. */
-internal fun WearRoute.OnlineModuleDownload.asset() = ModuleReleaseAsset(fileName, url, size, 0, expected = sha256.ifBlank { null }?.let { ExpectedFile(size, it) })
+/** Carries the published file integrity and whether verification is mandatory. */
+internal fun WearRoute.OnlineModuleDownload.asset() = ModuleReleaseAsset(
+    fileName,
+    url,
+    size,
+    0,
+    expected = sha256.ifBlank { null }?.let { ExpectedFile(size, it) },
+    verificationRequired = verificationRequired,
+)
 
 @Composable
 internal fun rememberWearModuleInstaller(navigator: WearNavigator, onPickFailed: () -> Unit, onInstalled: () -> Unit): WearModuleInstaller {

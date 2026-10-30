@@ -249,7 +249,7 @@ class DownloadService : Service() {
                         root = root,
                         expected = expected,
                         fileName = fileName,
-                        onProgress = { bytes -> reportProgress(id, fileName, ((bytes * 100L) / expected.size).toInt().coerceIn(0, 100)) },
+                        onProgress = { bytes -> reportProgress(id, fileName, ((bytes * 100L) / expected.size).toInt().coerceIn(0, 100), bytes, expected.size) },
                         checkActive = { ensureActive() },
                     )
                 }

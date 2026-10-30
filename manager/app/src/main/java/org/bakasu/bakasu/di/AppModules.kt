@@ -123,6 +123,7 @@ import org.bakasu.bakasu.domain.usecase.LoadSettingsPlatformUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveDownloadsUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDynamicManagerStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveInstalledModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveKernelFlashUseCase
@@ -204,6 +205,7 @@ import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateEditorViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerScreenViewModel
+import org.bakasu.bakasu.ui.viewmodel.WearDownloadsViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearFileViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
@@ -349,6 +351,7 @@ val useCaseModule = module {
     factoryOf(::EnqueueDownloadUseCase)
     factoryOf(::EnqueueManagerUpdateUseCase)
     factoryOf(::ObserveDownloadUseCase)
+    factoryOf(::ObserveDownloadsUseCase)
     factoryOf(::CancelDownloadUseCase)
     factoryOf(::ObserveAssetDownloadUseCase)
     factoryOf(::GetKernelStatusUseCase)
@@ -477,6 +480,7 @@ val viewModelModule = module {
     viewModelOf(::SuperUserViewModel)
     viewModelOf(::SuSFSViewModel)
     viewModelOf(::ModuleDownloadViewModel)
+    viewModelOf(::WearDownloadsViewModel)
     viewModel { parameters -> WearSearchViewModel(parameters[0], get(), get()) }
     viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
     viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get(), get()) }

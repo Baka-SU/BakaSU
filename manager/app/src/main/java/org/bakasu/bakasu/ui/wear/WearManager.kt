@@ -451,6 +451,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                             entry<WearRoute.ModuleRepoSort> {
                                 WearModuleRepoSortPage(moduleRepoViewModel, ::back)
                             }
+                            entry<WearRoute.Downloads> {
+                                WearDownloadsPage(::back, installer::confirm)
+                            }
                             entry<WearRoute.ModuleSearch> {
                                 WearSearchPage(stringResource(R.string.search_modules), "installed-modules", modules.search, ::back, onAdvanced = { open(WearRoute.ModuleSort) }) {
                                     navigator.submitSearch(WearRoute.ModuleSearchResults, it) { query ->

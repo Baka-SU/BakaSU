@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
-import org.bakasu.bakasu.domain.usecase.CancelDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
@@ -36,37 +35,40 @@ data class ModuleDownloadUiState(
         get() = if (totalBytes > 0L) (downloadedBytes.toFloat() / totalBytes).coerceIn(0f, 1f) else null
 }
 
-/** One repository module download, owned by its route; clearing the route cancels a running download. */
+/** Observes a service-owned download; leaving its route does not cancel the transfer. */
 class ModuleDownloadViewModel(
     private val enqueue: EnqueueDownloadUseCase,
     private val observe: ObserveDownloadUseCase,
     private val verify: VerifyModuleDownloadUseCase,
-    private val cancelDownload: CancelDownloadUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ModuleDownloadUiState())
     val state: StateFlow<ModuleDownloadUiState> = mutableState.asStateFlow()
     private var job: Job? = null
-    private var downloadId: Int? = null
 
     /** A repository ZIP is offered for installing only when it matches the published size and SHA-256. */
     fun start(asset: ModuleReleaseAsset) {
         if (job?.isActive == true) return
+        if (asset.verificationRequired && asset.expected == null) {
+            mutableState.value = ModuleDownloadUiState(asset, ModuleDownloadPhase.VERIFY_FAILED)
+            return
+        }
         mutableState.value = ModuleDownloadUiState(asset, ModuleDownloadPhase.DOWNLOADING)
         job = viewModelScope.launch {
             val phase = try {
-                val id = enqueue(asset.downloadUrl, asset.name).also { downloadId = it }
+                // The service keeps enforcing published integrity even after this page closes.
+                val id = enqueue(asset.downloadUrl, asset.name, asset.expected)
                 val result = observe(id).filterNotNull()
                     .onEach { download ->
                         mutableState.update { it.copy(downloadedBytes = download.downloadedBytes, totalBytes = download.totalBytes) }
                     }
                     .first { it.status == DownloadStatus.COMPLETED || it.status == DownloadStatus.FAILED }
-                // The transfer has ended, so leaving from here on has no download to cancel.
-                downloadId = null
                 val uri = result.resultUri
                 if (result.status == DownloadStatus.COMPLETED && uri != null) {
                     mutableState.update { it.copy(phase = ModuleDownloadPhase.VERIFYING) }
                 }
                 when {
+                    result.verificationFailure != null -> ModuleDownloadPhase.VERIFY_FAILED
+
                     result.status == DownloadStatus.FAILED || uri == null -> ModuleDownloadPhase.FAILED
 
                     verify(uri, asset.expected?.size ?: 0L, asset.expected?.sha256.orEmpty()) -> {
@@ -81,12 +83,7 @@ class ModuleDownloadViewModel(
             } catch (_: Exception) {
                 ModuleDownloadPhase.FAILED
             }
-            downloadId = null
             mutableState.update { it.copy(phase = phase) }
         }
-    }
-
-    override fun onCleared() {
-        downloadId?.let(cancelDownload::invoke)
     }
 }

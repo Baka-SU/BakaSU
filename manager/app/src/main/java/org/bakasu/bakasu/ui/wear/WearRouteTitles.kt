@@ -18,6 +18,8 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     WearRoute.ModuleSort, WearRoute.ModuleRepoSort -> R.string.wear_sort
 
+    WearRoute.Downloads -> R.string.wear_downloads
+
     WearRoute.ModuleRepo, is WearRoute.OnlineModule, is WearRoute.OnlineModuleSection -> R.string.module_repo
 
     WearRoute.ModuleRepoSearch, WearRoute.ModuleSearch, WearRoute.ModuleSearchResults -> R.string.search_modules

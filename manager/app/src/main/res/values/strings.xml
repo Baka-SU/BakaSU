@@ -906,4 +906,6 @@
     <string name="wear_search_input">Enter a search term</string>
     <string name="wear_search_advanced">Advanced search</string>
     <string name="wear_search_history">Search history</string>
+    <string name="wear_downloads">Downloads</string>
+    <string name="wear_downloads_empty">No module downloads</string>
 </resources>

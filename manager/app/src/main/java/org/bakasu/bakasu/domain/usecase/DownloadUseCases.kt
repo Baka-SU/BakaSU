@@ -25,6 +25,10 @@ class ObserveDownloadUseCase(private val repository: DownloadRepository) {
     operator fun invoke(id: Int): Flow<DownloadState?> = repository.downloads.map { it[id] }
 }
 
+class ObserveDownloadsUseCase(private val repository: DownloadRepository) {
+    operator fun invoke(): Flow<List<DownloadState>> = repository.downloads.map { it.values.toList() }
+}
+
 class ObserveAssetDownloadUseCase(private val repository: DownloadRepository) {
     operator fun invoke(asset: ModuleReleaseAsset): Flow<DownloadState?> = repository.downloads.map { find(it, asset) }.distinctUntilChanged()
 

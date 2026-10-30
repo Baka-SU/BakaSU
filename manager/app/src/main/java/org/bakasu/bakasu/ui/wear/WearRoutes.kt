@@ -56,6 +56,9 @@ sealed interface WearRoute : NavKey {
     data object ModuleRepoSort : WearRoute, NeedsRoot
 
     @Serializable
+    data object Downloads : WearRoute, NeedsRoot
+
+    @Serializable
     data class OnlineModule(val id: String, val repositoryUrl: String) :
         WearRoute,
         NeedsRoot
@@ -79,6 +82,7 @@ sealed interface WearRoute : NavKey {
         val sha256: String,
         val version: String = "",
         val update: Boolean = false,
+        val verificationRequired: Boolean = false,
     ) : WearRoute,
         NeedsRoot
 

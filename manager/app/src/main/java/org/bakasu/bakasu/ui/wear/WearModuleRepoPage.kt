@@ -399,8 +399,8 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String
 }
 
 /**
- * The download of one module file. It starts once when the route opens; leaving the route cancels
- * a running download, as its ViewModel belongs to the route. A verified file goes to [onDownloaded].
+ * One service-owned module download, observed while this route is open. Closing the route keeps
+ * the transfer running; a verified file completed here goes to [onDownloaded].
  */
 @Composable
 internal fun WearModuleDownloadPage(route: WearRoute.OnlineModuleDownload, onDownloaded: (String) -> Unit) {
