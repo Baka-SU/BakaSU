@@ -23,6 +23,7 @@ object BlobDownloadHandler {
     private const val STALE_THRESHOLD_MS = 5 * 60 * 1000L
 
     private val pendingDownloads = ConcurrentHashMap<String, PendingDownload>()
+
     @Volatile
     private var lastCleanupTime = System.currentTimeMillis()
 

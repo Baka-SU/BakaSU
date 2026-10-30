@@ -3,8 +3,8 @@ package org.bakasu.bakasu.ui.webui.file
 import android.util.Log
 import android.webkit.JavascriptInterface
 import com.topjohnwu.superuser.io.SuFile
-import org.json.JSONArray
 import java.io.BufferedOutputStream
+import org.json.JSONArray
 
 class FileInterface(private val path: String) {
     private val suFile: SuFile = SuFile(path)
@@ -112,16 +112,13 @@ class FileInterface(private val path: String) {
     fun setReadOnly(): Boolean = runCatching { suFile.setReadOnly() }.getOrDefault(false)
 
     @JavascriptInterface
-    fun setReadable(readable: Boolean, ownerOnly: Boolean): Boolean =
-        runCatching { suFile.setReadable(readable, ownerOnly) }.getOrDefault(false)
+    fun setReadable(readable: Boolean, ownerOnly: Boolean): Boolean = runCatching { suFile.setReadable(readable, ownerOnly) }.getOrDefault(false)
 
     @JavascriptInterface
-    fun setWritable(writable: Boolean, ownerOnly: Boolean): Boolean =
-        runCatching { suFile.setWritable(writable, ownerOnly) }.getOrDefault(false)
+    fun setWritable(writable: Boolean, ownerOnly: Boolean): Boolean = runCatching { suFile.setWritable(writable, ownerOnly) }.getOrDefault(false)
 
     @JavascriptInterface
-    fun setExecutable(executable: Boolean, ownerOnly: Boolean): Boolean =
-        runCatching { suFile.setExecutable(executable, ownerOnly) }.getOrDefault(false)
+    fun setExecutable(executable: Boolean, ownerOnly: Boolean): Boolean = runCatching { suFile.setExecutable(executable, ownerOnly) }.getOrDefault(false)
 
     @JavascriptInterface
     fun getFreeSpace(): Long = runCatching { suFile.freeSpace }.getOrDefault(-1L)
