@@ -2,10 +2,17 @@ package org.bakasu.bakasu.ui.wear.component
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -14,6 +21,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -23,9 +32,11 @@ import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.RevealDirection
 import androidx.wear.compose.material3.RevealValue
 import androidx.wear.compose.material3.SwipeToReveal
+import androidx.wear.compose.material3.SwipeToRevealDefaults
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
@@ -51,6 +62,8 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     val active = LocalScreenIsActive.current
+    var rowHeight by remember { mutableIntStateOf(0) }
+    val actionHeight = with(LocalDensity.current) { rowHeight.toDp() }.coerceAtLeast(SwipeToRevealDefaults.LargeActionButtonHeight)
     LaunchedEffect(scrolling, active) {
         if (!active) {
             state.snapTo(RevealValue.Covered)
@@ -78,15 +91,21 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
         primaryAction = {
             PrimaryActionButton(
                 onClick = { run(primary) },
-                icon = { Icon(primary.icon, contentDescription = primary.label) },
+                icon = { Icon(primary.icon, contentDescription = primary.label, modifier = Modifier.requiredSize(ButtonDefaults.LargeIconSize)) },
                 text = { Text(primary.label) },
+                modifier = Modifier.height(actionHeight),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
             )
         },
         secondaryAction = secondary?.let { action ->
             {
                 SecondaryActionButton(
                     onClick = { run(action) },
-                    icon = { Icon(action.icon, contentDescription = action.label) },
+                    icon = { Icon(action.icon, contentDescription = action.label, modifier = Modifier.requiredSize(ButtonDefaults.LargeIconSize)) },
+                    modifier = Modifier.height(actionHeight),
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
         },
@@ -156,6 +175,12 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
                 }
             }
         },
-        content = content,
+        content = {
+            // Matching the row height makes the standard reveal shapes vertical capsules.
+            Box(
+                Modifier.heightIn(min = SwipeToRevealDefaults.LargeActionButtonHeight).onSizeChanged { rowHeight = it.height },
+                propagateMinConstraints = true,
+            ) { content() }
+        },
     )
 }
