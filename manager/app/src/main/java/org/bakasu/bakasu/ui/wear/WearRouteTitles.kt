@@ -22,6 +22,10 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     WearRoute.RepositorySources -> R.string.repo_manage
 
+    WearRoute.AddRepository -> R.string.repo_add_repository
+
+    is WearRoute.RepositorySource -> R.string.repo_configure
+
     WearRoute.ModuleRepo, is WearRoute.OnlineModule, is WearRoute.OnlineModuleSection -> R.string.module_repo
 
     WearRoute.ModuleRepoSearch, WearRoute.ModuleSearch, WearRoute.ModuleSearchResults -> R.string.search_modules

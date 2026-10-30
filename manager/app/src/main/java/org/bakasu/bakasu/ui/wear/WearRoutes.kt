@@ -62,6 +62,14 @@ sealed interface WearRoute : NavKey {
     data object RepositorySources : WearRoute, NeedsRoot
 
     @Serializable
+    data object AddRepository : WearRoute, NeedsRoot
+
+    @Serializable
+    data class RepositorySource(val url: String) :
+        WearRoute,
+        NeedsRoot
+
+    @Serializable
     data class OnlineModule(val id: String, val repositoryUrl: String) :
         WearRoute,
         NeedsRoot

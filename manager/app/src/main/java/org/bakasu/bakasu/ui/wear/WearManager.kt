@@ -461,7 +461,18 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 WearDownloadsPage(::back, installer::confirm)
                             }
                             entry<WearRoute.RepositorySources> {
-                                WearRepositorySelectionPage(moduleRepoViewModel, ::back)
+                                WearRepositorySourcesPage(::back, { open(WearRoute.AddRepository) }) { open(WearRoute.RepositorySource(it)) }
+                            }
+                            entry<WearRoute.AddRepository> {
+                                WearAddRepositoryPage(::back)
+                            }
+                            entry<WearRoute.RepositorySource> { route ->
+                                val catalog by moduleRepoViewModel.state.collectAsStateWithLifecycle()
+                                WearRepositorySourcePage(route.url, catalog.repositoryUrl, ::back) { url ->
+                                    moduleRepoViewModel.selectRepository(url)
+                                    back()
+                                    back()
+                                }
                             }
                             entry<WearRoute.ModuleSearch> {
                                 WearSearchPage(stringResource(R.string.search_modules), "installed-modules", modules.search, ::back, onAdvanced = { open(WearRoute.ModuleSort) }) {
