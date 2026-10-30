@@ -21,24 +21,26 @@ object KsuIO {
     fun version(): Int = KSU_IO_VERSION
 
     @JavascriptInterface
+    @Suppress("ktlint:standard:function-naming")
     fun File(path: String): FileInterface = FileInterface(path)
 
     @JavascriptInterface
+    @Suppress("ktlint:standard:function-naming")
     fun FileInputStream(): FileInputStreamInterface = fileInputStream
 
     @JavascriptInterface
+    @Suppress("ktlint:standard:function-naming")
     fun FileOutputStream(): FileOutputStreamInterface = fileOutputStream
 
     @JavascriptInterface
+    @Suppress("ktlint:standard:function-naming")
     fun RandomAccessFile(): RandomAccessFileInterface = randomAccessFile
 
     /**
      * Check if we can open a new stream without exceeding resource limits.
      * Returns true if under limit, false otherwise.
      */
-    internal fun canOpenStream(): Boolean {
-        return openInputStreams.size + openOutputStreams.size < MAX_OPEN_STREAMS
-    }
+    internal fun canOpenStream(): Boolean = openInputStreams.size + openOutputStreams.size < MAX_OPEN_STREAMS
 
     fun destroy() {
         fileInputStream.closeAll()

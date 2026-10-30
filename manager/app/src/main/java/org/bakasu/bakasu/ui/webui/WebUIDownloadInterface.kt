@@ -135,14 +135,10 @@ class WebUIDownloadInterface(private val state: WebUIState) {
     }
 
     @JavascriptInterface
-    fun writeDownloadChunk(downloadId: String, base64Chunk: String): Boolean {
-        return BlobDownloadHandler.writeChunk(downloadId, base64Chunk)
-    }
+    fun writeDownloadChunk(downloadId: String, base64Chunk: String): Boolean = BlobDownloadHandler.writeChunk(downloadId, base64Chunk)
 
     @JavascriptInterface
-    fun completeChunkedDownload(downloadId: String): Boolean {
-        return BlobDownloadHandler.completeDownload(downloadId)
-    }
+    fun completeChunkedDownload(downloadId: String): Boolean = BlobDownloadHandler.completeDownload(downloadId)
 
     @JavascriptInterface
     fun cancelChunkedDownload(downloadId: String) {
@@ -193,7 +189,7 @@ class WebUIDownloadInterface(private val state: WebUIState) {
         @Suppress("DEPRECATION")
         val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         val target = resolveAvailableTarget(downloadsDir, displayName)
-        writeWebUIDownload(ByteArrayInputStream(content), target, onBytesWritten)
+        writeWebUIDownload(target, ByteArrayInputStream(content), onBytesWritten = onBytesWritten)
         val uri = FileProvider.getUriForFile(
             context,
             "${BuildConfig.APPLICATION_ID}.fileprovider",

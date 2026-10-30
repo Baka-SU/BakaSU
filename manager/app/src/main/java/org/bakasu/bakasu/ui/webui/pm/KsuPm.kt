@@ -63,14 +63,13 @@ class KsuPm(private val packageRepository: InstalledPackageRepository) {
         return jsonArray.toString()
     }
 
-    private fun buildInfo(pkg: org.bakasu.bakasu.domain.model.InstalledPackageInfo): JSONObject =
-        JSONObject().apply {
-            put("packageName", pkg.packageName)
-            put("versionName", pkg.versionName)
-            put("versionCode", pkg.versionCode)
-            put("appLabel", pkg.appLabel)
-            put("isSystem", pkg.isSystem)
-            put("uid", pkg.uid)
-            put("userId", if (pkg.uid >= 0) pkg.uid / 100000 else JSONObject.NULL)
-        }
+    private fun buildInfo(pkg: org.bakasu.bakasu.domain.model.InstalledPackageInfo): JSONObject = JSONObject().apply {
+        put("packageName", pkg.packageName)
+        put("versionName", pkg.versionName)
+        put("versionCode", pkg.versionCode)
+        put("appLabel", pkg.appLabel)
+        put("isSystem", pkg.isSystem)
+        put("uid", pkg.uid)
+        put("userId", if (pkg.uid >= 0) pkg.uid / 100000 else JSONObject.NULL)
+    }
 }

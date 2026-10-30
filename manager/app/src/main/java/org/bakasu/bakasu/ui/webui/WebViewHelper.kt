@@ -37,9 +37,7 @@ private const val KSU_SCHEME = "ksu"
 private const val ICON_HOST = "icon"
 private const val INTERNAL_BLOB_DOWNLOAD_HOST = "blob-download.kernelsu.internal"
 
-private fun loadDownloadJs(context: Context): String {
-    return context.assets.open("webview/download.js").bufferedReader(Charsets.UTF_8).use { it.readText() }
-}
+private fun loadDownloadJs(context: Context): String = context.assets.open("webview/download.js").bufferedReader(Charsets.UTF_8).use { it.readText() }
 
 fun Activity.setTaskDescription(label: String) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -147,7 +145,7 @@ internal suspend fun prepareWebView(
                     if (url.scheme.equals(KSU_SCHEME, ignoreCase = true) && url.host.equals(ICON_HOST, ignoreCase = true)) {
                         val packageName = url.path?.substring(1)
                         if (!packageName.isNullOrEmpty()) {
-val icon = appIconDataSource.loadSync(packageName, 512)
+                            val icon = appIconDataSource.loadSync(packageName, 512)
                             if (icon != null) {
                                 val stream = ByteArrayOutputStream()
                                 icon.compress(Bitmap.CompressFormat.PNG, 100, stream)
