@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
@@ -74,6 +75,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.formatFileSize
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
@@ -178,7 +180,15 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
         item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
         item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_modules), onSearch, icon = Icons.Rounded.Search, description = state.search.ifBlank { null }) }
         item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_star_first), state.sortStargazerCountFirst, { viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it)) }) }
-        if (state.modules.isEmpty() && !state.isRefreshing && failure == null) item { WearInfoCard(spec) { Text(stringResource(R.string.wear_catalog_empty)) } }
+        if (state.modules.isEmpty() && !state.isRefreshing && failure == null) {
+            item {
+                WearEmptyState(
+                    spec,
+                    if (state.search.isNotBlank()) Icons.Rounded.SearchOff else Icons.Rounded.Cloud,
+                    stringResource(R.string.wear_catalog_empty),
+                )
+            }
+        }
         LazySegmentedColumn(state.modules, { it.catalogId }) { module ->
             WearSettingsJumpPageWidget(
                 spec,
