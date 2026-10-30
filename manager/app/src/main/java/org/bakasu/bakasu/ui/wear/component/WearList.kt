@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.wear.component
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.scrollable
@@ -28,6 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -110,6 +112,13 @@ fun WearList(
     val screenActive = LocalScreenIsActive.current
     var viewportHeight by remember { mutableFloatStateOf(1f) }
     var openingPanel by remember { mutableStateOf(false) }
+    var closingPanel by remember { mutableStateOf(false) }
+    val closeProgress by animateFloatAsState(
+        if (closingPanel) 1f else 0f,
+        animationSpec = if (reduceMotion) snap() else motion.defaultSpatialSpec(),
+        label = "wear-panel-close",
+        finishedListener = { if (closingPanel && it == 1f) onClosePanel?.invoke() },
+    )
     val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
     val panelProgress by animateFloatAsState(
         targetValue = if (openingPanel) 1f else (pullProgress.floatValue * threshold / viewportHeight).coerceIn(0f, 1f),
@@ -158,7 +167,7 @@ fun WearList(
                 }
             }
         },
-        onClosePanel = onClosePanel,
+        onClosePanel = onClosePanel?.let { { closingPanel = true } },
         panelLabel = panelLabel,
     )
     // Loading shows the indeterminate indicator at the screen center instead of the content, as the
@@ -202,9 +211,10 @@ fun WearList(
             }
         }
     }
+    // The main page stays stationary; the menu is a separate surface above it.
     val pageModifier = Modifier.graphicsLayer {
-        translationY = if (panelContent != null && screenActive) revealProgress * viewportHeight else 0f
-    }
+        translationY = if (onClosePanel != null) -closeProgress * viewportHeight else 0f
+    }.then(if (onClosePanel != null) Modifier.background(MaterialTheme.colorScheme.background) else Modifier)
     Box(Modifier.fillMaxSize().then(gestureModifier).onSizeChanged { viewportHeight = it.height.toFloat().coerceAtLeast(1f) }) {
         // The edge button and the room it takes stay hidden until loading ends.
         if (!isLoading && (onBack != null || onConfirm != null || backToTop)) {
@@ -293,6 +303,7 @@ fun WearList(
         if (panelContent != null && revealProgress > 0f && screenActive) {
             Box(
                 Modifier.fillMaxSize().graphicsLayer { translationY = (revealProgress - 1f) * viewportHeight }
+                    .shadow(8.dp).background(MaterialTheme.colorScheme.background)
                     .clearAndSetSemantics {},
             ) {
                 CompositionLocalProvider(LocalScreenIsActive provides false) { panelContent() }

@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -40,6 +41,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.rememberPagerState
@@ -327,7 +329,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                 NavDisplay(
                     backStack = navigator.backStack,
                     onBack = { back() },
-                    sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss)),
+                    sceneStrategies = listOf(DialogSceneStrategy<androidx.navigation3.runtime.NavKey>(), rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss)),
                     entryDecorators = listOf(
                         rememberSaveableStateHolderNavEntryDecorator(),
                         rememberViewModelStoreNavEntryDecorator(),
@@ -670,7 +672,8 @@ private fun <T : Any> withPageTransitions(provider: (T) -> NavEntry<T>): (T) -> 
     val entry = provider(key)
     // A pull-down panel has already settled into view before its destination is committed.
     val transitions = if (key is WearRoute.Operations) {
-        NavDisplay.transitionSpec { EnterTransition.None togetherWith ExitTransition.None }
+        DialogSceneStrategy.dialog(DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) +
+            NavDisplay.transitionSpec { EnterTransition.None togetherWith ExitTransition.None }
     } else {
         WearPageTransitions
     }

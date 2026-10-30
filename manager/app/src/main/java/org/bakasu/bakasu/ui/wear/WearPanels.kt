@@ -86,7 +86,7 @@ internal fun WearOperationsPanel(
             WearIconAction(Icons.Rounded.FilterList, stringResource(R.string.sulog_filter_title), { onOpen(WearRoute.LogOptions) }),
         )
     }
-    WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = rememberPanelListState()) { spec ->
+    WearList(onClosePanel = onBack, snap = true, listState = rememberPanelListState()) { spec ->
         SegmentedColumn(actions, { it.label }) { action ->
             WearSettingsJumpPageWidget(spec, action.label, action.onClick, icon = action.icon, enabled = action.enabled)
         }
