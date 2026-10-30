@@ -200,6 +200,27 @@ fn write_elf64_word(
     Ok(())
 }
 
+fn ensure_vermagic_release_matches(module_vermagic: &str, required_vermagic: &str) -> Result<()> {
+    let module_release = module_vermagic
+        .split_ascii_whitespace()
+        .next()
+        .context("Module vermagic has no release component")?;
+    let required_release = required_vermagic
+        .split_ascii_whitespace()
+        .next()
+        .context("Kernel vermagic has no release component")?;
+
+    if module_release != required_release {
+        bail!(
+            "Refusing to replace vermagic for a different kernel release \
+             (module {module_release:?}, kernel {required_release:?}); \
+             rebuild kernelsu.ko against the running kernel's headers and BTF"
+        );
+    }
+
+    Ok(())
+}
+
 fn replace_module_vermagic(buffer: &mut Vec<u8>, required_vermagic: &str) -> Result<()> {
     struct ModinfoLocation {
         offset: usize,
@@ -261,6 +282,14 @@ fn replace_module_vermagic(buffer: &mut Vec<u8>, required_vermagic: &str) -> Res
     };
 
     let old_modinfo = &buffer[location.offset..location.offset + location.size];
+    let old_vermagic = old_modinfo
+        .split(|byte| *byte == 0)
+        .find_map(|entry| entry.strip_prefix(b"vermagic="))
+        .context("Module has no vermagic entry")?;
+    let old_vermagic =
+        std::str::from_utf8(old_vermagic).context("Module vermagic is not valid UTF-8")?;
+    ensure_vermagic_release_matches(old_vermagic, required_vermagic)?;
+
     let replacement = format!("vermagic={required_vermagic}");
     let mut new_modinfo = Vec::with_capacity(old_modinfo.len().max(replacement.len() + 1));
     let mut replaced = false;
@@ -417,7 +446,8 @@ where
 }
 
 /// Load a symbol-bound module image, retrying once with the kernel's vermagic
-/// when the first attempt is rejected over a vermagic mismatch.
+/// when the first attempt is rejected and only build-specific tokens differ.
+/// A different kernel release is an ABI mismatch and is rejected.
 fn init_module_buffer(mut buffer: Vec<u8>, params: &CStr) -> Result<()> {
     let mut kmsg = match open_kmsg_at_end() {
         Ok(file) => Some(file),
@@ -451,6 +481,29 @@ fn init_module_buffer(mut buffer: Vec<u8>, params: &CStr) -> Result<()> {
             init_module(&buffer, params).context("init_module failed after replacing vermagic")?;
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ensure_vermagic_release_matches;
+
+    #[test]
+    fn accepts_kernel_specific_vermagic_tokens_for_same_release() {
+        let module = "6.6.30-android15-8-g1234567890-ab SMP preempt mod_unload modversions aarch64";
+        let kernel =
+            "6.6.30-android15-8-g1234567890-ab SMP preempt mod_unload modversions vivo aarch64";
+
+        assert!(ensure_vermagic_release_matches(module, kernel).is_ok());
+    }
+
+    #[test]
+    fn rejects_a_module_built_for_a_different_kernel_release() {
+        let module = "6.6.127-4k-g46a034eca005-dirty SMP preempt mod_unload modversions aarch64";
+        let kernel = "6.6.144-4k-g9bf326ec3b1e SMP preempt mod_unload modversions aarch64";
+
+        let error = ensure_vermagic_release_matches(module, kernel).unwrap_err();
+        assert!(error.to_string().contains("rebuild kernelsu.ko"));
     }
 }
 

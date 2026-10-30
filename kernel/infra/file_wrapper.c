@@ -632,7 +632,22 @@ int ksu_install_file_wrapper(int fd)
     // Use ksu_file_sid to bypass SELinux check.
     // When we call `su` from terminal app, this is useful.
     if (wrapper_sec) {
-        wrapper_sec->sid = ksu_file_sid;
+        /*
+         * selinux_inode() is inlined using the build kernel's lsm_blob_sizes
+         * layout. If a module built against an older kernel is loaded, the
+         * computed pointer can land in the previous LSM blob. Writing sid at
+         * that address corrupts unrelated state (for example list.prev).
+         *
+         * inode_security_struct starts with a back pointer to its inode, so
+         * validate the computed object before modifying it. The wrapper inode
+         * is not published yet, making this a safe fail-closed check.
+         */
+        if (unlikely(wrapper_sec->inode != wrapper_inode)) {
+            pr_err("ksu_fdwrapper: inode security ABI mismatch; refusing to write SID\n");
+            ret = -EIO;
+            goto out_put_wrapper_file;
+        }
+        WRITE_ONCE(wrapper_sec->sid, ksu_file_sid);
     }
     // Install open file operation for inode.
     wrapper_inode->i_fop = &ksu_file_wrapper_inode_fops;
