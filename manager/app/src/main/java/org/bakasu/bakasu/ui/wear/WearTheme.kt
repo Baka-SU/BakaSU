@@ -98,8 +98,9 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             Density(settings.dpi / 160f, systemDensity.fontScale)
         }
     }
-    val backgroundState = remember { BackgroundRenderState() }
-    LaunchedEffect(config.customBackgroundUri) { backgroundState.seedColor = 0 }
+    val backgroundState = remember(config.customBackgroundUri) {
+        BackgroundRenderState().apply { seedColor = config.backgroundSeedColor }
+    }
     val seed = when {
         config.useDynamicColor && config.isUseBackgroundSeedColor && backgroundState.seedColor != 0 -> backgroundState.seedColor
         config.useDynamicColor && Build.VERSION.SDK_INT >= 31 -> colorResource(android.R.color.system_accent1_500).toArgb()
@@ -177,7 +178,14 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
     ) {
         MaterialTheme(colorScheme = themedColors, typography = wearTypography(config.isHighContrastMode), motionScheme = MotionScheme.expressive()) {
             // The selected image and dim layer belong to the shared page background.
-            WearBackground { content() }
+            WearBackground {
+                // Older installs have no saved background color; prepare it before showing pages.
+                if (config.useDynamicColor && config.isUseBackgroundSeedColor && config.customBackgroundUri != null && backgroundState.seedColor == 0) {
+                    WearLoadingScreen()
+                } else {
+                    content()
+                }
+            }
         }
     }
 }

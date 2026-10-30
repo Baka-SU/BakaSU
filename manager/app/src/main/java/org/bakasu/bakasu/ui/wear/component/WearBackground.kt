@@ -18,6 +18,7 @@ import androidx.wear.compose.material3.SwipeToDismissBox
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.launch
+import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.extractSeedColor
@@ -37,6 +38,7 @@ import org.koin.compose.koinInject
 @Composable
 fun WearBackground(content: @Composable BoxScope.() -> Unit) {
     val config = koinInject<ThemeConfig>()
+    val backgroundManager = koinInject<BackgroundManager>()
     val renderState = LocalBackgroundRenderState.current
     val scope = rememberCoroutineScope()
     Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -44,8 +46,15 @@ fun WearBackground(content: @Composable BoxScope.() -> Unit) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current).data(uri).allowHardware(false).build(),
                 onSuccess = { result ->
-                    scope.launch { renderState.seedColor = result.result.drawable.toBitmap().extractSeedColor() }
+                    scope.launch {
+                        val seed = result.result.drawable.toBitmap().extractSeedColor()
+                        if (config.customBackgroundUri == uri) {
+                            backgroundManager.saveBackgroundSeedColor(seed)
+                            renderState.seedColor = seed
+                        }
+                    }
                 },
+                onError = { config.customBackgroundUri = null },
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize().then(if (config.isEnableBlur && Build.VERSION.SDK_INT >= 31) Modifier.blur(25.dp) else Modifier),

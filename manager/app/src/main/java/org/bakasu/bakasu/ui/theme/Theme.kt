@@ -126,6 +126,7 @@ class ThemeConfig(
 ) {
     // 主题状态
     var customBackgroundUri by mutableStateOf<Uri?>(null)
+    var backgroundSeedColor by mutableIntStateOf(0)
     var backgroundDim by mutableFloatStateOf(0f)
     var forceDarkMode by mutableStateOf<Boolean?>(null)
     var seedColor by mutableIntStateOf(defaultSeedColor())
@@ -161,6 +162,7 @@ class ThemeConfig(
 
     fun reset() {
         customBackgroundUri = null
+        backgroundSeedColor = 0
         forceDarkMode = null
         seedColor = defaultSeedColor()
         useDynamicColor = false
@@ -252,6 +254,11 @@ class BackgroundManager(
         settings.putBoolean("use_background_seed_color", enable)
     }
 
+    fun saveBackgroundSeedColor(color: Int) {
+        config.backgroundSeedColor = color
+        settings.putInt("cached_seed_color", color)
+    }
+
     fun saveEnableHighContrastMode(enable: Boolean) {
         config.isHighContrastMode = enable
         settings.putBoolean("high_contrast_mode", enable)
@@ -269,6 +276,7 @@ class BackgroundManager(
             } ?: return false
 
             saveBackgroundUri(finalUri)
+            saveBackgroundSeedColor(0)
             config.customBackgroundUri = finalUri
             cardConfig.updateBackground(true)
             withContext(Dispatchers.IO) {
@@ -289,6 +297,7 @@ class BackgroundManager(
     fun clearCustomBackground(context: Context) {
         val previousUri = config.customBackgroundUri
         saveBackgroundUri(null)
+        saveBackgroundSeedColor(0)
         config.customBackgroundUri = null
         cardConfig.updateBackground(false)
         clearBackgroundBlurCache(context)
@@ -301,6 +310,7 @@ class BackgroundManager(
         val uriString = prefs.getString("custom_background", null)
 
         val newUri = uriString?.toUri()
+        config.backgroundSeedColor = if (newUri != null) prefs.getInt("cached_seed_color", 0) else 0
 
         if (config.customBackgroundUri?.toString() != newUri?.toString()) {
             Log.d(tag, "加载自定义背景: $uriString")
