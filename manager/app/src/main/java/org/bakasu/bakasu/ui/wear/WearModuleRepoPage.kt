@@ -95,14 +95,10 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
     // Opening the repository loads its index, which also checks that the watch can reach it over
     // any network: the paired phone, the watch Wi-Fi or its mobile data.
     var failure by remember { mutableStateOf<RepositoryFailure?>(null) }
-    LaunchedEffect(viewModel) { viewModel.dispatch(ModuleRepoUiAction.Refresh) }
-    // A refresh that ends with a failure of this repository reports it once.
-    LaunchedEffect(state.isRefreshing) {
-        if (!state.isRefreshing) failure = state.failures[state.repositoryUrl]
-    }
+    var refreshRequest by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     fun retry() {
         failure = null
-        viewModel.dispatch(ModuleRepoUiAction.Refresh)
+        refreshRequest++
     }
     val failureReason = stringResource(if (failure?.reason == RepositoryError.OFFLINE) R.string.wear_no_internet else R.string.wear_repo_unreachable)
     // Without a list there is nothing to show, so the failure asks to retry or leave.
@@ -128,7 +124,9 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
             dismissButton = { AlertDialogDefaults.DismissButton(onClick = leave) },
         )
     }
-    LaunchedEffect(failure) {
+    LaunchedEffect(viewModel, state.repositoryUrl, refreshRequest) {
+        failure = null
+        failure = viewModel.refreshAndGetFailure()
         if (failure != null && state.modules.isEmpty() && state.search.isBlank()) connectDialog.show()
     }
     // A search that could not load shows the failure in place of its results; Back clears the search.
