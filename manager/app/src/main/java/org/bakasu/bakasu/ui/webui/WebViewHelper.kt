@@ -147,7 +147,7 @@ internal suspend fun prepareWebView(
                     if (url.scheme.equals(KSU_SCHEME, ignoreCase = true) && url.host.equals(ICON_HOST, ignoreCase = true)) {
                         val packageName = url.path?.substring(1)
                         if (!packageName.isNullOrEmpty()) {
-                            val icon = appIconDataSource.loadSync(packageName, 512)
+val icon = appIconDataSource.loadSync(packageName, 512)
                             if (icon != null) {
                                 val stream = ByteArrayOutputStream()
                                 icon.compress(Bitmap.CompressFormat.PNG, 100, stream)
