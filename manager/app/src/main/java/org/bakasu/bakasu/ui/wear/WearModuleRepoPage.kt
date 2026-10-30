@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Code
@@ -111,7 +112,7 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
         AlertDialog(
             visible = true,
             onDismissRequest = leave,
-            icon = { WearDialogIcon(Icons.Rounded.Info) },
+            icon = { WearDialogIcon(Icons.Rounded.ErrorOutline) },
             title = { Text(stringResource(R.string.wear_repo_connect_failed)) },
             text = { Text(failureReason, color = MaterialTheme.colorScheme.error) },
             confirmButton = {

@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Cloud
@@ -198,7 +199,7 @@ private fun rememberWearOfflineDialog(onDismissed: () -> Unit = {}) = rememberCu
     AlertDialog(
         visible = true,
         onDismissRequest = close,
-        icon = { WearDialogIcon(Icons.Rounded.SignalWifiOff) },
+        icon = { WearDialogIcon(Icons.Rounded.ErrorOutline) },
         title = { Text(stringResource(R.string.wear_template_offline)) },
         text = { Text(stringResource(R.string.wear_no_internet)) },
         edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
