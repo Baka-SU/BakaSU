@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Copyright
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Group
+import androidx.compose.material.icons.rounded.VolunteerActivism
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,12 +42,14 @@ import org.bakasu.bakasu.ui.wear.component.wearGroupGap
  */
 
 /**
- * App identity, icon attribution and the project, community and license destinations.
+ * App identity, icon attribution, support, documentation, community and license destinations.
  */
 @Composable
 internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, onLicenses: () -> Unit) {
     val context = LocalContext.current
     val projectUrl = stringResource(R.string.wear_project_url)
+    val supportUrl = stringResource(R.string.home_support_url)
+    val learnUrl = stringResource(R.string.home_learn_kernelsu_url)
     val copyright = rememberCustomDialog { dismiss ->
         AlertDialog(
             visible = true,
@@ -102,6 +106,22 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
             }
         }
         wearGroupGap("identity-gap")
+        item {
+            WearChip(
+                spec,
+                stringResource(R.string.home_support_title),
+                icon = Icons.Rounded.VolunteerActivism,
+                onClick = { onOpenLink(supportUrl) },
+            )
+        }
+        item {
+            WearChip(
+                spec,
+                stringResource(R.string.home_learn_kernelsu),
+                icon = Icons.AutoMirrored.Rounded.MenuBook,
+                onClick = { onOpenLink(learnUrl) },
+            )
+        }
         item {
             WearChip(
                 spec,

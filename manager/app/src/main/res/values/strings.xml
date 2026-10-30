@@ -891,4 +891,5 @@
     <string name="module_changelog_failed">Fetch changelog failed: %s</string>
     <string name="wear_restore_module">Restore module</string>
     <string name="wear_restore_module_summary">Cancel removal before restarting</string>
+    <string name="home_support_url">https://patreon.com/weishu</string>
 </resources>
