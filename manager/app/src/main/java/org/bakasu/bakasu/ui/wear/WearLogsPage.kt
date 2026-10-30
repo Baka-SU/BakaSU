@@ -38,6 +38,8 @@ import org.bakasu.bakasu.ui.screen.sulogEntryTitle
 import org.bakasu.bakasu.ui.screen.sulogFilterLabel
 import org.bakasu.bakasu.ui.viewmodel.SulogUiState
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
+import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
@@ -72,6 +74,13 @@ internal fun WearLogsPage(
     error: String? = null,
     panelContent: @Composable (() -> Unit)? = null,
 ) {
+    val statusFailure = when (state.sulogStatus) {
+        "unsupported" -> stringResource(R.string.sulog_unsupported_title)
+        "managed" -> stringResource(R.string.feature_status_managed_summary)
+        else -> null
+    }
+    val failures = listOfNotNull(error, state.errorMessage, statusFailure).filter { it.isNotBlank() }.distinct()
+    WearErrorDialog(failures.takeIf { it.isNotEmpty() && !state.isLoading && !state.isRefreshing }?.joinToString("\n"))
     // As on the phone: the log refreshes by the pull gesture, whose progress shows in the edge
     // button, and the first load shows only the loading indicator.
     WearList(
@@ -97,48 +106,13 @@ internal fun WearLogsPage(
                 )
             }
         }
-        when (state.sulogStatus) {
-            "unsupported" -> item {
-                WearStatusItem(
-                    spec,
-                    Icons.Rounded.Warning,
-                    stringResource(R.string.sulog_unsupported_title),
-                    tone = WearStatusTone.WARNING,
-                )
-            }
-
-            "managed" -> item {
-                WearStatusItem(
-                    spec,
-                    Icons.Rounded.Warning,
-                    stringResource(R.string.feature_status_managed_summary),
-                    tone = WearStatusTone.WARNING,
-                )
-            }
-        }
-        if (state.sulogStatus == "supported" && !state.isSulogEnabled) {
-            item {
-                WearStatusItem(spec, Icons.Rounded.Warning, stringResource(R.string.sulog_disabled_title))
-            }
-        }
-        val failure = listOfNotNull(error, state.errorMessage).filter { it.isNotBlank() }
-        if (failure.isNotEmpty()) {
-            item {
-                WearStatusItem(
-                    spec,
-                    Icons.Rounded.Error,
-                    (listOf(stringResource(R.string.sulog_failed_to_load)) + failure).joinToString("\n"),
-                    tone = WearStatusTone.ERROR,
-                )
-            }
-        }
-        if (failure.isEmpty()) {
+        if (failures.isEmpty()) {
             if (state.visibleEntries.isEmpty()) {
                 item {
                     if (state.searchText.isNotBlank()) {
-                        WearStatusItem(spec, Icons.Rounded.SearchOff, stringResource(R.string.search_no_any_match))
+                        WearEmptyState(spec, Icons.Rounded.SearchOff, stringResource(R.string.search_no_any_match))
                     } else {
-                        WearStatusItem(spec, Icons.Rounded.Article, stringResource(R.string.wear_no_logs))
+                        WearEmptyState(spec, Icons.Rounded.Article, stringResource(R.string.wear_no_logs))
                     }
                 }
             }
