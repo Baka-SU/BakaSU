@@ -94,7 +94,7 @@ internal fun WearModulesPage(
 
 /**
  * One module row: the row opens the module details. The whole container takes the active color
- * while the module is enabled and the neutral tonal surface otherwise. The title is the module name
+ * while the module is enabled, a muted red while pending removal and the neutral tonal surface otherwise. The title is the module name
  * alone; the version, any pending removal and the metamodule label follow in the quieter secondary
  * line.
  */
@@ -145,7 +145,18 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                 ),
             // A reveal row owns its transformation; a standalone row owns its own.
             transformation = if (actions.isEmpty()) SurfaceTransformation(spec) else null,
-            colors = if (module.enabled) ButtonDefaults.filledVariantButtonColors() else ButtonDefaults.filledTonalButtonColors(),
+            colors = when {
+                module.remove -> ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    iconColor = MaterialTheme.colorScheme.onErrorContainer,
+                )
+
+                module.enabled -> ButtonDefaults.filledVariantButtonColors()
+
+                else -> ButtonDefaults.filledTonalButtonColors()
+            },
             icon = { Icon(Icons.Rounded.Extension, contentDescription = null) },
             // The metamodule label follows the version on its baseline; a long version is cut so the
             // label always shows whole.
