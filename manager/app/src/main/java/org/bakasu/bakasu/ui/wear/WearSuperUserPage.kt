@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.Backup
-import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -36,12 +35,11 @@ import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
+import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearStatusItem
-import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.wearGroupGap
 
 /**
@@ -64,6 +62,7 @@ internal fun WearSuperUserPage(
     // As on the phone: an empty list shows the loading indicator in place of the page; once it has
     // content, refreshing shows at the pull refresh, in the edge button.
     val loading = state.isRefreshing && state.appGroupList.isEmpty() && state.search.isEmpty()
+    WearErrorDialog(error.takeUnless { state.isRefreshing })
     WearList(
         isLoading = loading, isRefreshing = state.isRefreshing && !loading, onRefresh = onRefresh,
         onBack = onBack, onOpenPanel = onOpenPanel, panelLabel = stringResource(R.string.wear_operations),
@@ -71,9 +70,6 @@ internal fun WearSuperUserPage(
         snap = true, listState = listState, backToTop = backToTop,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.superuser)) }
-        if (!error.isNullOrBlank()) {
-            item { WearStatusItem(spec, Icons.Rounded.Error, error, tone = WearStatusTone.ERROR) }
-        }
         if (state.appGroupList.isEmpty() && error.isNullOrBlank()) {
             item {
                 WearEmptyState(spec, Icons.Rounded.Archive, stringResource(R.string.no_apps_found))
