@@ -19,6 +19,15 @@ import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.BackHand
+import androidx.compose.material.icons.rounded.Swipe
+import androidx.compose.material.icons.rounded.ViewAgenda
+import androidx.compose.material.icons.rounded.Contrast
+import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.Translate
+import androidx.compose.material.icons.rounded.LayersClear
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -154,7 +163,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                             stringResource(R.string.settings_custom_enable_high_contrast),
                             config.isHighContrastMode,
                             backgrounds::saveEnableHighContrastMode,
-                            icon = Icons.Rounded.Settings,
+                            icon = Icons.Rounded.Contrast,
                             secondaryLabel = stringResource(R.string.settings_custom_enable_high_contrast_summary),
                         )
                     }
@@ -338,7 +347,7 @@ internal fun WearDpiPage(
                 preferences.immersiveTime,
                 { preferenceViewModel.set(WearPreference.ImmersiveTime, it) },
                 enabled = preferences.timeDisplay != "hidden",
-                icon = Icons.Rounded.Schedule,
+                icon = Icons.Rounded.LayersClear,
                 secondaryLabel = stringResource(R.string.wear_time_immersive_summary),
             )
         }
@@ -366,7 +375,13 @@ internal fun WearDpiPage(
                         else -> onSimpleMode(value)
                     }
                 },
-                icon = Icons.Rounded.Settings,
+                icon = when (label) {
+                    R.string.wear_long_press_haptics -> Icons.Rounded.Vibration
+                    R.string.wear_keep_screen_on -> Icons.Rounded.LightMode
+                    R.string.wear_block_back_key -> Icons.Rounded.BackHand
+                    R.string.wear_disable_swipe_back -> Icons.Rounded.Swipe
+                    else -> Icons.Rounded.ViewAgenda
+                },
                 secondaryLabel = when (label) {
                     R.string.wear_block_back_key -> stringResource(R.string.wear_block_back_key_summary)
                     R.string.wear_disable_swipe_back -> stringResource(R.string.wear_disable_swipe_back_summary)
@@ -415,6 +430,7 @@ internal fun WearDpiPage(
                 spec,
                 stringResource(R.string.wear_screen_shape),
                 { onOpen(WearRoute.Selection(WearSelection.ScreenShape)) },
+                icon = Icons.Rounded.AspectRatio,
                 description = screenShapeLabel(preferences.shape),
             )
         }
@@ -424,6 +440,7 @@ internal fun WearDpiPage(
                     spec,
                     stringResource(R.string.settings_language),
                     { onOpen(WearRoute.Selection(WearSelection.Language)) },
+                    icon = Icons.Rounded.Translate,
                     description = state.currentAppLocale?.let { it.getDisplayName(it) } ?: stringResource(R.string.language_system_default),
                 )
             }

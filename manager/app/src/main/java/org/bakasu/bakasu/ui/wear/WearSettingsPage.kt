@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Policy
 import androidx.compose.material.icons.rounded.RemoveModerator
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Settings
@@ -141,7 +142,8 @@ private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
         WearSelection.LinkMode -> Icons.Rounded.Language
         WearSelection.PickerMode -> Icons.Rounded.FolderOpen
         WearSelection.SuCompat -> Icons.Rounded.RemoveModerator
-        WearSelection.Palette, WearSelection.ColorSpec -> Icons.Rounded.Settings
+        WearSelection.Palette -> Icons.Rounded.Palette
+        WearSelection.ColorSpec -> Icons.Rounded.Tune
     }
 
     else -> Icons.Rounded.Settings
