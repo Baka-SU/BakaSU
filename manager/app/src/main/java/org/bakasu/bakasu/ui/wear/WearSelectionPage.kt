@@ -18,8 +18,6 @@ import com.materialkolor.dynamiccolor.ColorSpec
 import java.util.Locale
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.availablePaletteStyles
-import org.bakasu.bakasu.ui.viewmodel.PredictiveBackAnimation
-import org.bakasu.bakasu.ui.viewmodel.PredictiveBackExitDirection
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.WearPreference
@@ -55,20 +53,6 @@ internal fun WearSelectionPage(
             state.dynamicColorSpec.name,
             onBack,
         ) { onAction(SettingsUiAction.SetDynamicColorSpec(ColorSpec.SpecVersion.valueOf(it))) }
-
-        WearSelection.BackAnimation -> WearChoicePage(
-            stringResource(R.string.predictive_back_animation),
-            PredictiveBackAnimation.entries.map { it.value to backAnimationLabel(it) },
-            state.predictiveBackAnimation.value,
-            onBack,
-        ) { onAction(SettingsUiAction.SetPredictiveBackAnimation(PredictiveBackAnimation.fromValueOrDefault(it))) }
-
-        WearSelection.BackDirection -> WearChoicePage(
-            stringResource(R.string.predictive_back_exit_direction),
-            PredictiveBackExitDirection.entries.map { it.value to backDirectionLabel(it) },
-            state.predictiveBackExitDirection.value,
-            onBack,
-        ) { onAction(SettingsUiAction.SetPredictiveBackExitDirection(PredictiveBackExitDirection.fromValueOrDefault(it))) }
 
         WearSelection.PickerMode -> WearChoicePage(
             stringResource(R.string.wear_picker_mode),
@@ -146,33 +130,12 @@ private fun selectionIcon(selection: WearSelection, value: String): ImageVector 
 
     WearSelection.PickerMode -> if (value == "auto") Icons.Rounded.AutoAwesome else Icons.Rounded.FolderOpen
 
-    WearSelection.BackAnimation, WearSelection.BackDirection, WearSelection.Palette, WearSelection.ColorSpec -> Icons.Rounded.AutoAwesome
+    WearSelection.Palette, WearSelection.ColorSpec -> Icons.Rounded.AutoAwesome
 }
 
-@Composable
-internal fun backAnimationLabel(animation: PredictiveBackAnimation) = stringResource(
-    when (animation) {
-        PredictiveBackAnimation.None -> R.string.predictive_back_animation_none
-        PredictiveBackAnimation.AOSP -> R.string.predictive_back_animation_aosp
-        PredictiveBackAnimation.MIUIX -> R.string.predictive_back_animation_miuix
-        PredictiveBackAnimation.Scale -> R.string.predictive_back_animation_scale
-        PredictiveBackAnimation.KernelSUClassic -> R.string.predictive_back_animation_ksu_classic
-    },
-)
-
-@Composable
-internal fun backDirectionLabel(direction: PredictiveBackExitDirection) = stringResource(
-    when (direction) {
-        PredictiveBackExitDirection.FOLLOW_GESTURE -> R.string.predictive_back_exit_direction_follow_gesture
-        PredictiveBackExitDirection.ALWAYS_RIGHT -> R.string.predictive_back_exit_direction_always_right
-        PredictiveBackExitDirection.ALWAYS_LEFT -> R.string.predictive_back_exit_direction_always_left
-    },
-)
-
-/** The `language` or `language_COUNTRY` form stored in `app_locale` and parsed by LocaleHelper, as on the phone. */
+/** The language tag stored in app_locale, shared with the phone. */
 private fun Locale.settingTag() = if (country.isEmpty()) language else "${language}_$country"
 
-/** Labels shared by the choice pages and the current-value summaries in settings. */
 @Composable
 internal fun pickerModeLabel(mode: String) = stringResource(
     when (mode) {

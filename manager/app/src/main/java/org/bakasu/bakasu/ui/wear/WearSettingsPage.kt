@@ -139,7 +139,7 @@ private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
         WearSelection.LinkMode -> Icons.Rounded.Language
         WearSelection.PickerMode -> Icons.Rounded.FolderOpen
         WearSelection.SuCompat -> Icons.Rounded.RemoveModerator
-        WearSelection.BackAnimation, WearSelection.BackDirection, WearSelection.Palette, WearSelection.ColorSpec -> Icons.Rounded.Settings
+        WearSelection.Palette, WearSelection.ColorSpec -> Icons.Rounded.Settings
     }
 
     else -> Icons.Rounded.Settings

@@ -9,7 +9,7 @@ enum class WearSettingsCategory { General, Security, Advanced, Display }
 
 /** The settings that are chosen from a single list of options. */
 @Serializable
-enum class WearSelection { PickerMode, LinkMode, ScreenShape, Language, SuCompat, BackAnimation, BackDirection, Palette, ColorSpec }
+enum class WearSelection { PickerMode, LinkMode, ScreenShape, Language, SuCompat, Palette, ColorSpec }
 
 /** Navigation destinations of [WearManagerScreen]; [Main] is the pager with the four top-level pages. */
 @Serializable

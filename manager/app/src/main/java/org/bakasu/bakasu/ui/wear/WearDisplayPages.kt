@@ -52,7 +52,6 @@ import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
 import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
-import org.bakasu.bakasu.ui.viewmodel.PredictiveBackAnimation
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.WearPreference
@@ -353,20 +352,6 @@ internal fun WearDpiPage(
                     R.string.simple_mode -> stringResource(R.string.simple_mode_summary)
                     else -> null
                 },
-            )
-        }
-        item { WearSectionHeader(spec, stringResource(R.string.predictive_back_settings)) }
-        val backOptions = listOfNotNull(
-            WearSelection.BackAnimation,
-            WearSelection.BackDirection.takeIf { state.predictiveBackAnimation == PredictiveBackAnimation.Scale },
-        )
-        LazySegmentedColumn(backOptions, { it.name }) { selection ->
-            WearSettingsJumpPageWidget(
-                spec,
-                stringResource(if (selection == WearSelection.BackAnimation) R.string.predictive_back_animation else R.string.predictive_back_exit_direction),
-                { onOpen(WearRoute.Selection(selection)) },
-                icon = Icons.Rounded.Settings,
-                description = if (selection == WearSelection.BackAnimation) backAnimationLabel(state.predictiveBackAnimation) else backDirectionLabel(state.predictiveBackExitDirection),
             )
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_display_screen_layout)) }

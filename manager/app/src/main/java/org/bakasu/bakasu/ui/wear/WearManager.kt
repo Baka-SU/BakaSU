@@ -6,11 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -43,7 +39,6 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import androidx.navigationevent.NavigationEvent
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.AlertDialog
@@ -81,8 +76,6 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
-import org.bakasu.bakasu.ui.viewmodel.PredictiveBackAnimation
-import org.bakasu.bakasu.ui.viewmodel.PredictiveBackExitDirection
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
@@ -317,7 +310,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                         PageBaseDecorator,
                     ),
                     entryProvider = withPageTransitions(
-                        settings,
                         entryProvider {
                             entry<WearRoute.Main> {
                                 WearMainPages(
@@ -629,38 +621,9 @@ private val WearPageTransitions: Map<String, Any> = NavDisplay.transitionSpec {
  * content key are carried over unchanged, leaving the entry's saveable state and ViewModel scopes
  * as they were.
  */
-private fun <T : Any> withPageTransitions(settings: SettingsUiState, provider: (T) -> NavEntry<T>): (T) -> NavEntry<T> = { key ->
+private fun <T : Any> withPageTransitions(provider: (T) -> NavEntry<T>): (T) -> NavEntry<T> = { key ->
     val entry = provider(key)
-    val backTransitions = NavDisplay.popTransitionSpec { wearBackTransition(settings.predictiveBackAnimation, 1) } +
-        NavDisplay.predictivePopTransitionSpec { edge ->
-            val sign = when (settings.predictiveBackExitDirection) {
-                PredictiveBackExitDirection.ALWAYS_RIGHT -> 1
-                PredictiveBackExitDirection.ALWAYS_LEFT -> -1
-                PredictiveBackExitDirection.FOLLOW_GESTURE -> if (edge == NavigationEvent.EDGE_RIGHT) -1 else 1
-            }
-            wearBackTransition(settings.predictiveBackAnimation, sign)
-        }
-    NavEntry(key, entry.contentKey, entry.metadata + WearPageTransitions + backTransitions) { entry.Content() }
-}
-
-/** Navigation 3 seeks these transforms for platform predictive back, including cancellation. */
-private fun wearBackTransition(animation: PredictiveBackAnimation, sign: Int): ContentTransform = when (animation) {
-    PredictiveBackAnimation.None -> EnterTransition.None togetherWith ExitTransition.None
-
-    PredictiveBackAnimation.MIUIX ->
-        slideInHorizontally(spring(0.8f, 300f)) { -it / 3 } togetherWith slideOutHorizontally(spring(0.8f, 300f)) { it }
-
-    PredictiveBackAnimation.Scale ->
-        (scaleIn(tween(200), initialScale = 0.85f) + fadeIn(tween(200))) togetherWith
-            (scaleOut(tween(200), targetScale = 0.85f) + slideOutHorizontally(tween(200)) { sign * it })
-
-    PredictiveBackAnimation.AOSP ->
-        (slideInHorizontally(tween(450)) { -it / 4 } + scaleIn(tween(450), initialScale = 0.9f)) togetherWith
-            (slideOutHorizontally(tween(450)) { it / 4 } + fadeOut(tween(200)))
-
-    PredictiveBackAnimation.KernelSUClassic ->
-        (slideInHorizontally(tween(300)) { -it / 2 } + fadeIn(tween(300))) togetherWith
-            (slideOutHorizontally(tween(300)) { it } + fadeOut(tween(300)))
+    NavEntry(key, entry.contentKey, entry.metadata + WearPageTransitions) { entry.Content() }
 }
 
 /**
