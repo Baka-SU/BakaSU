@@ -45,9 +45,8 @@ fun rememberWearConfirmDialog(
     onConfirm: () -> Unit,
 ): DialogHandle = rememberCustomDialog { dismiss ->
     val icon: @Composable () -> Unit = {
-        Icon(
+        WearDialogIcon(
             if (destructive) Icons.Rounded.Warning else Icons.Rounded.Info,
-            contentDescription = null,
             tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
         )
     }

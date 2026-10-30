@@ -49,6 +49,7 @@ import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
+import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
@@ -135,9 +136,9 @@ internal fun WearHomePage(
         val warning = shownWarning ?: return@rememberCustomDialog
         val action = warning.onAction
         val icon: @Composable () -> Unit = {
-            Icon(
+            WearDialogIcon(
                 if (warning.tone == WearStatusTone.ERROR) Icons.Rounded.Error else Icons.Rounded.Warning,
-                contentDescription = null,
+                tint = if (warning.tone == WearStatusTone.ERROR) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
             )
         }
         if (action != null) {

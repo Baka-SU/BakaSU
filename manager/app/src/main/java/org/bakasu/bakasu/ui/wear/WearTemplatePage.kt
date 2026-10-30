@@ -54,6 +54,7 @@ import org.bakasu.bakasu.ui.viewmodel.TemplateUiEvent
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
+import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -197,7 +198,7 @@ private fun rememberWearOfflineDialog(onDismissed: () -> Unit = {}) = rememberCu
     AlertDialog(
         visible = true,
         onDismissRequest = close,
-        icon = { Icon(Icons.Rounded.SignalWifiOff, contentDescription = null) },
+        icon = { WearDialogIcon(Icons.Rounded.SignalWifiOff) },
         title = { Text(stringResource(R.string.wear_template_offline)) },
         text = { Text(stringResource(R.string.wear_no_internet)) },
         edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
@@ -229,7 +230,7 @@ internal fun WearOnlineTemplatePage(onBack: () -> Unit) {
         AlertDialog(
             visible = true,
             onDismissRequest = leave,
-            icon = { Icon(Icons.Rounded.Info, contentDescription = null) },
+            icon = { WearDialogIcon(Icons.Rounded.Info) },
             title = { Text(stringResource(R.string.wear_repo_connect_failed)) },
             text = {
                 Text(

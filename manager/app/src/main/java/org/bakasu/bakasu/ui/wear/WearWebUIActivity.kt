@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -59,6 +60,7 @@ import org.bakasu.bakasu.data.webui.WebUiRepository
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.wear.component.WearBackground
+import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
@@ -303,6 +305,7 @@ private fun HandleWearWebUIEvent(state: WebUIState) {
         AlertDialog(
             visible = true,
             onDismissRequest = { respond(false) },
+            icon = { WearDialogIcon(Icons.Rounded.Info) },
             title = { Text(title) },
             text = { Text(message) },
             confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = { respond(true) }) },

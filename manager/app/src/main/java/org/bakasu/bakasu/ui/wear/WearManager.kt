@@ -18,6 +18,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -95,6 +97,7 @@ import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPageIndicator
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPager
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
@@ -158,6 +161,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
             AlertDialog(
                 visible = true,
                 onDismissRequest = dismiss,
+                icon = { WearDialogIcon(Icons.Rounded.ErrorOutline, tint = MaterialTheme.colorScheme.onErrorContainer) },
                 title = { Text(stringResource(R.string.wear_warning_root)) },
                 text = { Text(stringResource(R.string.grant_root_failed)) },
                 edgeButton = { AlertDialogDefaults.EdgeButton(onClick = dismiss) },

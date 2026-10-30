@@ -55,6 +55,7 @@ import org.bakasu.bakasu.ui.viewmodel.WearFileViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
+import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
@@ -119,7 +120,7 @@ internal fun WearFilePage(
         AlertDialog(
             visible = true,
             onDismissRequest = close,
-            icon = { Icon(Icons.Rounded.Error, contentDescription = null) },
+            icon = { WearDialogIcon(Icons.Rounded.Error) },
             title = { Text(stringResource(R.string.wear_file_access_failed)) },
             text = { Text(state.error ?: stringResource(R.string.operation_failed)) },
             confirmButton = {
@@ -169,7 +170,7 @@ internal fun WearFilePage(
         AlertDialog(
             visible = true,
             onDismissRequest = cancel,
-            icon = { Icon(Icons.Rounded.Folder, contentDescription = null) },
+            icon = { WearDialogIcon(Icons.Rounded.Folder) },
             title = { Text(stringResource(R.string.wear_storage_permission_title)) },
             text = { Text(stringResource(R.string.wear_storage_permission_message)) },
             confirmButton = {

@@ -70,7 +70,7 @@ fun WearManagerUpdateDialog(update: ManagerUpdateInfo?) {
         AlertDialog(
             visible = true,
             onDismissRequest = dismiss,
-            icon = { Icon(Icons.Rounded.SystemUpdateAlt, contentDescription = null) },
+            icon = { WearDialogIcon(Icons.Rounded.SystemUpdateAlt) },
             title = { Text(stringResource(if (stable) R.string.manager_update_stable else R.string.manager_update_beta)) },
             text = {
                 Text(

@@ -72,6 +72,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.formatFileSize
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
@@ -110,7 +111,7 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
         AlertDialog(
             visible = true,
             onDismissRequest = leave,
-            icon = { Icon(Icons.Rounded.Info, contentDescription = null) },
+            icon = { WearDialogIcon(Icons.Rounded.Info) },
             title = { Text(stringResource(R.string.wear_repo_connect_failed)) },
             text = { Text(failureReason, color = MaterialTheme.colorScheme.error) },
             confirmButton = {
@@ -223,7 +224,7 @@ private fun rememberModuleDownload(moduleName: String, installer: WearModuleInst
         AlertDialog(
             visible = true,
             onDismissRequest = dismiss,
-            icon = { Icon(Icons.Rounded.Download, contentDescription = null) },
+            icon = { WearDialogIcon(Icons.Rounded.Download) },
             title = { Text(stringResource(R.string.wear_download_confirm_title)) },
             text = {
                 if (asset != null) {
