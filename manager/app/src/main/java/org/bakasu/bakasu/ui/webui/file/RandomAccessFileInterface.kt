@@ -10,7 +10,7 @@ class RandomAccessFileInterface {
     companion object {
         private const val MAX_OPEN_FILES = 30
     }
-    
+
     private val openFiles = ConcurrentHashMap<String, SuRandomAccessFile>()
 
     @JavascriptInterface
