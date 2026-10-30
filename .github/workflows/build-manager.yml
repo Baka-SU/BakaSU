@@ -358,9 +358,7 @@ jobs:
     needs: [repack-manager, telegram-bot-api]
     if: github.event_name != 'pull_request' && github.event_name != 'workflow_call'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        manager_type: [ "spoofed", "normal" ]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -375,7 +373,7 @@ jobs:
             echo "UPLOAD=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Determine manager variant
+      - name: Determine topicid
         id: determine
         run: |
           echo "topicid=${{ vars.MESSAGE_THREAD_ID }}" >> $GITHUB_OUTPUT
@@ -387,7 +385,7 @@ jobs:
       - name: Download Release artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ steps.determine.outputs.title }}-release
+          name: Manager-release
           path: ./apk/release
 
       - name: Download Telegram Bot API Binary
@@ -404,7 +402,7 @@ jobs:
           MESSAGE_THREAD_ID: ${{ steps.determine.outputs.topicid }}
           DEVELOPING_THREAD_ID: ${{ vars.MESSAGE_DEVELOPING_MANAGER_THREAD_ID }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          TITLE: ${{ steps.determine.outputs.title }}
+          TITLE: Manager
           BRANCH: ${{ github.ref_name }}
         run: |
           pip3 install python-telegram-bot
