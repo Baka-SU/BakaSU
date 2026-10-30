@@ -889,4 +889,6 @@
     <string name="wear_download_verify_failed">File verification failed</string>
     <string name="selected_slot">Selected slot: %1$s</string>
     <string name="module_changelog_failed">Fetch changelog failed: %s</string>
+    <string name="wear_restore_module">Restore module</string>
+    <string name="wear_restore_module_summary">Cancel removal before restarting</string>
 </resources>

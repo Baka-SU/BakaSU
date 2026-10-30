@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.material.icons.rounded.Update
@@ -187,19 +188,22 @@ internal fun WearModuleDetail(
         item {
             WearActionButton(
                 spec,
-                Icons.Rounded.Delete,
-                stringResource(R.string.uninstall),
-                removeDialog::show,
-                enabled = !module.remove,
-                secondaryText = stringResource(if (module.remove) R.string.wear_pending_removal else R.string.wear_uninstall_summary),
+                if (module.remove) Icons.Rounded.Restore else Icons.Rounded.Delete,
+                stringResource(if (module.remove) R.string.wear_restore_module else R.string.uninstall),
+                if (module.remove) ({ onRemove(module.id, false) }) else removeDialog::show,
+                secondaryText = stringResource(if (module.remove) R.string.wear_restore_module_summary else R.string.wear_uninstall_summary),
                 // Every part takes the error pair: left unset, the secondary label and icon would keep
                 // the filled button's onPrimary and follow the accent color.
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    iconColor = MaterialTheme.colorScheme.onErrorContainer,
-                ),
+                colors = if (module.remove) {
+                    ButtonDefaults.filledTonalButtonColors()
+                } else {
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        iconColor = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                },
                 compact = true,
             )
         }

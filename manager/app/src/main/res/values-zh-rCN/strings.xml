@@ -863,4 +863,6 @@
     <string name="wear_uid">UID</string>
     <string name="wear_gid">GID</string>
     <string name="wear_webui">WebUI</string>
+    <string name="wear_restore_module">恢复模块</string>
+    <string name="wear_restore_module_summary">取消待重启移除状态</string>
 </resources>

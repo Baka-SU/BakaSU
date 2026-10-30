@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
@@ -152,7 +153,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                         Text(
                             details,
                             Modifier.weight(1f, fill = false).alignByBaseline(),
-                            color = if (module.remove) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                            color = LocalContentColor.current,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -172,6 +173,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             Text(
                 module.name,
                 style = LocalTextStyle.current.merge(TextStyle(lineBreak = LineBreak.Heading)),
+                textDecoration = if (module.remove) TextDecoration.LineThrough else TextDecoration.None,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
