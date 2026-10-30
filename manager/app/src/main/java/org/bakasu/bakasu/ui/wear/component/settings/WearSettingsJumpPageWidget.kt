@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.ui.wear.component.settings
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -27,6 +28,7 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
     enabled: Boolean = true,
     description: String? = null,
     transformed: Boolean = true,
+    largeIcon: Boolean = false,
 ) {
     FilledTonalButton(
         onClick = onClick,
@@ -39,7 +41,8 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
             Modifier.fillMaxWidth()
         },
         transformation = if (transformed) SurfaceTransformation(spec) else null,
-        icon = icon?.let { { Icon(it, contentDescription = null) } },
+        contentPadding = if (largeIcon) ButtonDefaults.ButtonWithLargeIconContentPadding else ButtonDefaults.ContentPadding,
+        icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
         secondaryLabel = description?.let { text -> { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
     ) { Text(title, maxLines = if (description == null) 3 else 2, overflow = TextOverflow.Ellipsis) }
 }

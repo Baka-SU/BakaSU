@@ -109,6 +109,7 @@ fun TransformingLazyColumnItemScope.WearActionButton(
     secondaryText: String? = null,
     colors: ButtonColors = wearButtonColors(),
     compact: Boolean = false,
+    largeIcon: Boolean = false,
 ) {
     Button(
         onClick = onClick,
@@ -118,7 +119,8 @@ fun TransformingLazyColumnItemScope.WearActionButton(
             .wearCompactRow(compact),
         transformation = SurfaceTransformation(transformationSpec),
         colors = colors,
-        icon = icon?.let { { Icon(it, contentDescription = null) } },
+        contentPadding = if (largeIcon) ButtonDefaults.ButtonWithLargeIconContentPadding else ButtonDefaults.ContentPadding,
+        icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
         secondaryLabel = secondaryText?.let { text -> { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
     ) { Text(label, maxLines = if (secondaryText == null) 3 else 2, overflow = TextOverflow.Ellipsis) }
 }

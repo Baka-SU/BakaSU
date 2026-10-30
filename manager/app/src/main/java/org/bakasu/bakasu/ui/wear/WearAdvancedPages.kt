@@ -140,6 +140,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                         stringResource(R.string.signature_size),
                         { input = DynamicManagerInput.Size },
                         icon = Icons.Rounded.FormatSize,
+                        largeIcon = true,
                         description = size.ifBlank { null },
                     )
                 }
@@ -149,6 +150,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                         stringResource(R.string.signature_hash),
                         { input = DynamicManagerInput.Hash },
                         icon = Icons.Rounded.Fingerprint,
+                        largeIcon = true,
                         description = hash.ifBlank { null },
                     )
                 }
@@ -166,7 +168,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                                 grant.show()
                             }
                         }
-                    })
+                    }, largeIcon = true)
                 }
             } else if (choosingApp) {
                 item {
@@ -175,6 +177,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                         Icons.Rounded.Search,
                         stringResource(R.string.search_apps),
                         { input = DynamicManagerInput.Search },
+                        largeIcon = true,
                     )
                 }
                 LazySegmentedColumn(state.apps, { it.packageName }) { app ->
@@ -190,6 +193,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                         },
                         enabled = app.isChangeable,
                         icon = Icons.Rounded.Apps,
+                        largeIcon = true,
                     )
                 }
             } else {
@@ -217,10 +221,11 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                         { manual = true },
                         icon = Icons.Rounded.Settings,
                         description = stringResource(R.string.dynamic_manager_manual_config_summary),
+                        largeIcon = true,
                     )
                 }
-                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_apps), { choosingApp = true }, icon = Icons.Rounded.Apps) }
-                item { WearActionButton(spec, Icons.Rounded.Delete, stringResource(R.string.dynamic_manager_clear_config), clear::show) }
+                item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_apps), { choosingApp = true }, icon = Icons.Rounded.Apps, largeIcon = true) }
+                item { WearActionButton(spec, Icons.Rounded.Delete, stringResource(R.string.dynamic_manager_clear_config), clear::show, largeIcon = true) }
             }
         }
     }
