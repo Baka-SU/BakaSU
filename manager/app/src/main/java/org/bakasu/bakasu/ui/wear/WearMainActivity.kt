@@ -1,10 +1,12 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.StartupState
 import org.bakasu.bakasu.domain.usecase.ApplyLanguageUseCase
@@ -24,6 +26,7 @@ class WearMainActivity : WearActivity() {
     private val observeStartupState: ObserveStartupStateUseCase by inject()
     private val ensureManagerInstalled: EnsureManagerInstalledUseCase by inject()
     private val applyLanguage: ApplyLanguageUseCase by inject()
+    private val intentChannel = Channel<Intent>(capacity = Channel.BUFFERED)
 
     override fun attachBaseContext(newBase: Context?) {
         super.attachBaseContext(newBase?.let(applyLanguage::invoke))
@@ -36,6 +39,7 @@ class WearMainActivity : WearActivity() {
         if (savedInstanceState == null) {
             homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
             superUserViewModel.dispatch(SuperUserUiAction.Refresh)
+            intent?.let { intentChannel.trySend(it) }
         }
         val startupState = observeStartupState()
         setContent {
@@ -43,9 +47,15 @@ class WearMainActivity : WearActivity() {
                 when (val state = startupState.collectAsStateWithLifecycle().value) {
                     StartupState.Loading -> WearStartupStatus()
                     is StartupState.Failed -> WearStartupStatus(state.message)
-                    StartupState.Ready -> WearManagerScreen()
+                    StartupState.Ready -> WearManagerScreen(intentChannel)
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intentChannel.trySend(intent)
     }
 }

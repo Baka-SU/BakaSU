@@ -81,7 +81,7 @@ internal fun WearInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit) {
             WearSettingsJumpPageWidget(
                 spec,
                 stringResource(R.string.GKI_install_methods),
-                { onOpen(WearRoute.Ak3Install) },
+                { onOpen(WearRoute.Ak3Install()) },
                 icon = Icons.Rounded.Upload,
                 enabled = environment.rootAvailable,
                 description = stringResource(if (environment.rootAvailable) R.string.ak3_select_zip else R.string.root_required),
@@ -303,10 +303,10 @@ private fun Uri.fileName(): String = lastPathSegment?.substringAfterLast('/') ?:
 
 /** AnyKernel3: pick the ZIP, choose the slot on A/B devices, then flash. */
 @Composable
-internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit) {
+internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit, initialUri: String? = null) {
     val installState by koinViewModel<InstallViewModel>().state.collectAsStateWithLifecycle()
     val environment = installState.environment
-    var zipUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var zipUri by rememberSaveable { mutableStateOf(initialUri) }
     var slot by rememberSaveable { mutableStateOf<String?>(null) }
     var skipKsud by rememberSaveable { mutableStateOf(false) }
     val selectZip = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->

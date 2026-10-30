@@ -162,7 +162,7 @@ sealed interface WearRoute : NavKey {
     data object LkmInstall : WearRoute
 
     @Serializable
-    data object Ak3Install : WearRoute
+    data class Ak3Install(val uri: String? = null) : WearRoute
 
     /** Patching the boot image with the choices of [LkmInstall], as the phone's Flash screen does. */
     @Serializable

@@ -62,6 +62,7 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.confirmationDialogCurvedText
 import androidx.wear.compose.material3.openOnPhoneDialogCurvedText
 import androidx.wear.compose.navigation3.rememberSwipeDismissableSceneStrategy
+import kotlinx.coroutines.channels.ReceiveChannel
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.network.WearLinkFailure
 import org.bakasu.bakasu.domain.model.FlashOperation
@@ -118,7 +119,7 @@ private const val MODULES = 2
 private const val SETTINGS = 3
 
 @Composable
-fun WearManagerScreen() {
+fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val activity = LocalActivity.current
     // The shared models belong to the activity, outside the back stack, as on the phone.
     val homeViewModel = koinViewModel<HomeViewModel>()
@@ -285,6 +286,10 @@ fun WearManagerScreen() {
     WearManagerUpdateDialog(home.stableManagerUpdate ?: home.betaManagerUpdate)
     WearResultDialog(settingsResult) { clearSettingsFeedback() }
     WearModuleInstallConfirmDialog(installer)
+    // Keep launch actions queued until the root-dependent navigation has its initial state.
+    if (home.isInitialDataLoaded) {
+        WearIntentDispatcher(intentChannel, navigator, installer)
+    }
     AppScaffold(
         timeText = { WearTimeText() },
         containerColor = Color.Transparent,
@@ -548,8 +553,8 @@ fun WearManagerScreen() {
                             entry<WearRoute.LkmInstall> {
                                 WearLkmInstallPage(::back, ::open)
                             }
-                            entry<WearRoute.Ak3Install> {
-                                WearAk3InstallPage(::back, ::open)
+                            entry<WearRoute.Ak3Install> { route ->
+                                WearAk3InstallPage(::back, ::open, route.uri)
                             }
                             entry<WearRoute.BootFlash> { route ->
                                 WearFlashPage(route.toOperation(), ::back) {
