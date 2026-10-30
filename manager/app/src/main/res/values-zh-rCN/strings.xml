@@ -446,6 +446,7 @@
     <string name="download_failed_content">%s 下载失败</string>
     <string name="download_cancel">取消</string>
     <string name="download_install">安装</string>
+    <string name="open">打开</string>
     <string name="notification_permission_description">需要通知权限来展示下载进度。</string>
     <string name="notification_permission_denied">下载失败，缺失通知权限</string>
     <string name="storage_permission_description">需要外部存储权限来展示下载进度。</string>

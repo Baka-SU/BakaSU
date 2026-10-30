@@ -454,6 +454,7 @@
     <string name="download_failed_content">Failed to download %s</string>
     <string name="download_cancel">Cancel</string>
     <string name="download_install">Install</string>
+    <string name="open">Open</string>
     <string name="notification_permission_description">Notification permission is needed to show download progress.</string>
     <string name="notification_permission_denied">Download failed: Notification permission is required</string>
     <string name="storage_permission_description">External Storage permission is needed to write file.</string>

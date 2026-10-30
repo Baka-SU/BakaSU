@@ -12,6 +12,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import java.io.File
 import org.bakasu.bakasu.data.packageinfo.InstalledPackageRepository
 import org.bakasu.bakasu.data.webui.WebUiRepository
+import org.bakasu.bakasu.ui.webui.file.KsuIO
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -236,6 +237,13 @@ class WebViewInterface(
     @JavascriptInterface
     fun exit() {
         state.requestExit()
+    }
+
+    @JavascriptInterface
+    fun io() = KsuIO
+
+    fun destroy() {
+        KsuIO.destroy()
     }
 }
 

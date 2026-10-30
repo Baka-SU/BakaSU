@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.webui
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.view.ViewGroup
@@ -10,6 +11,7 @@ import android.webkit.WebView
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import org.bakasu.bakasu.R
 
 sealed class WebUIEvent {
     data object Loading : WebUIEvent()
@@ -24,11 +26,14 @@ sealed class WebUIEvent {
 
 class WebUIState {
     var webView: WebView? = null
+    var webViewInterface: WebViewInterface? = null
+    var downloadInterface: WebUIDownloadInterface? = null
     lateinit var modDir: String
     var moduleName: String = ""
 
     var uiEvent by mutableStateOf<WebUIEvent>(WebUIEvent.Loading)
     var isUrlLoaded = false
+    @Volatile
     var currentInsets: Insets = Insets(0, 0, 0, 0)
     var isInsetsEnabled by mutableStateOf(false)
     var webCanGoBack by mutableStateOf(false)
@@ -68,11 +73,18 @@ class WebUIState {
         uiEvent = WebUIEvent.Close
     }
 
-    fun dispose() {
+    fun dispose(activity: Activity) {
+        activity.setTaskDescription(activity.getString(R.string.app_name))
+        downloadInterface?.destroy()
+        downloadInterface = null
+        webViewInterface?.destroy()
+        webViewInterface = null
         webView?.let { view ->
             (view.parent as? ViewGroup)?.removeView(view)
             view.destroy()
         }
         webView = null
+        filePathCallback?.onReceiveValue(null)
+        filePathCallback = null
     }
 }
