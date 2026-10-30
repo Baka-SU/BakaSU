@@ -175,7 +175,15 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
             }
         }
 
-        else -> WearList(onBack = onBack, snap = true) { spec ->
+        else -> WearList(
+            onBack = onBack,
+            snap = true,
+            onConfirm = {
+                if (environment.isGki && lkmUri == null && environment.currentKmi.isBlank()) choosing = "kmi" else flash(null)
+            },
+            confirmEnabled = ready,
+            confirmLabel = stringResource(R.string.install_next),
+        ) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.Lkm_install_methods)) }
             methods.forEach { option ->
                 item(key = option) {
@@ -281,16 +289,6 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
                     )
                 }
             }
-            wearGroupGap("next-gap")
-            item {
-                WearActionButton(spec, Icons.Rounded.ArrowForward, stringResource(R.string.install_next), {
-                    if (environment.isGki && lkmUri == null && environment.currentKmi.isBlank()) {
-                        choosing = "kmi"
-                    } else {
-                        flash(null)
-                    }
-                }, enabled = ready, colors = ButtonDefaults.buttonColors())
-            }
         }
     }
 }
@@ -317,7 +315,13 @@ internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit,
         if (environment.isAbDevice && slot == null) slot = activeSlot
     }
     val ready = zipUri != null && (!environment.isAbDevice || slot != null)
-    WearList(onBack = onBack, snap = true) { spec ->
+    WearList(
+        onBack = onBack,
+        snap = true,
+        onConfirm = { zipUri?.let { onOpen(WearRoute.KernelFlash(it, slot, skipKsud)) } },
+        confirmEnabled = ready,
+        confirmLabel = stringResource(R.string.install_next),
+    ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.GKI_install_methods)) }
         item {
             WearSettingsJumpPageWidget(
@@ -360,12 +364,6 @@ internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit,
                 { skipKsud = it },
                 secondaryLabel = stringResource(R.string.skip_ksud_summary),
             )
-        }
-        wearGroupGap("next-gap")
-        item {
-            WearActionButton(spec, Icons.Rounded.ArrowForward, stringResource(R.string.install_next), {
-                zipUri?.let { onOpen(WearRoute.KernelFlash(it, slot, skipKsud)) }
-            }, enabled = ready, colors = ButtonDefaults.buttonColors())
         }
     }
 }
@@ -412,7 +410,11 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
         return
     }
 
-    WearList(onBack = onBack) { spec ->
+    WearList(
+        onBack = onBack,
+        onConfirm = ({ viewModel.dispatch(KernelFlashUiAction.Reboot) }).takeIf { status == WearFlashStatus.SUCCESS },
+        confirmLabel = stringResource(R.string.wear_reboot_device),
+    ) { spec ->
         item {
             WearPageHeader(
                 spec,
@@ -464,16 +466,6 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
                         stringResource(R.string.save_log),
                         saveLog,
                         secondaryText = stringResource(R.string.wear_save_log_summary),
-                    )
-                }
-                item {
-                    WearActionButton(
-                        spec,
-                        Icons.Rounded.Refresh,
-                        stringResource(R.string.wear_reboot_device),
-                        { viewModel.dispatch(KernelFlashUiAction.Reboot) },
-                        secondaryText = stringResource(R.string.wear_reboot_apply_kernel),
-                        colors = ButtonDefaults.buttonColors(),
                     )
                 }
             }

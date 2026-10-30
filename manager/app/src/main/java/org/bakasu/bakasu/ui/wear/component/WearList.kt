@@ -49,6 +49,7 @@ import androidx.wear.compose.material3.LocalContentColor
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.ResponsiveTransformationSpec
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.TransformationVariableSpec
@@ -76,6 +77,8 @@ fun WearList(
     onRefresh: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
     onConfirm: (() -> Unit)? = null,
+    confirmLabel: String? = null,
+    confirmEnabled: Boolean = true,
     backToTop: Boolean = false,
     onOpenPanel: (() -> Unit)? = null,
     onClosePanel: (() -> Unit)? = null,
@@ -174,6 +177,7 @@ fun WearList(
             scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
             edgeButton = {
                 EdgeButton(
+                    enabled = onConfirm == null || confirmEnabled,
                     onClick = {
                         // While refreshing, the edge button only shows the progress of the pull refresh.
                         if (isRefreshing) {
@@ -213,6 +217,8 @@ fun WearList(
                             Modifier.size(24.dp),
                             colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current),
                         )
+                    } else if (onConfirm != null && confirmLabel != null) {
+                        Text(confirmLabel)
                     } else {
                         Icon(
                             if (onClosePanel != null) {

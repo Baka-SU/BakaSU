@@ -98,7 +98,11 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
         return
     }
 
-    WearList(onBack = onBack) { spec ->
+    WearList(
+        onBack = onBack,
+        onConfirm = ({ viewModel.dispatch(FlashUiAction.Reboot(allowSoftReboot = isModule)) }).takeIf { status == WearFlashStatus.SUCCESS && state.showReboot },
+        confirmLabel = stringResource(R.string.wear_reboot_device),
+    ) { spec ->
         item { WearPageHeader(spec, title) }
         when (status) {
             WearFlashStatus.RUNNING -> {
@@ -140,18 +144,6 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
                         saveLog,
                         secondaryText = stringResource(R.string.wear_save_log_summary),
                     )
-                }
-                if (state.showReboot) {
-                    item {
-                        WearActionButton(
-                            spec,
-                            Icons.Rounded.Refresh,
-                            stringResource(R.string.wear_reboot_device),
-                            { viewModel.dispatch(FlashUiAction.Reboot(allowSoftReboot = isModule)) },
-                            secondaryText = if (isModule) stringResource(R.string.wear_reboot_apply_module) else null,
-                            colors = ButtonDefaults.buttonColors(),
-                        )
-                    }
                 }
             }
 
