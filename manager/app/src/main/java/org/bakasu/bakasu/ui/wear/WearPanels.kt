@@ -90,6 +90,13 @@ internal fun WearOperationsPanel(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.sulog_search_placeholder), onSearch),
             WearIconAction(Icons.Rounded.FilterList, stringResource(R.string.sulog_filter_title), { onOpen(WearRoute.LogOptions) }),
         )
+
+        WearOperationsPage.Repository -> listOf(
+            WearIconAction(Icons.Rounded.Search, stringResource(R.string.search_modules), onSearch),
+            WearIconAction(Icons.Rounded.Sort, stringResource(R.string.wear_sort), { onOpen(WearRoute.ModuleRepoSort) }),
+            WearIconAction(Icons.Rounded.Download, stringResource(R.string.wear_downloads), { onOpen(WearRoute.Downloads) }),
+            WearIconAction(Icons.Rounded.Cloud, stringResource(R.string.repo_manage), { onOpen(WearRoute.RepositorySources) }),
+        )
     }
     Box(Modifier.fillMaxSize()) {
         WearList(onClosePanel = onBack, snap = true, listState = rememberPanelListState()) { spec ->

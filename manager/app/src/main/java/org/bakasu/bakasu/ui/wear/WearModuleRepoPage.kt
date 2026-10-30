@@ -94,7 +94,13 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 @Composable
-internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Unit, onSearch: () -> Unit, onOpen: (CatalogModule) -> Unit) {
+internal fun WearModuleRepoPage(
+    viewModel: ModuleRepoViewModel,
+    onBack: () -> Unit,
+    onOpenPanel: () -> Unit,
+    panelContent: @Composable (() -> Unit)? = null,
+    onOpen: (CatalogModule) -> Unit,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     // Opening the repository loads its index, which also checks that the watch can reach it over
     // any network: the paired phone, the watch Wi-Fi or its mobile data.
@@ -138,10 +144,11 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
         isRefreshing = state.isRefreshing,
         onRefresh = ::retry,
         onBack = onBack,
+        onOpenPanel = onOpenPanel,
+        panelContent = panelContent,
+        panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
-        item { WearSettingsJumpPageWidget(spec, stringResource(R.string.search_modules), onSearch, icon = Icons.Rounded.Search, description = state.search.ifBlank { null }) }
-        item { WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_star_first), state.sortStargazerCountFirst, { viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it)) }) }
         if (state.modules.isEmpty() && !state.isRefreshing && failure == null) {
             item {
                 WearEmptyState(

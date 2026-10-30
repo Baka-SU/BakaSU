@@ -390,6 +390,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                             WearOperationsPage.Modules -> moduleSearchInput()
                                             WearOperationsPage.Logs -> logSearchInput()
                                             WearOperationsPage.Home -> Unit
+                                            WearOperationsPage.Repository -> open(WearRoute.ModuleRepoSearch)
                                         }
                                     },
                                     onInstall = {
@@ -424,7 +425,12 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 WearFlashPage(FlashOperation.Module(route.uri), ::back, installer.onInstalled)
                             }
                             entry<WearRoute.ModuleRepo> {
-                                WearModuleRepoPage(moduleRepoViewModel, ::back, { open(WearRoute.ModuleRepoSearch) }) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
+                                WearModuleRepoPage(
+                                    moduleRepoViewModel,
+                                    ::back,
+                                    { open(WearRoute.Operations(WearOperationsPage.Repository)) },
+                                    panelContent = { panelPreview(WearOperationsPage.Repository) },
+                                ) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
                             }
                             entry<WearRoute.ModuleRepoSearch> {
                                 WearModuleRepoSearchPage(moduleRepoViewModel, ::back) { open(WearRoute.ModuleRepoSort) }
@@ -453,6 +459,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                             }
                             entry<WearRoute.Downloads> {
                                 WearDownloadsPage(::back, installer::confirm)
+                            }
+                            entry<WearRoute.RepositorySources> {
+                                WearRepositorySelectionPage(moduleRepoViewModel, ::back)
                             }
                             entry<WearRoute.ModuleSearch> {
                                 WearSearchPage(stringResource(R.string.search_modules), "installed-modules", modules.search, ::back, onAdvanced = { open(WearRoute.ModuleSort) }) {
