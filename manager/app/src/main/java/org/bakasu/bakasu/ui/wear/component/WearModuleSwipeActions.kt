@@ -8,12 +8,13 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -26,6 +27,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntSize
 import androidx.wear.compose.foundation.GestureInclusion
 import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
@@ -60,8 +62,15 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     val active = LocalScreenIsActive.current
-    var rowHeight by remember { mutableIntStateOf(0) }
-    val actionHeight = with(LocalDensity.current) { rowHeight.toDp() }
+    var rowSize by remember { mutableStateOf(IntSize.Zero) }
+    val density = LocalDensity.current
+    val rowShape = ButtonDefaults.shape
+    val bounds = Size(rowSize.width.toFloat(), rowSize.height.toFloat())
+    // Only the straight side between the row's top and bottom corners belongs to the action.
+    val topRadius = rowShape.topEnd.toPx(bounds, density).coerceAtMost(bounds.height / 2f)
+    val bottomRadius = rowShape.bottomEnd.toPx(bounds, density).coerceAtMost(bounds.height / 2f)
+    val actionHeight = with(density) { (bounds.height - topRadius - bottomRadius).coerceAtLeast(0f).toDp() }
+    val iconSize = (actionHeight * 0.7f).coerceAtMost(ButtonDefaults.LargeIconSize)
     LaunchedEffect(scrolling, active) {
         if (!active) {
             state.snapTo(RevealValue.Covered)
@@ -89,7 +98,7 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
         primaryAction = {
             PrimaryActionButton(
                 onClick = { run(primary) },
-                icon = { Icon(primary.icon, contentDescription = primary.label, modifier = Modifier.requiredSize(ButtonDefaults.LargeIconSize)) },
+                icon = { Icon(primary.icon, contentDescription = primary.label, modifier = Modifier.requiredSize(iconSize)) },
                 text = { Text(primary.label) },
                 modifier = Modifier.height(actionHeight),
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -100,7 +109,7 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
             {
                 SecondaryActionButton(
                     onClick = { run(action) },
-                    icon = { Icon(action.icon, contentDescription = action.label, modifier = Modifier.requiredSize(ButtonDefaults.LargeIconSize)) },
+                    icon = { Icon(action.icon, contentDescription = action.label, modifier = Modifier.requiredSize(iconSize)) },
                     modifier = Modifier.height(actionHeight),
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -175,7 +184,7 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
         },
         content = {
             // The module's own content determines its height; actions never stretch short rows.
-            Box(Modifier.onSizeChanged { rowHeight = it.height }) { content() }
+            Box(Modifier.onSizeChanged { rowSize = it }) { content() }
         },
     )
 }
