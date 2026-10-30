@@ -26,7 +26,6 @@ jobs:
       keystore: ${{ steps.gen.outputs.keystore }}
       keystore_password: ${{ steps.gen.outputs.keystore_password }}
       key_password: ${{ steps.gen.outputs.key_password }}
-      spoofed_package_name: ${{ steps.pkg.outputs.spoofed_package_name }}
     steps:
       - name: Generate temporary keystore
         if: github.event_name == 'pull_request'
@@ -74,15 +73,6 @@ jobs:
           echo "Certificate size: $SIZE_HEX ($SIZE_DEC bytes)"
           echo "Certificate hash: $HASH"
 
-      - name: Generate package name for spoofed manager
-        id: pkg
-        run: |
-          word1=$(tr -dc 'a-z' </dev/urandom | head -c6)
-          word2=$(tr -dc 'a-z' </dev/urandom | head -c6)
-          word3=$(tr -dc 'a-z' </dev/urandom | head -c6)
-          SPOOFED_PACKAGE_NAME="${word1}.${word2}.${word3}"
-          echo "spoofed_package_name=$SPOOFED_PACKAGE_NAME" >> $GITHUB_OUTPUT
-
   build-lkm:
     needs: prepare
     uses: ./.github/workflows/build-lkm.yml
@@ -116,14 +106,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - manager_type: "spoofed"
-            build_type: "release"
-
-          - manager_type: "normal"
-            build_type: "release"
-          - manager_type: "normal"
-            build_type: "debug"
+        build_type: [ "release", "debug" ]
     defaults:
       run:
         working-directory: ./manager
@@ -141,15 +124,6 @@ jobs:
             echo "COMMIT_SHA=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           else
             echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Determine manager variant
-        id: determine
-        run: |
-          if [ "${{ matrix.manager_type }}" == "spoofed" ]; then
-            echo "title=Spoofed-Manager" >> $GITHUB_OUTPUT
-          else
-            echo "title=Manager" >> $GITHUB_OUTPUT
           fi
 
       - name: Write key
@@ -192,10 +166,7 @@ jobs:
       - name: Build APK
         run: |
           export BUILD_EXTRA_ARGS=""
-          if [ "${{ matrix.manager_type }}" == "spoofed" ]; then
-            export KSU_PACKAGE_NAME="${{ needs.prepare.outputs.spoofed_package_name }}"
-            export BUILD_EXTRA_ARGS="-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME -PIS_SPOOFED_BUILD=true"
-          elif [ "${{ github.event_name }}" == "pull_request" ]; then
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
             export KSU_PACKAGE_NAME="com.resukisu.resukisu.pr${{github.event.pull_request.number}}"
             export BUILD_EXTRA_ARGS="-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME"
           elif [ "${{ github.ref_type }}" != "tag" ] && [ "${{ github.ref_name }}" != "main" ]; then
@@ -213,7 +184,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }}
+          name: Manager-gradle-${{ matrix.build_type }}
           path: |
             manager/app/build/outputs/apk/release/*.apk
             manager/app/build/outputs/apk/debug/*.apk
@@ -221,7 +192,7 @@ jobs:
       - name: Upload mappings
         uses: actions/upload-artifact@v7
         with:
-          name: "${{ steps.determine.outputs.title }}-mappings"
+          name: "Manager-mappings"
           path: "manager/app/build/outputs/mapping/release/"
           if-no-files-found: ignore
 
@@ -232,33 +203,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - manager_type: "spoofed"
-            build_type: "release"
-          - manager_type: "normal"
-            build_type: "release"
-          - manager_type: "normal"
-            build_type: "debug"
+        build_type: [ "release", "debug" ]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: Determine manager variant
-        id: determine
-        run: |
-          if [ "${{ matrix.manager_type }}" == "spoofed" ]; then
-            echo "title=Spoofed-Manager" >> $GITHUB_OUTPUT
-          else
-            echo "title=Manager" >> $GITHUB_OUTPUT
-          fi
-
       - name: Download artifact
         uses: actions/download-artifact@v8
         with:
-            name: ${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }}
-            path: artifacts/${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }}
+            name: Manager-gradle-${{ matrix.build_type }}
+            path: artifacts/Manager-gradle-${{ matrix.build_type }}
       
       - name: Download arm64 ksud
         uses: actions/download-artifact@v8
@@ -288,7 +244,7 @@ jobs:
       - name: Place manager apk and ksud artifacts
         run: |
           mkdir -p manager/app/build/outputs/apk/${{ matrix.build_type }}
-          APKS=$(find artifacts/${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }} -type f -name "*.apk")
+          APKS=$(find artifacts/Manager-gradle-${{ matrix.build_type }} -type f -name "*.apk")
           APKS=$(echo "$APKS" | tr '\n' ' ')
           test -n "$APKS"
           cp -f $APKS manager/app/build/outputs/apk/${{ matrix.build_type }}/
@@ -353,12 +309,12 @@ jobs:
       - name: Delete gradle build
         uses: GeekyEggo/delete-artifact@v6
         with:
-          name: ${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }}
+          name: Manager-gradle-${{ matrix.build_type }}
         
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.determine.outputs.title }}-${{ matrix.build_type }}
+          name: Manager-${{ matrix.build_type }}
           path: dist/*.apk
 
   telegram-bot-api:
@@ -422,13 +378,7 @@ jobs:
       - name: Determine manager variant
         id: determine
         run: |
-          if [ "${{ matrix.manager_type }}" == "spoofed" ]; then
-            echo "title=Spoofed-Manager" >> $GITHUB_OUTPUT
-            echo "topicid=${{ vars.MESSAGE_SPOOFED_THREAD_ID }}" >> $GITHUB_OUTPUT
-          else
-            echo "title=Manager" >> $GITHUB_OUTPUT
-            echo "topicid=${{ vars.MESSAGE_THREAD_ID }}" >> $GITHUB_OUTPUT
-          fi
+          echo "topicid=${{ vars.MESSAGE_THREAD_ID }}" >> $GITHUB_OUTPUT
 
           if [[ "${{ github.ref }}" != "refs/heads/main" && "${{ github.ref_type }}" != "tag" ]]; then
             echo "topicid=${{ vars.MESSAGE_DEVELOPING_MANAGER_THREAD_ID }}" >> $GITHUB_OUTPUT

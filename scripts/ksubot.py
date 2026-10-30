@@ -272,17 +272,14 @@ async def main():
     print("---")
     print(caption)
     print("---")
-    if TITLE.lower() == "spoofed-manager" and (BRANCH != "main" and GITHUB_REF_TYPE != "tag"):
-        print("[!] Spoofed Manager is not allowed to be uploaded for non-main branch")
-    else:
-        print("[+] Sending")
-        if no_caption:
-            await send_message(bot=bot, chat_id=CHAT_ID, text=caption, message_thread_id=MESSAGE_THREAD_ID)
-        if len(upload_release_files) > 0:
-            await send_media_group(bot=bot, chat_id=CHAT_ID, media=upload_release_files, message_thread_id=MESSAGE_THREAD_ID)
-        if TITLE.lower() == "manager" and (BRANCH == "main" or GITHUB_REF_TYPE == "tag"):
-            print("[+] Sending main branch updated message")
-            await send_message(bot=bot,chat_id=CHAT_ID, text=MAIN_UPDATED_MSG, message_thread_id=DEVELOPING_THREAD_ID)
+    print("[+] Sending")
+    if no_caption:
+        await send_message(bot=bot, chat_id=CHAT_ID, text=caption, message_thread_id=MESSAGE_THREAD_ID)
+    if len(upload_release_files) > 0:
+        await send_media_group(bot=bot, chat_id=CHAT_ID, media=upload_release_files, message_thread_id=MESSAGE_THREAD_ID)
+    if TITLE.lower() == "manager" and (BRANCH == "main" or GITHUB_REF_TYPE == "tag"):
+        print("[+] Sending main branch updated message")
+        await send_message(bot=bot,chat_id=CHAT_ID, text=MAIN_UPDATED_MSG, message_thread_id=DEVELOPING_THREAD_ID)
     print("[+] Done!")
 
 if __name__ == "__main__":
