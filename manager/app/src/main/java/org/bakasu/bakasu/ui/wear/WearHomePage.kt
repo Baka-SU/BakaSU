@@ -86,7 +86,7 @@ internal fun WearHomePage(
     val info = state.systemInfo
     val seccomp = wearSeccompStatus(state)
     val managers = managerSignatures(state)
-    // Build and compatibility notices are yellow warnings; failing to obtain root is a red error.
+    // Build notices are warnings; missing root or incompatible interfaces block features and are errors.
     val warnings = buildList {
         if (status.ksuVersion != null && !status.isRootAvailable) {
             add(WearHomeWarning(R.string.wear_warning_root, stringResource(R.string.grant_root_failed), WearStatusTone.ERROR))
@@ -105,7 +105,7 @@ internal fun WearHomePage(
                 WearHomeWarning(
                     R.string.wear_warning_version_mismatch,
                     stringResource(message),
-                    WearStatusTone.WARNING,
+                    WearStatusTone.ERROR,
                     onInstall.takeIf { kernelInstall },
                 ),
             )
