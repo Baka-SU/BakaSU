@@ -36,6 +36,7 @@ import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
 import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
+import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -64,6 +65,7 @@ internal fun WearModulesPage(
     // As on the phone: an empty list shows the loading indicator in place of the page; once it has
     // content, refreshing shows at the pull refresh, in the edge button.
     val loading = state.isRefreshing && state.moduleList.isEmpty() && state.search.isEmpty()
+    WearErrorDialog(error.takeUnless { state.isRefreshing })
     WearList(
         isLoading = loading,
         isRefreshing = state.isRefreshing && !loading,
@@ -76,11 +78,6 @@ internal fun WearModulesPage(
         panelContent = panelContent,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module)) }
-        if (!error.isNullOrBlank()) {
-            item {
-                WearStatusItem(spec, Icons.Rounded.Error, error, tone = WearStatusTone.ERROR)
-            }
-        }
         if (state.moduleList.isEmpty() && error.isNullOrBlank()) {
             item {
                 WearEmptyState(spec, Icons.Rounded.Extension, stringResource(R.string.module_empty))

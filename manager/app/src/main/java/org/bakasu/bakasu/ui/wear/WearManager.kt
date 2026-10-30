@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.wear
 
 import android.content.Intent
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -98,6 +100,7 @@ import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPageIndicator
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPager
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
@@ -107,8 +110,8 @@ import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
-import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
+import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.bakasu.bakasu.ui.wear.component.rememberWearRemoteInput
 import org.koin.compose.viewmodel.koinViewModel
@@ -121,6 +124,7 @@ private const val SETTINGS = 3
 @Composable
 fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val activity = LocalActivity.current
+    val context = LocalContext.current
     // The shared models belong to the activity, outside the back stack, as on the phone.
     val homeViewModel = koinViewModel<HomeViewModel>()
     val superUserViewModel = koinViewModel<SuperUserViewModel>()
@@ -238,14 +242,28 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         clearSettingsFeedback()
         settingsViewModel.dispatch(it)
     }
-    // Settings results show once as the official confirmation overlay; a few messages report failures.
-    val settingsResult = settingsError?.let { WearResult(it.ifBlank { operationFailedText }, success = false) }
-        ?: settingsMessageResource?.let { (id, arg) ->
-            WearResult(
-                if (arg == null) stringResource(id) else stringResource(id, arg),
-                success = id != R.string.background_crop_failed && id != R.string.settings_selinux_hide_failed,
-            )
+    // Ordinary switches speak through their state; DPI and background changes use a short toast.
+    // Blocking failures and follow-up instructions stay visible until the user dismisses them.
+    val settingsNotice = settingsMessageResource?.let { (id, arg) ->
+        if (arg == null) stringResource(id) else stringResource(id, arg)
+    }
+    val settingsNoticeDialog = rememberCustomDialog { dismiss ->
+        val close = {
+            dismiss()
+            clearSettingsFeedback()
         }
+        AlertDialog(
+            visible = true,
+            onDismissRequest = close,
+            icon = { WearDialogIcon(Icons.Rounded.Info) },
+            title = { Text(stringResource(R.string.settings)) },
+            text = { Text(settingsNotice.orEmpty()) },
+            edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
+        )
+    }
+    LaunchedEffect(settingsNotice) {
+        if (settingsNotice != null) settingsNoticeDialog.show() else settingsNoticeDialog.hide()
+    }
 
     LaunchedEffect(home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled) {
         navigator.closeUnavailable(home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled)
@@ -298,7 +316,18 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                 is SettingsUiEvent.Message -> {
                     settingsError = null
-                    settingsMessageResource = event.stringResource to event.formatArg
+                    settingsMessageResource = null
+                    val message = if (event.formatArg == null) context.getString(event.stringResource) else context.getString(event.stringResource, event.formatArg)
+                    when (event.stringResource) {
+                        R.string.dpi_applied_success, R.string.background_set_success, R.string.background_removed ->
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+
+                        R.string.icon_switched -> Unit
+
+                        R.string.background_crop_failed, R.string.settings_selinux_hide_failed -> settingsError = message
+
+                        else -> settingsMessageResource = event.stringResource to event.formatArg
+                    }
                 }
 
                 SettingsUiEvent.RestartActivity -> activity?.recreate()
@@ -308,7 +337,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
     // A found manager update is offered in a dialog, the stable channel first as on the phone's Home.
     WearManagerUpdateDialog(home.stableManagerUpdate ?: home.betaManagerUpdate)
-    WearResultDialog(settingsResult) { clearSettingsFeedback() }
+    WearErrorDialog(settingsError?.ifBlank { operationFailedText }) { clearSettingsFeedback() }
     WearModuleInstallConfirmDialog(installer)
     // Keep launch actions queued until the root-dependent navigation has its initial state.
     if (home.isInitialDataLoaded) {

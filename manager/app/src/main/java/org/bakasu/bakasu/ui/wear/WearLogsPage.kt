@@ -160,7 +160,7 @@ internal fun WearLogsPage(
 internal fun WearLogEntryPage(entry: SulogEntry?, onBack: () -> Unit) {
     WearList(onBack = onBack) { spec ->
         if (entry == null) {
-            item { WearStatusItem(spec, Icons.Rounded.Article, stringResource(R.string.wear_no_logs)) }
+            item { WearEmptyState(spec, Icons.Rounded.Article, stringResource(R.string.wear_no_logs)) }
             return@WearList
         }
         item { WearPageHeader(spec, sulogEntryTitle(entry)) }

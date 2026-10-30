@@ -13,11 +13,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Person
@@ -84,8 +84,8 @@ import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
-import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
+import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
@@ -105,11 +105,11 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
         refreshRequest++
     }
     val failureReason = stringResource(if (failure?.reason == RepositoryError.OFFLINE) R.string.wear_no_internet else R.string.wear_repo_unreachable)
-    // Without a list there is nothing to show, so the failure asks to retry or leave.
+    // Every connection failure asks to retry; cached results stay available after dismissing it.
     val connectDialog = rememberCustomDialog { dismiss ->
         val leave = {
             dismiss()
-            onBack()
+            if (state.modules.isEmpty()) onBack() else failure = null
         }
         AlertDialog(
             visible = true,
@@ -131,45 +131,7 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
     LaunchedEffect(viewModel, state.repositoryUrl, refreshRequest) {
         failure = null
         failure = viewModel.refreshAndGetFailure()
-        if (failure != null && state.modules.isEmpty() && state.search.isBlank()) connectDialog.show()
-    }
-    // A search that could not load shows the failure in place of its results; Back clears the search.
-    if (failure != null && state.search.isNotBlank() && state.modules.isEmpty() && !state.isRefreshing) {
-        BackHandler {
-            failure = null
-            viewModel.dispatch(ModuleRepoUiAction.Search(""))
-        }
-        ScreenScaffold {
-            Column(
-                Modifier.fillMaxSize().padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Icon(
-                    Icons.Rounded.Warning,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.error,
-                )
-                Text(
-                    stringResource(R.string.wear_load_failed),
-                    modifier = Modifier.padding(top = 8.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    failureReason,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-        return
-    }
-    WearResultDialog(WearResult(failureReason, success = false, brief = true).takeIf { failure != null && state.modules.isNotEmpty() }) {
-        failure = null
+        if (failure != null) connectDialog.show()
     }
     WearList(
         isLoading = state.isRefreshing && state.modules.isEmpty(),
