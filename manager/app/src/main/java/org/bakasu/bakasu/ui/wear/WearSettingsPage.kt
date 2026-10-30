@@ -158,7 +158,6 @@ internal fun WearSettingsPage(
     onBack: () -> Unit,
     category: WearSettingsCategory? = null,
     preferences: WearPreferences = WearPreferences(),
-    susfsAvailable: Boolean = false,
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     backToTop: Boolean = false,
 ) {
@@ -200,16 +199,6 @@ internal fun WearSettingsPage(
                     { onOpen(route) },
                     icon = settingsRouteIcon(route),
                 )
-            }
-            if (status.isFullFeatured && susfsAvailable) {
-                item {
-                    WearSettingsJumpPageWidget(
-                        spec,
-                        stringResource(R.string.susfs_config_setting_title),
-                        { onOpen(WearRoute.SuSFS) },
-                        icon = Icons.Rounded.VisibilityOff,
-                    )
-                }
             }
             wearGroupGap("about-gap")
             item {

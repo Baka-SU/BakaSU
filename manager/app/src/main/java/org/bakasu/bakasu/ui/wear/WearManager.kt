@@ -332,10 +332,30 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     },
                                     onSettings = dispatchSettings,
                                     onOpen = ::open,
-                                    onSearchApps = appSearchInput,
-                                    onSearchModules = moduleSearchInput,
-                                    onInstallModule = installer::pickFile,
                                     onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
+                                )
+                            }
+                            entry<WearRoute.Operations> { route ->
+                                WearOperationsPanel(
+                                    page = route.page,
+                                    onBack = ::back,
+                                    onOpen = navigator::replace,
+                                    onSearch = {
+                                        back()
+                                        when (route.page) {
+                                            WearOperationsPage.SuperUser -> appSearchInput()
+                                            WearOperationsPage.Modules -> moduleSearchInput()
+                                            WearOperationsPage.Logs -> logSearchInput()
+                                            WearOperationsPage.Home -> Unit
+                                        }
+                                    },
+                                    onInstall = {
+                                        back()
+                                        installer.pickFile()
+                                    },
+                                    rootAvailable = home.systemStatus.isRootAvailable,
+                                    fullFeatured = home.systemStatus.isFullFeatured,
+                                    susfsAvailable = home.systemInfo.susfsEnabled,
                                 )
                             }
                             entry<WearRoute.Module> { route ->
@@ -383,8 +403,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 WearModuleDownloadPage(route) { installer.downloaded(route, it) }
                             }
                             entry<WearRoute.ModuleSort> {
-                                // The repository replaces the panel, so Back returns to the module list.
-                                WearModulePanel(modules, ::back, moduleViewModel::dispatch) { navigator.replace(WearRoute.ModuleRepo) }
+                                WearModulePanel(modules, ::back, moduleViewModel::dispatch)
                             }
                             entry<WearRoute.ModuleSearch> {
                                 WearTextInputPage(stringResource(R.string.search_modules), modules.search) {
@@ -451,13 +470,12 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 WearLogsPage(
                                     state = logs,
                                     onBack = ::back,
-                                    onSearch = logSearchInput,
                                     onClearSearch = { sulogViewModel.dispatch(SulogUiAction.Search("")) },
                                     onRefresh = {
                                         logError = null
                                         sulogViewModel.dispatch(SulogUiAction.Refresh)
                                     },
-                                    onOptions = { open(WearRoute.LogOptions) },
+                                    onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.Logs)) },
                                     onEntry = { open(WearRoute.LogEntry(it.key)) },
                                     error = logError,
                                 )
@@ -644,9 +662,6 @@ private fun WearMainPages(
     onModule: (ModuleUiAction) -> Unit,
     onSettings: (SettingsUiAction) -> Unit,
     onOpen: (WearRoute) -> Unit,
-    onSearchApps: () -> Unit,
-    onSearchModules: () -> Unit,
-    onInstallModule: () -> Unit,
     onWebUi: (InstalledModule) -> Unit,
 ) {
     val activity = LocalActivity.current
@@ -698,7 +713,7 @@ private fun WearMainPages(
                                 home,
                                 homeError,
                                 { activity?.finish() },
-                                { onOpen(WearRoute.Reboot) },
+                                { onOpen(WearRoute.Operations(WearOperationsPage.Home)) },
                                 homeListState,
                                 onInstall = { onOpen(WearRoute.KernelInstall) },
                                 onVersionInfo = { onOpen(WearRoute.HomeVersionInfo) },
@@ -711,10 +726,7 @@ private fun WearMainPages(
                                 error = superuserError,
                                 onRefresh = { onSuperUser(SuperUserUiAction.Refresh) },
                                 onBack = { activity?.finish() },
-                                onSearch = onSearchApps,
-                                onLogs = { onOpen(WearRoute.Logs) },
-                                onBackup = { onOpen(WearRoute.AllowlistBackup) },
-                                onFilter = { onOpen(WearRoute.AppFilter) },
+                                onOpenPanel = { onOpen(WearRoute.Operations(WearOperationsPage.SuperUser)) },
                                 listState = appListState,
                                 onAppClick = { uid, packageName -> onOpen(WearRoute.App(uid, packageName)) },
                                 backToTop = true,
@@ -724,19 +736,22 @@ private fun WearMainPages(
                                 state = modules,
                                 error = moduleError,
                                 onRefresh = { onModule(ModuleUiAction.Refresh(manual = true)) },
-                                onSearch = onSearchModules,
-                                onSort = { onOpen(WearRoute.ModuleSort) },
+                                onOpenPanel = { onOpen(WearRoute.Operations(WearOperationsPage.Modules)) },
                                 listState = moduleListState,
                                 onModuleClick = { onOpen(WearRoute.Module(it)) },
-                                onInstallClick = onInstallModule,
                                 onWebUi = onWebUi,
                                 onExecute = { onOpen(WearRoute.ModuleAction(it.id)) },
                             )
 
                             SETTINGS -> WearSettingsPage(
-                                settings, home.systemStatus, onSettings, onOpen,
-                                { activity?.finish() }, preferences = preferences,
-                                susfsAvailable = home.systemInfo.susfsEnabled, listState = settingsListState, backToTop = true,
+                                settings,
+                                home.systemStatus,
+                                onSettings,
+                                onOpen,
+                                { activity?.finish() },
+                                preferences = preferences,
+                                listState = settingsListState,
+                                backToTop = true,
                             )
                         }
                     }

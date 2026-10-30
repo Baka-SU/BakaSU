@@ -54,9 +54,7 @@ internal fun WearModulesPage(
     error: String?,
     onRefresh: () -> Unit,
     onModuleClick: (String) -> Unit,
-    onInstallClick: () -> Unit,
-    onSearch: () -> Unit,
-    onSort: () -> Unit,
+    onOpenPanel: () -> Unit,
     onWebUi: (InstalledModule) -> Unit = {},
     onExecute: (InstalledModule) -> Unit = {},
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
@@ -71,20 +69,10 @@ internal fun WearModulesPage(
         backToTop = true,
         snap = true,
         listState = listState,
-        onOpenPanel = onSort,
-        panelLabel = stringResource(R.string.wear_sort),
+        onOpenPanel = onOpenPanel,
+        panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module)) }
-        // Search on the left and install on the right, as one compact button group.
-        item {
-            WearIconButtonGroup(
-                spec,
-                listOf(
-                    WearIconAction(Icons.Rounded.Search, stringResource(R.string.search_modules), onSearch),
-                    WearIconAction(Icons.Rounded.Add, stringResource(R.string.install), onInstallClick),
-                ),
-            )
-        }
         if (!error.isNullOrBlank()) {
             item {
                 WearStatusItem(spec, Icons.Rounded.Error, error, tone = WearStatusTone.ERROR)

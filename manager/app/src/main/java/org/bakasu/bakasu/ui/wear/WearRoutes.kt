@@ -7,6 +7,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class WearSettingsCategory { General, Security, Advanced, Display }
 
+@Serializable
+enum class WearOperationsPage { Home, SuperUser, Modules, Logs }
+
 /** The settings that are chosen from a single list of options. */
 @Serializable
 enum class WearSelection { PickerMode, LinkMode, ScreenShape, Language, SuCompat, Palette, ColorSpec }
@@ -16,6 +19,9 @@ enum class WearSelection { PickerMode, LinkMode, ScreenShape, Language, SuCompat
 sealed interface WearRoute : NavKey {
     @Serializable
     data object Main : WearRoute
+
+    @Serializable
+    data class Operations(val page: WearOperationsPage) : WearRoute
 
     @Serializable
     data class Module(val id: String) :
@@ -205,6 +211,7 @@ interface NeedsRoot
 val WearRoute.needsRoot: Boolean
     get() = when (this) {
         is NeedsRoot -> true
+        is WearRoute.Operations -> page != WearOperationsPage.Home
         is WearRoute.Settings -> category == WearSettingsCategory.Security || category == WearSettingsCategory.Advanced
         is WearRoute.Selection -> selection == WearSelection.SuCompat
         else -> false

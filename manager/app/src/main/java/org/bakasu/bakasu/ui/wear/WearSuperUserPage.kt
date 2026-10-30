@@ -54,10 +54,7 @@ internal fun WearSuperUserPage(
     onRefresh: () -> Unit,
     onAppClick: (Int, String) -> Unit,
     onBack: () -> Unit,
-    onSearch: () -> Unit,
-    onLogs: () -> Unit,
-    onBackup: () -> Unit,
-    onFilter: () -> Unit,
+    onOpenPanel: () -> Unit,
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     backToTop: Boolean = false,
 ) {
@@ -66,23 +63,10 @@ internal fun WearSuperUserPage(
     val loading = state.isRefreshing && state.appGroupList.isEmpty() && state.search.isEmpty()
     WearList(
         isLoading = loading, isRefreshing = state.isRefreshing && !loading, onRefresh = onRefresh,
-        onBack = onBack, onOpenPanel = onFilter, panelLabel = stringResource(R.string.wear_filter_sort),
+        onBack = onBack, onOpenPanel = onOpenPanel, panelLabel = stringResource(R.string.wear_operations),
         snap = true, listState = listState, backToTop = backToTop,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.superuser)) }
-        // Search, SU log and allowlist backup as one compact button group, matching the Modules page actions.
-        item {
-            WearIconButtonGroup(
-                spec,
-                listOf(
-                    WearIconAction(Icons.Rounded.Search, stringResource(R.string.search_apps), onSearch),
-                    WearIconAction(Icons.Rounded.Article, stringResource(R.string.sulog), onLogs),
-                    WearIconAction(Icons.Rounded.Backup, stringResource(R.string.wear_allowlist_backup), onBackup),
-                ),
-            )
-        }
-        // The app list follows the actions directly, separated by the 8dp group gap of the Wear list guidance.
-        wearGroupGap("apps-gap")
         if (!error.isNullOrBlank()) {
             item { WearStatusItem(spec, Icons.Rounded.Error, error, tone = WearStatusTone.ERROR) }
         }

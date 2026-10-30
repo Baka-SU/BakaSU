@@ -57,7 +57,7 @@ import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
  */
 
 /**
- * The SU log: a compact action group (search, refresh, options) and the status of
+ * The SU log: page actions in its pull-down panel and the status of
  * the log, then one Wear Material 3 [TitleCard] per entry that opens its full fields. Log files,
  * type filters and cleaning live in [WearLogOptionsPage], as the phone keeps them in the app bar.
  */
@@ -65,10 +65,9 @@ import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 internal fun WearLogsPage(
     state: SulogUiState,
     onBack: () -> Unit,
-    onSearch: () -> Unit,
     onClearSearch: () -> Unit,
     onRefresh: () -> Unit,
-    onOptions: () -> Unit,
+    onOpenPanel: () -> Unit,
     onEntry: (SulogEntry) -> Unit,
     error: String? = null,
 ) {
@@ -79,17 +78,10 @@ internal fun WearLogsPage(
         isRefreshing = state.isRefreshing && !state.isLoading,
         onRefresh = onRefresh,
         onBack = onBack,
+        onOpenPanel = onOpenPanel,
+        panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.sulog)) }
-        item {
-            WearIconButtonGroup(
-                spec,
-                listOf(
-                    WearIconAction(Icons.Rounded.Search, stringResource(R.string.sulog_search_placeholder), onSearch),
-                    WearIconAction(Icons.Rounded.FilterList, stringResource(R.string.sulog_filter_title), onOptions),
-                ),
-            )
-        }
         // The active query; tapping it clears the search.
         if (state.searchText.isNotBlank()) {
             item {

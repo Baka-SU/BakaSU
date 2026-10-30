@@ -74,7 +74,7 @@ internal fun WearHomePage(
     state: HomeDashboardState,
     error: String?,
     onBack: () -> Unit,
-    onRebootPanel: () -> Unit,
+    onOpenPanel: () -> Unit,
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     onInstall: (() -> Unit)? = null,
     onVersionInfo: () -> Unit = {},
@@ -169,8 +169,8 @@ internal fun WearHomePage(
     }
     WearList(
         onBack = onBack,
-        onOpenPanel = onRebootPanel.takeIf { status.isRootAvailable },
-        panelLabel = stringResource(R.string.reboot),
+        onOpenPanel = onOpenPanel.takeIf { status.isRootAvailable },
+        panelLabel = stringResource(R.string.wear_operations),
         listState = listState,
         backToTop = backToTop,
     ) { spec ->
