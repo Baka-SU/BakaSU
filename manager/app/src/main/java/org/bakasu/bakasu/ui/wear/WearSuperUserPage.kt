@@ -12,6 +12,7 @@ import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineBreak
@@ -98,16 +99,16 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
     // The same labels and conditions as the phone's superuser list.
     val labels = buildList {
         if (group.allowSu) {
-            add(stringResource(R.string.wear_badge_root))
+            add(R.string.wear_badge_root)
         } else if (group.shouldUmount) {
-            add(stringResource(R.string.wear_badge_umount))
+            add(R.string.wear_badge_umount)
         }
         if (group.hasCustomProfile) {
-            add(stringResource(R.string.wear_badge_custom))
+            add(R.string.wear_badge_custom)
         } else if (!group.allowSu) {
-            add(stringResource(R.string.wear_badge_default))
+            add(R.string.wear_badge_default)
         }
-        if (isManager) add(stringResource(R.string.wear_badge_manager))
+        if (isManager) add(R.string.wear_badge_manager)
     }
     Button(
         modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
@@ -134,10 +135,18 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 labels.forEach { label ->
+                    val colors = MaterialTheme.colorScheme
+                    val (container, content) = when (label) {
+                        R.string.wear_badge_root -> colors.primary to Color.Black
+                        R.string.wear_badge_default -> colors.primaryContainer to Color.White
+                        R.string.wear_badge_umount -> colors.secondaryContainer to colors.onSecondaryContainer
+                        R.string.wear_badge_custom -> colors.tertiaryContainer to colors.onTertiaryContainer
+                        else -> colors.errorContainer to colors.onErrorContainer
+                    }
                     WearBadge(
-                        label,
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        stringResource(label),
+                        containerColor = container,
+                        contentColor = content,
                         style = badgeStyle,
                     )
                 }
