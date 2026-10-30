@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Copyright
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Group
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
+import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.BuildConfig
@@ -48,6 +50,9 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
         AlertDialog(
             visible = true,
             onDismissRequest = dismiss,
+            icon = {
+                Icon(Icons.Rounded.ErrorOutline, contentDescription = null, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
+            },
             title = { Text(stringResource(R.string.wear_icon_copyright)) },
             text = { Text(stringResource(R.string.about_app_icon, stringResource(R.string.wear_icon_author))) },
             edgeButton = { AlertDialogDefaults.EdgeButton(onClick = dismiss) },
