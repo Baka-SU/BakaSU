@@ -18,17 +18,23 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalScrollCaptureInProgress
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -81,6 +87,7 @@ fun WearList(
     confirmEnabled: Boolean = true,
     backToTop: Boolean = false,
     onOpenPanel: (() -> Unit)? = null,
+    panelContent: @Composable (() -> Unit)? = null,
     onClosePanel: (() -> Unit)? = null,
     panelLabel: String? = null,
     snap: Boolean = false,
@@ -101,8 +108,24 @@ fun WearList(
     val motion = MaterialTheme.motionScheme
     val reduceMotion = LocalReduceMotion.current
     val screenActive = LocalScreenIsActive.current
+    var viewportHeight by remember { mutableFloatStateOf(1f) }
+    var openingPanel by remember { mutableStateOf(false) }
+    val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
+    val panelProgress by animateFloatAsState(
+        targetValue = if (openingPanel) 1f else (pullProgress.floatValue * threshold / viewportHeight).coerceIn(0f, 1f),
+        animationSpec = if (reduceMotion || pullProgress.floatValue > 0f && !openingPanel) snap() else motion.defaultSpatialSpec(),
+        label = "wear-panel-reveal",
+        finishedListener = { progress ->
+            if (openingPanel && progress == 1f && screenActive) {
+                openingPanel = false
+                onOpenPanel?.invoke()
+            }
+        },
+    )
+    val revealProgress = panelProgress.coerceIn(0f, 1f)
     LaunchedEffect(screenActive) {
         if (!screenActive) {
+            openingPanel = false
             pullOffset.floatValue = 0f
             pullProgress.floatValue = 0f
         }
@@ -119,14 +142,22 @@ fun WearList(
         },
         label = "wear-boundary-pull",
     )
-    // The gesture covers the whole screen, including the edge button shown at the end of the list.
+    // Keep the gesture on the stationary viewport while its pages move underneath it.
     val gestureModifier = Modifier.wearRefreshGesture(
         listState,
         pullOffset,
         pullProgress,
         enabled = screenActive && !isLoading && !isRefreshing && !isBusy,
         onRefresh = onRefresh,
-        onOpenPanel = onOpenPanel,
+        onOpenPanel = onOpenPanel?.let { open ->
+            {
+                if (panelContent == null || reduceMotion || pullProgress.floatValue * threshold >= viewportHeight) {
+                    open()
+                } else {
+                    openingPanel = true
+                }
+            }
+        },
         onClosePanel = onClosePanel,
         panelLabel = panelLabel,
     )
@@ -141,7 +172,9 @@ fun WearList(
         } else {
             Box(Modifier.fillMaxSize()) {
                 TransformingLazyColumn(
-                    modifier = Modifier.fillMaxSize().graphicsLayer { translationY = animatedOffset },
+                    modifier = Modifier.fillMaxSize().graphicsLayer {
+                        translationY = if (panelContent == null || pullProgress.floatValue < 0f) animatedOffset else 0f
+                    },
                     state = listState,
                     contentPadding = contentPadding,
                     verticalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.Top),
@@ -159,7 +192,7 @@ fun WearList(
                     content(transformationSpec)
                 }
                 // Pulling down at the top shows the panel indicator in the room the list makes for it.
-                if (onOpenPanel != null) {
+                if (onOpenPanel != null && panelContent == null) {
                     WearPullIndicator(
                         pullProgress.floatValue,
                         closing = onClosePanel != null,
@@ -169,89 +202,102 @@ fun WearList(
             }
         }
     }
-    // The edge button and the room it takes stay hidden until loading ends.
-    if (!isLoading && (onBack != null || onConfirm != null || backToTop)) {
-        ScreenScaffold(
-            scrollState = listState,
-            modifier = gestureModifier,
-            scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
-            edgeButton = {
-                EdgeButton(
-                    enabled = onConfirm == null || confirmEnabled,
-                    onClick = {
-                        // While refreshing, the edge button only shows the progress of the pull refresh.
-                        if (isRefreshing) {
-                            Unit
-                        } else if (onClosePanel != null) {
-                            onClosePanel()
-                        } else if (onConfirm != null) {
-                            onConfirm()
-                        } else if (backToTop) {
-                            scope.launch { listState.animateScrollToItem(0) }
-                        } else {
-                            onBack?.invoke()
-                        }
-                    },
-                    // Dragging on the edge button keeps scrolling the list, as in the M3 list guidance.
-                    modifier = Modifier.scrollable(
-                        listState,
-                        orientation = Orientation.Vertical,
-                        reverseDirection = true,
-                        overscrollEffect = rememberOverscrollEffect(),
-                    ),
-                ) {
-                    // The pull refresh starts at the end of the list, so its progress shows here, where
-                    // the finger is: a ring that fills with the pull, then a spinner while refreshing.
-                    if (onClosePanel != null && pullProgress.floatValue < 0f) {
-                        WearPullIndicator(-pullProgress.floatValue, closing = true)
-                    } else if (pullProgress.floatValue < 0f) {
-                        CircularProgressIndicator(
-                            progress = { (-pullProgress.floatValue).coerceIn(0f, 1f) },
-                            modifier = Modifier.size(24.dp),
-                            colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current),
-                            // The pull ring keeps the thin stroke of the spinner that follows it.
-                            strokeWidth = CircularProgressIndicatorDefaults.IndeterminateStrokeWidth,
-                        )
-                    } else if (isRefreshing) {
-                        CircularProgressIndicator(
-                            Modifier.size(24.dp),
-                            colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current),
-                        )
-                    } else if (onConfirm != null && confirmLabel != null) {
-                        Text(confirmLabel)
-                    } else {
-                        Icon(
-                            if (onClosePanel != null) {
-                                Icons.Rounded.KeyboardArrowDown
+    val pageModifier = Modifier.graphicsLayer {
+        translationY = if (panelContent != null && screenActive) revealProgress * viewportHeight else 0f
+    }
+    Box(Modifier.fillMaxSize().then(gestureModifier).onSizeChanged { viewportHeight = it.height.toFloat().coerceAtLeast(1f) }) {
+        // The edge button and the room it takes stay hidden until loading ends.
+        if (!isLoading && (onBack != null || onConfirm != null || backToTop)) {
+            ScreenScaffold(
+                scrollState = listState,
+                modifier = pageModifier,
+                scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
+                edgeButton = {
+                    EdgeButton(
+                        enabled = onConfirm == null || confirmEnabled,
+                        onClick = {
+                            // While refreshing, the edge button only shows the progress of the pull refresh.
+                            if (isRefreshing) {
+                                Unit
+                            } else if (onClosePanel != null) {
+                                onClosePanel()
                             } else if (onConfirm != null) {
-                                Icons.Rounded.Check
+                                onConfirm()
                             } else if (backToTop) {
-                                Icons.Rounded.VerticalAlignTop
+                                scope.launch { listState.animateScrollToItem(0) }
                             } else {
-                                Icons.Rounded.ArrowBack
-                            },
-                            contentDescription = stringResource(
+                                onBack?.invoke()
+                            }
+                        },
+                        // Dragging on the edge button keeps scrolling the list, as in the M3 list guidance.
+                        modifier = Modifier.scrollable(
+                            listState,
+                            orientation = Orientation.Vertical,
+                            reverseDirection = true,
+                            overscrollEffect = rememberOverscrollEffect(),
+                        ),
+                    ) {
+                        // The pull refresh starts at the end of the list, so its progress shows here, where
+                        // the finger is: a ring that fills with the pull, then a spinner while refreshing.
+                        if (onClosePanel != null && pullProgress.floatValue < 0f) {
+                            WearPullIndicator(-pullProgress.floatValue, closing = true)
+                        } else if (pullProgress.floatValue < 0f) {
+                            CircularProgressIndicator(
+                                progress = { (-pullProgress.floatValue).coerceIn(0f, 1f) },
+                                modifier = Modifier.size(24.dp),
+                                colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current),
+                                // The pull ring keeps the thin stroke of the spinner that follows it.
+                                strokeWidth = CircularProgressIndicatorDefaults.IndeterminateStrokeWidth,
+                            )
+                        } else if (isRefreshing) {
+                            CircularProgressIndicator(
+                                Modifier.size(24.dp),
+                                colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current),
+                            )
+                        } else if (onConfirm != null && confirmLabel != null) {
+                            Text(confirmLabel)
+                        } else {
+                            Icon(
                                 if (onClosePanel != null) {
-                                    R.string.wear_close_panel
+                                    Icons.Rounded.KeyboardArrowDown
                                 } else if (onConfirm != null) {
-                                    R.string.confirm
+                                    Icons.Rounded.Check
                                 } else if (backToTop) {
-                                    R.string.scroll_to_top
+                                    Icons.Rounded.VerticalAlignTop
                                 } else {
-                                    R.string.back
+                                    Icons.Rounded.ArrowBack
                                 },
-                            ),
-                        )
+                                contentDescription = stringResource(
+                                    if (onClosePanel != null) {
+                                        R.string.wear_close_panel
+                                    } else if (onConfirm != null) {
+                                        R.string.confirm
+                                    } else if (backToTop) {
+                                        R.string.scroll_to_top
+                                    } else {
+                                        R.string.back
+                                    },
+                                ),
+                            )
+                        }
                     }
-                }
-            },
-        ) { listContent(it) }
-    } else {
-        ScreenScaffold(
-            scrollState = listState,
-            modifier = gestureModifier,
-            scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
-        ) { listContent(it) }
+                },
+            ) { listContent(it) }
+        } else {
+            ScreenScaffold(
+                scrollState = listState,
+                modifier = pageModifier,
+                scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
+            ) { listContent(it) }
+        }
+        if (panelContent != null && revealProgress > 0f && screenActive) {
+            Box(
+                Modifier.fillMaxSize().graphicsLayer { translationY = (revealProgress - 1f) * viewportHeight }
+                    .clearAndSetSemantics {},
+            ) {
+                CompositionLocalProvider(LocalScreenIsActive provides false) { panelContent() }
+            }
+        }
     }
 }
 

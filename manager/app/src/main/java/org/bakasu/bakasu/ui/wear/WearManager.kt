@@ -6,6 +6,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -210,6 +212,18 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         moduleViewModel.dispatch(ModuleUiAction.Refresh())
         homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
     }
+    val panelPreview: @Composable (WearOperationsPage) -> Unit = { page ->
+        WearOperationsPanel(
+            page,
+            {},
+            {},
+            {},
+            {},
+            rootAvailable = home.systemStatus.isRootAvailable,
+            fullFeatured = home.systemStatus.isFullFeatured,
+            susfsAvailable = home.systemInfo.susfsEnabled,
+        )
+    }
     val selectImageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) settingsViewModel.dispatch(SettingsUiAction.SetCustomBackground(uri.toString()))
     }
@@ -342,6 +356,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     },
                                     onSettings = dispatchSettings,
                                     onOpen = ::open,
+                                    homePanelContent = { panelPreview(WearOperationsPage.Home) },
+                                    appPanelContent = { panelPreview(WearOperationsPage.SuperUser) },
+                                    modulePanelContent = { panelPreview(WearOperationsPage.Modules) },
                                     onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
                                 )
                             }
@@ -488,6 +505,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.Logs)) },
                                     onEntry = { open(WearRoute.LogEntry(it.key)) },
                                     error = logError,
+                                    panelContent = { panelPreview(WearOperationsPage.Logs) },
                                 )
                             }
                             entry<WearRoute.LogOptions> {
@@ -650,7 +668,13 @@ private val WearPageTransitions: Map<String, Any> = NavDisplay.transitionSpec {
  */
 private fun <T : Any> withPageTransitions(provider: (T) -> NavEntry<T>): (T) -> NavEntry<T> = { key ->
     val entry = provider(key)
-    NavEntry(key, entry.contentKey, entry.metadata + WearPageTransitions) { entry.Content() }
+    // A pull-down panel has already settled into view before its destination is committed.
+    val transitions = if (key is WearRoute.Operations) {
+        NavDisplay.transitionSpec { EnterTransition.None togetherWith ExitTransition.None }
+    } else {
+        WearPageTransitions
+    }
+    NavEntry(key, entry.contentKey, entry.metadata + transitions) { entry.Content() }
 }
 
 /**
@@ -673,6 +697,9 @@ private fun WearMainPages(
     onSettings: (SettingsUiAction) -> Unit,
     onOpen: (WearRoute) -> Unit,
     onWebUi: (InstalledModule) -> Unit,
+    homePanelContent: @Composable () -> Unit,
+    appPanelContent: @Composable () -> Unit,
+    modulePanelContent: @Composable () -> Unit,
 ) {
     val activity = LocalActivity.current
     if (!home.isInitialDataLoaded && homeError == null) {
@@ -728,6 +755,7 @@ private fun WearMainPages(
                                 onInstall = { onOpen(WearRoute.KernelInstall) },
                                 onVersionInfo = { onOpen(WearRoute.HomeVersionInfo) },
                                 onStatusInfo = { onOpen(WearRoute.HomeStatusInfo) },
+                                panelContent = homePanelContent,
                                 backToTop = true,
                             )
 
@@ -737,6 +765,7 @@ private fun WearMainPages(
                                 onRefresh = { onSuperUser(SuperUserUiAction.Refresh) },
                                 onBack = { activity?.finish() },
                                 onOpenPanel = { onOpen(WearRoute.Operations(WearOperationsPage.SuperUser)) },
+                                panelContent = appPanelContent,
                                 listState = appListState,
                                 onAppClick = { uid, packageName -> onOpen(WearRoute.App(uid, packageName)) },
                                 backToTop = true,
@@ -747,6 +776,7 @@ private fun WearMainPages(
                                 error = moduleError,
                                 onRefresh = { onModule(ModuleUiAction.Refresh(manual = true)) },
                                 onOpenPanel = { onOpen(WearRoute.Operations(WearOperationsPage.Modules)) },
+                                panelContent = modulePanelContent,
                                 listState = moduleListState,
                                 onModuleClick = { onOpen(WearRoute.Module(it)) },
                                 onWebUi = onWebUi,

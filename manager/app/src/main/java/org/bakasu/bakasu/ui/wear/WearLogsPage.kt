@@ -70,6 +70,7 @@ internal fun WearLogsPage(
     onOpenPanel: () -> Unit,
     onEntry: (SulogEntry) -> Unit,
     error: String? = null,
+    panelContent: @Composable (() -> Unit)? = null,
 ) {
     // As on the phone: the log refreshes by the pull gesture, whose progress shows in the edge
     // button, and the first load shows only the loading indicator.
@@ -80,6 +81,7 @@ internal fun WearLogsPage(
         onBack = onBack,
         onOpenPanel = onOpenPanel,
         panelLabel = stringResource(R.string.wear_operations),
+        panelContent = panelContent,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.sulog)) }
         // The active query; tapping it clears the search.

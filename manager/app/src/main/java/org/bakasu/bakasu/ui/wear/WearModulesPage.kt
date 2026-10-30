@@ -59,6 +59,7 @@ internal fun WearModulesPage(
     onWebUi: (InstalledModule) -> Unit = {},
     onExecute: (InstalledModule) -> Unit = {},
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
+    panelContent: @Composable (() -> Unit)? = null,
 ) {
     // As on the phone: an empty list shows the loading indicator in place of the page; once it has
     // content, refreshing shows at the pull refresh, in the edge button.
@@ -72,6 +73,7 @@ internal fun WearModulesPage(
         listState = listState,
         onOpenPanel = onOpenPanel,
         panelLabel = stringResource(R.string.wear_operations),
+        panelContent = panelContent,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module)) }
         if (!error.isNullOrBlank()) {

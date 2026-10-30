@@ -24,6 +24,8 @@ import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import kotlin.math.abs
 import org.bakasu.bakasu.R
 
+internal val WearPullThreshold = 48.dp
+
 /**
  * @author Hanhan_awa
  * @date 2026/10/1.
@@ -58,7 +60,7 @@ internal fun Modifier.wearRefreshGesture(
     val panel by rememberUpdatedState(onOpenPanel)
     val closePanel by rememberUpdatedState(onClosePanel)
     val haptic = LocalHapticFeedback.current
-    val threshold = with(LocalDensity.current) { 48.dp.toPx() }
+    val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
     val refreshLabel = stringResource(R.string.wear_refresh)
     val backLabel = stringResource(R.string.back)
     // The crown turned past the boundary: three times the touch threshold of extra rotation, with a
