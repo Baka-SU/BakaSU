@@ -9,7 +9,6 @@ import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.FilterList
-import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Warning
@@ -58,7 +57,7 @@ import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
  */
 
 /**
- * The SU log: a compact action group (search, refresh, options), the on/off entry and the status of
+ * The SU log: a compact action group (search, refresh, options) and the status of
  * the log, then one Wear Material 3 [TitleCard] per entry that opens its full fields. Log files,
  * type filters and cleaning live in [WearLogOptionsPage], as the phone keeps them in the app bar.
  */
@@ -66,7 +65,6 @@ import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 internal fun WearLogsPage(
     state: SulogUiState,
     onBack: () -> Unit,
-    onEnable: () -> Unit,
     onSearch: () -> Unit,
     onClearSearch: () -> Unit,
     onRefresh: () -> Unit,
@@ -106,13 +104,6 @@ internal fun WearLogsPage(
             }
         }
         when (state.sulogStatus) {
-            // As on the phone, the log only offers enabling; disabling is the setting's switch.
-            "supported" -> if (!state.isSulogEnabled) {
-                item {
-                    WearActionButton(spec, Icons.Rounded.PowerSettingsNew, stringResource(R.string.wear_enable_sulog), onEnable)
-                }
-            }
-
             "unsupported" -> item {
                 WearStatusItem(
                     spec,

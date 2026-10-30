@@ -451,7 +451,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 WearLogsPage(
                                     state = logs,
                                     onBack = ::back,
-                                    onEnable = { sulogViewModel.dispatch(SulogUiAction.Enable) },
                                     onSearch = logSearchInput,
                                     onClearSearch = { sulogViewModel.dispatch(SulogUiAction.Search("")) },
                                     onRefresh = {
