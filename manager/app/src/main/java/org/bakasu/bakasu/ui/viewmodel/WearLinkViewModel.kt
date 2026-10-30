@@ -13,6 +13,8 @@ import org.bakasu.bakasu.data.network.WearLinkException
 import org.bakasu.bakasu.data.network.WearLinkFailure
 import org.bakasu.bakasu.data.network.WearLinkRepository
 import org.bakasu.bakasu.data.network.WearLinkTarget
+import org.bakasu.bakasu.domain.model.BridgeException
+import org.bakasu.bakasu.domain.model.BridgeFailure
 import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
 
 /**
@@ -29,9 +31,10 @@ sealed interface WearLinkEvent {
 /** How opening ended when the phone was involved or it failed; shown once as an overlay. */
 sealed interface WearLinkResult {
     data object OpenedOnPhone : WearLinkResult
+    data object PhoneNotification : WearLinkResult
 
     /** A null [reason] is an unexpected failure; [onPhone] marks a module WebUI the phone could not open. */
-    data class Failed(val reason: WearLinkFailure?, val onPhone: Boolean = false) : WearLinkResult
+    data class Failed(val reason: WearLinkFailure?, val onPhone: Boolean = false, val bridgeFailure: BridgeFailure? = null) : WearLinkResult
 }
 
 /**
@@ -72,14 +75,13 @@ class WearLinkViewModel(
 
     /**
      * Opens a module WebUI in the watch WebView, or on the phone: when chosen, or automatically when
-     * the watch has no WebView. On the phone the page is served by this watch over the Data Layer.
+     * the watch has no WebView. The phone receives the page from this watch over secure RFCOMM.
      */
     fun openWebUi(moduleId: String, moduleName: String) {
         val mode = mode
         if (mode == "phone" || mode != "webview" && !repository.hasWebView()) {
             run(onPhone = true) {
-                repository.openWebUiOnPhone(moduleId, moduleName)
-                mutableResult.value = WearLinkResult.OpenedOnPhone
+                mutableResult.value = if (repository.openWebUiOnPhone(moduleId, moduleName)) WearLinkResult.OpenedOnPhone else WearLinkResult.PhoneNotification
             }
         } else if (repository.hasWebView()) {
             viewModelScope.launch { mutableEvents.emit(WearLinkEvent.WebUi(moduleId)) }
@@ -110,7 +112,7 @@ class WearLinkViewModel(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                mutableResult.value = WearLinkResult.Failed((error as? WearLinkException)?.reason, onPhone)
+                mutableResult.value = WearLinkResult.Failed((error as? WearLinkException)?.reason, onPhone, (error as? BridgeException)?.reason)
             } finally {
                 mutableLoading.value = false
             }

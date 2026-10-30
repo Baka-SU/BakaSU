@@ -4,13 +4,8 @@ import android.app.Application
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.util.Log
 import androidx.wear.remote.interactions.RemoteActivityHelper
 import androidx.webkit.WebViewCompat
-import com.google.android.gms.tasks.Tasks
-import com.google.android.gms.wearable.CapabilityClient
-import com.google.android.gms.wearable.Wearable
-import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
@@ -19,10 +14,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import org.bakasu.bakasu.data.webui.WearWebUiProtocol
+import org.bakasu.bakasu.data.webui.CompanionBridgeRepository
 import org.bakasu.bakasu.data.webui.WearWebUiSession
-
-private const val TAG = "WearLink"
+import org.bakasu.bakasu.domain.model.BridgeException
+import org.bakasu.bakasu.domain.model.BridgeFailure
 
 enum class WearLinkTarget { WEBVIEW, BROWSER, PHONE }
 
@@ -34,7 +29,7 @@ class WearLinkException(val reason: WearLinkFailure, cause: Throwable? = null) :
  * Links open on the watch or are sent to the phone. On the watch they go to the default browser
  * when one can handle the link, otherwise to the app's WebView, which some watches ship without.
  */
-class WearLinkRepository(private val application: Application) {
+class WearLinkRepository(private val application: Application, private val bridge: CompanionBridgeRepository) {
     // Both the system feature and an installed provider are required; builds that remove WebView
     // drop the feature, and a provider package alone does not prove WebView can be created.
     fun hasWebView(): Boolean = application.packageManager.hasSystemFeature(PackageManager.FEATURE_WEBVIEW) &&
@@ -91,55 +86,23 @@ class WearLinkRepository(private val application: Application) {
         target
     }
 
-    /**
-     * Opens a module's WebUI on the paired phone. A connected phone must have this app, found by its
-     * Data Layer capability; the phone page is then started with RemoteActivityHelper and may claim
-     * a session limited to [moduleId], for that phone only (see [WearWebUiSession]).
-     */
-    suspend fun openWebUiOnPhone(moduleId: String, moduleName: String) = withContext(Dispatchers.IO) {
-        val nodeClient = Wearable.getNodeClient(application)
-        val connected = runCatching { Tasks.await(nodeClient.connectedNodes, 5, TimeUnit.SECONDS) }
-            .getOrElse {
-                Log.w(TAG, "Connected nodes unavailable", it)
-                throw WearLinkException(WearLinkFailure.PHONE_FAILED, it)
-            }
-        Log.i(TAG, "Connected nodes: ${connected.joinToString { "${it.displayName}(${it.id}, nearby=${it.isNearby})" }}")
-        if (connected.isEmpty()) throw WearLinkException(WearLinkFailure.PHONE_UNAVAILABLE)
-        val localId = runCatching { Tasks.await(nodeClient.localNode, 5, TimeUnit.SECONDS).id }
-            .getOrElse {
-                Log.w(TAG, "Local node unavailable", it)
-                throw WearLinkException(WearLinkFailure.PHONE_FAILED, it)
-            }
-        // The Data Layer only links apps with the same package name and signing certificate, so a
-        // phone app from another build (for example a release signed with another key, or a version
-        // without the capability) is not found here.
-        val phones = runCatching {
-            Tasks.await(
-                Wearable.getCapabilityClient(application)
-                    .getCapability(WearWebUiProtocol.CAPABILITY, CapabilityClient.FILTER_REACHABLE),
-                5,
-                TimeUnit.SECONDS,
-            ).nodes
-        }.getOrElse {
-            Log.w(TAG, "Capability query failed", it)
-            throw WearLinkException(WearLinkFailure.PHONE_FAILED, it)
-        }
-            .filter { it.id != localId }
-        Log.i(TAG, "Nodes with ${WearWebUiProtocol.CAPABILITY}: ${phones.joinToString { "${it.displayName}(${it.id})" }}")
-        val phone = phones.firstOrNull { it.isNearby } ?: phones.firstOrNull()
-            ?: throw WearLinkException(WearLinkFailure.PHONE_APP_MISSING)
-        // The link only names this app's phone activity; that activity claims the session from the
-        // watch over the Data Layer, so the intent carries nothing another app could reuse.
-        val token = WearWebUiSession.offer(moduleId, moduleName, phone.id)
-        val uri = Uri.Builder().scheme(WearWebUiProtocol.SCHEME).authority(WearWebUiProtocol.HOST).build()
+    /** Opens the WebUI through the paired app; false means the phone posted its notification. */
+    suspend fun openWebUiOnPhone(moduleId: String, moduleName: String): Boolean = withContext(Dispatchers.IO) {
+        val peer = bridge.state.value.peer?.takeIf { bridge.state.value.paired }
+            ?: throw BridgeException(BridgeFailure.SETUP_REQUIRED)
+        val token = WearWebUiSession.offer(moduleId, moduleName, peer.address)
         try {
-            startOnPhone(
-                Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)
-                    .setPackage(application.packageName),
-                phone.id,
-            )
+            bridge.startServer()
+            bridge.awaitServer()
+            when (bridge.request(peer.address, CompanionBridgeRepository.OPEN) { it.input.readUTF() }) {
+                "opened" -> true
+                "notification" -> false
+                "notifications-required" -> throw BridgeException(BridgeFailure.NOTIFICATIONS)
+                else -> throw BridgeException(BridgeFailure.CONNECTION)
+            }
         } catch (error: Exception) {
             WearWebUiSession.end(token)
+            bridge.stopServer()
             throw error
         }
     }

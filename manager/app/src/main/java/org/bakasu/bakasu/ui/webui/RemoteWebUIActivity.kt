@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.webui
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -24,15 +25,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.AppSettingsRepository
+import org.bakasu.bakasu.data.webui.BridgeActivityLaunch
+import org.bakasu.bakasu.data.webui.CompanionBridgeRepository
 import org.bakasu.bakasu.data.webui.RemoteWebUiBackend
-import org.bakasu.bakasu.data.webui.WearWebUiProtocol
 import org.bakasu.bakasu.ui.theme.KernelSUTheme
 import org.koin.compose.koinInject
 
 /**
- * The phone side of a watch module's WebUI, opened by the watch through RemoteActivityHelper with a
- * `resukisu-webui://open` link. The link carries no data and anyone may send it: the activity only
- * shows a session that a watch offered to this phone and that it claims over the Data Layer. The
+ * The phone side of a watch module's WebUI, opened internally after Bluetooth app authentication.
+ * The activity claims the module session from the explicitly paired watch over secure RFCOMM. The
  * page, its files and its `ksu` bridge commands are all served by the watch, so every change the
  * page makes is applied on the watch; closing the page tells the watch to end the session and
  * reload its modules.
@@ -49,7 +50,8 @@ class RemoteWebUIActivity : ComponentActivity() {
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
         super.onCreate(savedInstanceState)
 
-        if (intent.data?.scheme != WearWebUiProtocol.SCHEME) {
+        val peer = intent.getStringExtra(BridgeActivityLaunch.PEER)
+        if (peer == null) {
             finish()
             return
         }
@@ -58,12 +60,14 @@ class RemoteWebUIActivity : ComponentActivity() {
             KernelSUTheme {
                 val webUIState = remember { WebUIState() }
                 val settingsRepository = koinInject<AppSettingsRepository>()
+                val transport = koinInject<CompanionBridgeRepository>()
                 val colorsCss = koinInject<MonetColorsProvider>().getColorsCss()
                 val currentColorsCss = rememberUpdatedState(colorsCss)
                 val claimFailed = stringResource(R.string.operation_failed)
                 LaunchedEffect(Unit) {
-                    val remote = withContext(Dispatchers.IO) { RemoteWebUiBackend.claim(applicationContext) }
+                    val remote = withContext(Dispatchers.IO) { RemoteWebUiBackend.claim(transport, peer) }
                     if (remote == null) {
+                        BridgeActivityLaunch.failed(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
                         webUIState.uiEvent = WebUIEvent.Error(claimFailed)
                         return@LaunchedEffect
                     }
@@ -78,6 +82,7 @@ class RemoteWebUIActivity : ComponentActivity() {
                         restrictToModule = true,
                         colorsCssProvider = { currentColorsCss.value },
                     )
+                    BridgeActivityLaunch.ready(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
                 }
                 DisposableEffect(Unit) { onDispose { webUIState.dispose() } }
 
@@ -103,7 +108,20 @@ class RemoteWebUIActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        if (isFinishing) backend?.close(applicationContext)
+        if (isFinishing) backend?.close()
         super.onDestroy()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getStringExtra(BridgeActivityLaunch.REQUEST) == this.intent.getStringExtra(BridgeActivityLaunch.REQUEST)) {
+            // A late notification brings the already claimed page forward without claiming twice.
+            if (backend != null) BridgeActivityLaunch.ready(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
+            return
+        }
+        backend?.close()
+        backend = null
+        setIntent(intent)
+        recreate()
     }
 }

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.rounded.Adb
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Delete
@@ -123,6 +124,8 @@ private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
 
     WearRoute.Color -> Icons.Rounded.Palette
 
+    WearRoute.BridgeSetup -> Icons.Rounded.Bluetooth
+
     WearRoute.Dpi -> Icons.Rounded.FormatSize
 
     WearRoute.Logs -> Icons.Rounded.Article
@@ -168,6 +171,7 @@ internal fun WearSettingsPage(
     val themeConfig = koinInject<ThemeConfig>()
     val languageSummary = state.currentAppLocale?.let { it.getDisplayName(it) }
         ?: stringResource(R.string.language_system_default)
+    val bridgeSummary = stringResource(R.string.wear_bridge_summary)
     val pickerSummary = pickerModeLabel(preferences.picker)
     val linkSummary = linkModeLabel(preferences.link)
     val suCompatSummary = suCompatModeLabel(state.suCompatMode)
@@ -370,6 +374,7 @@ internal fun WearSettingsPage(
             // Pages that open from this category, with the current value or phone summary as description.
             val pages = buildList {
                 if (category == WearSettingsCategory.General) {
+                    add(SettingsPageLink(SettingsSection.LinksFiles, R.string.wear_bridge, WearRoute.BridgeSetup, bridgeSummary))
                     if (status.isFullFeatured) add(SettingsPageLink(SettingsSection.Diagnostics, R.string.sulog, WearRoute.Logs))
                     add(SettingsPageLink(SettingsSection.Diagnostics, R.string.send_log, WearRoute.Bugreport))
                     add(

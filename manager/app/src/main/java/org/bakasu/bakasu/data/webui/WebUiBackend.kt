@@ -13,7 +13,7 @@ import org.json.JSONObject
 /**
  * What a module WebUI needs from the device that owns the module: root commands, module files and
  * the module and package lists. [LocalWebUiBackend] serves the device itself; the phone uses
- * [RemoteWebUiBackend] to reach a watch's module over the Wear Data Layer.
+ * [RemoteWebUiBackend] to reach a watch's module over authenticated secure RFCOMM.
  */
 interface WebUiBackend {
     fun execute(command: String): WebUiCommandResult

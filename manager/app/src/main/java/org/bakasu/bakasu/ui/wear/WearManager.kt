@@ -597,6 +597,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         .onFailure { settingsError = operationFailedText }
                                 }
                             }
+                            entry<WearRoute.BridgeSetup> {
+                                WearBridgeSetupPage(::back)
+                            }
                             entry<WearRoute.Dpi> {
                                 WearDpiPage(settings, ::back, dispatchSettings, ::open, preferences, preferenceViewModel, home.isSimpleMode) {
                                     homeViewModel.dispatch(HomeUiAction.SetSimpleMode(it))

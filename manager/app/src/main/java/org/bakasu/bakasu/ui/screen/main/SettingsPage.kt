@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.twotone.Article
 import androidx.compose.material.icons.automirrored.twotone.Undo
 import androidx.compose.material.icons.twotone.Adb
+import androidx.compose.material.icons.twotone.Bluetooth
 import androidx.compose.material.icons.twotone.BugReport
 import androidx.compose.material.icons.twotone.Delete
 import androidx.compose.material.icons.twotone.DeleteForever
@@ -460,6 +461,16 @@ fun SettingsPage(bottomPadding: Dp) {
                                 description = stringResource(R.string.theme_settings),
                                 onClick = {
                                     navigator.push(Route.ThemeSettings)
+                                },
+                            )
+                        }
+                        item {
+                            SettingsJumpPageWidget(
+                                icon = Icons.TwoTone.Bluetooth,
+                                title = stringResource(R.string.wear_bridge),
+                                description = stringResource(R.string.wear_bridge_summary),
+                                onClick = {
+                                    context.startActivity(Intent(context, org.bakasu.bakasu.ui.webui.WearBridgeSetupActivity::class.java))
                                 },
                             )
                         }

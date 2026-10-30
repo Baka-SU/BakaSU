@@ -21,6 +21,14 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND" />
+    <uses-permission android:name="android.permission.REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND" />
+    <uses-permission android:name="android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+    <uses-feature android:name="android.software.companion_device_setup" android:required="false" />
 
     <uses-permission
         android:name="${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
@@ -196,23 +204,20 @@
             android:theme="@style/Theme.KernelSU.Wear"
             android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden" />
 
-        <!-- A watch module's WebUI shown on the phone; the watch opens it with RemoteActivityHelper,
-             which needs it exported. The link carries no data: the activity only shows a session it
-             claims from the paired watch over the Data Layer. -->
+        <!-- Opened internally after Bluetooth app authentication, never by an exported deep link. -->
         <activity
             android:name=".ui.webui.RemoteWebUIActivity"
+            android:launchMode="singleTask"
             android:autoRemoveFromRecents="true"
             android:taskAffinity="${applicationId}.webui"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.KernelSU.WebUI"
-            android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="resukisu-webui" android:host="open" />
-            </intent-filter>
-        </activity>
+            android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden" />
+        <activity android:name=".ui.webui.WearBridgeSetupActivity" android:exported="false" android:theme="@style/Theme.KernelSU" />
+        <service android:name=".data.webui.CompanionBridgeService" android:exported="false" android:foregroundServiceType="connectedDevice" />
+        <service android:name=".data.webui.BridgeCompanionDeviceService" android:exported="true" android:permission="android.permission.BIND_COMPANION_DEVICE_SERVICE">
+            <intent-filter><action android:name="android.companion.CompanionDeviceService" /></intent-filter>
+        </service>
 
         <!-- Built-in document picker for watches without a usable DocumentsUI. Not exported: only
              this app's own SAF requests reach it, and only when no system picker can take them
@@ -239,7 +244,7 @@
             android:exported="false"
             android:grantUriPermissions="false" />
 
-        <!-- Serves watch WebUIs and phone-assisted template downloads over the Wear Data Layer.
+        <!-- Serves phone-assisted template downloads over the Wear Data Layer.
              Exported for Google Play services, which only delivers events from this app on paired
              devices signed with the same key. -->
         <service
@@ -247,8 +252,6 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.CHANNEL_EVENT" />
-                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
-                <data android:scheme="wear" android:host="*" android:pathPrefix="/resukisu/webui" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/resukisu/templates" />
             </intent-filter>
         </service>

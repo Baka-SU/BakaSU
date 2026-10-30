@@ -150,6 +150,9 @@ sealed interface WearRoute : NavKey {
     data object Color : WearRoute
 
     @Serializable
+    data object BridgeSetup : WearRoute
+
+    @Serializable
     data object Dpi : WearRoute
 
     @Serializable

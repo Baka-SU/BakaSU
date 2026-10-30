@@ -60,6 +60,7 @@ import org.bakasu.bakasu.data.text.HanziToPinyin
 import org.bakasu.bakasu.data.theme.MonetCompatColorSource
 import org.bakasu.bakasu.data.theme.ThemeRepository
 import org.bakasu.bakasu.data.update.ManagerUpdateRepository
+import org.bakasu.bakasu.data.webui.CompanionBridgeRepository
 import org.bakasu.bakasu.data.webui.WebUiRepository
 import org.bakasu.bakasu.domain.text.TextTransliterator
 import org.bakasu.bakasu.domain.usecase.AddModuleRepositoryUseCase
@@ -73,6 +74,7 @@ import org.bakasu.bakasu.domain.usecase.CheckFlashModuleMountUseCase
 import org.bakasu.bakasu.domain.usecase.CheckManagerUpdateUseCase
 import org.bakasu.bakasu.domain.usecase.CleanSulogUseCase
 import org.bakasu.bakasu.domain.usecase.ClearDynamicManagerUseCase
+import org.bakasu.bakasu.domain.usecase.ConfigureCompanionBridgeUseCase
 import org.bakasu.bakasu.domain.usecase.ConfigureSuLogUseCase
 import org.bakasu.bakasu.domain.usecase.ControlAppUseCase
 import org.bakasu.bakasu.domain.usecase.DeleteProfileTemplateUseCase
@@ -91,6 +93,7 @@ import org.bakasu.bakasu.domain.usecase.GenerateBugreportUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppProfileUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppSepolicyUseCase
 import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
+import org.bakasu.bakasu.domain.usecase.GetBridgePeersUseCase
 import org.bakasu.bakasu.domain.usecase.GetCatalogModuleUseCase
 import org.bakasu.bakasu.domain.usecase.GetDefaultUmountModulesUseCase
 import org.bakasu.bakasu.domain.usecase.GetHomeBasicInfoUseCase
@@ -122,6 +125,7 @@ import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
 import org.bakasu.bakasu.domain.usecase.LoadSettingsPlatformUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveCompanionBridgeUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadsUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDynamicManagerStateUseCase
@@ -136,6 +140,7 @@ import org.bakasu.bakasu.domain.usecase.ObserveStartupStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveSulogStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveSuperUserStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveUmountStateUseCase
+import org.bakasu.bakasu.domain.usecase.PairCompanionBridgeUseCase
 import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
 import org.bakasu.bakasu.domain.usecase.PrepareScriptUseCase
 import org.bakasu.bakasu.domain.usecase.RebootUseCase
@@ -184,6 +189,7 @@ import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.util.Shortcut
 import org.bakasu.bakasu.ui.viewmodel.AppProfileViewModel
+import org.bakasu.bakasu.ui.viewmodel.CompanionBridgeViewModel
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerViewModel
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
 import org.bakasu.bakasu.ui.viewmodel.FlashViewModel
@@ -319,6 +325,7 @@ val repositoryModule = module {
     singleOf(::ThemeRepository)
     singleOf(::WearFileRepository)
     singleOf(::WearLinkRepository)
+    single { CompanionBridgeRepository(androidApplication(), get(), get(applicationScopeQualifier)) }
     single {
         val themeRepository = get<ThemeRepository>()
         ThemeConfig(themeRepository::defaultSeedColor)
@@ -351,6 +358,10 @@ val useCaseModule = module {
     factoryOf(::EnqueueDownloadUseCase)
     factoryOf(::EnqueueManagerUpdateUseCase)
     factoryOf(::ObserveDownloadUseCase)
+    factoryOf(::ObserveCompanionBridgeUseCase)
+    factoryOf(::GetBridgePeersUseCase)
+    factoryOf(::PairCompanionBridgeUseCase)
+    factoryOf(::ConfigureCompanionBridgeUseCase)
     factoryOf(::ObserveDownloadsUseCase)
     factoryOf(::CancelDownloadUseCase)
     factoryOf(::ObserveAssetDownloadUseCase)
@@ -503,6 +514,7 @@ val viewModelModule = module {
     viewModelOf(::UmountManagerScreenViewModel)
     viewModelOf(::WearFileViewModel)
     viewModelOf(::WearLinkViewModel)
+    viewModelOf(::CompanionBridgeViewModel)
     viewModelOf(::WearPreferencesViewModel)
     viewModel { parameters ->
         ExecuteModuleActionViewModel(
