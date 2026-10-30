@@ -23,9 +23,12 @@ fun WearChoicePage(
     onBack: () -> Unit,
     enabled: Boolean = true,
     icon: ((String) -> ImageVector)? = null,
+    isLoading: Boolean = false,
+    onRefresh: (() -> Unit)? = null,
+    labelMaxLines: Int = 3,
     onChoose: (String) -> Unit,
 ) {
-    WearList(onBack = onBack, snap = true) { spec ->
+    WearList(onBack = onBack, snap = true, isLoading = isLoading, onRefresh = onRefresh) { spec ->
         item { WearPageHeader(spec, title) }
         LazySegmentedColumn(choices, { it.first }) { (value, label) ->
             RadioButton(
@@ -36,7 +39,7 @@ fun WearChoicePage(
                 enabled = enabled,
                 transformation = SurfaceTransformation(spec),
                 icon = icon?.let { { Icon(it(value), contentDescription = null) } },
-                label = { Text(label, maxLines = 3, overflow = TextOverflow.Ellipsis) },
+                label = { Text(label, maxLines = labelMaxLines, overflow = TextOverflow.Ellipsis) },
             )
         }
     }

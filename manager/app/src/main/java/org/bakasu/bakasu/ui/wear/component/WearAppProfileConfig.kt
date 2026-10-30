@@ -22,6 +22,7 @@ import org.bakasu.bakasu.profile.Groups
 import org.bakasu.bakasu.toRawFlags
 import org.bakasu.bakasu.toRootProfileFlags
 import org.bakasu.bakasu.ui.viewmodel.TemplateUiAction
+import org.bakasu.bakasu.ui.viewmodel.TemplateUiEvent
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
@@ -53,7 +54,16 @@ fun WearAppProfileConfig(
         parameters = { parametersOf(true) },
     )
     val templates by templateViewModel.uiState.collectAsStateWithLifecycle()
-    val localTemplates = templates.templateList.filter { it.local }
+    // All persisted templates are selectable, including the synchronized presets, as on the phone.
+    val availableTemplates = templates.templateList
+    val failedTemplateMessage = stringResource(R.string.wear_load_failed)
+    var templateError by remember { mutableStateOf<String?>(null) }
+    WearErrorDialog(templateError) { templateError = null }
+    LaunchedEffect(templateViewModel) {
+        templateViewModel.events.collect { event ->
+            if (event is TemplateUiEvent.Error) templateError = event.message.ifBlank { failedTemplateMessage }
+        }
+    }
     LaunchedEffect(templateViewModel) { templateViewModel.dispatch(TemplateUiAction.Refresh()) }
     var page by rememberSaveable { mutableStateOf(0) }
     var rootMode by rememberSaveable {
@@ -113,11 +123,17 @@ fun WearAppProfileConfig(
 
                 R.string.profile_template -> WearChoicePage(
                     stringResource(shownPage),
-                    localTemplates.map { it.id to it.name.ifBlank { it.id } },
+                    availableTemplates.map { it.id to it.name.ifBlank { it.id } },
                     profile.rootTemplate.orEmpty(),
                     back,
+                    isLoading = templates.isRefreshing,
+                    onRefresh = {
+                        templateError = null
+                        templateViewModel.dispatch(TemplateUiAction.Refresh())
+                    },
+                    labelMaxLines = Int.MAX_VALUE,
                 ) { id ->
-                    localTemplates.firstOrNull { it.id == id }?.let { template ->
+                    availableTemplates.firstOrNull { it.id == id }?.let { template ->
                         onProfileChange(
                             profile.copy(
                                 rootUseDefault = false, rootTemplate = id,
