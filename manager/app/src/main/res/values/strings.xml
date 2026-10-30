@@ -897,4 +897,10 @@
     <string name="wear_badge_custom">CUSTOM</string>
     <string name="wear_badge_default">DEFAULT</string>
     <string name="wear_badge_manager">MANAGER</string>
+    <string name="wear_time_display">Time display</string>
+    <string name="wear_time_mode_time">Time</string>
+    <string name="wear_time_mode_title">Page title</string>
+    <string name="wear_time_mode_hidden">Hidden</string>
+    <string name="wear_time_immersive">Immersive time</string>
+    <string name="wear_time_immersive_summary">Remove the black background behind the time or title</string>
 </resources>

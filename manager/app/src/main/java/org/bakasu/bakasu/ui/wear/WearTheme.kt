@@ -42,12 +42,14 @@ import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearSwipeEnabled
+import org.bakasu.bakasu.ui.wear.component.LocalWearTimeOptions
 import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
+import org.bakasu.bakasu.ui.wear.component.WearTimeOptions
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -173,6 +175,7 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
         LocalDensity provides density,
         LocalConfiguration provides configuration,
         LocalWearSwipeEnabled provides settings.enableSwipeDismiss,
+        LocalWearTimeOptions provides WearTimeOptions(preferences.timeDisplay, preferences.immersiveTime),
         LocalHapticFeedback provides haptics,
         LocalBackgroundRenderState provides backgroundState,
     ) {

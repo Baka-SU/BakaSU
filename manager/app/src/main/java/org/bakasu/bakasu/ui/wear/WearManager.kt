@@ -132,6 +132,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val preferenceViewModel = koinViewModel<WearPreferencesViewModel>()
     val linkViewModel = koinViewModel<WearLinkViewModel>()
     val preferences by preferenceViewModel.state.collectAsStateWithLifecycle()
+    var mainTitle by rememberSaveable { mutableIntStateOf(R.string.home) }
     val home by homeViewModel.uiState.collectAsStateWithLifecycle()
     val superuser by superUserViewModel.uiState.collectAsStateWithLifecycle()
     val modules by moduleViewModel.uiState.collectAsStateWithLifecycle()
@@ -314,7 +315,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         WearIntentDispatcher(intentChannel, navigator, installer)
     }
     AppScaffold(
-        timeText = { WearTimeText() },
+        timeText = { WearTimeText(stringResource((navigator.top ?: WearRoute.Main).titleResource(mainTitle))) },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
@@ -362,6 +363,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     },
                                     onSettings = dispatchSettings,
                                     onOpen = ::open,
+                                    onTitleChange = { mainTitle = it },
                                     homePanelContent = { panelPreview(WearOperationsPage.Home) },
                                     appPanelContent = { panelPreview(WearOperationsPage.SuperUser) },
                                     modulePanelContent = { panelPreview(WearOperationsPage.Modules) },
@@ -703,6 +705,7 @@ private fun WearMainPages(
     onModule: (ModuleUiAction) -> Unit,
     onSettings: (SettingsUiAction) -> Unit,
     onOpen: (WearRoute) -> Unit,
+    onTitleChange: (Int) -> Unit,
     onWebUi: (InstalledModule) -> Unit,
     homePanelContent: @Composable () -> Unit,
     appPanelContent: @Composable () -> Unit,
@@ -729,6 +732,14 @@ private fun WearMainPages(
     // Lists load once, as on the phone; later changes refresh through their own events and the pull
     // gesture, not on every page visit.
     LaunchedEffect(pagerState.currentPage, home.systemStatus.isFullFeatured) {
+        onTitleChange(
+            when (pages.getOrNull(pagerState.currentPage)) {
+                SUPERUSER -> R.string.superuser
+                MODULES -> R.string.module
+                SETTINGS -> R.string.settings
+                else -> R.string.home
+            },
+        )
         when (pages.getOrNull(pagerState.currentPage)) {
             HOME -> onHome(HomeUiAction.Refresh(showIndicator = false))
             SUPERUSER -> if (superuser.appGroupList.isEmpty() && !superuser.isRefreshing) onSuperUser(SuperUserUiAction.Refresh)

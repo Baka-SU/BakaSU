@@ -24,17 +24,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.CurvedModifier
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.PagerState
+import androidx.wear.compose.foundation.weight
 import androidx.wear.compose.material3.HorizontalPageIndicator
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.PageIndicatorDefaults
@@ -43,6 +51,12 @@ import androidx.wear.compose.material3.ScrollIndicatorDefaults
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.TimeText
 import androidx.wear.compose.material3.TimeTextDefaults
+import androidx.wear.compose.material3.curvedText
+import androidx.wear.compose.material3.timeTextCurvedText
+import org.bakasu.bakasu.R
+
+data class WearTimeOptions(val mode: String = "time", val immersive: Boolean = false)
+val LocalWearTimeOptions = staticCompositionLocalOf { WearTimeOptions() }
 
 /**
  * @author Hanhan_awa
@@ -51,17 +65,31 @@ import androidx.wear.compose.material3.TimeTextDefaults
 
 /** M3 chrome is curved; rectangular screens use the same scaffold slots and time source. */
 @Composable
-fun WearTimeText() {
+fun WearTimeText(title: String = stringResource(R.string.home)) {
+    val options = LocalWearTimeOptions.current
+    if (options.mode == "hidden") return
+    val background = if (options.immersive) Color.Transparent else TimeTextDefaults.backgroundColor()
+    val curvedStyle = TimeTextDefaults.timeTextStyle()
     if (LocalConfiguration.current.isScreenRound) {
-        TimeText()
+        TimeText(backgroundColor = background) { time ->
+            if (options.mode == "title") {
+                curvedText(title, CurvedModifier.weight(1f), style = curvedStyle, overflow = TextOverflow.Ellipsis)
+            } else {
+                timeTextCurvedText(time)
+            }
+        }
     } else {
         val time = TimeTextDefaults.rememberTimeSource(TimeTextDefaults.timeFormat()).currentTime()
         Box(Modifier.fillMaxWidth().padding(TimeTextDefaults.ContentPadding), contentAlignment = Alignment.TopCenter) {
             Text(
-                time,
+                if (options.mode == "title") title else time,
                 style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.background(TimeTextDefaults.backgroundColor(), RoundedCornerShape(50))
-                    .padding(horizontal = 6.dp).clearAndSetSemantics {},
+                modifier = Modifier.background(background, RoundedCornerShape(50))
+                    .padding(horizontal = 6.dp).then(
+                        if (options.mode == "title") Modifier.semantics { heading() } else Modifier.clearAndSetSemantics {},
+                    ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

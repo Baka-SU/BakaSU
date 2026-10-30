@@ -45,6 +45,7 @@ fun TransformingLazyColumnItemScope.WearPageHeader(
     transformationSpec: TransformationSpec,
     title: String,
 ) {
+    if (LocalWearTimeOptions.current.mode == "title") return
     val side = maxOf(14.dp, (LocalConfiguration.current.screenWidthDp * 0.073f).dp)
     val defaults = ListHeaderDefaults.ContentPadding
     ListHeader(

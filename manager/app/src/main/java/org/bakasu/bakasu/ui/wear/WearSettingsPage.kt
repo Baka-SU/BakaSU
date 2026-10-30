@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Policy
 import androidx.compose.material.icons.rounded.RemoveModerator
 import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Settings
@@ -57,7 +58,7 @@ import org.koin.compose.koinInject
  * @date 2026/10/1.
  */
 
-private fun settingsCategoryTitle(category: WearSettingsCategory?): Int = when (category) {
+internal fun settingsCategoryTitle(category: WearSettingsCategory?): Int = when (category) {
     WearSettingsCategory.General -> R.string.wear_general
     WearSettingsCategory.Security -> R.string.wear_security
     WearSettingsCategory.Advanced -> R.string.advanced_options
@@ -134,6 +135,7 @@ private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
     WearRoute.Uninstall -> Icons.Rounded.Delete
 
     is WearRoute.Selection -> when (route.selection) {
+        WearSelection.TimeDisplay -> Icons.Rounded.Schedule
         WearSelection.ScreenShape -> Icons.Rounded.AspectRatio
         WearSelection.Language -> Icons.Rounded.Translate
         WearSelection.LinkMode -> Icons.Rounded.Language

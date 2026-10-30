@@ -143,7 +143,7 @@ private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) 
 private fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
     val back: () -> Unit = { if (state.webCanGoBack) state.webView?.goBack() else onFinish() }
     BackHandler { back() }
-    AppScaffold(timeText = { WearTimeText() }, containerColor = Color.Transparent) {
+    AppScaffold(timeText = { WearTimeText(state.moduleName.ifBlank { stringResource(R.string.wear_webui) }) }, containerColor = Color.Transparent) {
         WearSwipeToDismissBox(onDismissed = back) { background ->
             if (!background) {
                 when (val event = state.uiEvent) {

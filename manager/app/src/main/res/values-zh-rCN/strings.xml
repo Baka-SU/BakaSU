@@ -871,4 +871,10 @@
     <string name="wear_badge_custom">CUSTOM</string>
     <string name="wear_badge_default">DEFAULT</string>
     <string name="wear_badge_manager">MANAGER</string>
+    <string name="wear_time_display">时间组件显示</string>
+    <string name="wear_time_mode_time">显示时间</string>
+    <string name="wear_time_mode_title">显示页面标题</string>
+    <string name="wear_time_mode_hidden">隐藏组件</string>
+    <string name="wear_time_immersive">沉浸式时间组件</string>
+    <string name="wear_time_immersive_summary">取消时间或标题后方的黑色背景遮罩</string>
 </resources>

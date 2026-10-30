@@ -21,6 +21,8 @@ enum class WearPreference(val key: String, val default: String, val options: Lis
     Picker("wear_file_picker", "auto", listOf("auto", "builtin", "system")),
     Link("wear_link_mode", "auto", listOf("auto", "webview", "phone")),
     Shape("wear_screen_shape", "auto", listOf("auto", "round", "square")),
+    TimeDisplay("wear_time_display", "time", listOf("time", "title", "hidden")),
+    ImmersiveTime("wear_immersive_time", "false"),
     LongPressHaptics("wear_long_press_haptics", "true"),
     KeepScreenOn("wear_keep_screen_on", "false"),
     BlockBackKey("wear_block_back_key", "false"),
@@ -37,6 +39,8 @@ data class WearPreferences(
     val longPressHaptics: Boolean = true,
     val keepScreenOn: Boolean = false,
     val blockBackKey: Boolean = false,
+    val timeDisplay: String = WearPreference.TimeDisplay.default,
+    val immersiveTime: Boolean = false,
 )
 
 class WearPreferencesViewModel(
@@ -53,6 +57,8 @@ class WearPreferencesViewModel(
         getPreference.wear(WearPreference.LongPressHaptics).toBoolean(),
         getPreference.wear(WearPreference.KeepScreenOn).toBoolean(),
         getPreference.wear(WearPreference.BlockBackKey).toBoolean(),
+        getPreference.wear(WearPreference.TimeDisplay),
+        getPreference.wear(WearPreference.ImmersiveTime).toBoolean(),
     )
 
     fun set(preference: WearPreference, value: String) {

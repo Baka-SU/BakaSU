@@ -6,8 +6,10 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
+import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
 
 /**
@@ -27,7 +29,7 @@ class WearFilePickerActivity : WearActivity() {
         setContent {
             WearManagerTheme {
                 AppScaffold(
-                    timeText = { WearTimeText() },
+                    timeText = { WearTimeText(stringResource(R.string.wear_picker_mode)) },
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ) {

@@ -12,7 +12,7 @@ enum class WearOperationsPage { Home, SuperUser, Modules, Logs }
 
 /** The settings that are chosen from a single list of options. */
 @Serializable
-enum class WearSelection { PickerMode, LinkMode, ScreenShape, Language, SuCompat, Palette, ColorSpec }
+enum class WearSelection { PickerMode, LinkMode, ScreenShape, Language, SuCompat, Palette, ColorSpec, TimeDisplay }
 
 /** Navigation destinations of [WearManagerScreen]; [Main] is the pager with the four top-level pages. */
 @Serializable

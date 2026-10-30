@@ -7,6 +7,7 @@ import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.RemoveModerator
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Square
 import androidx.compose.material.icons.rounded.Translate
@@ -40,6 +41,13 @@ internal fun WearSelectionPage(
     onAction: (SettingsUiAction) -> Unit,
 ) {
     when (selection) {
+        WearSelection.TimeDisplay -> WearChoicePage(
+            stringResource(R.string.wear_time_display),
+            WearPreference.TimeDisplay.options.map { it to timeDisplayLabel(it) },
+            preferences.timeDisplay,
+            onBack,
+        ) { preferenceViewModel.set(WearPreference.TimeDisplay, it) }
+
         WearSelection.Palette -> WearChoicePage(
             stringResource(R.string.dynamic_palette_style),
             state.dynamicColorSpec.availablePaletteStyles().map { it.name to paletteLabel(it) },
@@ -112,6 +120,8 @@ internal fun WearSelectionPage(
 }
 
 private fun selectionIcon(selection: WearSelection, value: String): ImageVector = when (selection) {
+    WearSelection.TimeDisplay -> Icons.Rounded.Schedule
+
     WearSelection.ScreenShape -> when (value) {
         "round" -> Icons.Rounded.Circle
         "square" -> Icons.Rounded.Square
@@ -132,6 +142,15 @@ private fun selectionIcon(selection: WearSelection, value: String): ImageVector 
 
     WearSelection.Palette, WearSelection.ColorSpec -> Icons.Rounded.AutoAwesome
 }
+
+@Composable
+internal fun timeDisplayLabel(mode: String) = stringResource(
+    when (mode) {
+        "title" -> R.string.wear_time_mode_title
+        "hidden" -> R.string.wear_time_mode_hidden
+        else -> R.string.wear_time_mode_time
+    },
+)
 
 /** The language tag stored in app_locale, shared with the phone. */
 private fun Locale.settingTag() = if (country.isEmpty()) language else "${language}_$country"

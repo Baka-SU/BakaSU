@@ -18,6 +18,7 @@ import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -321,6 +322,26 @@ internal fun WearDpiPage(
     val pending = (state.tempDpi.toFloat() / systemDpi).coerceIn(0.75f, 1.5f)
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_display_touch)) }
+        item {
+            WearSettingsJumpPageWidget(
+                spec,
+                stringResource(R.string.wear_time_display),
+                { onOpen(WearRoute.Selection(WearSelection.TimeDisplay)) },
+                icon = Icons.Rounded.Schedule,
+                description = timeDisplayLabel(preferences.timeDisplay),
+            )
+        }
+        item {
+            WearSettingsSwitchWidget(
+                spec,
+                stringResource(R.string.wear_time_immersive),
+                preferences.immersiveTime,
+                { preferenceViewModel.set(WearPreference.ImmersiveTime, it) },
+                enabled = preferences.timeDisplay != "hidden",
+                icon = Icons.Rounded.Schedule,
+                secondaryLabel = stringResource(R.string.wear_time_immersive_summary),
+            )
+        }
         SegmentedColumn(
             listOf(R.string.wear_long_press_haptics, R.string.wear_keep_screen_on, R.string.wear_block_back_key, R.string.wear_disable_swipe_back, R.string.simple_mode),
             { it },

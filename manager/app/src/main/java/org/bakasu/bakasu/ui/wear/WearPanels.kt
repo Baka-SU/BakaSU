@@ -2,6 +2,8 @@ package org.bakasu.bakasu.ui.wear
 
 import android.os.Build
 import android.os.PowerManager
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -38,6 +40,7 @@ import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
+import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
@@ -86,10 +89,13 @@ internal fun WearOperationsPanel(
             WearIconAction(Icons.Rounded.FilterList, stringResource(R.string.sulog_filter_title), { onOpen(WearRoute.LogOptions) }),
         )
     }
-    WearList(onClosePanel = onBack, snap = true, listState = rememberPanelListState()) { spec ->
-        SegmentedColumn(actions, { it.label }) { action ->
-            WearSettingsJumpPageWidget(spec, action.label, action.onClick, icon = action.icon, enabled = action.enabled)
+    Box(Modifier.fillMaxSize()) {
+        WearList(onClosePanel = onBack, snap = true, listState = rememberPanelListState()) { spec ->
+            SegmentedColumn(actions, { it.label }) { action ->
+                WearSettingsJumpPageWidget(spec, action.label, action.onClick, icon = action.icon, enabled = action.enabled)
+            }
         }
+        WearTimeText(stringResource(R.string.wear_operations))
     }
 }
 
