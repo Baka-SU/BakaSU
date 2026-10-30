@@ -877,4 +877,7 @@
     <string name="wear_time_mode_hidden">隐藏组件</string>
     <string name="wear_time_immersive">沉浸式时间组件</string>
     <string name="wear_time_immersive_summary">取消时间或标题后方的黑色背景遮罩</string>
+    <string name="wear_search_input">输入搜索内容</string>
+    <string name="wear_search_advanced">高级搜索</string>
+    <string name="wear_search_history">搜索历史</string>
 </resources>

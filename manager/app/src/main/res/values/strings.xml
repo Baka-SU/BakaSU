@@ -903,4 +903,7 @@
     <string name="wear_time_mode_hidden">Hidden</string>
     <string name="wear_time_immersive">Immersive time</string>
     <string name="wear_time_immersive_summary">Remove the black background behind the time or title</string>
+    <string name="wear_search_input">Enter a search term</string>
+    <string name="wear_search_advanced">Advanced search</string>
+    <string name="wear_search_history">Search history</string>
 </resources>

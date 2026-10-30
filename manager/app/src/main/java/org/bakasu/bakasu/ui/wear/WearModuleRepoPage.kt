@@ -84,7 +84,7 @@ import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
-import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
+import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
@@ -165,9 +165,9 @@ internal fun WearModuleRepoPage(viewModel: ModuleRepoViewModel, onBack: () -> Un
 
 /** The repository search input, a route of its own; it searches the list it was opened from. */
 @Composable
-internal fun WearModuleRepoSearchPage(viewModel: ModuleRepoViewModel, onBack: () -> Unit) {
+internal fun WearModuleRepoSearchPage(viewModel: ModuleRepoViewModel, onBack: () -> Unit, onAdvanced: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    WearTextInputPage(stringResource(R.string.search_modules), state.search) {
+    WearSearchPage(stringResource(R.string.search_modules), "repository:${state.repositoryUrl}", state.search, onBack, onAdvanced) {
         viewModel.dispatch(ModuleRepoUiAction.Search(it.trim()))
         onBack()
         // A search before the repository has loaded tries to load it first.
@@ -540,6 +540,18 @@ private fun WearModuleDownloadScreen(name: String, version: String, state: Modul
                     }
                 }
             }
+        }
+    }
+}
+
+/** The existing repository sort option, shared by advanced search and the operations panel. */
+@Composable
+internal fun WearModuleRepoSortPage(viewModel: ModuleRepoViewModel, onBack: () -> Unit) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    WearList(onBack = onBack) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.wear_sort)) }
+        item {
+            WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_star_first), state.sortStargazerCountFirst, { viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it)) })
         }
     }
 }

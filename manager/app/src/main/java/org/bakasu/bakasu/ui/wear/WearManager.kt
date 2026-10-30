@@ -110,10 +110,9 @@ import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
-import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
+import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
-import org.bakasu.bakasu.ui.wear.component.rememberWearRemoteInput
 import org.koin.compose.viewmodel.koinViewModel
 
 private const val HOME = 0
@@ -194,29 +193,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     )
     fun open(route: WearRoute) = navigator.open(route)
     fun back() = navigator.back()
-    // Searches use the system Wear input; the in-app input pages are only the fallback.
-    val appSearchInput = rememberWearRemoteInput(
-        stringResource(R.string.search_apps),
-        onUnavailable = { open(WearRoute.AppSearch) },
-    ) { query ->
-        if (query.isNotBlank()) {
-            superUserViewModel.dispatch(SuperUserUiAction.Search(query.trim()))
-            open(WearRoute.AppSearchResults)
-        }
-    }
-    val moduleSearchInput = rememberWearRemoteInput(
-        stringResource(R.string.search_modules),
-        onUnavailable = { open(WearRoute.ModuleSearch) },
-    ) { query ->
-        if (query.isNotBlank()) {
-            moduleViewModel.dispatch(ModuleUiAction.Search(query.trim()))
-            open(WearRoute.ModuleSearchResults)
-        }
-    }
-    val logSearchInput = rememberWearRemoteInput(
-        stringResource(R.string.sulog_search_placeholder),
-        onUnavailable = { open(WearRoute.LogSearch) },
-    ) { sulogViewModel.dispatch(SulogUiAction.Search(it.trim())) }
+    val appSearchInput = { open(WearRoute.AppSearch) }
+    val moduleSearchInput = { open(WearRoute.ModuleSearch) }
+    val logSearchInput = { open(WearRoute.LogSearch) }
 
     val installer = rememberWearModuleInstaller(navigator, onPickFailed = { moduleError = operationFailedText }) {
         moduleViewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
@@ -448,7 +427,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 WearModuleRepoPage(moduleRepoViewModel, ::back, { open(WearRoute.ModuleRepoSearch) }) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
                             }
                             entry<WearRoute.ModuleRepoSearch> {
-                                WearModuleRepoSearchPage(moduleRepoViewModel, ::back)
+                                WearModuleRepoSearchPage(moduleRepoViewModel, ::back) { open(WearRoute.ModuleRepoSort) }
                             }
                             entry<WearRoute.OnlineModule> { route ->
                                 WearOnlineModulePage(
@@ -469,8 +448,11 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                             entry<WearRoute.ModuleSort> {
                                 WearModulePanel(modules, ::back, moduleViewModel::dispatch)
                             }
+                            entry<WearRoute.ModuleRepoSort> {
+                                WearModuleRepoSortPage(moduleRepoViewModel, ::back)
+                            }
                             entry<WearRoute.ModuleSearch> {
-                                WearTextInputPage(stringResource(R.string.search_modules), modules.search) {
+                                WearSearchPage(stringResource(R.string.search_modules), "installed-modules", modules.search, ::back, onAdvanced = { open(WearRoute.ModuleSort) }) {
                                     navigator.submitSearch(WearRoute.ModuleSearchResults, it) { query ->
                                         moduleViewModel.dispatch(ModuleUiAction.Search(query))
                                     }
@@ -501,7 +483,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 WearSuperUserPanel(superuser, ::back, superUserViewModel::dispatch)
                             }
                             entry<WearRoute.AppSearch> {
-                                WearTextInputPage(stringResource(R.string.search_apps), superuser.search) {
+                                WearSearchPage(stringResource(R.string.search_apps), "apps", superuser.search, ::back, onAdvanced = { open(WearRoute.AppFilter) }) {
                                     navigator.submitSearch(WearRoute.AppSearchResults, it) { query ->
                                         superUserViewModel.dispatch(SuperUserUiAction.Search(query))
                                     }
@@ -558,7 +540,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 WearLogEntryPage(logs.entries.firstOrNull { it.key == route.key }, ::back)
                             }
                             entry<WearRoute.LogSearch> {
-                                WearTextInputPage(stringResource(R.string.sulog_search_placeholder), logs.searchText) {
+                                WearSearchPage(stringResource(R.string.sulog_search_placeholder), "sulog", logs.searchText, ::back, onAdvanced = { open(WearRoute.LogOptions) }) {
                                     sulogViewModel.dispatch(SulogUiAction.Search(it))
                                     back()
                                 }

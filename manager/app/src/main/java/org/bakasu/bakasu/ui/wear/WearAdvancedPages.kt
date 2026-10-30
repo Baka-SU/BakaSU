@@ -41,6 +41,7 @@ import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
+import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
@@ -108,13 +109,20 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
             DynamicManagerInput.Hash -> hash
         }
         WearSubPage({ input = null }) {
-            WearTextInputPage(stringResource(title), value) {
-                when (editing) {
-                    DynamicManagerInput.Search -> viewModel.dispatch(DynamicManagerUiAction.Search(it))
-                    DynamicManagerInput.Size -> size = it
-                    DynamicManagerInput.Hash -> hash = it
+            if (editing == DynamicManagerInput.Search) {
+                WearSearchPage(stringResource(title), "dynamic-manager", value, { input = null }) {
+                    viewModel.dispatch(DynamicManagerUiAction.Search(it))
+                    input = null
                 }
-                input = null
+            } else {
+                WearTextInputPage(stringResource(title), value) {
+                    when (editing) {
+                        DynamicManagerInput.Size -> size = it
+                        DynamicManagerInput.Hash -> hash = it
+                        DynamicManagerInput.Search -> Unit
+                    }
+                    input = null
+                }
             }
         }
         return

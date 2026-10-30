@@ -207,6 +207,7 @@ import org.bakasu.bakasu.ui.viewmodel.UmountManagerScreenViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearFileViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
+import org.bakasu.bakasu.ui.viewmodel.WearSearchViewModel
 import org.bakasu.bakasu.ui.webui.MonetColorsProvider
 import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.factoryOf
@@ -476,6 +477,7 @@ val viewModelModule = module {
     viewModelOf(::SuperUserViewModel)
     viewModelOf(::SuSFSViewModel)
     viewModelOf(::ModuleDownloadViewModel)
+    viewModel { parameters -> WearSearchViewModel(parameters[0], get(), get()) }
     viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
     viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get(), get()) }
     viewModelOf(::RepositorySourcesViewModel)
