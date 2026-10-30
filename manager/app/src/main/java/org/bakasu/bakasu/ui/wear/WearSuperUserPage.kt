@@ -1,5 +1,7 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -100,16 +102,16 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
     // The same labels and conditions as the phone's superuser list.
     val labels = buildList {
         if (group.allowSu) {
-            add("ROOT")
+            add(stringResource(R.string.wear_badge_root))
         } else if (group.shouldUmount) {
-            add("UMOUNT")
+            add(stringResource(R.string.wear_badge_umount))
         }
         if (group.hasCustomProfile) {
-            add("CUSTOM")
+            add(stringResource(R.string.wear_badge_custom))
         } else if (!group.allowSu) {
-            add("DEFAULT")
+            add(stringResource(R.string.wear_badge_default))
         }
-        if (isManager) add("MANAGER")
+        if (isManager) add(stringResource(R.string.wear_badge_manager))
     }
     Button(
         modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
@@ -126,13 +128,23 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
             )
         },
         secondaryLabel = {
-            labels.forEachIndexed { index, label ->
-                WearBadge(
-                    label,
-                    if (index == 0) Modifier else Modifier.padding(start = 4.dp),
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                )
+            val badgeStyle = MaterialTheme.typography.labelSmall.let {
+                it.copy(fontSize = it.fontSize * 0.8f, lineHeight = it.lineHeight * 0.8f)
+            }
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                maxItemsInEachRow = 2,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                labels.forEach { label ->
+                    WearBadge(
+                        label,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        style = badgeStyle,
+                    )
+                }
             }
         },
     ) {

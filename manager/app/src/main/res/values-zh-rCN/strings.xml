@@ -866,4 +866,9 @@
     <string name="wear_restore_module">恢复模块</string>
     <string name="wear_restore_module_summary">取消待重启移除状态</string>
     <string name="home_support_url">https://patreon.com/weishu</string>
+    <string name="wear_badge_root">ROOT</string>
+    <string name="wear_badge_umount">UMOUNT</string>
+    <string name="wear_badge_custom">CUSTOM</string>
+    <string name="wear_badge_default">DEFAULT</string>
+    <string name="wear_badge_manager">MANAGER</string>
 </resources>

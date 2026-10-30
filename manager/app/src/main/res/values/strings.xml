@@ -892,4 +892,9 @@
     <string name="wear_restore_module">Restore module</string>
     <string name="wear_restore_module_summary">Cancel removal before restarting</string>
     <string name="home_support_url">https://patreon.com/weishu</string>
+    <string name="wear_badge_root">ROOT</string>
+    <string name="wear_badge_umount">UMOUNT</string>
+    <string name="wear_badge_custom">CUSTOM</string>
+    <string name="wear_badge_default">DEFAULT</string>
+    <string name="wear_badge_manager">MANAGER</string>
 </resources>
