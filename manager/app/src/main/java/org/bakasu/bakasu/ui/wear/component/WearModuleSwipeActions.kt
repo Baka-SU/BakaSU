@@ -4,7 +4,6 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,7 +35,6 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.RevealDirection
 import androidx.wear.compose.material3.RevealValue
 import androidx.wear.compose.material3.SwipeToReveal
-import androidx.wear.compose.material3.SwipeToRevealDefaults
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
@@ -63,7 +61,7 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
     val haptic = LocalHapticFeedback.current
     val active = LocalScreenIsActive.current
     var rowHeight by remember { mutableIntStateOf(0) }
-    val actionHeight = with(LocalDensity.current) { rowHeight.toDp() }.coerceAtLeast(SwipeToRevealDefaults.LargeActionButtonHeight)
+    val actionHeight = with(LocalDensity.current) { rowHeight.toDp() }
     LaunchedEffect(scrolling, active) {
         if (!active) {
             state.snapTo(RevealValue.Covered)
@@ -176,11 +174,8 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
             }
         },
         content = {
-            // Matching the row height makes the standard reveal shapes vertical capsules.
-            Box(
-                Modifier.heightIn(min = SwipeToRevealDefaults.LargeActionButtonHeight).onSizeChanged { rowHeight = it.height },
-                propagateMinConstraints = true,
-            ) { content() }
+            // The module's own content determines its height; actions never stretch short rows.
+            Box(Modifier.onSizeChanged { rowHeight = it.height }) { content() }
         },
     )
 }
