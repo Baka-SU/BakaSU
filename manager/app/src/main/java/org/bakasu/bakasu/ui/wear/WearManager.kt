@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
@@ -124,6 +125,7 @@ private const val SETTINGS = 3
 fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val activity = LocalActivity.current
     val context = LocalContext.current
+    val resources = LocalResources.current
     // The shared models belong to the activity, outside the back stack, as on the phone.
     val homeViewModel = koinViewModel<HomeViewModel>()
     val superUserViewModel = koinViewModel<SuperUserViewModel>()
@@ -285,7 +287,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
             }
         }
     }
-    LaunchedEffect(settingsViewModel) {
+    LaunchedEffect(settingsViewModel, resources) {
         settingsViewModel.events.collect { event ->
             when (event) {
                 is SettingsUiEvent.Error -> {
@@ -296,7 +298,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                 is SettingsUiEvent.Message -> {
                     settingsError = null
                     settingsMessageResource = null
-                    val message = if (event.formatArg == null) context.getString(event.stringResource) else context.getString(event.stringResource, event.formatArg)
+                    val message = if (event.formatArg == null) resources.getString(event.stringResource) else resources.getString(event.stringResource, event.formatArg)
                     when (event.stringResource) {
                         R.string.dpi_applied_success, R.string.background_set_success, R.string.background_removed ->
                             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
