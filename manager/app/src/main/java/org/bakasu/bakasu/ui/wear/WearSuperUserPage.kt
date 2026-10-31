@@ -125,9 +125,6 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
             )
         },
         secondaryLabel = {
-            val badgeStyle = MaterialTheme.typography.labelSmall.let {
-                it.copy(fontSize = it.fontSize * 0.8f, lineHeight = it.lineHeight * 0.8f)
-            }
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 maxItemsInEachRow = 2,
@@ -147,7 +144,6 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
                         stringResource(label),
                         containerColor = container,
                         contentColor = content,
-                        style = badgeStyle,
                     )
                 }
             }

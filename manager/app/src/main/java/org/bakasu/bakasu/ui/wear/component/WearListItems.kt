@@ -135,7 +135,9 @@ fun WearBadge(
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.tertiary,
     contentColor: Color = MaterialTheme.colorScheme.onTertiary,
-    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelSmall,
+    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelSmall.let {
+        it.copy(fontSize = it.fontSize * 0.8f, lineHeight = it.lineHeight * 0.8f)
+    },
 ) {
     Text(
         text,

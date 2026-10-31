@@ -174,15 +174,11 @@ private fun WearChipHeadline(
             modifier = Modifier.align(Alignment.CenterVertically),
         )
         badges.forEach { badge ->
-            Text(
+            WearBadge(
                 badge,
-                modifier = Modifier.align(Alignment.CenterVertically)
-                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 4.dp, vertical = 1.dp),
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.align(Alignment.CenterVertically),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
     }
