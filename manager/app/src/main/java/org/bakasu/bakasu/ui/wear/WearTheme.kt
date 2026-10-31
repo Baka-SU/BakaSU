@@ -51,6 +51,7 @@ import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.WearTimeOptions
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
+import org.bakasu.bakasu.ui.wear.component.WearToastHost
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -182,11 +183,13 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
         MaterialTheme(colorScheme = themedColors, typography = wearTypography(config.isHighContrastMode), motionScheme = MotionScheme.expressive()) {
             // The selected image and dim layer belong to the shared page background.
             WearBackground {
-                // Older installs have no saved background color; prepare it before showing pages.
-                if (config.useDynamicColor && config.isUseBackgroundSeedColor && config.customBackgroundUri != null && backgroundState.seedColor == 0) {
-                    WearLoadingScreen()
-                } else {
-                    content()
+                WearToastHost {
+                    // Older installs have no saved background color; prepare it before showing pages.
+                    if (config.useDynamicColor && config.isUseBackgroundSeedColor && config.customBackgroundUri != null && backgroundState.seedColor == 0) {
+                        WearLoadingScreen()
+                    } else {
+                        content()
+                    }
                 }
             }
         }

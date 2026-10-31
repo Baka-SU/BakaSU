@@ -2,7 +2,6 @@ package org.bakasu.bakasu.ui.wear
 
 import android.content.Intent
 import android.os.Build
-import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -92,6 +91,7 @@ import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearPanelDismissals
 import org.bakasu.bakasu.ui.wear.component.LocalWearPanelHosted
 import org.bakasu.bakasu.ui.wear.component.LocalWearPanelPull
+import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPageIndicator
@@ -113,6 +113,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val activity = LocalActivity.current
     val context = LocalContext.current
     val resources = LocalResources.current
+    val toast = LocalWearToast.current
     // The shared models belong to the activity, outside the back stack, as on the phone.
     val homeViewModel = koinViewModel<HomeViewModel>()
     val superUserViewModel = koinViewModel<SuperUserViewModel>()
@@ -290,7 +291,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                     val message = if (event.formatArg == null) resources.getString(event.stringResource) else resources.getString(event.stringResource, event.formatArg)
                     when (event.stringResource) {
                         R.string.dpi_applied_success, R.string.background_set_success, R.string.background_removed ->
-                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                            toast.show(message)
 
                         R.string.icon_switched -> Unit
 
