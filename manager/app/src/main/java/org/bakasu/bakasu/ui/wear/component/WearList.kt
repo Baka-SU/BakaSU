@@ -132,10 +132,11 @@ fun WearList(
     var viewportHeight by remember { mutableFloatStateOf(1f) }
     var openingPanel by remember { mutableStateOf(false) }
     var closingPanel by remember { mutableStateOf(false) }
+    var draggingPanel by remember { mutableStateOf(false) }
     val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
     val closeProgress by animateFloatAsState(
         if (closingPanel) 1f else (-pullProgress.floatValue * threshold / viewportHeight).coerceIn(0f, 1f),
-        animationSpec = if (reduceMotion || (pullProgress.floatValue < 0f && !closingPanel)) snap() else tween(180),
+        animationSpec = if (reduceMotion || draggingPanel || (pullProgress.floatValue < 0f && !closingPanel)) snap() else tween(180),
         label = "wear-panel-close",
         finishedListener = { if (closingPanel && it == 1f) onClosePanel?.invoke() },
     )
@@ -154,7 +155,7 @@ fun WearList(
     val following = reduceMotion || (pullProgress.floatValue > 0f && !openingPanel)
     val panelProgress by animateFloatAsState(
         targetValue = panelTarget,
-        animationSpec = if (following || panelHosted || !openingPanel || panelWasDismissed) snap() else tween(180),
+        animationSpec = if (following || draggingPanel || panelHosted || panelWasDismissed) snap() else tween(180),
         label = "wear-panel-reveal",
         // Committing the logical destination keeps the same menu in the shared host.
         finishedListener = { progress -> if (openingPanel && progress == 1f && screenActive) onOpenPanel?.invoke() },
@@ -224,9 +225,13 @@ fun WearList(
         },
         panelLabel = panelLabel,
         onPullStart = {
+            val currentPull = if (onClosePanel != null) -closeProgress * viewportHeight else panelProgress * viewportHeight
             openingPanel = false
             closingPanel = false
+            draggingPanel = true
+            currentPull
         },
+        onPullEnd = { draggingPanel = false },
     )
     // Loading shows the indeterminate indicator at the screen center instead of the content, as the
     // phone does; the branded loading screen is only for the manager's first load.
@@ -390,8 +395,8 @@ fun WearList(
 /** How far the page shrinks behind a pulled panel. */
 private const val WearPanelPageScale = 0.12f
 
-/** The lower menu controls enter first; reach maximum dimming during that early reveal. */
-internal const val WearPanelDimReach = 0.15f
+/** Dimming follows the complete reveal, so the page remains visible while it recedes. */
+internal const val WearPanelDimReach = 1f
 
 internal const val WearPanelMaxDim = 1f
 

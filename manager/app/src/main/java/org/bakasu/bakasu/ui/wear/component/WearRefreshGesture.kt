@@ -52,7 +52,8 @@ internal fun Modifier.wearRefreshGesture(
     onOpenPanel: (() -> Unit)? = null,
     onClosePanel: (() -> Unit)? = null,
     panelLabel: String? = null,
-    onPullStart: () -> Unit = {},
+    onPullStart: () -> Float = { 0f },
+    onPullEnd: () -> Unit = {},
 ): Modifier {
     // Lists without any boundary action keep their gestures untouched.
     if (onRefresh == null && onOpenPanel == null && onClosePanel == null) return this
@@ -61,6 +62,7 @@ internal fun Modifier.wearRefreshGesture(
     val panel by rememberUpdatedState(onOpenPanel)
     val closePanel by rememberUpdatedState(onClosePanel)
     val pullStart by rememberUpdatedState(onPullStart)
+    val pullEnd by rememberUpdatedState(onPullEnd)
     val haptic = LocalHapticFeedback.current
     val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
     val refreshLabel = stringResource(R.string.wear_refresh)
@@ -141,7 +143,11 @@ internal fun Modifier.wearRefreshGesture(
                         } else {
                             dragging = true
                             dy = total.y
-                            pullStart()
+                            // Resume a settling reveal at its current position before following
+                            // this finger, including when it immediately reverses direction.
+                            val initialPull = pullStart()
+                            pullDown = initialPull.coerceAtLeast(0f)
+                            pullUp = (-initialPull).coerceAtLeast(0f)
                         }
                     }
                     // A pull grows only while its boundary is held, and moving back shrinks it.
@@ -150,6 +156,7 @@ internal fun Modifier.wearRefreshGesture(
                     if (canceled) {
                         displacement.floatValue = 0f
                         pullProgress.floatValue = 0f
+                        pullEnd()
                         continue
                     }
                     val pull = maxOf(pullDown, pullUp)
@@ -164,6 +171,7 @@ internal fun Modifier.wearRefreshGesture(
             } finally {
                 displacement.floatValue = 0f
                 pullProgress.floatValue = 0f
+                pullEnd()
             }
         }
     }.semantics {
