@@ -266,6 +266,14 @@ $(info -- $(REPO_NAME)/compat: found hashtab_key_params function)
 ccflags-y += -DKSU_COMPAT_HAS_HASHTAB_KEY_PARAMS
 endif
 
+# Match the target's symbol hash, including Android/vendor backports. Do not
+# select a hash by kernel version: using a different hash silently misses keys.
+ifeq ($(shell grep -F -q '((hash << 5) + hash) ^ c' $(srctree)/security/selinux/ss/symtab.c && grep -E -q 'hash[[:space:]]*=[[:space:]]*5381' $(srctree)/security/selinux/ss/symtab.c; echo $$?),0)
+ccflags-y += -DKSU_COMPAT_SYMTAB_HASH_DJB2A
+else ifeq ($(shell grep -F -q 'val = (val << 4 | (val >> (8*sizeof(unsigned int)-4))) ^ (*p)' $(srctree)/security/selinux/ss/symtab.c; echo $$?),0)
+ccflags-y += -DKSU_COMPAT_SYMTAB_HASH_ROT4
+endif
+
 # https://github.com/torvalds/linux/commit/c3a276111ea2572399281988b3129683e2a6b60b
 ifeq ($(shell grep -q "filename_trans_key" $(srctree)/security/selinux/ss/policydb.h; echo $$?),0)
 $(info -- $(REPO_NAME)/compat: found filename_trans_key function)
