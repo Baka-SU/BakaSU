@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,7 +70,7 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
     val density = LocalDensity.current
     val actionHeight = (with(density) { rowSize.height.toDp() } - 8.dp).coerceAtLeast(0.dp)
     val iconSize = (actionHeight * 0.7f).coerceAtMost(ButtonDefaults.LargeIconSize)
-    val actionShapes = IconButtonDefaults.shapes(MaterialTheme.shapes.medium)
+    val actionShapes = IconButtonDefaults.shapes(RoundedCornerShape(50))
     LaunchedEffect(scrolling, active) {
         if (!active) {
             state.snapTo(RevealValue.Covered)
