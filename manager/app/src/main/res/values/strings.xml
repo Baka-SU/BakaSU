@@ -937,4 +937,5 @@
     <string name="wear_display_interaction">Screen behavior &amp; haptics</string>
     <string name="wear_phone_connection_failed">Unable to connect to phone</string>
     <string name="wear_bridge_active_connection">Connected to %1$s</string>
+    <string name="wear_repository_url_hint">Enter a repository server URL</string>
 </resources>

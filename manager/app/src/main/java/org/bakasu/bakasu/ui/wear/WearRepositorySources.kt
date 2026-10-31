@@ -1,5 +1,12 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
@@ -14,7 +21,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.RepositoryApiType
@@ -134,39 +143,65 @@ internal fun WearAddRepositoryPage(onBack: () -> Unit) {
             onBack()
         }
     }
-    val editing = input
-    if (editing != null) {
-        WearSubPage({ input = null }) {
-            if (editing == RepositoryInput.Url) {
-                WearTextInputPage(stringResource(R.string.repo_server_url), state.url) {
-                    viewModel.setUrl(it.trim())
-                    input = null
-                }
-            } else {
-                WearChoicePage(stringResource(R.string.repo_api_type), RepositoryApiType.entries.map { it.name to stringResource(it.resId) }, state.apiType.name, { input = null }) {
-                    viewModel.setApiType(RepositoryApiType.valueOf(it))
-                    input = null
+    AnimatedContent(
+        targetState = input,
+        modifier = Modifier.fillMaxSize(),
+        transitionSpec = {
+            val direction = if (targetState == null) -1 else 1
+            (slideInHorizontally { direction * it / 2 } + fadeIn()) togetherWith
+                (slideOutHorizontally { -direction * it / 2 } + fadeOut())
+        },
+        label = "wear-repository-input",
+    ) { editing ->
+        if (editing != null) {
+            WearSubPage({ input = null }) {
+                if (editing == RepositoryInput.Url) {
+                    WearTextInputPage(
+                        title = stringResource(R.string.repo_server_url),
+                        initialValue = state.url,
+                        autoFocus = true,
+                        keyboardType = KeyboardType.Uri,
+                        placeholder = stringResource(R.string.wear_repository_url_hint),
+                    ) {
+                        viewModel.setUrl(it.trim())
+                        input = null
+                    }
+                } else {
+                    WearChoicePage(
+                        title = stringResource(R.string.repo_api_type),
+                        choices = RepositoryApiType.entries.map { it.name to stringResource(it.resId) },
+                        selected = state.apiType.name,
+                        onBack = { input = null },
+                        enabled = !state.busy,
+                        icon = { Icons.Rounded.Cloud },
+                    ) {
+                        viewModel.setApiType(RepositoryApiType.valueOf(it))
+                        input = null
+                    }
                 }
             }
-        }
-        return
-    }
-    WearList(
-        onBack = onBack,
-        isLoading = state.busy,
-        onConfirm = { viewModel.add() },
-        confirmLabel = stringResource(R.string.add),
-        confirmEnabled = state.url.isNotBlank() && !state.busy,
-    ) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.repo_add_repository)) }
-        SegmentedColumn(listOf(RepositoryInput.Url, RepositoryInput.Api), { it }) { field ->
-            WearSettingsJumpPageWidget(
-                spec,
-                stringResource(if (field == RepositoryInput.Url) R.string.repo_server_url else R.string.repo_api_type),
-                { input = field },
-                icon = if (field == RepositoryInput.Url) Icons.Rounded.Language else Icons.Rounded.Tune,
-                description = if (field == RepositoryInput.Url) state.url else stringResource(state.apiType.resId),
-            )
+        } else {
+            WearList(
+                onBack = onBack,
+                isBusy = state.busy,
+                isRefreshing = state.busy,
+                onConfirm = { viewModel.add() },
+                confirmLabel = stringResource(R.string.add),
+                confirmEnabled = state.url.isNotBlank() && !state.busy,
+            ) { spec ->
+                item { WearPageHeader(spec, stringResource(R.string.repo_add_repository)) }
+                SegmentedColumn(listOf(RepositoryInput.Url, RepositoryInput.Api), { it }) { field ->
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(if (field == RepositoryInput.Url) R.string.repo_server_url else R.string.repo_api_type),
+                        { input = field },
+                        icon = if (field == RepositoryInput.Url) Icons.Rounded.Language else Icons.Rounded.Tune,
+                        enabled = !state.busy,
+                        description = if (field == RepositoryInput.Url) state.url.ifBlank { stringResource(R.string.wear_repository_url_hint) } else stringResource(state.apiType.resId),
+                        descriptionMaxLines = if (field == RepositoryInput.Url) 3 else 2,
+                    )
+                }
+            }
         }
     }
 }

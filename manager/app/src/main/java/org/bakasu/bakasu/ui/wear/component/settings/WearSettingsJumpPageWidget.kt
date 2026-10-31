@@ -29,6 +29,7 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
     description: String? = null,
     transformed: Boolean = true,
     largeIcon: Boolean = false,
+    descriptionMaxLines: Int = 1,
 ) {
     FilledTonalButton(
         onClick = onClick,
@@ -43,6 +44,6 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
         transformation = if (transformed) SurfaceTransformation(spec) else null,
         contentPadding = if (largeIcon) ButtonDefaults.ButtonWithLargeIconContentPadding else ButtonDefaults.ContentPadding,
         icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
-        secondaryLabel = description?.let { text -> { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
+        secondaryLabel = description?.let { text -> { Text(text, maxLines = descriptionMaxLines, overflow = TextOverflow.Ellipsis) } },
     ) { Text(title, maxLines = if (description == null) 3 else 2, overflow = TextOverflow.Ellipsis) }
 }

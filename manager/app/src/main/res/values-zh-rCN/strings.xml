@@ -911,4 +911,5 @@
     <string name="wear_display_interaction">屏幕行为与触觉反馈</string>
     <string name="wear_phone_connection_failed">无法连接手机</string>
     <string name="wear_bridge_active_connection">已连接 %1$s</string>
+    <string name="wear_repository_url_hint">请输入仓库服务器地址</string>
 </resources>

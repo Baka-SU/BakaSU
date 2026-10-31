@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
@@ -33,7 +34,7 @@ import androidx.wear.compose.material3.Text
 
 /** Uses the watch IME, including its voice input, without importing a phone text-field control. */
 @Composable
-fun WearTextInputPage(title: String, initialValue: String, multiline: Boolean = false, imeAction: ImeAction = ImeAction.Done, autoFocus: Boolean = false, onSubmit: (String) -> Unit) {
+fun WearTextInputPage(title: String, initialValue: String, multiline: Boolean = false, imeAction: ImeAction = ImeAction.Done, autoFocus: Boolean = false, keyboardType: KeyboardType = KeyboardType.Text, placeholder: String? = null, onSubmit: (String) -> Unit) {
     var value by rememberSaveable(title, initialValue) { mutableStateOf(initialValue) }
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
@@ -46,13 +47,13 @@ fun WearTextInputPage(title: String, initialValue: String, multiline: Boolean = 
                     value = value, onValueChange = { value = it }, singleLine = !multiline,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    keyboardOptions = KeyboardOptions(imeAction = imeAction),
+                    keyboardOptions = KeyboardOptions(imeAction = imeAction, keyboardType = keyboardType),
                     keyboardActions = KeyboardActions(onDone = { onSubmit(value) }, onSearch = { onSubmit(value) }, onSend = { onSubmit(value) }),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(focus)
                         .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
                         .padding(12.dp).semantics { contentDescription = title },
                     decorationBox = { field ->
-                        if (value.isEmpty()) Text(title, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (value.isEmpty()) Text(placeholder ?: title, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         field()
                     },
                 )
