@@ -125,6 +125,7 @@ fun WearList(
     panelLabel: String? = null,
     snap: Boolean = false,
     itemSpacing: Dp = WearItemSpacing,
+    topContentPadding: Dp = 0.dp,
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     content: TransformingLazyColumnScope.(TransformationSpec) -> Unit,
 ) {
@@ -241,17 +242,18 @@ fun WearList(
     val loadingDescription = stringResource(R.string.wear_loading)
     val listContent: @Composable (PaddingValues) -> Unit = { scaffoldPadding ->
         val layoutDirection = LocalLayoutDirection.current
-        val contentPadding = if (LocalWearTimeOptions.current.mode == "title") {
-            val titleSpace = with(LocalDensity.current) { MaterialTheme.typography.labelMedium.lineHeight.toDp() } + 16.dp
-            PaddingValues(
-                start = scaffoldPadding.calculateStartPadding(layoutDirection),
-                end = scaffoldPadding.calculateEndPadding(layoutDirection),
-                top = maxOf(scaffoldPadding.calculateTopPadding(), titleSpace),
-                bottom = scaffoldPadding.calculateBottomPadding(),
-            )
+        val timeSpace = if (LocalWearTimeOptions.current.mode == "hidden") {
+            0.dp
         } else {
-            scaffoldPadding
+            with(LocalDensity.current) { MaterialTheme.typography.labelMedium.lineHeight.toDp() } +
+                if (LocalConfiguration.current.isScreenRound) 20.dp else 12.dp
         }
+        val contentPadding = PaddingValues(
+            start = scaffoldPadding.calculateStartPadding(layoutDirection),
+            end = scaffoldPadding.calculateEndPadding(layoutDirection),
+            top = maxOf(scaffoldPadding.calculateTopPadding(), timeSpace) + topContentPadding,
+            bottom = scaffoldPadding.calculateBottomPadding(),
+        )
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(Modifier.semantics { contentDescription = loadingDescription })

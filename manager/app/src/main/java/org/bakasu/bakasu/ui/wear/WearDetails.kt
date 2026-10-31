@@ -112,7 +112,7 @@ internal fun WearModuleDetail(
         onConfirm = { onRemove(module.id, true) },
     )
     WearResultDialog(error?.takeIf { it.isNotBlank() }?.let { WearResult(it, success = false) }, onErrorShown)
-    WearList(onBack = onBack, itemSpacing = WearCompactItemSpacing) { spec ->
+    WearList(onBack = onBack, itemSpacing = WearCompactItemSpacing, topContentPadding = 12.dp) { spec ->
         // As in the design, the page opens with the module title card instead of a page title.
         item {
             WearInfoCard(spec, shape = ButtonDefaults.shape, contentPadding = ButtonDefaults.ContentPadding) {
