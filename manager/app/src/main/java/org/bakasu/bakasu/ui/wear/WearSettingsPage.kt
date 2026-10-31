@@ -61,9 +61,9 @@ import org.koin.compose.koinInject
  */
 
 internal fun settingsCategoryTitle(category: WearSettingsCategory?): Int = when (category) {
-    WearSettingsCategory.General -> R.string.wear_general
-    WearSettingsCategory.Security -> R.string.wear_security
-    WearSettingsCategory.Advanced -> R.string.advanced_options
+    WearSettingsCategory.General -> R.string.app_settings
+    WearSettingsCategory.Security -> R.string.configuration
+    WearSettingsCategory.Advanced -> R.string.tools
     WearSettingsCategory.Display -> R.string.wear_display
     null -> R.string.settings
 }
@@ -186,11 +186,8 @@ internal fun WearSettingsPage(
         item { WearPageHeader(spec, stringResource(settingsCategoryTitle(category))) }
         if (category == null) {
             val categories = buildList {
+                if (status.isFullFeatured) add(WearSettingsCategory.Security)
                 add(WearSettingsCategory.General)
-                if (status.isFullFeatured) {
-                    add(WearSettingsCategory.Security)
-                    add(WearSettingsCategory.Advanced)
-                }
             }
             LazySegmentedColumn(categories, { it.name }) { entry ->
                 WearSettingsJumpPageWidget(
@@ -207,6 +204,9 @@ internal fun WearSettingsPage(
                     { onOpen(route) },
                     icon = settingsRouteIcon(route),
                 )
+            }
+            item {
+                WearSettingsJumpPageWidget(spec, stringResource(R.string.tools), { onOpen(WearRoute.Settings(WearSettingsCategory.Advanced)) }, icon = Icons.Rounded.Build)
             }
             wearGroupGap("about-gap")
             item {
@@ -375,8 +375,9 @@ internal fun WearSettingsPage(
             val pages = buildList {
                 if (category == WearSettingsCategory.General) {
                     add(SettingsPageLink(SettingsSection.LinksFiles, R.string.wear_bridge, WearRoute.BridgeSetup, bridgeSummary))
-                    if (status.isFullFeatured) add(SettingsPageLink(SettingsSection.Diagnostics, R.string.sulog, WearRoute.Logs))
-                    add(SettingsPageLink(SettingsSection.Diagnostics, R.string.send_log, WearRoute.Bugreport))
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                        add(SettingsPageLink(SettingsSection.AppBehavior, R.string.settings_language, WearRoute.Selection(WearSelection.Language), languageSummary))
+                    }
                     add(
                         SettingsPageLink(
                             SettingsSection.LinksFiles,
@@ -406,6 +407,8 @@ internal fun WearSettingsPage(
                     add(SettingsPageLink(SettingsSection.AccessProfiles, R.string.settings_profile_template, WearRoute.Templates))
                 }
                 if (category == WearSettingsCategory.Advanced) {
+                    if (status.isFullFeatured) add(SettingsPageLink(SettingsSection.Diagnostics, R.string.sulog, WearRoute.Logs))
+                    add(SettingsPageLink(SettingsSection.Diagnostics, R.string.send_log, WearRoute.Bugreport))
                     if (status.isFullFeatured) {
                         add(SettingsPageLink(SettingsSection.ManagerMounts, R.string.dynamic_manager_title, WearRoute.DynamicManager))
                         if (state.isKernelUmountEnabled) add(SettingsPageLink(SettingsSection.ManagerMounts, R.string.umount_path_manager, WearRoute.Umount))

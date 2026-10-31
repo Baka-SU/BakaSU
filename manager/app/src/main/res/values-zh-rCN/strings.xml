@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="wear_icon_copyright">图标版权声明</string>
-    <string name="wear_appearance_theme">外观主题</string>
-    <string name="wear_display_touch">显示与触控</string>
+    <string name="wear_appearance_theme">主题颜色</string>
+    <string name="wear_display_touch">显示与触觉反馈</string>
     <string name="wear_long_press_haptics">长按触控反馈</string>
     <string name="wear_keep_screen_on">保持屏幕常亮</string>
     <string name="wear_block_back_key">屏蔽返回键</string>
