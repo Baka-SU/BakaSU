@@ -30,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -92,6 +91,8 @@ import org.bakasu.bakasu.ui.wear.component.WearHorizontalPager
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
 import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
@@ -105,7 +106,6 @@ private const val SETTINGS = 3
 @Composable
 fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val activity = LocalActivity.current
-    val context = LocalContext.current
     val resources = LocalResources.current
     val toast = LocalWearToast.current
     // The shared models belong to the activity, outside the back stack, as on the phone.
@@ -184,9 +184,12 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         clearSettingsFeedback()
         settingsViewModel.dispatch(it)
     }
-    // Ordinary switches speak through their state; DPI and background changes use a short toast.
+    // Ordinary switches speak through their state; DPI uses a toast and background results use a dialog.
     // Blocking failures and follow-up instructions stay visible until the user dismisses them.
-    val settingsNotice = settingsMessageResource?.let { (id, arg) ->
+    val backgroundNotice = settingsMessageResource?.takeIf { it.first == R.string.background_set_success || it.first == R.string.background_removed }
+    val backgroundResult = backgroundNotice?.let { (id, _) -> WearResult(stringResource(id), success = true) }
+    WearResultDialog(backgroundResult) { clearSettingsFeedback() }
+    val settingsNotice = settingsMessageResource?.takeUnless { it == backgroundNotice }?.let { (id, arg) ->
         if (arg == null) stringResource(id) else stringResource(id, arg)
     }
     val settingsNoticeDialog = rememberCustomDialog { dismiss ->
@@ -261,7 +264,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                     settingsMessageResource = null
                     val message = if (event.formatArg == null) resources.getString(event.stringResource) else resources.getString(event.stringResource, event.formatArg)
                     when (event.stringResource) {
-                        R.string.dpi_applied_success, R.string.background_set_success, R.string.background_removed ->
+                        R.string.dpi_applied_success ->
                             toast.show(message)
 
                         R.string.icon_switched -> Unit

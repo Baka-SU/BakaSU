@@ -9,8 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
@@ -172,6 +175,9 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             )
         }
     }
+    // Only initial background preparation may delay content. Later image changes keep the
+    // navigation, ViewModels and open dialogs composed while their colors update.
+    var contentShown by remember { mutableStateOf(false) }
     CompositionLocalProvider(
         LocalDensity provides density,
         LocalConfiguration provides configuration,
@@ -184,10 +190,11 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             // The selected image and dim layer belong to the shared page background.
             WearBackground {
                 WearToastHost {
-                    // Older installs have no saved background color; prepare it before showing pages.
-                    if (config.useDynamicColor && config.isUseBackgroundSeedColor && config.customBackgroundUri != null && backgroundState.seedColor == 0) {
+                    // Older installs prepare their saved background color before the first content is shown.
+                    if (!contentShown && config.useDynamicColor && config.isUseBackgroundSeedColor && config.customBackgroundUri != null && backgroundState.seedColor == 0) {
                         WearLoadingScreen()
                     } else {
+                        SideEffect { contentShown = true }
                         content()
                     }
                 }
