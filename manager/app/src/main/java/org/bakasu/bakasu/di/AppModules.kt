@@ -93,6 +93,7 @@ import org.bakasu.bakasu.domain.usecase.GenerateBugreportUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppProfileUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppSepolicyUseCase
 import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
+import org.bakasu.bakasu.domain.usecase.GetBridgePeersUseCase
 import org.bakasu.bakasu.domain.usecase.GetCatalogModuleUseCase
 import org.bakasu.bakasu.domain.usecase.GetDefaultUmountModulesUseCase
 import org.bakasu.bakasu.domain.usecase.GetHomeBasicInfoUseCase
@@ -357,6 +358,7 @@ val useCaseModule = module {
     factoryOf(::EnqueueManagerUpdateUseCase)
     factoryOf(::ObserveDownloadUseCase)
     factoryOf(::ObserveCompanionBridgeUseCase)
+    factoryOf(::GetBridgePeersUseCase)
     factoryOf(::ConfigureCompanionBridgeUseCase)
     factoryOf(::ObserveDownloadsUseCase)
     factoryOf(::CancelDownloadUseCase)

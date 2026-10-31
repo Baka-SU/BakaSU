@@ -899,6 +899,7 @@
     <string name="wear_bridge_background_help">若手机限制后台运行，请在应用设置中允许后台运行，并点击 WebUI 通知打开界面。不同设备提供的系统选项可能不同。</string>
     <string name="wear_bridge_app_settings">手机应用设置</string>
     <string name="wear_bridge_pair_watch">配对手表</string>
+    <string name="wear_bridge_no_peers">没有已配对的蓝牙设备，请先在系统设置中配对手表。</string>
     <string name="wear_bridge_allow_access">允许手机端 Manager 访问手表</string>
     <string name="wear_bridge_allow_access_summary">打开手表的模块 WebUI 并读取其模块文件</string>
     <string name="wear_bridge_allow_access_title">允许手表访问？</string>

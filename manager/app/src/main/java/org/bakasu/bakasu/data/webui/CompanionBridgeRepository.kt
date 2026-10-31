@@ -169,12 +169,16 @@ class CompanionBridgeRepository(
         preferences.putString(NAME, name)
         if (preferences.getString(SECRET).isNullOrBlank()) preferences.putString(SECRET, newSecret())
         setEnabled(true)
-        if (Build.VERSION.SDK_INT >= 31) {
-            @Suppress("DEPRECATION")
-            runCatching { application.getSystemService(CompanionDeviceManager::class.java).startObservingDevicePresence(address) }
-                .onFailure { Log.w("CompanionBridge", "Presence observation unavailable", it) }
-        }
+        observePresence(address)
         refresh()
+    }
+
+    /** Lets the system restart the receiver when the associated watch appears; CDM-only and optional. */
+    fun observePresence(address: String) {
+        if (isWatch || Build.VERSION.SDK_INT < 31) return
+        @Suppress("DEPRECATION")
+        runCatching { application.getSystemService(CompanionDeviceManager::class.java)?.startObservingDevicePresence(address) }
+            .onFailure { Log.w("CompanionBridge", "Presence observation unavailable", it) }
     }
 
     private fun newSecret(): String = UUID.randomUUID().toString() + UUID.randomUUID().toString()

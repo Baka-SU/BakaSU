@@ -925,6 +925,7 @@
     <string name="wear_bridge_background_help">If your phone restricts background activity, allow background operation in app settings and open the WebUI notification. System options vary by device.</string>
     <string name="wear_bridge_app_settings">Phone app settings</string>
     <string name="wear_bridge_pair_watch">Pair a watch</string>
+    <string name="wear_bridge_no_peers">No Bluetooth-paired devices. Pair the watch in system settings first.</string>
     <string name="wear_bridge_allow_access">Allow phone Manager to access this watch</string>
     <string name="wear_bridge_allow_access_summary">Open this watch\'s module WebUI and read its module files</string>
     <string name="wear_bridge_allow_access_title">Allow watch access?</string>

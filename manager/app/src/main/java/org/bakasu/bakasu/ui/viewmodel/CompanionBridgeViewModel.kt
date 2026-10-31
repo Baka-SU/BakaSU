@@ -9,14 +9,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.BridgeException
 import org.bakasu.bakasu.domain.model.BridgeFailure
+import org.bakasu.bakasu.domain.model.BridgePeer
 import org.bakasu.bakasu.domain.usecase.ConfigureCompanionBridgeUseCase
+import org.bakasu.bakasu.domain.usecase.GetBridgePeersUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCompanionBridgeUseCase
 
 class CompanionBridgeViewModel(
     observe: ObserveCompanionBridgeUseCase,
+    private val getPeers: GetBridgePeersUseCase,
     private val configure: ConfigureCompanionBridgeUseCase,
 ) : ViewModel() {
     val state = observe()
+    private val mutablePeers = MutableStateFlow<List<BridgePeer>>(emptyList())
+    val peers = mutablePeers.asStateFlow()
     private val mutableError = MutableStateFlow<BridgeFailure?>(null)
     val error = mutableError.asStateFlow()
     private val mutableBusy = MutableStateFlow(false)
@@ -30,9 +35,17 @@ class CompanionBridgeViewModel(
     }
     fun refresh() = run { configure.refresh() }
 
-    /** Picks up a watch associated in system settings before this page was opened. */
-    fun restoreAssociation() = run { configure.restore() }
+    /** Loads the saved link, restores a system association and the paired-device list in one pass. */
+    fun initialize() = run {
+        configure.refresh()
+        configure.restore()
+        mutablePeers.value = getPeers()
+    }
+
+    /** Bluetooth-paired devices; the system pairing is the only requirement for a watch link. */
+    fun loadPeers() = run { mutablePeers.value = getPeers() }
     fun link(address: String, name: String) = run { configure.link(address, name) }
+    fun observePresence(address: String) = run { configure.observePresence(address) }
     fun setAccess(enabled: Boolean) = run {
         val peer = state.value.peer ?: throw BridgeException(BridgeFailure.SETUP_REQUIRED)
         if (enabled) configure.link(peer.address, peer.name) else configure.enable(false)
