@@ -52,6 +52,7 @@ internal fun Modifier.wearRefreshGesture(
     onOpenPanel: (() -> Unit)? = null,
     onClosePanel: (() -> Unit)? = null,
     panelLabel: String? = null,
+    onPullStart: () -> Unit = {},
 ): Modifier {
     // Lists without any boundary action keep their gestures untouched.
     if (onRefresh == null && onOpenPanel == null && onClosePanel == null) return this
@@ -59,6 +60,7 @@ internal fun Modifier.wearRefreshGesture(
     val refresh by rememberUpdatedState(onRefresh)
     val panel by rememberUpdatedState(onOpenPanel)
     val closePanel by rememberUpdatedState(onClosePanel)
+    val pullStart by rememberUpdatedState(onPullStart)
     val haptic = LocalHapticFeedback.current
     val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
     val refreshLabel = stringResource(R.string.wear_refresh)
@@ -108,6 +110,7 @@ internal fun Modifier.wearRefreshGesture(
             // to the top does not open the panel with the rest of its travel.
             val startedAtTop = !listState.canScrollBackward
             val startedAtEnd = !listState.canScrollForward
+            if (!canceled && (startedAtTop || startedAtEnd)) pullStart()
             try {
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)

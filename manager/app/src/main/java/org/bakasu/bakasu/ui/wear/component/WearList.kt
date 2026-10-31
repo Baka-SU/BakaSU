@@ -160,29 +160,18 @@ fun WearList(
     val following = reduceMotion || (pullProgress.floatValue > 0f && !openingPanel)
     val panelProgress by animateFloatAsState(
         targetValue = panelTarget,
-        animationSpec = if (following) snap() else spring(Spring.DampingRatioLowBouncy, Spring.StiffnessMediumLow),
+        animationSpec = if (following || panelHosted) snap() else spring(0.85f, Spring.StiffnessMediumLow),
         label = "wear-panel-reveal",
         // The fully revealed preview stays put: the panel's destination draws the same content over
         // it, so the page and the destination swap without the page showing in between.
         finishedListener = { progress -> if (openingPanel && progress == 1f && screenActive) onOpenPanel?.invoke() },
     )
-    // As on the Wear OS lock screen, the page follows the finger rather than the sheet: it starts
-    // darkening and stepping back as soon as the pull begins, and is as far back as it goes when the
-    // pull completes. A released pull keeps that position until the sheet has landed.
-    val recessTarget = if (openingPanel) 1f else pullProgress.floatValue.coerceIn(0f, 1f)
-    val recessProgress by animateFloatAsState(
-        targetValue = recessTarget,
-        animationSpec = if (following) snap() else spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow),
-        label = "wear-page-recess",
-    )
-    // The panel's own spring passes its resting place a little, so the edge that slides in bounces as
-    // it lands.
-    val revealProgress = panelProgress.coerceAtLeast(0f)
-    val pageRecess = recessProgress.coerceIn(0f, WearPageRecessLimit)
+    // Movement, scale and scrim share the reveal, including the destination's closing animation.
+    val panelPull = LocalWearPanelPull.current
+    val revealProgress = (if (panelHosted && panelContent != null) panelPull.floatValue else panelProgress).coerceAtLeast(0f)
+    val pageRecess = revealProgress.coerceIn(0f, WearPageRecessLimit)
     val pageScale = 1f - WearPanelPageScale * pageRecess
-    // The page is fully dark by the time the sheet's first row shows, so that row comes up on the
-    // sheet's own background and the two read as one surface. A chosen background is the page's own
-    // backdrop, and the user asked to see it, so the panel leaves it undimmed.
+    // Keep the current background treatment while scale and dimming follow the same reveal.
     val customBackground = koinInject<CardConfig>().isCustomBackgroundEnabled
     val pageDim = if (customBackground) 0f else (pageRecess / WearPanelDimReach).coerceIn(0f, 1f)
     // The destination has started closing or has left; the held preview goes away at once, so the
@@ -195,12 +184,12 @@ fun WearList(
             pullProgress.floatValue = 0f
         }
     }
-    // The panel's own page reports the pull to the surfaces drawn over it; the preview and the
-    // panel's destination hold no panel of their own and stay quiet.
-    val panelPull = LocalWearPanelPull.current
+    // The opening page publishes its reveal; the hosted menu publishes the reverse on closing.
     SideEffect {
         if (panelContent != null && screenActive) {
             panelPull.floatValue = pageRecess.coerceIn(0f, 1f)
+        } else if (onClosePanel != null && screenActive) {
+            panelPull.floatValue = 1f - closeProgress
         }
     }
     // A page that leaves the screen gives up a pull in progress, unless the panel it handed over to
@@ -250,6 +239,10 @@ fun WearList(
             null
         },
         panelLabel = panelLabel,
+        onPullStart = {
+            openingPanel = false
+            closingPanel = false
+        },
     )
     // Loading shows the indeterminate indicator at the screen center instead of the content, as the
     // phone does; the branded loading screen is only for the manager's first load.
@@ -397,13 +390,9 @@ fun WearList(
         if (panelContent != null && pageDim > 0f) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = pageDim)).clearAndSetSemantics {})
         }
-        // A panel preview is drawn while it is pulled or opening, and stays under the panel's own
-        // destination afterwards; a dismissal hands the page back. The destination covers it, so the
-        // two swap without the page showing in between.
-        if (panelContent != null && (pullProgress.floatValue > 0f || openingPanel) && revealProgress > 0f && (screenActive || panelHosted)) {
-            // On a round screen the surface is the screen's own circle, so the edge that slides in
-            // is an arc rather than a straight cut across the display. The surface casts no shadow:
-            // it rises over a page that is already black, and it has to read as one with it.
+        // Hand the preview to the transparent destination once it is hosted, avoiding double-drawn rows.
+        if (panelContent != null && (pullProgress.floatValue > 0f || openingPanel) && revealProgress > 0f && screenActive && !panelHosted) {
+            // The moving panel follows the display shape.
             val panelShape = if (LocalConfiguration.current.isScreenRound) CircleShape else RectangleShape
             Box(
                 Modifier.fillMaxSize().graphicsLayer { translationY = (revealProgress - 1f) * viewportHeight }
@@ -419,8 +408,8 @@ fun WearList(
 /** How far the page shrinks behind a pulled panel. */
 private const val WearPanelPageScale = 0.12f
 
-/** The share of the pull by which the page behind the panel is fully dark. */
-private const val WearPanelDimReach = 0.8f
+/** The lower menu controls enter first; reach maximum dimming during that early reveal. */
+private const val WearPanelDimReach = 0.15f
 
 /** A bound on the page overshoot, so a long pull cannot shrink it far out of shape. */
 private const val WearPageRecessLimit = 1.2f
