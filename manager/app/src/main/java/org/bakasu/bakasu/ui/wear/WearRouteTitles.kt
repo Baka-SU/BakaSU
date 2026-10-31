@@ -65,8 +65,6 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     WearRoute.Color -> R.string.theme_color
 
-    WearRoute.BridgeSetup -> R.string.wear_bridge
-
     WearRoute.Dpi -> R.string.wear_display_touch
 
     WearRoute.Templates, is WearRoute.TemplateEditor -> R.string.manage_app_profile

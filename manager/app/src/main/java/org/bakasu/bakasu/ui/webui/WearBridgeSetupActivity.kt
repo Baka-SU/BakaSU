@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui.webui
 import android.Manifest
 import android.app.Activity
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.companion.AssociationInfo
 import android.companion.AssociationRequest
 import android.companion.BluetoothDeviceFilter
@@ -24,8 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bluetooth
-import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -34,7 +35,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -45,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.BridgeFailure
+import org.bakasu.bakasu.domain.model.BridgePeer
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
@@ -56,7 +61,7 @@ import org.bakasu.bakasu.ui.theme.KernelSUTheme
 import org.bakasu.bakasu.ui.viewmodel.CompanionBridgeViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Phone-only CDM consent and Bluetooth receiver settings. */
+/** Phone-only watch link: pick the watch through CDM, then grant it WebUI access. */
 class WearBridgeSetupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,7 +70,7 @@ class WearBridgeSetupActivity : ComponentActivity() {
     }
 }
 
-private enum class BridgeSetting { Permissions, Associate, Code, Generate, Enable, Disconnect, AppSettings }
+private enum class BridgeSetting { Permissions, PairWatch, Watch, Access, Disconnect, AppSettings }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,8 +90,27 @@ private fun PhoneBridgeSettings(onBack: () -> Unit) {
             viewModel.clearError()
         }
     }
-    LaunchedEffect(viewModel) { viewModel.refresh() }
+    LaunchedEffect(viewModel) {
+        viewModel.refresh()
+        viewModel.restoreAssociation()
+    }
+    // The watch chosen in system settings; access is granted as soon as the user confirms.
+    var pendingWatch by remember { mutableStateOf<BridgePeer?>(null) }
+    val allowTitle = stringResource(R.string.wear_bridge_allow_access_title)
+    val allowMessage = stringResource(R.string.wear_bridge_allow_access_message)
+    LaunchedEffect(pendingWatch) {
+        val peer = pendingWatch ?: return@LaunchedEffect
+        if (confirm.awaitConfirm(allowTitle, allowMessage) == ConfirmResult.Confirmed) {
+            viewModel.link(peer.address, peer.name)
+        } else {
+            viewModel.unassociate(peer.address)
+        }
+        pendingWatch = null
+    }
     val permissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { viewModel.refresh() }
+    fun deviceName(address: String): String = runCatching {
+        context.getSystemService(BluetoothManager::class.java)?.adapter?.getRemoteDevice(address)?.name
+    }.getOrNull().orEmpty().ifBlank { address }
     val chooser = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && Build.VERSION.SDK_INT < 33) {
             if (Build.VERSION.SDK_INT >= 31 && ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
@@ -95,7 +119,11 @@ private fun PhoneBridgeSettings(onBack: () -> Unit) {
             }
             @Suppress("DEPRECATION")
             val device = result.data?.getParcelableExtra<BluetoothDevice>(CompanionDeviceManager.EXTRA_DEVICE)
-            device?.let { viewModel.associate(it.address, it.name.orEmpty().ifBlank { it.address }) }
+            if (device == null) {
+                viewModel.failed(BridgeFailure.ASSOCIATION)
+            } else {
+                pendingWatch = BridgePeer(device.address, device.name.orEmpty().ifBlank { device.address })
+            }
         }
     }
     fun associate() {
@@ -120,7 +148,11 @@ private fun PhoneBridgeSettings(onBack: () -> Unit) {
                         }
                         override fun onAssociationCreated(info: AssociationInfo) {
                             val address = info.deviceMacAddress?.toString()
-                            if (address == null) viewModel.failed(BridgeFailure.ASSOCIATION) else viewModel.associate(address, info.displayName?.toString() ?: address)
+                            if (address == null) {
+                                viewModel.failed(BridgeFailure.ASSOCIATION)
+                            } else {
+                                pendingWatch = BridgePeer(address, info.displayName?.toString().orEmpty().ifBlank { deviceName(address) })
+                            }
                         }
                         override fun onFailure(message: CharSequence?) {
                             viewModel.failed(BridgeFailure.ASSOCIATION)
@@ -148,13 +180,17 @@ private fun PhoneBridgeSettings(onBack: () -> Unit) {
     }
     val removeTitle = stringResource(R.string.wear_bridge_disconnect)
     val removeMessage = stringResource(R.string.wear_bridge_disconnect_message)
+    val peer = state.peer
+    val status = when {
+        state.connected -> stringResource(R.string.wear_bridge_active_connection, peer?.name.orEmpty())
+        state.enabled -> stringResource(R.string.wear_bridge_waiting)
+        else -> stringResource(R.string.wear_bridge_access_off)
+    }
     val rows = buildList {
         add(BridgeSetting.Permissions)
-        add(BridgeSetting.Associate)
-        if (state.pairingCode != null) add(BridgeSetting.Code)
-        if (state.peer != null) {
-            add(BridgeSetting.Generate)
-            if (state.paired) add(BridgeSetting.Enable)
+        if (peer == null) add(BridgeSetting.PairWatch) else add(BridgeSetting.Watch)
+        if (peer != null) {
+            add(BridgeSetting.Access)
             add(BridgeSetting.Disconnect)
         }
         add(BridgeSetting.AppSettings)
@@ -172,15 +208,20 @@ private fun PhoneBridgeSettings(onBack: () -> Unit) {
                         if (requested.isEmpty()) viewModel.refresh() else permissions.launch(requested.toTypedArray())
                     })
 
-                    BridgeSetting.Associate -> SettingsJumpPageWidget(icon = Icons.Rounded.Link, title = stringResource(R.string.wear_bridge_associate), enabled = !busy, onClick = { associate() })
+                    BridgeSetting.PairWatch -> SettingsJumpPageWidget(icon = Icons.Rounded.Link, title = stringResource(R.string.wear_bridge_pair_watch), enabled = !busy, onClick = { associate() })
 
-                    BridgeSetting.Code -> SettingsBaseWidget(icon = Icons.Rounded.Key, title = stringResource(R.string.wear_bridge_pair_code), description = state.pairingCode)
+                    BridgeSetting.Watch -> SettingsBaseWidget(icon = Icons.Rounded.Bluetooth, title = peer?.name.orEmpty(), description = status)
 
-                    BridgeSetting.Generate -> SettingsJumpPageWidget(icon = Icons.Rounded.Key, title = stringResource(R.string.wear_bridge_generate_code), description = state.peer?.name, enabled = !busy, onClick = { viewModel.generateCode() })
+                    BridgeSetting.Access -> SettingsSwitchWidget(
+                        icon = Icons.Rounded.Bluetooth,
+                        title = stringResource(R.string.wear_bridge_allow_access),
+                        description = stringResource(R.string.wear_bridge_allow_access_summary),
+                        checked = state.enabled,
+                        enabled = !busy,
+                        onCheckedChange = viewModel::setAccess,
+                    )
 
-                    BridgeSetting.Enable -> SettingsSwitchWidget(icon = Icons.Rounded.Bluetooth, title = stringResource(R.string.wear_bridge_enable), checked = state.enabled, enabled = !busy, onCheckedChange = viewModel::enable)
-
-                    BridgeSetting.Disconnect -> SettingsJumpPageWidget(title = removeTitle, enabled = !busy, onClick = {
+                    BridgeSetting.Disconnect -> SettingsJumpPageWidget(icon = Icons.Rounded.LinkOff, title = removeTitle, enabled = !busy, onClick = {
                         scope.launch { if (confirm.awaitConfirm(removeTitle, removeMessage) == ConfirmResult.Confirmed) viewModel.disconnect() }
                     })
 
@@ -189,7 +230,6 @@ private fun PhoneBridgeSettings(onBack: () -> Unit) {
                     })
                 }
             }
-            if (state.pairingCode != null) item { Text(stringResource(R.string.wear_bridge_code_help), Modifier.padding(16.dp)) }
             item { Text(stringResource(R.string.wear_bridge_background_help), Modifier.padding(16.dp)) }
         }
     }

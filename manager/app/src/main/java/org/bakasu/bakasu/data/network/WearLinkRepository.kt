@@ -86,15 +86,32 @@ class WearLinkRepository(private val application: Application, private val bridg
         target
     }
 
-    /** Opens the WebUI through the paired app; false means the phone posted its notification. */
+    /**
+     * Opens the WebUI through the app that authorizes this watch, fetching the shared key on first
+     * use. False means the phone posted its notification instead of opening the page.
+     */
     suspend fun openWebUiOnPhone(moduleId: String, moduleName: String): Boolean = withContext(Dispatchers.IO) {
-        val peer = bridge.state.value.peer?.takeIf { bridge.state.value.paired }
-            ?: throw BridgeException(BridgeFailure.SETUP_REQUIRED)
-        val token = WearWebUiSession.offer(moduleId, moduleName, peer.address)
+        var token = ""
         try {
+            var peer = bridge.ensureProvisioned()
+            token = WearWebUiSession.offer(moduleId, moduleName, peer.address)
             bridge.startServer()
             bridge.awaitServer()
-            when (bridge.request(peer.address, CompanionBridgeRepository.OPEN) { it.input.readUTF() }) {
+            val response = try {
+                bridge.request(peer.address, CompanionBridgeRepository.OPEN) { it.input.readUTF() }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                // The phone may have revoked or rotated the key; fetch it once more before giving up.
+                WearWebUiSession.end(token)
+                bridge.forgetSecret()
+                peer = runCatching { bridge.provision() }.getOrElse { throw error }
+                token = WearWebUiSession.offer(moduleId, moduleName, peer.address)
+                bridge.startServer()
+                bridge.awaitServer()
+                bridge.request(peer.address, CompanionBridgeRepository.OPEN) { it.input.readUTF() }
+            }
+            when (response) {
                 "opened" -> true
                 "notification" -> false
                 "notifications-required" -> throw BridgeException(BridgeFailure.NOTIFICATIONS)

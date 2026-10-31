@@ -115,7 +115,7 @@ class CompanionBridgeService : Service() {
         try {
             repository.connection(socket).use { connection ->
                 when (repository.authenticate(connection)) {
-                    CompanionBridgeRepository.PAIR -> Unit
+                    CompanionBridgeRepository.PROVISION -> Unit
 
                     CompanionBridgeRepository.OPEN -> {
                         val response = try {

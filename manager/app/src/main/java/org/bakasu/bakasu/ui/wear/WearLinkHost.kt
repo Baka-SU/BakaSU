@@ -1,6 +1,11 @@
 package org.bakasu.bakasu.ui.wear
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
@@ -15,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
@@ -52,6 +58,16 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, onWebView: (String) -> U
                 is WearLinkEvent.WebUi -> runCatching { context.startActivity(WearWebUIActivity.intent(context, event.moduleId)) }
                     .onFailure { viewModel.fail(null) }
             }
+        }
+    }
+    // The watch has no connection settings page anymore, so ask for Bluetooth where it is needed.
+    val bluetooth = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { viewModel.dismissResult() }
+    val bluetoothFailure = (result as? WearLinkResult.Failed)?.bridgeFailure
+    LaunchedEffect(bluetoothFailure) {
+        if (bluetoothFailure == BridgeFailure.PERMISSION && Build.VERSION.SDK_INT >= 31 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
+        ) {
+            bluetooth.launch(Manifest.permission.BLUETOOTH_CONNECT)
         }
     }
     BackHandler(loading) { viewModel.cancel() }
