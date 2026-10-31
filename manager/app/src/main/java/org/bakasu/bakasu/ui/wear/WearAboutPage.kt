@@ -148,7 +148,7 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
                 spec,
                 stringResource(R.string.home_support_title),
                 icon = Icons.Rounded.VolunteerActivism,
-                emphasis = WearChipEmphasis.HIGH,
+                emphasis = WearChipEmphasis.MEDIUM,
                 onClick = { onOpenLink(supportUrl) },
             )
         }
@@ -157,7 +157,7 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
                 spec,
                 stringResource(R.string.home_learn_kernelsu),
                 icon = Icons.AutoMirrored.Rounded.MenuBook,
-                emphasis = WearChipEmphasis.HIGH,
+                emphasis = WearChipEmphasis.MEDIUM,
                 onClick = { onOpenLink(learnUrl) },
             )
         }
