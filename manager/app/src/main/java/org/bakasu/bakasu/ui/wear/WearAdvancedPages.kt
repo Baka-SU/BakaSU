@@ -1,5 +1,8 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Apps
@@ -19,12 +22,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.items
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.Text
+import java.util.Locale
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.UmountPath
+import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.screen.main.UninstallType
 import org.bakasu.bakasu.ui.screen.toUmountFlagName
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerOperation
@@ -55,7 +63,7 @@ import org.koin.compose.viewmodel.koinViewModel
 private enum class DynamicManagerInput { Search, Size, Hash }
 
 @Composable
-internal fun WearDynamicManagerPage(onBack: () -> Unit) {
+internal fun WearDynamicManagerPage(onBack: () -> Unit, onChanged: () -> Unit) {
     val viewModel = koinViewModel<DynamicManagerViewModel>()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var result by remember { mutableStateOf<WearResult?>(null) }
@@ -73,6 +81,7 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                 event.operation == DynamicManagerOperation.Clear -> WearResult(cleared, success = true)
                 else -> WearResult(succeeded, success = true)
             }
+            if (event.success) onChanged()
         }
     }
     var input by rememberSaveable { mutableStateOf<DynamicManagerInput?>(null) }
@@ -166,13 +175,14 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                 item {
                     WearActionButton(spec, Icons.Rounded.Settings, stringResource(R.string.wear_save_configuration), {
                         val length = size.toIntOrNull()
+                        val signatureHash = hash.trim().lowercase(Locale.ROOT)
                         when {
-                            length == null || length <= 0 -> result = WearResult(failed, success = false)
+                            length == null || length !in 0x100..0x1000 -> result = WearResult(failed, success = false)
 
-                            !hash.matches(Regex("[0-9a-fA-F]{64}")) -> result = WearResult(invalidHash, success = false)
+                            !signatureHash.matches(Regex("[0-9a-f]{64}")) -> result = WearResult(invalidHash, success = false)
 
                             else -> {
-                                pending = DynamicManagerUiAction.SetManual(length, hash)
+                                pending = DynamicManagerUiAction.SetManual(length, signatureHash)
                                 grant.show()
                             }
                         }
@@ -200,7 +210,12 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit) {
                             }
                         },
                         enabled = app.isChangeable,
-                        icon = Icons.Rounded.Apps,
+                        iconContent = {
+                            Box(Modifier.size(ButtonDefaults.LargeIconSize)) {
+                                Icon(Icons.Rounded.Apps, null, Modifier.fillMaxSize())
+                                PackageIcon(app.packageName, null, Modifier.fillMaxSize())
+                            }
+                        },
                         largeIcon = true,
                     )
                 }

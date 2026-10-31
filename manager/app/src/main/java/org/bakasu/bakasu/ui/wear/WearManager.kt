@@ -625,7 +625,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     WearSuSFSPage(::back) { open(WearRoute.Reboot) }
                                 }
                                 entry<WearRoute.DynamicManager> {
-                                    WearDynamicManagerPage(::back)
+                                    WearDynamicManagerPage(::back) { homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false)) }
                                 }
                                 entry<WearRoute.Umount> {
                                     WearUmountPage(::back)

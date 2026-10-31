@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear.component.settings
 
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -34,6 +35,7 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
     secondaryLabel: String? = null,
     compact: Boolean = false,
     largeIcon: Boolean = false,
+    iconContent: (@Composable BoxScope.() -> Unit)? = null,
 ) {
     SwitchButton(
         modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec)
@@ -45,7 +47,7 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
         checked = checked,
         onCheckedChange = onCheckedChange,
         enabled = enabled,
-        icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
+        icon = iconContent ?: icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
         secondaryLabel = secondaryLabel?.let { text -> { Text(text, maxLines = 2, overflow = TextOverflow.Ellipsis) } },
         label = { Text(label, maxLines = 3, overflow = TextOverflow.Ellipsis) },
     )
