@@ -66,16 +66,14 @@ fun WearAppProfileConfig(
     }
     LaunchedEffect(templateViewModel) { templateViewModel.dispatch(TemplateUiAction.Refresh()) }
     var page by rememberSaveable { mutableStateOf(0) }
-    var rootMode by rememberSaveable {
-        mutableStateOf(
-            if (profile.rootUseDefault) {
-                R.string.profile_default
-            } else if (profile.rootTemplate != null) {
-                R.string.profile_template
-            } else {
-                R.string.profile_custom
-            },
-        )
+    var choosingTemplateMode by rememberSaveable { mutableStateOf(false) }
+    // Only the unsaved choice of template mode is local; saved modes follow the actual profile,
+    // including a failed save rolling back in the shared ViewModel.
+    val rootMode = when {
+        choosingTemplateMode -> R.string.profile_template
+        profile.rootUseDefault -> R.string.profile_default
+        profile.rootTemplate != null -> R.string.profile_template
+        else -> R.string.profile_custom
     }
     var inputError by remember { mutableStateOf(false) }
     var domain by rememberSaveable { mutableStateOf(profile.context) }
@@ -110,7 +108,7 @@ fun WearAppProfileConfig(
                 R.string.profile -> WearChoicePage(stringResource(R.string.profile), modeChoices, mode.toString(), back) { value ->
                     val selected = value.toInt()
                     if (profile.allowSu) {
-                        rootMode = selected
+                        choosingTemplateMode = selected == R.string.profile_template
                         // Template mode is persisted only after a template has been selected.
                         if (selected != R.string.profile_template) {
                             onProfileChange(profile.copy(rootUseDefault = selected == R.string.profile_default, rootTemplate = null))
@@ -134,6 +132,7 @@ fun WearAppProfileConfig(
                     labelMaxLines = Int.MAX_VALUE,
                 ) { id ->
                     availableTemplates.firstOrNull { it.id == id }?.let { template ->
+                        choosingTemplateMode = false
                         onProfileChange(
                             profile.copy(
                                 rootUseDefault = false, rootTemplate = id,

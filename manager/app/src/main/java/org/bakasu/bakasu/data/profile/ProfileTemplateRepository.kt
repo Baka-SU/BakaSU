@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.data.profile
 
 import android.app.Application
+import android.content.pm.PackageManager
 import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
@@ -120,6 +121,7 @@ class ProfileTemplateRepository(
 
     /** The template bodies by ID fetched by a reachable paired phone, or null when none answers. */
     private suspend fun fetchBodiesFromPhone(): Map<String, String>? = runCatching {
+        if (!application.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) return null
         val localId = Tasks.await(Wearable.getNodeClient(application).localNode, 5, TimeUnit.SECONDS).id
         val nodes = Tasks.await(
             Wearable.getCapabilityClient(application)
@@ -159,11 +161,9 @@ class ProfileTemplateRepository(
      * a network nothing is requested; a failed direct download is retried through the paired phone.
      */
     suspend fun fetchOnline(): Result<List<ProfileTemplate>> = withContext(Dispatchers.IO) {
-        if (!networkStatusRepository.isAvailable()) {
-            return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.Offline))
-        }
-        val bodies = fetchRemoteBodies() ?: fetchBodiesFromPhone()
-            ?: return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.RequestFailed))
+        val online = networkStatusRepository.isAvailable()
+        val bodies = (if (online) fetchRemoteBodies() else null) ?: fetchBodiesFromPhone()
+            ?: return@withContext Result.failure(ProfileTemplateException(if (online) ProfileTemplateFailure.RequestFailed else ProfileTemplateFailure.Offline))
         val templates = bodies.values.mapNotNull { body ->
             runCatching { JSONObject(body).toTemplate() }.getOrNull()?.copy(local = false)
         }
@@ -271,7 +271,7 @@ class ProfileTemplateRepository(
      * fetched by the paired phone's Manager instead.
      */
     private suspend fun fetchRemoteTemplates(): Boolean = runCatching {
-        val bodies = (if (networkStatusRepository.isAvailable()) fetchRemoteBodies() else fetchBodiesFromPhone())
+        val bodies = (if (networkStatusRepository.isAvailable()) fetchRemoteBodies() else null) ?: fetchBodiesFromPhone()
             ?: return false
         var fetchedAny = bodies.isEmpty()
         bodies.forEach { (id, body) ->

@@ -42,7 +42,6 @@ import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.domain.model.ProfileTemplateFailure
-import org.bakasu.bakasu.domain.usecase.IsNetworkAvailableUseCase
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiAction
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiEvent
@@ -70,7 +69,6 @@ import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -87,9 +85,6 @@ internal fun WearTemplatePage(
     onOpenTemplate: (id: String, readOnly: Boolean, creation: Boolean) -> Unit,
 ) {
     val viewModel = koinViewModel<TemplateViewModel>()
-    val isNetworkAvailable = koinInject<IsNetworkAvailableUseCase>()
-    // Without a network the online templates are not requested; the dialog says why.
-    val offlineDialog = rememberWearOfflineDialog()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -142,9 +137,7 @@ internal fun WearTemplatePage(
             )
         }
         item {
-            WearActionButton(spec, Icons.Rounded.Cloud, stringResource(R.string.wear_template_view_online), {
-                if (isNetworkAvailable()) onOpenOnline() else offlineDialog.show()
-            })
+            WearActionButton(spec, Icons.Rounded.Cloud, stringResource(R.string.wear_template_view_online), onOpenOnline)
         }
         item {
             WearActionButton(spec, Icons.Rounded.ContentPaste, stringResource(R.string.app_profile_import_from_clipboard), {
