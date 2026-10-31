@@ -177,7 +177,15 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         onExit = { activity?.finish() },
     )
     val panelPull = remember { mutableFloatStateOf(if (navigator.top is WearRoute.Operations) 1f else 0f) }
-    fun open(route: WearRoute) = navigator.open(route)
+    var panelDismissals by remember { mutableIntStateOf(0) }
+    fun open(route: WearRoute) {
+        if (route !is WearRoute.Operations) {
+            // A newly opened page must not inherit the menu reveal of the page it leaves.
+            panelPull.floatValue = 0f
+            panelDismissals++
+        }
+        navigator.open(route)
+    }
     fun back() {
         val leavingPanel = navigator.top is WearRoute.Operations
         navigator.back()
@@ -188,7 +196,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         }
     }
     // Operations remain in the logical back stack, but share the page's window and one menu instance.
-    var panelDismissals by remember { mutableIntStateOf(0) }
     val operationsOnTop = navigator.top is WearRoute.Operations
     LaunchedEffect(operationsOnTop) {
         if (!operationsOnTop) {
