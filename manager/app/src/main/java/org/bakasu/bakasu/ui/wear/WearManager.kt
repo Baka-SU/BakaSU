@@ -14,32 +14,25 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
@@ -48,7 +41,6 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.AlertDialog
@@ -91,8 +83,6 @@ import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
-import org.bakasu.bakasu.ui.wear.component.LocalWearPanelDismissals
-import org.bakasu.bakasu.ui.wear.component.LocalWearPanelHosted
 import org.bakasu.bakasu.ui.wear.component.LocalWearPanelPull
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
@@ -101,8 +91,7 @@ import org.bakasu.bakasu.ui.wear.component.WearHorizontalPageIndicator
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPager
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
 import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
-import org.bakasu.bakasu.ui.wear.component.WearPanelDimReach
-import org.bakasu.bakasu.ui.wear.component.WearPanelMaxDim
+import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
@@ -176,33 +165,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         },
         onExit = { activity?.finish() },
     )
-    val panelPull = remember { mutableFloatStateOf(if (navigator.top is WearRoute.Operations) 1f else 0f) }
-    var panelDismissals by remember { mutableIntStateOf(0) }
-    fun open(route: WearRoute) {
-        if (route !is WearRoute.Operations) {
-            // A newly opened page must not inherit the menu reveal of the page it leaves.
-            panelPull.floatValue = 0f
-            panelDismissals++
-        }
-        navigator.open(route)
-    }
-    fun back() {
-        val leavingPanel = navigator.top is WearRoute.Operations
-        navigator.back()
-        if (navigator.top is WearRoute.Operations) {
-            panelPull.floatValue = 1f
-        } else if (leavingPanel) {
-            panelPull.floatValue = 0f
-        }
-    }
-    // Operations remain in the logical back stack, but share the page's window and one menu instance.
+    fun open(route: WearRoute) = navigator.open(route)
+    fun back() = navigator.back()
     val operationsOnTop = navigator.top is WearRoute.Operations
-    LaunchedEffect(operationsOnTop) {
-        if (!operationsOnTop) {
-            panelPull.floatValue = 0f
-            panelDismissals++
-        }
-    }
     val appSearchInput = { open(WearRoute.AppSearch) }
     val moduleSearchInput = { open(WearRoute.ModuleSearch) }
     val logSearchInput = { open(WearRoute.LogSearch) }
@@ -337,391 +302,371 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
             val hostScheme = MaterialTheme.colorScheme
             val transparentScheme = remember(hostScheme) { hostScheme.copy(background = Color.Transparent) }
             MaterialTheme(colorScheme = transparentScheme) {
-                CompositionLocalProvider(
-                    LocalWearPanelDismissals provides panelDismissals,
-                    // The shared menu takes over the pull while leaving its owning page composed.
-                    LocalWearPanelHosted provides operationsOnTop,
-                    LocalWearPanelPull provides panelPull,
-                ) {
-                    NavDisplay(
-                        backStack = navigator.backStack.filterNot { it is WearRoute.Operations },
-                        onBack = { back() },
-                        sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss)),
-                        entryDecorators = listOf(
-                            rememberSaveableStateHolderNavEntryDecorator(),
-                            rememberViewModelStoreNavEntryDecorator(),
-                            PageBaseDecorator,
-                        ),
-                        entryProvider = withPageTransitions(
-                            entryProvider {
-                                entry<WearRoute.Main> {
-                                    WearMainPages(
-                                        home = home,
-                                        superuser = superuser,
-                                        modules = modules,
-                                        settings = settings,
-                                        preferences = preferences,
-                                        homeError = homeError,
-                                        superuserError = superuserError,
-                                        moduleError = moduleError,
-                                        onHome = { action ->
-                                            if (action is HomeUiAction.Refresh) homeError = null
-                                            homeViewModel.dispatch(action)
-                                        },
-                                        onSuperUser = superUserViewModel::dispatch,
-                                        onModule = { action ->
-                                            if (action is ModuleUiAction.Refresh) moduleError = null
-                                            moduleViewModel.dispatch(action)
-                                        },
-                                        onSettings = dispatchSettings,
-                                        onOpen = ::open,
-                                        onTitleChange = { mainTitle = it },
-                                        onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
-                                    )
-                                }
-                                entry<WearRoute.Module> { route ->
-                                    WearModuleDetail(
-                                        module = modules.moduleList.firstOrNull { it.id == route.id },
-                                        error = moduleError,
-                                        onBack = ::back,
-                                        onEnabledChange = { id, enabled -> moduleViewModel.dispatch(ModuleUiAction.SetEnabled(id, enabled)) },
-                                        onRemove = { id, removed -> moduleViewModel.dispatch(ModuleUiAction.SetRemoved(id, removed)) },
-                                        onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
-                                        onExecute = { open(WearRoute.ModuleAction(it.id)) },
-                                        onUpdate = { open(WearRoute.ModuleUpdate(it.id)) },
-                                        onErrorShown = { moduleError = null },
-                                    )
-                                }
-                                entry<WearRoute.ModuleAction> { route ->
-                                    WearExecuteModulePage(route.id, ::back) { moduleViewModel.dispatch(ModuleUiAction.Refresh()) }
-                                }
-                                entry<WearRoute.ModuleUpdate> { route ->
-                                    WearModuleUpdatePage(modules.moduleList.firstOrNull { it.id == route.id }, ::back, installer::update)
-                                }
-                                entry<WearRoute.ModuleInstall> { route ->
-                                    WearFlashPage(FlashOperation.Module(route.uri), ::back, installer.onInstalled)
-                                }
-                                entry<WearRoute.ModuleRepo> {
-                                    WearModuleRepoPage(
-                                        moduleRepoViewModel,
-                                        ::back,
-                                        { open(WearRoute.Operations(WearOperationsPage.Repository)) },
-                                        hasOperationsPanel = true,
-                                    ) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
-                                }
-                                entry<WearRoute.ModuleRepoSearch> {
-                                    WearModuleRepoSearchPage(moduleRepoViewModel, ::back, onSubmit = {
-                                        back()
-                                        open(WearRoute.ModuleRepoSearchResults)
-                                    }) { open(WearRoute.ModuleRepoSort) }
-                                }
-                                entry<WearRoute.ModuleRepoSearchResults> {
-                                    WearModuleRepoPage(
-                                        moduleRepoViewModel,
-                                        ::back,
-                                        { open(WearRoute.ModuleRepoSearch) },
-                                    ) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
-                                }
-                                entry<WearRoute.OnlineModule> { route ->
-                                    WearOnlineModulePage(
-                                        route.id,
-                                        route.repositoryUrl,
-                                        ::back,
-                                        linkViewModel::open,
-                                        { open(WearRoute.OnlineModuleSection(route.id, route.repositoryUrl, it)) },
-                                        installer,
-                                    )
-                                }
-                                entry<WearRoute.OnlineModuleSection> { route ->
-                                    WearOnlineModuleSectionPage(route.id, route.repositoryUrl, route.section, ::back, installer)
-                                }
-                                entry<WearRoute.OnlineModuleDownload> { route ->
-                                    WearModuleDownloadPage(route) { installer.downloaded(route, it) }
-                                }
-                                entry<WearRoute.ModuleSort> {
-                                    WearModulePanel(modules, ::back, moduleViewModel::dispatch)
-                                }
-                                entry<WearRoute.ModuleRepoSort> {
-                                    WearModuleRepoSortPage(moduleRepoViewModel, ::back)
-                                }
-                                entry<WearRoute.Downloads> {
-                                    WearDownloadsPage(::back, installer::confirm)
-                                }
-                                entry<WearRoute.RepositorySources> {
-                                    WearRepositorySourcesPage(::back, { open(WearRoute.AddRepository) }) { open(WearRoute.RepositorySource(it)) }
-                                }
-                                entry<WearRoute.AddRepository> {
-                                    WearAddRepositoryPage(::back)
-                                }
-                                entry<WearRoute.RepositorySource> { route ->
-                                    val catalog by moduleRepoViewModel.state.collectAsStateWithLifecycle()
-                                    WearRepositorySourcePage(route.url, catalog.repositoryUrl, ::back) { url ->
-                                        moduleRepoViewModel.selectRepository(url)
-                                        back()
-                                        back()
-                                    }
-                                }
-                                entry<WearRoute.ModuleSearch> {
-                                    WearSearchPage(stringResource(R.string.search_modules), "installed-modules", modules.search, ::back, onAdvanced = { open(WearRoute.ModuleSort) }) {
-                                        navigator.submitSearch(WearRoute.ModuleSearchResults, it) { query ->
-                                            moduleViewModel.dispatch(ModuleUiAction.Search(query))
-                                        }
-                                    }
-                                }
-                                entry<WearRoute.ModuleSearchResults> {
-                                    WearModuleSearchResults(
-                                        modules,
-                                        moduleError,
-                                        onEdit = moduleSearchInput,
-                                        onModuleClick = { open(WearRoute.Module(it)) },
-                                        onBack = ::back,
-                                    )
-                                }
-                                entry<WearRoute.App> { route ->
-                                    val group = superuser.appGroupList.firstOrNull {
-                                        it.uid == route.uid && it.primaryPackageName == route.packageName
-                                    }
-                                    WearAppDetail(
-                                        group = group,
-                                        isManager = group?.uid?.let { it in superuser.managerUids } == true,
-                                        onBack = ::back,
-                                        onSaved = { superUserViewModel.dispatch(SuperUserUiAction.StatusChanged) },
-                                        onOpen = ::open,
-                                    )
-                                }
-                                entry<WearRoute.AppFilter> {
-                                    WearSuperUserPanel(superuser, ::back, superUserViewModel::dispatch)
-                                }
-                                entry<WearRoute.AppSearch> {
-                                    WearSearchPage(stringResource(R.string.search_apps), "apps", superuser.search, ::back, onAdvanced = { open(WearRoute.AppFilter) }) {
-                                        navigator.submitSearch(WearRoute.AppSearchResults, it) { query ->
-                                            superUserViewModel.dispatch(SuperUserUiAction.Search(query))
-                                        }
-                                    }
-                                }
-                                entry<WearRoute.AppSearchResults> {
-                                    WearAppSearchResults(
-                                        superuser,
-                                        superuserError,
-                                        onEdit = appSearchInput,
-                                        onAppClick = { uid, packageName -> open(WearRoute.App(uid, packageName)) },
-                                        onBack = ::back,
-                                    )
-                                }
-                                entry<WearRoute.HomeVersionInfo> { WearHomeVersionInfoPage(home, ::back) }
-                                entry<WearRoute.HomeStatusInfo> { WearHomeStatusInfoPage(home, ::back) }
-                                entry<WearRoute.AllowlistBackup> {
-                                    WearAllowlistBackupPage(superUserViewModel, ::back)
-                                }
-                                entry<WearRoute.Logs> {
-                                    // Opening the SU log shows the latest file; returning from its own pages keeps
-                                    // the file chosen there.
-                                    var loaded by rememberSaveable { mutableStateOf(false) }
-                                    LaunchedEffect(Unit) {
-                                        if (!loaded) {
-                                            loaded = true
-                                            sulogViewModel.dispatch(SulogUiAction.RefreshLatest)
-                                        }
-                                    }
-                                    WearLogsPage(
-                                        state = logs,
-                                        onBack = ::back,
-                                        onClearSearch = { sulogViewModel.dispatch(SulogUiAction.Search("")) },
-                                        onRefresh = {
-                                            logError = null
-                                            sulogViewModel.dispatch(SulogUiAction.Refresh)
-                                        },
-                                        onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.Logs)) },
-                                        onEntry = { open(WearRoute.LogEntry(it.key)) },
-                                        error = logError,
-                                        hasOperationsPanel = true,
-                                    )
-                                }
-                                entry<WearRoute.LogOptions> {
-                                    WearLogOptionsPage(
-                                        state = logs,
-                                        onBack = ::back,
-                                        onSelectFile = { sulogViewModel.dispatch(SulogUiAction.SelectFile(it)) },
-                                        onToggleFilter = { sulogViewModel.dispatch(SulogUiAction.ToggleFilter(it)) },
-                                        onClean = { sulogViewModel.dispatch(SulogUiAction.CleanFile) },
-                                    )
-                                }
-                                entry<WearRoute.LogEntry> { route ->
-                                    WearLogEntryPage(logs.entries.firstOrNull { it.key == route.key }, ::back)
-                                }
-                                entry<WearRoute.LogSearch> {
-                                    WearSearchPage(stringResource(R.string.sulog_search_placeholder), "sulog", logs.searchText, ::back, onAdvanced = { open(WearRoute.LogOptions) }) {
-                                        sulogViewModel.dispatch(SulogUiAction.Search(it))
-                                        back()
-                                    }
-                                }
-                                entry<WearRoute.Settings> { route ->
-                                    WearSettingsPage(
-                                        settings,
-                                        home.systemStatus,
-                                        dispatchSettings,
-                                        ::open,
-                                        ::back,
-                                        route.category,
-                                        preferences,
-                                    )
-                                }
-                                entry<WearRoute.Selection> { route ->
-                                    WearSelectionPage(
-                                        route.selection,
-                                        settings,
-                                        preferences,
-                                        preferenceViewModel,
-                                        ::back,
-                                        dispatchSettings,
-                                    )
-                                }
-                                entry<WearRoute.Color> {
-                                    WearColorPage(settings, ::back, dispatchSettings, ::open) {
-                                        runCatching { selectImageLauncher.launch(arrayOf("image/*")) }
-                                            .onFailure { settingsError = operationFailedText }
-                                    }
-                                }
-                                entry<WearRoute.Dpi> {
-                                    WearDpiPage(settings, ::back, dispatchSettings, ::open, preferences, preferenceViewModel, home.isSimpleMode) {
-                                        homeViewModel.dispatch(HomeUiAction.SetSimpleMode(it))
-                                    }
-                                }
-                                entry<WearRoute.Templates> {
-                                    WearTemplatePage(::back, { open(WearRoute.OnlineTemplates) }) { id, readOnly, creation ->
-                                        open(WearRoute.TemplateEditor(id, readOnly, creation))
-                                    }
-                                }
-                                entry<WearRoute.OnlineTemplates> { WearOnlineTemplatePage(::back) }
-                                entry<WearRoute.TemplateEditor> { route ->
-                                    WearTemplateEditor(route.id, route.readOnly, route.creation, ::back)
-                                }
-                                entry<WearRoute.SuSFS> {
-                                    WearSuSFSPage(::back) { open(WearRoute.Reboot) }
-                                }
-                                entry<WearRoute.DynamicManager> {
-                                    WearDynamicManagerPage(::back) { homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false)) }
-                                }
-                                entry<WearRoute.Umount> {
-                                    WearUmountPage(::back)
-                                }
-                                entry<WearRoute.Uninstall> {
-                                    WearUninstallPage(::back) { restore -> open(WearRoute.UninstallFlash(restore)) }
-                                }
-                                entry<WearRoute.UninstallFlash> { route ->
-                                    WearFlashPage(if (route.restore) FlashOperation.Restore else FlashOperation.Uninstall, ::back) {
-                                        homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
-                                    }
-                                }
-                                entry<WearRoute.KernelInstall> {
-                                    WearInstallPage(::back, ::open)
-                                }
-                                entry<WearRoute.LkmInstall> {
-                                    WearLkmInstallPage(::back, ::open)
-                                }
-                                entry<WearRoute.Ak3Install> { route ->
-                                    WearAk3InstallPage(::back, ::open, route.uri)
-                                }
-                                entry<WearRoute.BootFlash> { route ->
-                                    WearFlashPage(route.toOperation(), ::back) {
-                                        homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
-                                    }
-                                }
-                                entry<WearRoute.KernelFlash> { route ->
-                                    WearKernelFlashPage(route.uri, route.slot, route.skipKsud, ::back)
-                                }
-                                entry<WearRoute.Reboot> {
-                                    WearRebootPanel(home.systemStatus.isRootAvailable, ::back) {
-                                        homeViewModel.dispatch(HomeUiAction.Reboot(it))
-                                    }
-                                }
-                                entry<WearRoute.Bugreport> {
-                                    WearBugreportPage(::back)
-                                }
-                                entry<WearRoute.About> {
-                                    WearAboutDetail(
-                                        onBack = ::back,
-                                        onOpenLink = linkViewModel::open,
-                                        onLicenses = { open(WearRoute.Licenses) },
-                                    )
-                                }
-                                entry<WearRoute.Licenses> {
-                                    WearLicensePage(::back) { open(WearRoute.LicenseDetail(it)) }
-                                }
-                                entry<WearRoute.LicenseDetail> { route ->
-                                    WearLicenseDetailPage(route.index, ::back, linkViewModel::open)
-                                }
-                                entry<WearRoute.Browser> { route ->
-                                    WearBrowserPage(route.url, ::back) {
-                                        back()
-                                        linkViewModel.webViewFailed(route.url)
-                                    }
-                                }
-                            },
-                        ),
-                    )
-                }
-            }
-            val operationsPage = when (val route = navigator.top) {
-                is WearRoute.Operations -> route.page
-
-                WearRoute.Main -> when (mainTitle) {
-                    R.string.superuser -> WearOperationsPage.SuperUser
-                    R.string.module -> WearOperationsPage.Modules
-                    R.string.home -> WearOperationsPage.Home
-                    else -> null
-                }
-
-                WearRoute.Logs -> WearOperationsPage.Logs
-
-                WearRoute.ModuleRepo -> WearOperationsPage.Repository
-
-                else -> null
-            }
-            val panelStateHolder = rememberSaveableStateHolder()
-            var panelHeight by remember { mutableFloatStateOf(1f) }
-            if (operationsPage != null && (operationsOnTop || panelPull.floatValue > 0f)) {
-                // One scrim also covers pages still animating out beneath the restored menu.
-                val dim = WearPanelMaxDim * (panelPull.floatValue / WearPanelDimReach).coerceIn(0f, 1f)
-                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)).clearAndSetSemantics {})
-                // No window handoff at the end of a pull, and no moving circular clipping boundary.
-                Box(
-                    Modifier.fillMaxSize().onSizeChanged { panelHeight = it.height.toFloat() }
-                        .graphicsLayer { translationY = (panelPull.floatValue - 1f) * panelHeight }
-                        .clipToBounds().then(if (operationsOnTop) Modifier else Modifier.clearAndSetSemantics {}),
-                ) {
-                    CompositionLocalProvider(
-                        LocalScreenIsActive provides operationsOnTop,
-                        LocalWearPanelHosted provides operationsOnTop,
-                        LocalWearPanelPull provides panelPull,
-                    ) {
-                        WearSwipeToDismissBox(onDismissed = { if (operationsOnTop) back() }) { isBackground ->
-                            if (!isBackground) {
-                                panelStateHolder.SaveableStateProvider(operationsPage) {
-                                    WearOperationsPanel(
-                                        page = operationsPage,
-                                        onBack = ::back,
-                                        onOpen = ::open,
-                                        onSearch = {
-                                            when (operationsPage) {
-                                                WearOperationsPage.SuperUser -> appSearchInput()
-                                                WearOperationsPage.Modules -> moduleSearchInput()
-                                                WearOperationsPage.Logs -> logSearchInput()
-                                                WearOperationsPage.Home -> Unit
-                                                WearOperationsPage.Repository -> open(WearRoute.ModuleRepoSearch)
-                                            }
-                                        },
-                                        onInstall = installer::pickFile,
-                                        rootAvailable = home.systemStatus.isRootAvailable,
-                                        fullFeatured = home.systemStatus.isFullFeatured,
-                                        susfsAvailable = home.systemInfo.susfsEnabled,
-                                        onClosing = { panelDismissals++ },
-                                    )
+                NavDisplay(
+                    backStack = navigator.backStack.filterNot { it is WearRoute.Operations },
+                    onBack = { back() },
+                    sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss)),
+                    entryDecorators = listOf(
+                        rememberSaveableStateHolderNavEntryDecorator(),
+                        rememberViewModelStoreNavEntryDecorator(),
+                        PageBaseDecorator,
+                    ),
+                    entryProvider = withPageTransitions(
+                        entryProvider {
+                            entry<WearRoute.Main> {
+                                WearMainPages(
+                                    home = home,
+                                    superuser = superuser,
+                                    modules = modules,
+                                    settings = settings,
+                                    preferences = preferences,
+                                    homeError = homeError,
+                                    superuserError = superuserError,
+                                    moduleError = moduleError,
+                                    onHome = { action ->
+                                        if (action is HomeUiAction.Refresh) homeError = null
+                                        homeViewModel.dispatch(action)
+                                    },
+                                    onSuperUser = superUserViewModel::dispatch,
+                                    onModule = { action ->
+                                        if (action is ModuleUiAction.Refresh) moduleError = null
+                                        moduleViewModel.dispatch(action)
+                                    },
+                                    onSettings = dispatchSettings,
+                                    onOpen = ::open,
+                                    onTitleChange = { mainTitle = it },
+                                    onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
+                                )
+                            }
+                            entry<WearRoute.Module> { route ->
+                                WearModuleDetail(
+                                    module = modules.moduleList.firstOrNull { it.id == route.id },
+                                    error = moduleError,
+                                    onBack = ::back,
+                                    onEnabledChange = { id, enabled -> moduleViewModel.dispatch(ModuleUiAction.SetEnabled(id, enabled)) },
+                                    onRemove = { id, removed -> moduleViewModel.dispatch(ModuleUiAction.SetRemoved(id, removed)) },
+                                    onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
+                                    onExecute = { open(WearRoute.ModuleAction(it.id)) },
+                                    onUpdate = { open(WearRoute.ModuleUpdate(it.id)) },
+                                    onErrorShown = { moduleError = null },
+                                )
+                            }
+                            entry<WearRoute.ModuleAction> { route ->
+                                WearExecuteModulePage(route.id, ::back) { moduleViewModel.dispatch(ModuleUiAction.Refresh()) }
+                            }
+                            entry<WearRoute.ModuleUpdate> { route ->
+                                WearModuleUpdatePage(modules.moduleList.firstOrNull { it.id == route.id }, ::back, installer::update)
+                            }
+                            entry<WearRoute.ModuleInstall> { route ->
+                                WearFlashPage(FlashOperation.Module(route.uri), ::back, installer.onInstalled)
+                            }
+                            entry<WearRoute.ModuleRepo> {
+                                WearModuleRepoPage(
+                                    moduleRepoViewModel,
+                                    ::back,
+                                    { open(WearRoute.Operations(WearOperationsPage.Repository)) },
+                                    hasOperationsPanel = true,
+                                ) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
+                            }
+                            entry<WearRoute.ModuleRepoSearch> {
+                                WearModuleRepoSearchPage(moduleRepoViewModel, ::back, onSubmit = {
+                                    back()
+                                    open(WearRoute.ModuleRepoSearchResults)
+                                }) { open(WearRoute.ModuleRepoSort) }
+                            }
+                            entry<WearRoute.ModuleRepoSearchResults> {
+                                WearModuleRepoPage(
+                                    moduleRepoViewModel,
+                                    ::back,
+                                    { open(WearRoute.ModuleRepoSearch) },
+                                ) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
+                            }
+                            entry<WearRoute.OnlineModule> { route ->
+                                WearOnlineModulePage(
+                                    route.id,
+                                    route.repositoryUrl,
+                                    ::back,
+                                    linkViewModel::open,
+                                    { open(WearRoute.OnlineModuleSection(route.id, route.repositoryUrl, it)) },
+                                    installer,
+                                )
+                            }
+                            entry<WearRoute.OnlineModuleSection> { route ->
+                                WearOnlineModuleSectionPage(route.id, route.repositoryUrl, route.section, ::back, installer)
+                            }
+                            entry<WearRoute.OnlineModuleDownload> { route ->
+                                WearModuleDownloadPage(route) { installer.downloaded(route, it) }
+                            }
+                            entry<WearRoute.ModuleSort> {
+                                WearModulePanel(modules, ::back, moduleViewModel::dispatch)
+                            }
+                            entry<WearRoute.ModuleRepoSort> {
+                                WearModuleRepoSortPage(moduleRepoViewModel, ::back)
+                            }
+                            entry<WearRoute.Downloads> {
+                                WearDownloadsPage(::back, installer::confirm)
+                            }
+                            entry<WearRoute.RepositorySources> {
+                                WearRepositorySourcesPage(::back, { open(WearRoute.AddRepository) }) { open(WearRoute.RepositorySource(it)) }
+                            }
+                            entry<WearRoute.AddRepository> {
+                                WearAddRepositoryPage(::back)
+                            }
+                            entry<WearRoute.RepositorySource> { route ->
+                                val catalog by moduleRepoViewModel.state.collectAsStateWithLifecycle()
+                                WearRepositorySourcePage(route.url, catalog.repositoryUrl, ::back) { url ->
+                                    moduleRepoViewModel.selectRepository(url)
+                                    back()
+                                    back()
                                 }
                             }
-                        }
-                    }
-                }
+                            entry<WearRoute.ModuleSearch> {
+                                WearSearchPage(stringResource(R.string.search_modules), "installed-modules", modules.search, ::back, onAdvanced = { open(WearRoute.ModuleSort) }) {
+                                    navigator.submitSearch(WearRoute.ModuleSearchResults, it) { query ->
+                                        moduleViewModel.dispatch(ModuleUiAction.Search(query))
+                                    }
+                                }
+                            }
+                            entry<WearRoute.ModuleSearchResults> {
+                                WearModuleSearchResults(
+                                    modules,
+                                    moduleError,
+                                    onEdit = moduleSearchInput,
+                                    onModuleClick = { open(WearRoute.Module(it)) },
+                                    onBack = ::back,
+                                )
+                            }
+                            entry<WearRoute.App> { route ->
+                                val group = superuser.appGroupList.firstOrNull {
+                                    it.uid == route.uid && it.primaryPackageName == route.packageName
+                                }
+                                WearAppDetail(
+                                    group = group,
+                                    isManager = group?.uid?.let { it in superuser.managerUids } == true,
+                                    onBack = ::back,
+                                    onSaved = { superUserViewModel.dispatch(SuperUserUiAction.StatusChanged) },
+                                    onOpen = ::open,
+                                )
+                            }
+                            entry<WearRoute.AppFilter> {
+                                WearSuperUserPanel(superuser, ::back, superUserViewModel::dispatch)
+                            }
+                            entry<WearRoute.AppSearch> {
+                                WearSearchPage(stringResource(R.string.search_apps), "apps", superuser.search, ::back, onAdvanced = { open(WearRoute.AppFilter) }) {
+                                    navigator.submitSearch(WearRoute.AppSearchResults, it) { query ->
+                                        superUserViewModel.dispatch(SuperUserUiAction.Search(query))
+                                    }
+                                }
+                            }
+                            entry<WearRoute.AppSearchResults> {
+                                WearAppSearchResults(
+                                    superuser,
+                                    superuserError,
+                                    onEdit = appSearchInput,
+                                    onAppClick = { uid, packageName -> open(WearRoute.App(uid, packageName)) },
+                                    onBack = ::back,
+                                )
+                            }
+                            entry<WearRoute.HomeVersionInfo> { WearHomeVersionInfoPage(home, ::back) }
+                            entry<WearRoute.HomeStatusInfo> { WearHomeStatusInfoPage(home, ::back) }
+                            entry<WearRoute.AllowlistBackup> {
+                                WearAllowlistBackupPage(superUserViewModel, ::back)
+                            }
+                            entry<WearRoute.Logs> {
+                                // Opening the SU log shows the latest file; returning from its own pages keeps
+                                // the file chosen there.
+                                var loaded by rememberSaveable { mutableStateOf(false) }
+                                LaunchedEffect(Unit) {
+                                    if (!loaded) {
+                                        loaded = true
+                                        sulogViewModel.dispatch(SulogUiAction.RefreshLatest)
+                                    }
+                                }
+                                WearLogsPage(
+                                    state = logs,
+                                    onBack = ::back,
+                                    onClearSearch = { sulogViewModel.dispatch(SulogUiAction.Search("")) },
+                                    onRefresh = {
+                                        logError = null
+                                        sulogViewModel.dispatch(SulogUiAction.Refresh)
+                                    },
+                                    onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.Logs)) },
+                                    onEntry = { open(WearRoute.LogEntry(it.key)) },
+                                    error = logError,
+                                    hasOperationsPanel = true,
+                                )
+                            }
+                            entry<WearRoute.LogOptions> {
+                                WearLogOptionsPage(
+                                    state = logs,
+                                    onBack = ::back,
+                                    onSelectFile = { sulogViewModel.dispatch(SulogUiAction.SelectFile(it)) },
+                                    onToggleFilter = { sulogViewModel.dispatch(SulogUiAction.ToggleFilter(it)) },
+                                    onClean = { sulogViewModel.dispatch(SulogUiAction.CleanFile) },
+                                )
+                            }
+                            entry<WearRoute.LogEntry> { route ->
+                                WearLogEntryPage(logs.entries.firstOrNull { it.key == route.key }, ::back)
+                            }
+                            entry<WearRoute.LogSearch> {
+                                WearSearchPage(stringResource(R.string.sulog_search_placeholder), "sulog", logs.searchText, ::back, onAdvanced = { open(WearRoute.LogOptions) }) {
+                                    sulogViewModel.dispatch(SulogUiAction.Search(it))
+                                    back()
+                                }
+                            }
+                            entry<WearRoute.Settings> { route ->
+                                WearSettingsPage(
+                                    settings,
+                                    home.systemStatus,
+                                    dispatchSettings,
+                                    ::open,
+                                    ::back,
+                                    route.category,
+                                    preferences,
+                                )
+                            }
+                            entry<WearRoute.Selection> { route ->
+                                WearSelectionPage(
+                                    route.selection,
+                                    settings,
+                                    preferences,
+                                    preferenceViewModel,
+                                    ::back,
+                                    dispatchSettings,
+                                )
+                            }
+                            entry<WearRoute.Color> {
+                                WearColorPage(settings, ::back, dispatchSettings, ::open) {
+                                    runCatching { selectImageLauncher.launch(arrayOf("image/*")) }
+                                        .onFailure { settingsError = operationFailedText }
+                                }
+                            }
+                            entry<WearRoute.Dpi> {
+                                WearDpiPage(settings, ::back, dispatchSettings, ::open, preferences, preferenceViewModel, home.isSimpleMode) {
+                                    homeViewModel.dispatch(HomeUiAction.SetSimpleMode(it))
+                                }
+                            }
+                            entry<WearRoute.Templates> {
+                                WearTemplatePage(::back, { open(WearRoute.OnlineTemplates) }) { id, readOnly, creation ->
+                                    open(WearRoute.TemplateEditor(id, readOnly, creation))
+                                }
+                            }
+                            entry<WearRoute.OnlineTemplates> { WearOnlineTemplatePage(::back) }
+                            entry<WearRoute.TemplateEditor> { route ->
+                                WearTemplateEditor(route.id, route.readOnly, route.creation, ::back)
+                            }
+                            entry<WearRoute.SuSFS> {
+                                WearSuSFSPage(::back) { open(WearRoute.Reboot) }
+                            }
+                            entry<WearRoute.DynamicManager> {
+                                WearDynamicManagerPage(::back) { homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false)) }
+                            }
+                            entry<WearRoute.Umount> {
+                                WearUmountPage(::back)
+                            }
+                            entry<WearRoute.Uninstall> {
+                                WearUninstallPage(::back) { restore -> open(WearRoute.UninstallFlash(restore)) }
+                            }
+                            entry<WearRoute.UninstallFlash> { route ->
+                                WearFlashPage(if (route.restore) FlashOperation.Restore else FlashOperation.Uninstall, ::back) {
+                                    homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
+                                }
+                            }
+                            entry<WearRoute.KernelInstall> {
+                                WearInstallPage(::back, ::open)
+                            }
+                            entry<WearRoute.LkmInstall> {
+                                WearLkmInstallPage(::back, ::open)
+                            }
+                            entry<WearRoute.Ak3Install> { route ->
+                                WearAk3InstallPage(::back, ::open, route.uri)
+                            }
+                            entry<WearRoute.BootFlash> { route ->
+                                WearFlashPage(route.toOperation(), ::back) {
+                                    homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
+                                }
+                            }
+                            entry<WearRoute.KernelFlash> { route ->
+                                WearKernelFlashPage(route.uri, route.slot, route.skipKsud, ::back)
+                            }
+                            entry<WearRoute.Reboot> {
+                                WearRebootPanel(home.systemStatus.isRootAvailable, ::back) {
+                                    homeViewModel.dispatch(HomeUiAction.Reboot(it))
+                                }
+                            }
+                            entry<WearRoute.Bugreport> {
+                                WearBugreportPage(::back)
+                            }
+                            entry<WearRoute.About> {
+                                WearAboutDetail(
+                                    onBack = ::back,
+                                    onOpenLink = linkViewModel::open,
+                                    onLicenses = { open(WearRoute.Licenses) },
+                                )
+                            }
+                            entry<WearRoute.Licenses> {
+                                WearLicensePage(::back) { open(WearRoute.LicenseDetail(it)) }
+                            }
+                            entry<WearRoute.LicenseDetail> { route ->
+                                WearLicenseDetailPage(route.index, ::back, linkViewModel::open)
+                            }
+                            entry<WearRoute.Browser> { route ->
+                                WearBrowserPage(route.url, ::back) {
+                                    back()
+                                    linkViewModel.webViewFailed(route.url)
+                                }
+                            }
+                        },
+                        pageContent = { key, content ->
+                            val route = key as WearRoute
+                            val menu = navigator.operationsFor(route)
+                            val operationsPage = menu?.page ?: when (route) {
+                                WearRoute.Main -> when (mainTitle) {
+                                    R.string.superuser -> WearOperationsPage.SuperUser
+                                    R.string.module -> WearOperationsPage.Modules
+                                    R.string.home -> WearOperationsPage.Home
+                                    else -> null
+                                }
+
+                                WearRoute.Logs -> WearOperationsPage.Logs
+
+                                WearRoute.ModuleRepo -> WearOperationsPage.Repository
+
+                                else -> null
+                            }
+                            WearOperationsHost(
+                                menuKey = operationsPage,
+                                menuOpen = menu != null,
+                                menuActive = menu != null && navigator.top == menu,
+                                onBack = ::back,
+                                menuContent = { onClosing ->
+                                    if (operationsPage != null) {
+                                        WearOperationsPanel(
+                                            page = operationsPage,
+                                            onBack = ::back,
+                                            onOpen = ::open,
+                                            onSearch = {
+                                                when (operationsPage) {
+                                                    WearOperationsPage.SuperUser -> appSearchInput()
+                                                    WearOperationsPage.Modules -> moduleSearchInput()
+                                                    WearOperationsPage.Logs -> logSearchInput()
+                                                    WearOperationsPage.Home -> Unit
+                                                    WearOperationsPage.Repository -> open(WearRoute.ModuleRepoSearch)
+                                                }
+                                            },
+                                            onInstall = installer::pickFile,
+                                            rootAvailable = home.systemStatus.isRootAvailable,
+                                            fullFeatured = home.systemStatus.isFullFeatured,
+                                            susfsAvailable = home.systemInfo.susfsEnabled,
+                                            onClosing = onClosing,
+                                        )
+                                    }
+                                },
+                                content = content,
+                            )
+                        },
+                    ),
+                )
             }
             BackHandler(operationsOnTop) { back() }
             // Over the pages: waiting for a link to open, which Back cancels, and its result.
@@ -758,9 +703,12 @@ private val WearPageTransitions: Map<String, Any> = NavDisplay.transitionSpec {
  * content key are carried over unchanged, leaving the entry's saveable state and ViewModel scopes
  * as they were.
  */
-private fun <T : Any> withPageTransitions(provider: (T) -> NavEntry<T>): (T) -> NavEntry<T> = { key ->
+private fun <T : Any> withPageTransitions(
+    provider: (T) -> NavEntry<T>,
+    pageContent: @Composable (T, @Composable () -> Unit) -> Unit,
+): (T) -> NavEntry<T> = { key ->
     val entry = provider(key)
-    NavEntry(key, entry.contentKey, entry.metadata + WearPageTransitions) { entry.Content() }
+    NavEntry(key, entry.contentKey, entry.metadata + WearPageTransitions) { pageContent(key) { entry.Content() } }
 }
 
 /**

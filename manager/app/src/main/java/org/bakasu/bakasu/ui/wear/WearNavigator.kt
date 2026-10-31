@@ -21,6 +21,12 @@ class WearNavigator internal constructor(
 ) {
     val top: WearRoute? get() = backStack.lastOrNull() as WearRoute?
 
+    /** A menu belongs only to the page immediately before it, even beneath another page. */
+    fun operationsFor(route: WearRoute): WearRoute.Operations? {
+        val index = backStack.indexOf(route)
+        return if (index >= 0) backStack.getOrNull(index + 1) as? WearRoute.Operations else null
+    }
+
     fun open(route: WearRoute) {
         onChange()
         if (top != route) backStack.add(route)
