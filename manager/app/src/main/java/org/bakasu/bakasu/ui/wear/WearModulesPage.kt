@@ -3,8 +3,8 @@ package org.bakasu.bakasu.ui.wear
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Wysiwyg
 import androidx.compose.material.icons.rounded.Extension
-import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -104,7 +104,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             if (module.hasWebUi && onWebUi != null) {
                 add(
                     WearIconAction(
-                        Icons.Rounded.Language,
+                        Icons.AutoMirrored.Rounded.Wysiwyg,
                         stringResource(R.string.wear_webui),
                     ) { onWebUi(module) },
                 )
