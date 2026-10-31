@@ -69,6 +69,19 @@ void susfs_set_priv_app_sid(void);
 
 void escape_to_root_for_adb_root();
 
+struct inode;
+struct inode_security_struct;
+struct inode_security_struct *ksu_selinux_inode(const struct inode *inode);
+
+#if defined(MODULE) && LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) && defined(CONFIG_DEBUG_INFO_BTF)
+int __init ksu_selinux_inode_init(void);
+#else
+static inline int ksu_selinux_inode_init(void)
+{
+    return 0;
+}
+#endif
+
 extern u32 ksu_file_sid;
 
 void __init ksu_selinux_init();
