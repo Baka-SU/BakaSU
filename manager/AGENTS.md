@@ -102,11 +102,12 @@ its UI and a few Wear-only data sources are separate.
 
 ### Wear UI
 
-* Pages live in `ui/wear/`; Wear components live in `ui/wear/component/`, with the Wear settings
-  adapters in `ui/wear/component/settings/`. Phone and Wear UI must not use each other's components;
-  the `WearPhoneComponentBoundary` lint check warns when they do. Only the dialog API
-  (`rememberCustomDialog`, `DialogHandle`) and `PackageIcon` are shared; non-UI helpers such as the
-  `module.prop` parser `ZipFileDetector` live in `data/`.
+* Pages live in `ui/wear/`; Wear-only reusable components live in `ui/wear/component/`, with Wear
+  settings adapters in `ui/wear/component/settings/`. Shared UI components belong in
+  `ui/component/`. Phone UI must not depend on Wear-only components, and Wear UI must not depend on
+  phone-only components; the `WearPhoneComponentBoundary` lint check warns about these violations.
+  The dialog API (`rememberCustomDialog`, `DialogHandle`) and `PackageIcon` are approved shared
+  components. Non-UI helpers such as the `module.prop` parser `ZipFileDetector` belong in `data/`.
 * `WearManager.kt` owns one `AppScaffold`, the four-page main `WearHorizontalPager` and a Navigation 3 `NavDisplay`;
   `WearRoutes.kt` declares the serializable destinations. Open and close pages through the
   `open`/`back` helpers and add a `WearRoute` for every new page instead of in-page string stacks.
@@ -132,17 +133,19 @@ back or the phone connection; check those on a watch when a change touches them.
 
 ## UI component conventions
 
-### Canonical component location
+### Canonical component locations
 
-All reusable UI components must be placed under:
+Place reusable UI components according to their intended scope:
 
 ```text
-org.bakasu.bakasu.ui.component
+org.bakasu.bakasu.ui.component        # shared components and phone UI components
+org.bakasu.bakasu.ui.wear.component   # Wear-only UI components
 ```
 
 Do not create parallel reusable-component packages inside individual pages, features, or view
-models. Screen-specific composables may remain close to their screen when they are truly local, but
-components intended for reuse must live in `ui.component`.
+models. Screen-specific composables may remain close to their screen when they are truly local.
+Components intended for reuse must live in the canonical package for their scope: shared and phone
+components in `ui.component`, and Wear-only components in `ui.wear.component`.
 
 ### Dialog
 
@@ -241,8 +244,9 @@ instead.
 
 * Keep repositories and data access in `data/`.
 * Keep presentation and Compose work in `ui/`.
-* Put reusable composables in `ui.component`, and prefer the settings component system for settings
-  surfaces.
+* Put shared and phone reusable composables in `ui.component`; put Wear-only reusable composables
+  in `ui.wear.component`. Prefer the settings component system for settings surfaces, using the
+  platform-appropriate package.
 * Extend the nearest existing pattern before creating a new abstraction.
 * Avoid duplicating existing widgets, shapes, or resource-access patterns.
 * Use `org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction` for every phone pager and
@@ -279,8 +283,9 @@ For implementation tasks:
 
 Before completing a UI or settings task, verify:
 
-* Reusable components are under `org.bakasu.bakasu.ui.component`, unless it from library, if so,
-  you MUST keep the original copyright notice.
+* Shared and phone reusable components are under `org.bakasu.bakasu.ui.component`; Wear-only
+  reusable components are under `org.bakasu.bakasu.ui.wear.component`. If a component comes from a
+  library, preserve its original copyright notice.
 * Settings screens use `org.bakasu.bakasu.ui.component.settings` components.
 * Static settings groups use `SegmentedColumn`; runtime-changing groups use `LazySegmentedColumn`.
 * Standard settings rows use the relevant `SettingsBaseWidget` wrapper instead of a hand-built
