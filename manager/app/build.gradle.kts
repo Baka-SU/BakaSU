@@ -44,6 +44,7 @@ android {
 
     buildTypes {
         debug {
+            applicationIdSuffix = ".debug"
             externalNativeBuild {
                 cmake {
                     arguments += listOf("-DCMAKE_CXX_FLAGS_DEBUG=-Og", "-DCMAKE_C_FLAGS_DEBUG=-Og")
