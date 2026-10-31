@@ -162,7 +162,7 @@ internal fun WearModuleRepoPage(
                 spec,
                 module.moduleName,
                 { onOpen(module) },
-                icon = Icons.Rounded.Cloud,
+                icon = Icons.Rounded.Extension,
                 description = module.summary.ifBlank { module.moduleId },
             )
         }
