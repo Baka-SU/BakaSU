@@ -31,6 +31,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.wear.component.WearChip
+import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
@@ -109,22 +110,6 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
         item {
             WearChip(
                 spec,
-                stringResource(R.string.home_support_title),
-                icon = Icons.Rounded.VolunteerActivism,
-                onClick = { onOpenLink(supportUrl) },
-            )
-        }
-        item {
-            WearChip(
-                spec,
-                stringResource(R.string.home_learn_kernelsu),
-                icon = Icons.AutoMirrored.Rounded.MenuBook,
-                onClick = { onOpenLink(learnUrl) },
-            )
-        }
-        item {
-            WearChip(
-                spec,
                 stringResource(R.string.wear_icon_copyright),
                 icon = Icons.Rounded.Copyright,
                 onClick = copyright::show,
@@ -155,6 +140,25 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
                 secondaryLabel = stringResource(R.string.license, stringResource(R.string.wear_project_license)),
                 icon = Icons.Rounded.Copyright,
                 onClick = onLicenses,
+            )
+        }
+        wearGroupGap("support-gap")
+        item {
+            WearChip(
+                spec,
+                stringResource(R.string.home_support_title),
+                icon = Icons.Rounded.VolunteerActivism,
+                emphasis = WearChipEmphasis.HIGH,
+                onClick = { onOpenLink(supportUrl) },
+            )
+        }
+        item {
+            WearChip(
+                spec,
+                stringResource(R.string.home_learn_kernelsu),
+                icon = Icons.AutoMirrored.Rounded.MenuBook,
+                emphasis = WearChipEmphasis.HIGH,
+                onClick = { onOpenLink(learnUrl) },
             )
         }
     }
