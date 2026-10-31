@@ -1,19 +1,27 @@
 package org.bakasu.bakasu.ui.wear.component
 
 import android.os.Build
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigationevent.NavigationEventTransitionState
+import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
+import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SwipeToDismissBox
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -33,7 +41,8 @@ import org.koin.compose.koinInject
  * The watchOS black page base. The app's single backdrop, including the user's cropped image and
  * chosen dimming; the components drawn over it are made translucent by the theme, so the image
  * shows through them. Black remains the fallback with no image, or until the image has loaded.
- * Rendered by WearManagerTheme outside all page and swipe-dismiss transitions.
+ * The plain black base follows predictive back; a selected image and its dim layer remain intact.
+ * Rendered by WearManagerTheme outside page transitions.
  */
 @Composable
 fun WearBackground(content: @Composable BoxScope.() -> Unit) {
@@ -41,7 +50,17 @@ fun WearBackground(content: @Composable BoxScope.() -> Unit) {
     val backgroundManager = koinInject<BackgroundManager>()
     val renderState = LocalBackgroundRenderState.current
     val scope = rememberCoroutineScope()
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    val transition = LocalNavigationEventDispatcherOwner.current?.navigationEventDispatcher
+        ?.transitionState?.collectAsStateWithLifecycle()?.value
+    val back = (transition as? NavigationEventTransitionState.InProgress)
+        ?.takeIf { it.direction == NavigationEventTransitionState.TRANSITIONING_BACK }
+    val baseColor = MaterialTheme.colorScheme.background
+    val backgroundAlpha by animateFloatAsState(
+        targetValue = if (config.customBackgroundUri != null) 1f else (1f - (back?.latestEvent?.progress ?: 0f)).coerceIn(0f, 1f),
+        animationSpec = if (back != null) snap() else MaterialTheme.motionScheme.defaultEffectsSpec<Float>(),
+        label = "wear-back-background",
+    )
+    Box(Modifier.fillMaxSize().drawBehind { drawRect(baseColor.copy(alpha = backgroundAlpha)) }) {
         config.customBackgroundUri?.let { uri ->
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current).data(uri).allowHardware(false).build(),

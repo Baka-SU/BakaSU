@@ -34,6 +34,9 @@ class WearMainActivity : WearActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Compose owns the page base, including its predictive-back alpha. An opaque window
+        // background would keep that base black after the Compose layer becomes transparent.
+        window.setBackgroundDrawableResource(android.R.color.transparent)
         lifecycleScope.launch { ensureManagerInstalled() }
         // As on the phone, Home and the app list start loading at launch.
         if (savedInstanceState == null) {
