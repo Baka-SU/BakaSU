@@ -23,7 +23,6 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
@@ -149,11 +148,11 @@ internal fun WearModuleRepoPage(
         panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
-        if (state.modules.isEmpty() && !state.isRefreshing && failure == null) {
+        if (state.modules.isEmpty() && state.search.isBlank() && !state.isRefreshing && failure == null) {
             item {
                 WearEmptyState(
                     spec,
-                    if (state.search.isNotBlank()) Icons.Rounded.SearchOff else Icons.Rounded.Cloud,
+                    Icons.Rounded.Cloud,
                     stringResource(R.string.wear_catalog_empty),
                 )
             }
@@ -172,11 +171,11 @@ internal fun WearModuleRepoPage(
 
 /** The repository search input, a route of its own; it searches the list it was opened from. */
 @Composable
-internal fun WearModuleRepoSearchPage(viewModel: ModuleRepoViewModel, onBack: () -> Unit, onAdvanced: () -> Unit) {
+internal fun WearModuleRepoSearchPage(viewModel: ModuleRepoViewModel, onBack: () -> Unit, onSubmit: () -> Unit, onAdvanced: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     WearSearchPage(stringResource(R.string.search_modules), "repository:${state.repositoryUrl}", state.search, onBack, onAdvanced) {
         viewModel.dispatch(ModuleRepoUiAction.Search(it.trim()))
-        onBack()
+        onSubmit()
         // A search before the repository has loaded tries to load it first.
         if (state.modules.isEmpty() && !state.isRefreshing) viewModel.dispatch(ModuleRepoUiAction.Refresh)
     }

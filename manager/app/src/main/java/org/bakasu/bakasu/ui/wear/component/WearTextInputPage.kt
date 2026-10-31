@@ -8,12 +8,17 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -28,8 +33,10 @@ import androidx.wear.compose.material3.Text
 
 /** Uses the watch IME, including its voice input, without importing a phone text-field control. */
 @Composable
-fun WearTextInputPage(title: String, initialValue: String, multiline: Boolean = false, onSubmit: (String) -> Unit) {
+fun WearTextInputPage(title: String, initialValue: String, multiline: Boolean = false, imeAction: ImeAction = ImeAction.Done, autoFocus: Boolean = false, onSubmit: (String) -> Unit) {
     var value by rememberSaveable(title, initialValue) { mutableStateOf(initialValue) }
+    val focus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
     // Confirming is the page's primary action, so it takes the edge button; Back and swipe dismiss it.
     WearList(onConfirm = { onSubmit(value) }) { spec ->
         item { WearPageHeader(spec, title) }
@@ -39,9 +46,9 @@ fun WearTextInputPage(title: String, initialValue: String, multiline: Boolean = 
                     value = value, onValueChange = { value = it }, singleLine = !multiline,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { onSubmit(value) }),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    keyboardOptions = KeyboardOptions(imeAction = imeAction),
+                    keyboardActions = KeyboardActions(onDone = { onSubmit(value) }, onSearch = { onSubmit(value) }, onSend = { onSubmit(value) }),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(focus)
                         .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
                         .padding(12.dp).semantics { contentDescription = title },
                     decorationBox = { field ->
@@ -49,6 +56,12 @@ fun WearTextInputPage(title: String, initialValue: String, multiline: Boolean = 
                         field()
                     },
                 )
+                LaunchedEffect(autoFocus) {
+                    if (autoFocus) {
+                        focus.requestFocus()
+                        keyboard?.show()
+                    }
+                }
             }
         }
     }

@@ -174,7 +174,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
             when (route) {
                 WearRoute.AppSearchResults -> superUserViewModel.dispatch(SuperUserUiAction.Search(""))
                 WearRoute.ModuleSearchResults -> moduleViewModel.dispatch(ModuleUiAction.Search(""))
-                WearRoute.ModuleRepo -> moduleRepoViewModel.dispatch(ModuleRepoUiAction.Search(""))
+                WearRoute.ModuleRepo, WearRoute.ModuleRepoSearchResults -> moduleRepoViewModel.dispatch(ModuleRepoUiAction.Search(""))
                 else -> Unit
             }
         },
@@ -437,7 +437,17 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     ) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
                                 }
                                 entry<WearRoute.ModuleRepoSearch> {
-                                    WearModuleRepoSearchPage(moduleRepoViewModel, ::back) { open(WearRoute.ModuleRepoSort) }
+                                    WearModuleRepoSearchPage(moduleRepoViewModel, ::back, onSubmit = {
+                                        back()
+                                        open(WearRoute.ModuleRepoSearchResults)
+                                    }) { open(WearRoute.ModuleRepoSort) }
+                                }
+                                entry<WearRoute.ModuleRepoSearchResults> {
+                                    WearModuleRepoPage(
+                                        moduleRepoViewModel,
+                                        ::back,
+                                        { open(WearRoute.ModuleRepoSearch) },
+                                    ) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
                                 }
                                 entry<WearRoute.OnlineModule> { route ->
                                     WearOnlineModulePage(

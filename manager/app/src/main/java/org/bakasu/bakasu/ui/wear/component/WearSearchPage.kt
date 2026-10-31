@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,17 +44,21 @@ fun WearSearchPage(
     val history by viewModel.history.collectAsStateWithLifecycle()
     var query by rememberSaveable(historyScope) { mutableStateOf(initialQuery) }
     var editing by rememberSaveable { mutableStateOf(false) }
-    val input = rememberWearRemoteInput(title, onUnavailable = { editing = true }) { query = it }
     fun submit(value: String) {
         if (value.isBlank()) return
         viewModel.record(value)
         onSearch(value.trim())
     }
+    val input = rememberWearRemoteInput(title, onUnavailable = { editing = true }) {
+        query = it
+        submit(it)
+    }
     if (editing) {
         WearSubPage({ editing = false }) {
-            WearTextInputPage(title, query) {
+            WearTextInputPage(title, query, imeAction = ImeAction.Search, autoFocus = true) {
                 query = it
                 editing = false
+                submit(it)
             }
         }
         return
