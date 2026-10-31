@@ -11,6 +11,8 @@ import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -41,6 +43,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalScrollCaptureInProgress
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -244,7 +247,19 @@ fun WearList(
     // Loading shows the indeterminate indicator at the screen center instead of the content, as the
     // phone does; the branded loading screen is only for the manager's first load.
     val loadingDescription = stringResource(R.string.wear_loading)
-    val listContent: @Composable (PaddingValues) -> Unit = { contentPadding ->
+    val listContent: @Composable (PaddingValues) -> Unit = { scaffoldPadding ->
+        val layoutDirection = LocalLayoutDirection.current
+        val contentPadding = if (LocalWearTimeOptions.current.mode == "title") {
+            val titleSpace = with(LocalDensity.current) { MaterialTheme.typography.labelMedium.lineHeight.toDp() } + 16.dp
+            PaddingValues(
+                start = scaffoldPadding.calculateStartPadding(layoutDirection),
+                end = scaffoldPadding.calculateEndPadding(layoutDirection),
+                top = maxOf(scaffoldPadding.calculateTopPadding(), titleSpace),
+                bottom = scaffoldPadding.calculateBottomPadding(),
+            )
+        } else {
+            scaffoldPadding
+        }
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(Modifier.semantics { contentDescription = loadingDescription })
