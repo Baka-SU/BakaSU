@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
@@ -30,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +52,7 @@ import org.bakasu.bakasu.ui.viewmodel.AppProfileUiEvent
 import org.bakasu.bakasu.ui.viewmodel.AppProfileViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileConfig
+import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearCompactItemSpacing
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
@@ -112,14 +115,22 @@ internal fun WearModuleDetail(
     WearList(onBack = onBack, itemSpacing = WearCompactItemSpacing) { spec ->
         // As in the design, the page opens with the module title card instead of a page title.
         item {
-            WearModuleInfoCard(spec) {
-                Text(module.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(module.version.ifBlank { unknown }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (module.remove) {
-                    Text(stringResource(R.string.wear_pending_removal), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
-                }
-                if (module.metamodule) {
-                    Text(stringResource(R.string.wear_meta_badge), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+            WearInfoCard(spec, shape = ButtonDefaults.shape, contentPadding = ButtonDefaults.ContentPadding) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Extension, null, Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(module.name, style = MaterialTheme.typography.titleMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(module.version.ifBlank { unknown }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (module.metamodule) {
+                                WearBadge(stringResource(R.string.wear_meta_badge), containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.tertiary)
+                            }
+                            if (module.remove) {
+                                WearBadge(stringResource(R.string.wear_pending_removal), containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
                 }
             }
         }
