@@ -34,6 +34,8 @@ internal fun WearOperationsHost(
     val pull = remember { mutableFloatStateOf(if (menuOpen) 1f else 0f) }
     var dismissals by remember { mutableIntStateOf(0) }
     var wasOpen by remember { mutableStateOf(menuOpen) }
+    val menuClosed = wasOpen && !menuOpen
+    val currentDismissals = if (menuClosed) dismissals + 1 else dismissals
     LaunchedEffect(menuOpen) {
         if (wasOpen && !menuOpen) {
             pull.floatValue = 0f
@@ -45,13 +47,13 @@ internal fun WearOperationsHost(
     var height by remember { mutableFloatStateOf(1f) }
     val screenActive = LocalScreenIsActive.current
     CompositionLocalProvider(
-        LocalWearPanelDismissals provides dismissals,
+        LocalWearPanelDismissals provides currentDismissals,
         LocalWearPanelHosted provides menuOpen,
         LocalWearPanelPull provides pull,
     ) {
         Box(Modifier.fillMaxSize()) {
             content()
-            if (menuKey != null && (menuOpen || pull.floatValue > 0f)) {
+            if (!menuClosed && menuKey != null && (menuOpen || pull.floatValue > 0f)) {
                 val dim = WearPanelMaxDim * (pull.floatValue / WearPanelDimReach).coerceIn(0f, 1f)
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)).clearAndSetSemantics {})
                 Box(

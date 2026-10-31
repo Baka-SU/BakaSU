@@ -637,16 +637,18 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                                 else -> null
                             }
+                            // An animation callback may only close the menu that scheduled it.
+                            val closeMenu: () -> Unit = { if (menu != null && navigator.top == menu) back() }
                             WearOperationsHost(
                                 menuKey = operationsPage,
                                 menuOpen = menu != null,
                                 menuActive = menu != null && navigator.top == menu,
-                                onBack = ::back,
+                                onBack = closeMenu,
                                 menuContent = { onClosing ->
                                     if (operationsPage != null) {
                                         WearOperationsPanel(
                                             page = operationsPage,
-                                            onBack = ::back,
+                                            onBack = closeMenu,
                                             onOpen = ::open,
                                             onSearch = {
                                                 when (operationsPage) {

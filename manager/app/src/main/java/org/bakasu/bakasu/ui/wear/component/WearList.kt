@@ -162,7 +162,11 @@ fun WearList(
     )
     // Movement, scale and scrim share the reveal, including the destination's closing animation.
     val panelPull = LocalWearPanelPull.current
-    val revealProgress = (if (panelHosted && hasOperationsPanel) panelPull.floatValue else panelProgress).coerceAtLeast(0f)
+    val revealProgress = when {
+        panelWasDismissed && !panelHosted -> 0f
+        panelHosted && hasOperationsPanel -> panelPull.floatValue
+        else -> panelProgress
+    }.coerceAtLeast(0f)
     val pageRecess = revealProgress.coerceIn(0f, WearPageRecessLimit)
     val pageScale = 1f - WearPanelPageScale * pageRecess
     // The destination has started closing or has left; the held preview goes away at once, so the
@@ -176,11 +180,13 @@ fun WearList(
         }
     }
     // The opening page publishes its reveal; the hosted menu publishes the reverse on closing.
+    // Observe closing frames here, so they recompose and republish even after the finger lifts.
+    val closingPull = 1f - closeProgress
     SideEffect {
         if (hasOperationsPanel && screenActive && !panelHosted) {
             panelPull.floatValue = pageRecess.coerceIn(0f, 1f)
         } else if (onClosePanel != null && screenActive && panelHosted) {
-            panelPull.floatValue = 1f - closeProgress
+            panelPull.floatValue = closingPull
         }
     }
     // A page that leaves the screen gives up a pull in progress, unless the panel it handed over to
