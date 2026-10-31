@@ -236,8 +236,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         if (settingsNotice != null) settingsNoticeDialog.show() else settingsNoticeDialog.hide()
     }
 
-    LaunchedEffect(home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled) {
-        navigator.closeUnavailable(home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled)
+    LaunchedEffect(home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled, home.systemStatus.isRootAvailable) {
+        navigator.closeUnavailable(home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled, home.systemStatus.isRootAvailable)
     }
     ActivityResumeEffect(homeViewModel) {
         homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = true))

@@ -68,8 +68,8 @@ internal fun WearOperationsPanel(
     val actions = when (page) {
         WearOperationsPage.Home -> listOfNotNull(
             if (fullFeatured && susfsAvailable) WearIconAction(Icons.Rounded.VisibilityOff, stringResource(R.string.susfs_config_setting_title), { onOpen(WearRoute.SuSFS) }) else null,
-            WearIconAction(Icons.Rounded.Article, stringResource(R.string.sulog), { onOpen(WearRoute.Logs) }, fullFeatured),
-            WearIconAction(Icons.Rounded.RestartAlt, stringResource(R.string.reboot), { onOpen(WearRoute.Reboot) }, rootAvailable),
+            if (fullFeatured) WearIconAction(Icons.Rounded.Article, stringResource(R.string.sulog), { onOpen(WearRoute.Logs) }) else null,
+            if (rootAvailable) WearIconAction(Icons.Rounded.RestartAlt, stringResource(R.string.reboot), { onOpen(WearRoute.Reboot) }) else null,
         )
 
         WearOperationsPage.SuperUser -> listOf(
@@ -102,7 +102,7 @@ internal fun WearOperationsPanel(
     val listState = rememberPanelListState()
     Box(Modifier.fillMaxSize()) {
         WearList(onClosePanel = onBack, onPanelClosing = onClosing, snap = true, listState = listState) { spec ->
-            SegmentedColumn(actions, { it.label }) { action ->
+            LazySegmentedColumn(actions, { it.label }) { action ->
                 WearSettingsJumpPageWidget(spec, action.label, action.onClick, icon = action.icon, enabled = action.enabled)
             }
         }

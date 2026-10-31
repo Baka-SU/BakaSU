@@ -93,7 +93,7 @@ internal fun WearHomePage(
         if (status.ksuVersion != null && !status.isRootAvailable) {
             add(WearHomeWarning(R.string.wear_warning_root, stringResource(R.string.grant_root_failed), WearStatusTone.ERROR))
         }
-        if (status.isManager && !status.isFullFeatured) {
+        if (status.isManager && status.kernelUAPIVersion != status.managerUAPIVersion) {
             val kernelInstall = status.lkmMode == true && (status.kernelUAPIVersion ?: 1) <= status.managerUAPIVersion
             val message = if ((status.kernelUAPIVersion ?: 1) > status.managerUAPIVersion) {
                 R.string.require_manager_version

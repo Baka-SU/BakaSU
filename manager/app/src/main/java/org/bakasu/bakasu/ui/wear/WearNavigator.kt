@@ -39,8 +39,11 @@ class WearNavigator internal constructor(
     }
 
     /** Closes every page once root or SUSFS, which it needs, is no longer available. */
-    fun closeUnavailable(fullFeatured: Boolean, susfs: Boolean) {
-        val lost = backStack.any { (it as WearRoute).needsRoot && !fullFeatured || it == WearRoute.SuSFS && !susfs }
+    fun closeUnavailable(fullFeatured: Boolean, susfs: Boolean, rootAvailable: Boolean) {
+        val lost = backStack.any {
+            (it as WearRoute).needsRoot && !fullFeatured || it == WearRoute.SuSFS && !susfs ||
+                it is WearRoute.Operations && !(if (it.page == WearOperationsPage.Home) rootAvailable else fullFeatured)
+        }
         if (lost) {
             onChange()
             backStack.retainAll { it == WearRoute.Main }

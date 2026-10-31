@@ -417,25 +417,25 @@ internal fun WearSettingsPage(
                 }
             }
             SettingsSection.entries.forEach { section ->
-                val sectionToggles = toggles.filter { it.section == section }
+                val sectionToggles = toggles.filter {
+                    it.section == section && when (it.label) {
+                        R.string.settings_kernel_umount -> state.kernelUmountStatus == "supported"
+                        R.string.settings_sulog -> state.sulogStatus == "supported"
+                        R.string.settings_selinux_hide -> state.selinuxHideStatus == "supported"
+                        R.string.settings_adb_root -> state.adbRootStatus == "supported"
+                        R.string.settings_soft_reboot -> !status.isLateLoadMode
+                        else -> true
+                    }
+                }
                 val sectionPages = pages.filter { it.section == section }
                 if (sectionToggles.isNotEmpty() || sectionPages.isNotEmpty()) {
                     item(key = section.name) { WearSectionHeader(spec, stringResource(section.title)) }
                     LazySegmentedColumn(sectionToggles, { it.label }) { toggle ->
-                        val enabled = when (toggle.label) {
-                            R.string.settings_kernel_umount -> state.kernelUmountStatus == "supported"
-                            R.string.settings_sulog -> state.sulogStatus == "supported"
-                            R.string.settings_selinux_hide -> state.selinuxHideStatus == "supported"
-                            R.string.settings_adb_root -> state.adbRootStatus == "supported"
-                            R.string.settings_soft_reboot -> !status.isLateLoadMode
-                            else -> true
-                        }
                         WearSettingsSwitchWidget(
                             spec,
                             stringResource(toggle.label),
                             toggle.checked,
                             { onAction(toggle.action) },
-                            enabled,
                             icon = settingsToggleIcon(toggle.label),
                             secondaryLabel = toggle.summary?.let { stringResource(it) },
                         )
