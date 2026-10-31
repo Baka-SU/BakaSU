@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -35,7 +36,7 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
-class MainActivity : ComponentActivity() {
+open class MainActivity : ComponentActivity() {
     private val homeViewModel: HomeViewModel by viewModel()
     private val moduleViewModel: ModuleViewModel by viewModel()
     private val settingsViewModel: SettingsViewModel by viewModel()
@@ -54,6 +55,14 @@ class MainActivity : ComponentActivity() {
     private val intentChannel = Channel<Intent>(capacity = Channel.BUFFERED)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Watches use their own activity; the launcher entries and alias stay shared with the phone.
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) {
+            super.onCreate(savedInstanceState)
+            // By name, so the phone side keeps no compile-time dependency on the Wear UI.
+            startActivity(Intent(intent).setClassName(this, "org.bakasu.bakasu.ui.wear.WearMainActivity"))
+            finish()
+            return
+        }
         try {
             val splashScreen = installSplashScreen()
 

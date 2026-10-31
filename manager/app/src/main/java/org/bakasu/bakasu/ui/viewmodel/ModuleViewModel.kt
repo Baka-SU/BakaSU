@@ -215,7 +215,7 @@ class ModuleViewModel(
             {
                 val executable = it.hasWebUi || it.hasActionScript
                 when {
-                    it.metamodule && it.enabled -> 0
+                    it.metamodule -> 0
 
                     sortEnabledFirst && sortActionFirst -> when {
                         it.enabled && executable -> 1

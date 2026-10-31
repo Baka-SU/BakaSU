@@ -1,0 +1,234 @@
+package org.bakasu.bakasu.ui.wear
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Article
+import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.Error
+import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.lazy.itemsIndexed
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.RadioButton
+import androidx.wear.compose.material3.SurfaceTransformation
+import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.TitleCard
+import androidx.wear.compose.material3.lazy.transformedHeight
+import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.SulogEntry
+import org.bakasu.bakasu.domain.model.SulogEventFilter
+import org.bakasu.bakasu.domain.model.toSulogDisplayName
+import org.bakasu.bakasu.ui.screen.sulogEntryDescription
+import org.bakasu.bakasu.ui.screen.sulogEntryDetailText
+import org.bakasu.bakasu.ui.screen.sulogEntryStatus
+import org.bakasu.bakasu.ui.screen.sulogEntrySummaryTags
+import org.bakasu.bakasu.ui.screen.sulogEntryTitle
+import org.bakasu.bakasu.ui.screen.sulogFilterLabel
+import org.bakasu.bakasu.ui.viewmodel.SulogUiState
+import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearBadge
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
+import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
+import org.bakasu.bakasu.ui.wear.component.WearIconAction
+import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
+import org.bakasu.bakasu.ui.wear.component.WearInfoCard
+import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
+import org.bakasu.bakasu.ui.wear.component.WearStatusItem
+import org.bakasu.bakasu.ui.wear.component.WearStatusTone
+import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
+import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
+import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
+
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
+ * The SU log: page actions in its pull-down panel and the status of
+ * the log, then one Wear Material 3 [TitleCard] per entry that opens its full fields. Log files,
+ * type filters and cleaning live in [WearLogOptionsPage], as the phone keeps them in the app bar.
+ */
+@Composable
+internal fun WearLogsPage(
+    state: SulogUiState,
+    onBack: () -> Unit,
+    onClearSearch: () -> Unit,
+    onRefresh: () -> Unit,
+    onOpenPanel: () -> Unit,
+    onEntry: (SulogEntry) -> Unit,
+    error: String? = null,
+    hasOperationsPanel: Boolean = false,
+) {
+    val statusFailure = when (state.sulogStatus) {
+        "unsupported" -> stringResource(R.string.sulog_unsupported_title)
+        "managed" -> stringResource(R.string.feature_status_managed_summary)
+        else -> null
+    }
+    val failures = listOfNotNull(error, state.errorMessage, statusFailure).filter { it.isNotBlank() }.distinct()
+    WearErrorDialog(failures.takeIf { it.isNotEmpty() && !state.isLoading && !state.isRefreshing }?.joinToString("\n"))
+    // As on the phone: the log refreshes by the pull gesture, whose progress shows in the edge
+    // button, and the first load shows only the loading indicator.
+    WearList(
+        isLoading = state.isLoading,
+        isRefreshing = state.isRefreshing && !state.isLoading,
+        onRefresh = onRefresh,
+        onBack = onBack,
+        onOpenPanel = onOpenPanel,
+        panelLabel = stringResource(R.string.wear_operations),
+        hasOperationsPanel = hasOperationsPanel,
+    ) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.sulog)) }
+        // The active query; tapping it clears the search.
+        if (state.searchText.isNotBlank()) {
+            item {
+                WearActionButton(
+                    spec,
+                    Icons.Rounded.SearchOff,
+                    state.searchText,
+                    onClearSearch,
+                    secondaryText = stringResource(R.string.wear_clear_search),
+                    colors = ButtonDefaults.filledTonalButtonColors(),
+                )
+            }
+        }
+        if (failures.isEmpty()) {
+            if (state.visibleEntries.isEmpty()) {
+                item {
+                    if (state.searchText.isNotBlank()) {
+                        WearEmptyState(spec, Icons.Rounded.SearchOff, stringResource(R.string.search_no_any_match))
+                    } else {
+                        WearEmptyState(spec, Icons.Rounded.Article, stringResource(R.string.wear_no_logs))
+                    }
+                }
+            }
+            itemsIndexed(state.visibleEntries, key = { index, entry -> "$index:${entry.key}" }) { _, entry ->
+                val tags = sulogEntrySummaryTags(entry) + listOfNotNull(sulogEntryStatus(entry))
+                TitleCard(
+                    onClick = { onEntry(entry) },
+                    title = { Text(sulogEntryTitle(entry), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp).transformedHeight(this, spec),
+                    transformation = SurfaceTransformation(spec),
+                    // The clock time fits the time slot; the full date stays in the content.
+                    time = entry.timestampText?.substringAfter(' ')?.let { { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
+                    subtitle = tags.takeIf { it.isNotEmpty() }?.let { labels ->
+                        {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                labels.forEach { label ->
+                                    WearBadge(label, containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+                                }
+                            }
+                        }
+                    },
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        sulogEntryDescription(entry)?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
+                        entry.timestampText?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodyExtraSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Every parsed field of one entry, as the phone's detail dialog shows it. */
+@Composable
+internal fun WearLogEntryPage(entry: SulogEntry?, onBack: () -> Unit) {
+    WearList(onBack = onBack) { spec ->
+        if (entry == null) {
+            item { WearEmptyState(spec, Icons.Rounded.Article, stringResource(R.string.wear_no_logs)) }
+            return@WearList
+        }
+        item { WearPageHeader(spec, sulogEntryTitle(entry)) }
+        item {
+            WearInfoCard(spec) {
+                Text(
+                    sulogEntryDetailText(entry),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
+        }
+    }
+}
+
+/** The log file, the event types shown and cleaning the selected file. */
+@Composable
+internal fun WearLogOptionsPage(
+    state: SulogUiState,
+    onBack: () -> Unit,
+    onSelectFile: (String) -> Unit,
+    onToggleFilter: (SulogEventFilter) -> Unit,
+    onClean: () -> Unit,
+) {
+    val cleanDialog = rememberWearConfirmDialog(
+        stringResource(R.string.sulog_clean_title),
+        stringResource(R.string.confirm_delete),
+        destructive = true,
+        onConfirm = onClean,
+    )
+    val selectedPath = state.selectedFilePath ?: state.files.firstOrNull()?.path
+    WearList(onBack = onBack) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.sulog_filter_title)) }
+        SegmentedColumn(SulogEventFilter.entries, { "filter-$it" }) { filter ->
+            WearSettingsSwitchWidget(
+                spec,
+                sulogFilterLabel(filter),
+                filter in state.selectedFilters,
+                { onToggleFilter(filter) },
+            )
+        }
+        if (state.files.isNotEmpty()) {
+            item { WearSectionHeader(spec, stringResource(R.string.sulog_log_files)) }
+            LazySegmentedColumn(state.files, { it.path }) { file ->
+                RadioButton(
+                    selected = file.path == selectedPath,
+                    onSelect = { onSelectFile(file.path) },
+                    modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
+                        .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
+                    transformation = SurfaceTransformation(spec),
+                    label = { Text(file.name.toSulogDisplayName(), maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                )
+            }
+        }
+        item {
+            WearActionButton(
+                spec,
+                Icons.Rounded.DeleteSweep,
+                stringResource(R.string.sulog_clean_title),
+                cleanDialog::show,
+                enabled = state.selectedFilePath != null && !state.isRefreshing,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    iconColor = MaterialTheme.colorScheme.onErrorContainer,
+                ),
+            )
+        }
+    }
+}

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Lets the watch find a paired Manager for online template synchronization. -->
+    <string-array name="android_wear_capabilities" translatable="false">
+        <item>resukisu_profile_templates</item>
+    </string-array>
+</resources>

@@ -126,6 +126,7 @@ class ThemeConfig(
 ) {
     // 主题状态
     var customBackgroundUri by mutableStateOf<Uri?>(null)
+    var backgroundSeedColor by mutableIntStateOf(0)
     var backgroundDim by mutableFloatStateOf(0f)
     var forceDarkMode by mutableStateOf<Boolean?>(null)
     var seedColor by mutableIntStateOf(defaultSeedColor())
@@ -161,6 +162,7 @@ class ThemeConfig(
 
     fun reset() {
         customBackgroundUri = null
+        backgroundSeedColor = 0
         forceDarkMode = null
         seedColor = defaultSeedColor()
         useDynamicColor = false
@@ -219,6 +221,14 @@ class BackgroundManager(
 ) {
     private val tag = "BackgroundManager"
 
+    private companion object {
+        /** Name used before backgrounds were stored under a per-save name; still deleted on replace. */
+        const val LEGACY_BACKGROUND_FILE_NAME = "custom_background.jpg"
+
+        /** Prefix of the per-save background names; the suffix keeps every saved Uri distinct. */
+        const val BACKGROUND_FILE_PREFIX = "custom_background_"
+    }
+
     fun saveBackgroundDim(dim: Float) {
         config.backgroundDim = dim
         settings.putFloat("background_dim", dim)
@@ -244,6 +254,11 @@ class BackgroundManager(
         settings.putBoolean("use_background_seed_color", enable)
     }
 
+    fun saveBackgroundSeedColor(color: Int) {
+        config.backgroundSeedColor = color
+        settings.putInt("cached_seed_color", color)
+    }
+
     fun saveEnableHighContrastMode(enable: Boolean) {
         config.isHighContrastMode = enable
         settings.putBoolean("high_contrast_mode", enable)
@@ -255,15 +270,18 @@ class BackgroundManager(
     ): Boolean {
         val appContext = context.applicationContext
         return try {
+            val previousUri = config.customBackgroundUri
             val finalUri = withContext(Dispatchers.IO) {
                 copyImageToInternalStorage(appContext, uri)
             } ?: return false
 
             saveBackgroundUri(finalUri)
+            saveBackgroundSeedColor(0)
             config.customBackgroundUri = finalUri
             cardConfig.updateBackground(true)
             withContext(Dispatchers.IO) {
                 clearBackgroundBlurCache(appContext)
+                deleteBackgroundFile(appContext, previousUri)
             }
             config.backgroundImageLoaded = false
 
@@ -277,10 +295,13 @@ class BackgroundManager(
     }
 
     fun clearCustomBackground(context: Context) {
+        val previousUri = config.customBackgroundUri
         saveBackgroundUri(null)
+        saveBackgroundSeedColor(0)
         config.customBackgroundUri = null
         cardConfig.updateBackground(false)
         clearBackgroundBlurCache(context)
+        deleteBackgroundFile(context, previousUri)
         config.backgroundImageLoaded = false
     }
 
@@ -289,6 +310,7 @@ class BackgroundManager(
         val uriString = prefs.getString("custom_background", null)
 
         val newUri = uriString?.toUri()
+        config.backgroundSeedColor = if (newUri != null) prefs.getInt("cached_seed_color", 0) else 0
 
         if (config.customBackgroundUri?.toString() != newUri?.toString()) {
             Log.d(tag, "加载自定义背景: $uriString")
@@ -298,6 +320,9 @@ class BackgroundManager(
         }
 
         config.backgroundDim = prefs.getFloat("background_dim", 0f).coerceIn(0f, 1f)
+        // Read with the other background settings: the Wear theme loads them only through here, so
+        // leaving the blur out turned it off again after the app restarted.
+        config.isEnableBlur = prefs.getBoolean("enable_blur", false)
         config.isEnableBlurExp = prefs.getBoolean("enable_blur_exp", false)
         config.isUseBackgroundSeedColor = prefs.getBoolean("use_background_seed_color", false)
         config.isHighContrastMode = prefs.getBoolean("high_contrast_mode", false)
@@ -316,10 +341,17 @@ class BackgroundManager(
         }
     }
 
+    /**
+     * Copies the picked image into the app's own storage under a fresh, per-save name.
+     *
+     * The name has to change on every save: Coil compares image requests field by field and skips
+     * a request equal to the one already loaded, so reusing a fixed name would leave the previous
+     * image on screen after the user picks another one.
+     */
     private fun copyImageToInternalStorage(context: Context, uri: Uri): Uri? {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-            val fileName = "custom_background.jpg"
+            val fileName = "$BACKGROUND_FILE_PREFIX${System.currentTimeMillis()}.jpg"
             val file = File(context.filesDir, fileName)
 
             FileOutputStream(file).use { outputStream ->
@@ -337,6 +369,20 @@ class BackgroundManager(
             Log.e(tag, "复制图片失败: ${e.message}", e)
             null
         }
+    }
+
+    /**
+     * Deletes a stored background image once it is no longer referenced. Only files this class
+     * writes qualify — the legacy fixed name and its per-save successors — so the blur cache,
+     * which shares the same directory under a different name, is left alone.
+     */
+    private fun deleteBackgroundFile(context: Context, uri: Uri?) {
+        val file = uri?.path?.let(::File) ?: return
+        val isStoredBackground = file.parentFile == context.filesDir &&
+            (file.name == LEGACY_BACKGROUND_FILE_NAME || file.name.startsWith(BACKGROUND_FILE_PREFIX))
+        if (!isStoredBackground) return
+        runCatching { file.delete() }
+            .onFailure { Log.w(tag, "删除背景文件失败: ${it.message}") }
     }
 }
 
@@ -1570,7 +1616,7 @@ private fun ContentDrawScope.drawStretchCompensatedBitmap(
 
 private fun Offset.isUsable(): Boolean = x.isFinite() && y.isFinite()
 
-private suspend fun Bitmap.extractSeedColor(
+internal suspend fun Bitmap.extractSeedColor(
     maxColors: Int = 128,
     fallbackColorArgb: Int = -12417548,
 ): Int = withContext(Dispatchers.IO) {

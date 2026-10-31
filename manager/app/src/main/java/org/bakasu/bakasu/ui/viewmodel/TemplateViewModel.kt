@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.ProfileTemplate
+import org.bakasu.bakasu.domain.usecase.DeleteProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.ExportProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.ImportProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplateOfflineUseCase
@@ -30,13 +31,14 @@ sealed interface TemplateUiAction {
     data class Refresh(val synchronize: Boolean = false) : TemplateUiAction
     data class Import(val json: String) : TemplateUiAction
     data object Export : TemplateUiAction
+    data class Delete(val id: String) : TemplateUiAction
 }
 
 sealed interface TemplateUiEvent {
     data object ImportCompleted : TemplateUiEvent
     data class Exported(val json: String) : TemplateUiEvent
     data object ExportEmpty : TemplateUiEvent
-    data class Error(val message: String) : TemplateUiEvent
+    data class Error(val message: String, val fromClipboard: Boolean = false) : TemplateUiEvent
 }
 
 class TemplateViewModel(
@@ -46,6 +48,7 @@ class TemplateViewModel(
     private val refreshTemplates: RefreshProfileTemplatesUseCase,
     private val importTemplatesUseCase: ImportProfileTemplatesUseCase,
     private val exportTemplatesUseCase: ExportProfileTemplatesUseCase,
+    private val deleteTemplateUseCase: DeleteProfileTemplateUseCase,
 ) : ViewModel() {
     private val mutableEvents = MutableSharedFlow<TemplateUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<TemplateUiEvent> = mutableEvents.asSharedFlow()
@@ -84,8 +87,13 @@ class TemplateViewModel(
                 val result = importTemplatesUseCase(action.json)
                 result.fold(
                     onSuccess = { mutableEvents.emit(TemplateUiEvent.ImportCompleted) },
-                    onFailure = { mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty())) },
+                    onFailure = { mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty(), fromClipboard = true)) },
                 )
+            }
+
+            // The repository removes the template from ksud and refreshes the list App Profile reads.
+            is TemplateUiAction.Delete -> viewModelScope.launch {
+                deleteTemplateUseCase(action.id).onFailure { mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty())) }
             }
 
             TemplateUiAction.Export -> viewModelScope.launch {

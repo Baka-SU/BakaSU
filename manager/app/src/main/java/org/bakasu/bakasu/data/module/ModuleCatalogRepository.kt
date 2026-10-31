@@ -19,7 +19,6 @@ import org.bakasu.bakasu.data.module.registry.KernelSuRegistryRepository
 import org.bakasu.bakasu.data.module.registry.ModuleNotInIndexException
 import org.bakasu.bakasu.data.module.registry.RegistryCatalogMapper
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
-import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.data.network.toDocument
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
@@ -39,7 +38,6 @@ import org.json.JSONObject
 data class RepositoryFeed(val source: RepositorySource, val modules: List<CatalogModule>, val error: RepositoryFailure? = null, val registryBuildId: String? = null)
 
 class ModuleCatalogRepository(
-    private val networkStatusRepository: NetworkStatusRepository,
     private val networkRequestRepository: NetworkRequestRepository,
     private val sourceStore: RepositorySourceStore,
     private val registry: KernelSuRegistryRepository,
@@ -79,10 +77,6 @@ class ModuleCatalogRepository(
             if (sources.isEmpty()) {
                 publishModules()
                 return ModuleCatalogResult.Success(mutableModules.value)
-            }
-            if (!networkStatusRepository.isAvailable() && sources.none { it.apiType == RepositoryApiType.KERNEL_SU }) {
-                mutableFailures.value = mutableFailures.value + sources.associate { it.url to RepositoryFailure(RepositoryError.OFFLINE) }
-                return ModuleCatalogResult.Failure(ModuleCatalogFailure.Offline)
             }
             sources.map { it.url to refreshMutexes.getOrPut(it.url) { Mutex() } }
         }
@@ -306,7 +300,6 @@ class ModuleCatalogRepository(
             mutableSources.value.firstOrNull { it.url == canonical }?.let { return@attempt it }
             sourceGenerations[canonical] ?: 0
         }
-        if (!networkStatusRepository.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)
         val source = RepositorySource(canonical, canonical, apiType = apiType)
         val feed = withContext(Dispatchers.IO) { loadSource(source) }
         stateMutex.withLock {
@@ -358,7 +351,6 @@ class ModuleCatalogRepository(
 
     private suspend fun loadSource(source: RepositorySource): RepositoryFeed {
         if (source.apiType == RepositoryApiType.KERNEL_SU) return loadKernelSuSource(source)
-        if (!networkStatusRepository.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)
         val body = networkRequestRepository.fetch("${source.url}json/modules.json").getOrThrow()
         val feed = MmrlRepositoryParser.parse(source.url, body)
         return feed.copy(
