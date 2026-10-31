@@ -913,4 +913,5 @@
     <string name="wear_bridge_disconnect_message">是否移除已保存的手机与手表连接？</string>
     <string name="wear_display_interaction">屏幕行为与触觉反馈</string>
     <string name="wear_phone_connection_failed">无法连接手机</string>
+    <string name="wear_bridge_active_connection">已连接 %1$s</string>
 </resources>

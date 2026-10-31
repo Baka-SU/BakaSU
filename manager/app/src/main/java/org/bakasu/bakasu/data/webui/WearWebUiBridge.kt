@@ -125,14 +125,15 @@ class RemoteWebUiBackend private constructor(
     val moduleName: String,
 ) : WebUiBackend {
 
-    private fun <T> call(op: String, arg: String, extra: Int = 0, read: (DataInputStream) -> T): T {
+    private fun <T> call(op: String, arg: String, extra: Int = 0, timeout: Boolean = true, onConnection: ((BridgeConnection) -> Unit)? = null, read: (DataInputStream) -> T): T {
         val connection = transport.connect(peerAddress, WearWebUiProtocol.RPC_PATH)
         try {
+            onConnection?.invoke(connection)
             val output = connection.output
             val request = JSONObject().put("token", token).put("op", op).put("arg", arg).put("extra", extra)
             with(WearWebUiProtocol) { output.writeFrame(FRAME_OK, request.toString().toByteArray()) }
             val input = connection.input
-            return read(input)
+            return if (timeout) CompanionBridgeRepository.handshake(connection.socket) { read(input) } else read(input)
         } finally {
             connection.close()
         }
@@ -149,6 +150,10 @@ class RemoteWebUiBackend private constructor(
     }.getOrNull() ?: WebUiCommandResult(-1, "", "")
 
     override fun spawn(command: String): WebUiProcess = object : WebUiProcess {
+        private val lock = Any()
+        private var connection: BridgeConnection? = null
+        private var closed = false
+
         override fun start(
             onStdout: (String) -> Unit,
             onStderr: (String) -> Unit,
@@ -156,7 +161,12 @@ class RemoteWebUiBackend private constructor(
         ) {
             thread(name = "remote-webui-spawn") {
                 val result = runCatching {
-                    call("spawn", command) { input ->
+                    call("spawn", command, timeout = false, onConnection = { socket ->
+                        synchronized(lock) {
+                            check(!closed)
+                            connection = socket
+                        }
+                    }) { input ->
                         var exit: WebUiCommandResult? = null
                         while (exit == null) {
                             val (type, payload) = with(WearWebUiProtocol) { input.readFrame() }
@@ -170,11 +180,17 @@ class RemoteWebUiBackend private constructor(
                         exit
                     }
                 }.getOrElse { WebUiCommandResult(-1, "", it.message.orEmpty()) }
+                synchronized(lock) { connection = null }
                 onComplete(result)
             }
         }
 
-        override fun close() = Unit
+        override fun close() {
+            synchronized(lock) {
+                closed = true
+                connection?.close()
+            }
+        }
     }
 
     override fun listModules(): String = runCatching { single("modules", "")?.decodeToString() }.getOrNull() ?: "[]"
@@ -186,7 +202,9 @@ class RemoteWebUiBackend private constructor(
             val request = JSONObject().put("token", token).put("op", "file").put("arg", path).put("extra", 0)
             with(WearWebUiProtocol) { output.writeFrame(FRAME_OK, request.toString().toByteArray()) }
             val input = connection.input
-            val (type, payload) = with(WearWebUiProtocol) { input.readFrame() }
+            val (type, payload) = CompanionBridgeRepository.handshake(connection.socket) {
+                with(WearWebUiProtocol) { input.readFrame() }
+            }
             when {
                 type != WearWebUiProtocol.FRAME_CHUNK -> {
                     connection.close()
@@ -221,7 +239,9 @@ class RemoteWebUiBackend private constructor(
         /** Claims only the session offered by the explicitly paired watch, off the main thread. */
         fun claim(transport: CompanionBridgeRepository, peerAddress: String): RemoteWebUiBackend? = runCatching {
             transport.connect(peerAddress, WearWebUiProtocol.CLAIM_PATH).use { connection ->
-                val (type, payload) = with(WearWebUiProtocol) { connection.input.readFrame() }
+                val (type, payload) = CompanionBridgeRepository.handshake(connection.socket) {
+                    with(WearWebUiProtocol) { connection.input.readFrame() }
+                }
                 if (type != WearWebUiProtocol.FRAME_OK) return null
                 val session = JSONObject(payload.decodeToString())
                 val module = session.getString("module")
@@ -261,7 +281,9 @@ private class RemoteFileInputStream(
     private fun ensure(): Boolean {
         while (offset >= chunk.size) {
             if (closed) return false
-            val (type, payload) = with(WearWebUiProtocol) { input.readFrame() }
+            val (type, payload) = CompanionBridgeRepository.handshake(connection.socket) {
+                with(WearWebUiProtocol) { input.readFrame() }
+            }
             if (type != WearWebUiProtocol.FRAME_CHUNK || payload.isEmpty()) {
                 close()
                 return false

@@ -113,7 +113,7 @@ class CompanionBridgeService : Service() {
 
     private suspend fun serve(socket: BluetoothSocket) {
         try {
-            BridgeConnection(socket).use { connection ->
+            repository.connection(socket).use { connection ->
                 when (repository.authenticate(connection)) {
                     CompanionBridgeRepository.PAIR -> Unit
 
@@ -184,6 +184,7 @@ class CompanionBridgeService : Service() {
 
     override fun onDestroy() {
         repository.setListening(false)
+        repository.closeConnections()
         runCatching { server?.close() }.onFailure { Log.w(TAG, "Listener close failed", it) }
         sockets.forEach { socket -> runCatching { socket.close() }.onFailure { Log.w(TAG, "Socket close failed", it) } }
         scope.cancel()

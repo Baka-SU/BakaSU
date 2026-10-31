@@ -16,4 +16,4 @@ enum class BridgeFailure(@param:StringRes val resId: Int) {
 
 class BridgeException(val reason: BridgeFailure, cause: Throwable? = null) : Exception(reason.name, cause)
 data class BridgePeer(val address: String, val name: String)
-data class BridgeState(val peer: BridgePeer? = null, val paired: Boolean = false, val enabled: Boolean = false, val pairingCode: String? = null)
+data class BridgeState(val peer: BridgePeer? = null, val paired: Boolean = false, val enabled: Boolean = false, val pairingCode: String? = null, val connected: Boolean = false)

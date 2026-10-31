@@ -19,6 +19,7 @@ import java.io.DataOutputStream
 import java.security.SecureRandom
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
@@ -29,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -40,11 +42,21 @@ import org.bakasu.bakasu.domain.model.BridgePeer
 import org.bakasu.bakasu.domain.model.BridgeState
 
 @SuppressLint("MissingPermission") // Constructed only after adapter() checks Bluetooth access.
-internal class BridgeConnection(val socket: BluetoothSocket) : Closeable {
+internal class BridgeConnection(val socket: BluetoothSocket, private val onClosed: (BridgeConnection) -> Unit) : Closeable {
     val peer: String = socket.remoteDevice.address.uppercase(Locale.ROOT)
     val input = DataInputStream(socket.inputStream.buffered())
     val output = DataOutputStream(socket.outputStream.buffered())
-    override fun close() = socket.close()
+    private var closed = false
+
+    @Synchronized override fun close() {
+        if (closed) return
+        closed = true
+        try {
+            socket.close()
+        } finally {
+            onClosed(this)
+        }
+    }
 }
 
 /** CDM selects the phone's permitted watch; secure RFCOMM carries mutually authenticated app calls. */
@@ -80,6 +92,7 @@ class CompanionBridgeRepository(
     @Volatile private var pendingCode: String? = null
 
     @Volatile private var codeExpiresAt = 0L
+    private val activeConnections = ConcurrentHashMap.newKeySet<BridgeConnection>()
     private val mutableState = MutableStateFlow(read())
     val state = mutableState.asStateFlow()
     private val mutableListening = MutableStateFlow(false)
@@ -90,10 +103,27 @@ class CompanionBridgeRepository(
         !preferences.getString(SECRET).isNullOrBlank(),
         preferences.getBoolean(ENABLED, false),
         pendingCode?.chunked(4)?.joinToString("-"),
+        connected = activeConnections.isNotEmpty(),
     )
 
     fun refresh() {
-        mutableState.value = read()
+        synchronized(activeConnections) {
+            mutableState.value = read()
+        }
+    }
+
+    internal fun connection(socket: BluetoothSocket): BridgeConnection = BridgeConnection(socket) {
+        synchronized(activeConnections) {
+            activeConnections.remove(it)
+            mutableState.update { state -> state.copy(connected = activeConnections.isNotEmpty()) }
+        }
+    }
+
+    private fun connected(connection: BridgeConnection) {
+        synchronized(activeConnections) {
+            activeConnections.add(connection)
+            mutableState.update { it.copy(connected = true) }
+        }
     }
 
     internal fun adapter(): BluetoothAdapter {
@@ -197,7 +227,14 @@ class CompanionBridgeRepository(
         mutableListening.value = value
     }
     internal fun stopServer() {
+        closeConnections()
         application.stopService(Intent(application, CompanionBridgeService::class.java))
+    }
+
+    internal fun closeConnections() {
+        activeConnections.forEach { connection ->
+            runCatching { connection.close() }.onFailure { Log.w("CompanionBridge", "Connection close failed", it) }
+        }
     }
 
     private fun credential(address: String, pairingCode: String?): String {
@@ -236,7 +273,7 @@ class CompanionBridgeRepository(
         try {
             return handshake(socket) {
                 socket.connect()
-                val connection = BridgeConnection(socket)
+                val connection = connection(socket)
                 val clientNonce = UUID.randomUUID().toString()
                 connection.output.apply {
                     writeUTF(WIRE_VERSION)
@@ -252,6 +289,7 @@ class CompanionBridgeRepository(
                     flush()
                 }
                 check(connection.input.readBoolean())
+                connected(connection)
                 connection
             }
         } catch (error: Exception) {
@@ -297,6 +335,7 @@ class CompanionBridgeRepository(
             }
             refresh()
         }
+        connected(connection)
         operation
     }
 

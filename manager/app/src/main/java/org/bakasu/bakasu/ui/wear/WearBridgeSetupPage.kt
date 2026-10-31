@@ -81,7 +81,13 @@ internal fun WearBridgeSetupPage(onBack: () -> Unit) {
     WearList(onBack = onBack, isLoading = busy) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_bridge)) }
         item { WearInfoCard(spec) { Text(stringResource(R.string.wear_bridge_pair_help)) } }
-        if (state.paired) item { WearInfoCard(spec) { Text(stringResource(R.string.wear_bridge_connected, state.peer?.name.orEmpty())) } }
+        if (state.paired) {
+            item {
+                WearInfoCard(spec) {
+                    Text(stringResource(if (state.connected) R.string.wear_bridge_active_connection else R.string.wear_bridge_connected, state.peer?.name.orEmpty()))
+                }
+            }
+        }
         item {
             WearActionButton(spec, Icons.Rounded.Bluetooth, stringResource(R.string.wear_bridge_permission), {
                 if (Build.VERSION.SDK_INT >= 31 && ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
