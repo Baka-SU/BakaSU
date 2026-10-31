@@ -170,6 +170,8 @@ MODULE_PARM_DESC(block_modules, "Comma-separated preset module names to acknowle
 
 int __init kernelsu_init(void)
 {
+    int ret;
+
     // clang-format off
     
     // ddk in x86-64 doesn't have generated/compile.h
@@ -224,17 +226,23 @@ int __init kernelsu_init(void)
         pr_alert("shell is allowed at init!");
     }
 
-#ifdef CONFIG_ARM64
-    ksu_start_apatch_conflict_check();
-#endif
-
     ksu_cred = prepare_creds();
     if (!ksu_cred) {
         pr_err("prepare cred failed!\n");
         return -ENOSYS;
     }
 
+    pr_info("initializing symbol resolver\n");
     ksu_init_symbol_resolver();
+    ret = ksu_selinux_inode_init();
+    if (ret) {
+        put_cred(ksu_cred);
+        ksu_cred = NULL;
+        return ret;
+    }
+#ifdef CONFIG_ARM64
+    ksu_start_apatch_conflict_check();
+#endif
     ksu_selinux_init();
     ksu_feature_init();
     ksu_sulog_init();

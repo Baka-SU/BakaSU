@@ -509,7 +509,7 @@ pub struct BootPatchArgs {
     #[arg(
         long,
         value_name = "NAMES",
-        default_value = "vr,vklp,oplus_secure_guard,oplus_secure_guard_new,mkp"
+        default_value = "vr,vklp,vklp_smaps_rollup,oplus_secure_guard,oplus_secure_guard_new,mkp"
     )]
     block_modules: Option<String>,
 
