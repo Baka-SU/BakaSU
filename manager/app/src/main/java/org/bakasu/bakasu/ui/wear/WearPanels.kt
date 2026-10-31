@@ -17,12 +17,10 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.ScrollInfoProvider
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.ButtonDefaults
@@ -210,10 +208,4 @@ internal fun WearRebootPanel(rootAvailable: Boolean, onBack: () -> Unit, onReboo
 }
 
 @Composable
-private fun rememberPanelListState(): androidx.wear.compose.foundation.lazy.TransformingLazyColumnState {
-    val state = rememberTransformingLazyColumnState()
-    val active = LocalScreenIsActive.current
-    // A menu opens at its heading even when its saveable state survived a previous visit or exit animation.
-    LaunchedEffect(active) { if (active) state.scrollToItem(0) }
-    return state
-}
+private fun rememberPanelListState(): androidx.wear.compose.foundation.lazy.TransformingLazyColumnState = rememberTransformingLazyColumnState()

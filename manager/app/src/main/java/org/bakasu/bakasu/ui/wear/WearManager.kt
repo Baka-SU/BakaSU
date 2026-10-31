@@ -386,9 +386,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     WearOperationsPanel(
                                         page = route.page,
                                         onBack = ::back,
-                                        onOpen = navigator::replace,
+                                        onOpen = ::open,
                                         onSearch = {
-                                            back()
                                             when (route.page) {
                                                 WearOperationsPage.SuperUser -> appSearchInput()
                                                 WearOperationsPage.Modules -> moduleSearchInput()
@@ -398,7 +397,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                             }
                                         },
                                         onInstall = {
-                                            back()
                                             installer.pickFile()
                                         },
                                         rootAvailable = home.systemStatus.isRootAvailable,
