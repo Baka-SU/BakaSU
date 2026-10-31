@@ -17,7 +17,7 @@ import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Person
@@ -119,9 +119,9 @@ internal fun WearModuleRepoPage(
         AlertDialog(
             visible = true,
             onDismissRequest = leave,
-            icon = { WearDialogIcon(Icons.Rounded.ErrorOutline) },
+            icon = { WearDialogIcon(Icons.Rounded.Error, tint = MaterialTheme.colorScheme.error) },
             title = { Text(stringResource(R.string.wear_repo_connect_failed)) },
-            text = { Text(failureReason, color = MaterialTheme.colorScheme.error) },
+            text = { Text(failureReason) },
             confirmButton = {
                 AlertDialogDefaults.ConfirmButton(
                     onClick = {

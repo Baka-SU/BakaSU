@@ -148,18 +148,14 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         ?.takeIf { it != SuperUserLoadFailure.ROOT_ACCESS_REQUIRED }
         ?.let { stringResource(R.string.wear_load_failed) }
     val rootDeniedDialog = rememberCustomDialog { dismiss ->
-        val scheme = MaterialTheme.colorScheme
-        val colors = remember(scheme) { scheme.copy(background = scheme.surfaceContainerHigh.copy(alpha = 1f)) }
-        MaterialTheme(colorScheme = colors) {
-            AlertDialog(
-                visible = true,
-                onDismissRequest = dismiss,
-                icon = { WearDialogIcon(Icons.Rounded.Error, tint = MaterialTheme.colorScheme.error) },
-                title = { Text(stringResource(R.string.wear_warning_root), color = MaterialTheme.colorScheme.error) },
-                text = { Text(stringResource(R.string.grant_root_failed)) },
-                edgeButton = { AlertDialogDefaults.EdgeButton(onClick = dismiss) },
-            )
-        }
+        AlertDialog(
+            visible = true,
+            onDismissRequest = dismiss,
+            icon = { WearDialogIcon(Icons.Rounded.Error, tint = MaterialTheme.colorScheme.error) },
+            title = { Text(stringResource(R.string.wear_warning_root)) },
+            text = { Text(stringResource(R.string.grant_root_failed)) },
+            edgeButton = { AlertDialogDefaults.EdgeButton(onClick = dismiss) },
+        )
     }
 
     // Settings feedback belongs to the page that caused it; navigating clears it.

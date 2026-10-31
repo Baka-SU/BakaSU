@@ -19,13 +19,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
-import androidx.wear.compose.material3.ConfirmationDialogDefaults
-import androidx.wear.compose.material3.FailureConfirmationDialog
-import androidx.wear.compose.material3.OpenOnPhoneDialog
 import androidx.wear.compose.material3.OpenOnPhoneDialogDefaults
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.confirmationDialogCurvedText
-import androidx.wear.compose.material3.openOnPhoneDialogCurvedText
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.network.WearLinkFailure
 import org.bakasu.bakasu.domain.model.BridgeFailure
@@ -35,6 +30,8 @@ import org.bakasu.bakasu.ui.viewmodel.WearLinkResult
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 
 /**
  * Shows what [viewModel] opens: a link on the watch goes to [onWebView], a module WebUI starts
@@ -62,12 +59,9 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, onWebView: (String) -> U
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
     }
 
-    val openText = OpenOnPhoneDialogDefaults.text
-    val openStyle = OpenOnPhoneDialogDefaults.curvedTextStyle
-    OpenOnPhoneDialog(
-        visible = result == WearLinkResult.OpenedOnPhone,
-        onDismissRequest = viewModel::dismissResult,
-        curvedText = { openOnPhoneDialogCurvedText(text = openText, style = openStyle) },
+    WearResultDialog(
+        if (result == WearLinkResult.OpenedOnPhone) WearResult(OpenOnPhoneDialogDefaults.text, success = true) else null,
+        viewModel::dismissResult,
     )
     // The overlay keeps the last failure while it animates out after the result is cleared.
     val failed = result as? WearLinkResult.Failed
@@ -98,18 +92,7 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, onWebView: (String) -> U
             else -> if (shown?.onPhone == true) R.string.wear_phone_open_failed else R.string.wear_link_open_failed
         },
     )
-    val failureStyle = ConfirmationDialogDefaults.curvedTextStyle
-    FailureConfirmationDialog(
-        visible = failed != null && failed.bridgeFailure == null,
-        onDismissRequest = viewModel::dismissResult,
-        curvedText = { confirmationDialogCurvedText(text = failureText, style = failureStyle) },
-    ) {
-        if (shown?.reason == WearLinkFailure.PHONE_UNAVAILABLE) {
-            ConfirmationDialogDefaults.ConnectionFailureIcon()
-        } else {
-            ConfirmationDialogDefaults.FailureIcon()
-        }
-    }
+    WearErrorDialog(failureText.takeIf { failed != null && failed.bridgeFailure == null }, viewModel::dismissResult)
 }
 
 @Composable

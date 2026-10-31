@@ -13,7 +13,6 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Error
-import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.Info
@@ -38,6 +37,7 @@ import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.ProfileTemplate
@@ -209,7 +209,7 @@ private fun rememberWearOfflineDialog(onDismissed: () -> Unit = {}) = rememberCu
     AlertDialog(
         visible = true,
         onDismissRequest = close,
-        icon = { WearDialogIcon(Icons.Rounded.ErrorOutline) },
+        icon = { WearDialogIcon(Icons.Rounded.Error, tint = MaterialTheme.colorScheme.error) },
         title = { Text(stringResource(R.string.wear_template_offline)) },
         text = { Text(stringResource(R.string.wear_no_internet)) },
         edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },

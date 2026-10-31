@@ -5,7 +5,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.material3.AlertDialog
@@ -21,24 +20,20 @@ import org.bakasu.bakasu.ui.component.rememberCustomDialog
 @Composable
 fun WearErrorDialog(message: String?, onDismiss: () -> Unit = {}) {
     val dialog = rememberCustomDialog { dismiss ->
-        val scheme = MaterialTheme.colorScheme
-        val colors = remember(scheme) { scheme.copy(background = scheme.surfaceContainerHigh.copy(alpha = 1f)) }
         val close = {
             dismiss()
             onDismiss()
         }
-        MaterialTheme(colorScheme = colors) {
-            AlertDialog(
-                visible = true,
-                onDismissRequest = close,
-                icon = {
-                    Icon(Icons.Rounded.Error, null, Modifier.size(ButtonDefaults.LargeIconSize), tint = MaterialTheme.colorScheme.error)
-                },
-                title = { Text(stringResource(R.string.operation_failed), color = MaterialTheme.colorScheme.error) },
-                text = { Text(message.orEmpty()) },
-                edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
-            )
-        }
+        AlertDialog(
+            visible = true,
+            onDismissRequest = close,
+            icon = {
+                Icon(Icons.Rounded.Error, null, Modifier.size(ButtonDefaults.LargeIconSize), tint = MaterialTheme.colorScheme.error)
+            },
+            title = { Text(stringResource(R.string.operation_failed)) },
+            text = { Text(message.orEmpty()) },
+            edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
+        )
     }
     LaunchedEffect(message) {
         if (message != null) dialog.show() else dialog.hide()
