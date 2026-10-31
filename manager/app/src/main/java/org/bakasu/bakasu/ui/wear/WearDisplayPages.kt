@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.LayersClear
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.Palette
@@ -339,45 +340,6 @@ internal fun WearDpiPage(
                 description = timeDisplayLabel(preferences.timeDisplay),
             )
         }
-        SegmentedColumn(
-            listOf(R.string.wear_long_press_haptics, R.string.wear_keep_screen_on, R.string.wear_block_back_key, R.string.wear_disable_swipe_back, R.string.simple_mode),
-            { it },
-        ) { label ->
-            val checked = when (label) {
-                R.string.wear_long_press_haptics -> preferences.longPressHaptics
-                R.string.wear_keep_screen_on -> preferences.keepScreenOn
-                R.string.wear_block_back_key -> preferences.blockBackKey
-                R.string.wear_disable_swipe_back -> !state.enableSwipeDismiss
-                else -> simpleMode
-            }
-            WearSettingsSwitchWidget(
-                spec,
-                stringResource(label),
-                checked,
-                { value ->
-                    when (label) {
-                        R.string.wear_long_press_haptics -> preferenceViewModel.set(WearPreference.LongPressHaptics, value)
-                        R.string.wear_keep_screen_on -> preferenceViewModel.set(WearPreference.KeepScreenOn, value)
-                        R.string.wear_block_back_key -> preferenceViewModel.set(WearPreference.BlockBackKey, value)
-                        R.string.wear_disable_swipe_back -> onAction(SettingsUiAction.SetSwipeDismiss(!value))
-                        else -> onSimpleMode(value)
-                    }
-                },
-                icon = when (label) {
-                    R.string.wear_long_press_haptics -> Icons.Rounded.Vibration
-                    R.string.wear_keep_screen_on -> Icons.Rounded.LightMode
-                    R.string.wear_block_back_key -> Icons.Rounded.BackHand
-                    R.string.wear_disable_swipe_back -> Icons.Rounded.Swipe
-                    else -> Icons.Rounded.ViewAgenda
-                },
-                secondaryLabel = when (label) {
-                    R.string.wear_block_back_key -> stringResource(R.string.wear_block_back_key_summary)
-                    R.string.wear_disable_swipe_back -> stringResource(R.string.wear_disable_swipe_back_summary)
-                    R.string.simple_mode -> stringResource(R.string.simple_mode_summary)
-                    else -> null
-                },
-            )
-        }
         item { WearSectionHeader(spec, stringResource(R.string.wear_display_screen_layout)) }
         // The scale label and value sit inside the slider card, above its track.
         item {
@@ -422,16 +384,45 @@ internal fun WearDpiPage(
                 description = screenShapeLabel(preferences.shape),
             )
         }
-        if (android.os.Build.VERSION.SDK_INT < 33) {
-            item {
-                WearSettingsJumpPageWidget(
-                    spec,
-                    stringResource(R.string.settings_language),
-                    { onOpen(WearRoute.Selection(WearSelection.Language)) },
-                    icon = Icons.Rounded.Translate,
-                    description = state.currentAppLocale?.let { it.getDisplayName(it) } ?: stringResource(R.string.language_system_default),
-                )
+        item { WearSectionHeader(spec, stringResource(R.string.wear_display_interaction)) }
+        SegmentedColumn(
+            listOf(R.string.wear_keep_screen_on, R.string.simple_mode, R.string.wear_long_press_haptics, R.string.wear_block_back_key, R.string.wear_disable_swipe_back),
+            { it },
+        ) { label ->
+            val checked = when (label) {
+                R.string.wear_long_press_haptics -> preferences.longPressHaptics
+                R.string.wear_keep_screen_on -> preferences.keepScreenOn
+                R.string.wear_block_back_key -> preferences.blockBackKey
+                R.string.wear_disable_swipe_back -> !state.enableSwipeDismiss
+                else -> simpleMode
             }
+            WearSettingsSwitchWidget(
+                spec,
+                stringResource(label),
+                checked,
+                { value ->
+                    when (label) {
+                        R.string.wear_long_press_haptics -> preferenceViewModel.set(WearPreference.LongPressHaptics, value)
+                        R.string.wear_keep_screen_on -> preferenceViewModel.set(WearPreference.KeepScreenOn, value)
+                        R.string.wear_block_back_key -> preferenceViewModel.set(WearPreference.BlockBackKey, value)
+                        R.string.wear_disable_swipe_back -> onAction(SettingsUiAction.SetSwipeDismiss(!value))
+                        else -> onSimpleMode(value)
+                    }
+                },
+                icon = when (label) {
+                    R.string.wear_long_press_haptics -> Icons.Rounded.Vibration
+                    R.string.wear_keep_screen_on -> Icons.Rounded.LightMode
+                    R.string.wear_block_back_key -> Icons.Rounded.BackHand
+                    R.string.wear_disable_swipe_back -> Icons.Rounded.Swipe
+                    else -> Icons.Rounded.ViewAgenda
+                },
+                secondaryLabel = when (label) {
+                    R.string.wear_block_back_key -> stringResource(R.string.wear_block_back_key_summary)
+                    R.string.wear_disable_swipe_back -> stringResource(R.string.wear_disable_swipe_back_summary)
+                    R.string.simple_mode -> stringResource(R.string.simple_mode_summary)
+                    else -> null
+                },
+            )
         }
     }
 }

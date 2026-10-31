@@ -937,5 +937,6 @@
     <string name="wear_bridge_phone_help">Associate your watch, then enter the generated code in its phone WebUI connection settings.</string>
     <string name="wear_bridge_no_peers">No paired Bluetooth devices. Pair the phone in system settings first.</string>
     <string name="wear_bridge_disconnect_message">Remove the saved phone and watch connection?</string>
+    <string name="wear_display_interaction">Screen behavior &amp; haptics</string>
     <string name="wear_phone_connection_failed">Unable to connect to phone</string>
 </resources>
