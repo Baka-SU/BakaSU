@@ -23,4 +23,4 @@ fun <T> TransformingLazyColumnScope.SegmentedColumn(
     entries: List<T>,
     key: (T) -> Any,
     content: @Composable TransformingLazyColumnItemScope.(T) -> Unit,
-) = LazySegmentedColumn(entries, key, content)
+): Unit = LazySegmentedColumn(entries, key, content)

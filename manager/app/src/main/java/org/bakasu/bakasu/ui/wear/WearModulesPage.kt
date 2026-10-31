@@ -40,7 +40,6 @@ import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleSwipeActions
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 
-
 /**
  * @author Hanhan_awa
  * @date 2026/10/1.
