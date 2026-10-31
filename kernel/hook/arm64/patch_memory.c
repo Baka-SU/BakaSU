@@ -75,16 +75,16 @@ unsigned long phys_from_virt(unsigned long addr, int *err)
     pgd = pgd_offset(mm, addr);
     if (pgd_none(*pgd) || pgd_bad(*pgd))
         goto fail;
-    pr_info("pgd of 0x%lx p=0x%lx v=0x%lx", addr, (uintptr_t)pgd, (uintptr_t)pgd_val(*pgd));
+    pr_debug("pgd of 0x%lx p=0x%lx v=0x%lx", addr, (uintptr_t)pgd, (uintptr_t)pgd_val(*pgd));
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
     p4d = p4d_offset(pgd, addr);
     if (p4d_none(*p4d) || p4d_bad(*p4d))
         goto fail;
-    pr_info("p4d of 0x%lx p=0x%lx v=0x%lx", addr, (uintptr_t)p4d, (uintptr_t)p4d_val(*p4d));
+    pr_debug("p4d of 0x%lx p=0x%lx v=0x%lx", addr, (uintptr_t)p4d, (uintptr_t)p4d_val(*p4d));
 #if defined(p4d_leaf)
     if (p4d_leaf(*p4d)) {
-        pr_info("Address 0x%lx maps to a P4D-level huge page\n", addr);
+        pr_debug("Address 0x%lx maps to a P4D-level huge page\n", addr);
         return __p4d_to_phys(*p4d) + ((addr & ~P4D_MASK));
     }
 #endif
@@ -94,29 +94,19 @@ unsigned long phys_from_virt(unsigned long addr, int *err)
 #endif
     if (pud_none(*pud) || pud_bad(*pud))
         goto fail;
-    pr_info("pud of 0x%lx p=0x%lx v=0x%lx", addr, (uintptr_t)pud, (uintptr_t)pud_val(*pud));
+    pr_debug("pud of 0x%lx p=0x%lx v=0x%lx", addr, (uintptr_t)pud, (uintptr_t)pud_val(*pud));
 #if defined(pud_leaf)
     if (pud_leaf(*pud)) {
-        pr_info("Address 0x%lx maps to a PUD-level huge page\n", addr);
-        return __pud_to_phys(*pud) + ((addr & ~PUD_MASK));
-    }
-#elif defined(pud_sect)
-    if (pud_sect(*pud)) {
-        pr_info("Address 0x%lx maps to a PUD-level huge page\n", addr);
+        pr_debug("Address 0x%lx maps to a PUD-level huge page\n", addr);
         return __pud_to_phys(*pud) + ((addr & ~PUD_MASK));
     }
 #endif
 
     pmd = pmd_offset(pud, addr);
-    pr_info("pmd of 0x%lx p=0x%lx v=0x%lx", addr, (uintptr_t)pmd, (uintptr_t)pmd_val(*pmd));
+    pr_debug("pmd of 0x%lx p=0x%lx v=0x%lx", addr, (uintptr_t)pmd, (uintptr_t)pmd_val(*pmd));
 #if defined(pmd_leaf)
     if (pmd_leaf(*pmd)) {
-        pr_info("Address 0x%lx maps to a PMD-level huge page\n", addr);
-        return __pmd_to_phys(*pmd) + ((addr & ~PMD_MASK));
-    }
-#elif defined(pmd_sect)
-    if (pmd_sect(*pmd)) {
-        pr_info("Address 0x%lx maps to a PMD-level huge page\n", addr);
+        pr_debug("Address 0x%lx maps to a PMD-level huge page\n", addr);
         return __pmd_to_phys(*pmd) + ((addr & ~PMD_MASK));
     }
 #endif
@@ -270,9 +260,10 @@ static int ksu_patch_text_nosync_vmap(struct patch_text_info *info)
 // not a big problem because we are in stop_machine.
 // ^1: https://github.com/NothingOSS/android_kernel_device_modules_6.1_nothing_mt6878/blob/957dac185efe46cbf6336b0fff9516d84c8cd78f/drivers/misc/mediatek/mkp/mkp_main.c#L29
 // ^2: https://github.com/torvalds/linux/commit/c0eb315ad9719e41ce44708455cc69df7ac9f3f8
+// Runs under stop_machine; propagate errors without console output.
 static int ksu_patch_text_nosync(void *dst, void *src, size_t len, int flags)
 {
-    pr_info("patch dst=0x%lx src=0x%lx len=%ld\n", (unsigned long)dst, (unsigned long)src, len);
+    pr_debug("patch dst=0x%lx src=0x%lx len=%ld\n", (unsigned long)dst, (unsigned long)src, len);
 
     unsigned long p = (unsigned long)dst;
     int ret = 0;
@@ -281,13 +272,12 @@ static int ksu_patch_text_nosync(void *dst, void *src, size_t len, int flags)
     unsigned long phy = phys_from_virt(p, &phy_err);
     if (phy_err) {
         ret = phy_err;
-        pr_err("failed to find phy addr for patch dst addr 0x%lx\n", p);
         goto err;
     }
-    pr_info("phy addr for patch 0x%lx: 0x%lx\n", p, phy);
+    pr_debug("phy addr for patch 0x%lx: 0x%lx\n", p, phy);
 
     void *map = set_fixmap_offset(FIX_TEXT_POKE0, phy);
-    pr_info("fixmap addr for patch 0x%lx: 0x%lx\n", p, (unsigned long)map);
+    pr_debug("fixmap addr for patch 0x%lx: 0x%lx\n", p, (unsigned long)map);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
     // bypass some stupid GKI kernel's self protection
@@ -310,7 +300,7 @@ static int ksu_patch_text_nosync(void *dst, void *src, size_t len, int flags)
         ksu_flush_dcache(dst, len);
 
 err:
-    pr_info("patch result=%d\n", ret);
+    pr_debug("patch result=%d\n", ret);
     return ret;
 }
 
@@ -345,33 +335,16 @@ static int ksu_patch_text_cb(void *arg)
 
 int ksu_patch_text(void *dst, void *src, size_t len, int flags)
 {
+    int ret;
     struct patch_text_info info = {
         .dst = dst,
         .src = src,
         .len = len,
         .cpu_count = ATOMIC_INIT(0),
         .flags = flags,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
-        .vmap_base = NULL,
-        .writable_addr = NULL,
-#endif
     };
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
-    int ret;
-
-    ret = ksu_prepare_patch_vmap(&info);
-    if (ret)
-        return ret;
-
-    ret = stop_machine(ksu_patch_text_cb, &info, cpu_online_mask);
-
-    vunmap(info.vmap_base);
-
-    return ret;
-#else
     return stop_machine(ksu_patch_text_cb, &info, cpu_online_mask);
-#endif
 }
 
 /*

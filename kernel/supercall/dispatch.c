@@ -2,6 +2,7 @@
 #include <linux/cred.h>
 #include <linux/kallsyms.h>
 #include <linux/mm.h>
+#include <linux/ratelimit.h>
 #include <linux/string.h>
 #include <linux/slab.h>
 #include <linux/kprobes.h>
@@ -1536,7 +1537,7 @@ long ksu_supercall_handle_ioctl(const struct file *filp, unsigned int cmd, void 
         }
     }
 
-    pr_warn("ksu ioctl: unsupported command 0x%x\n", cmd);
+    pr_warn_ratelimited("ksu ioctl: unsupported command 0x%x\n", cmd);
     return -ENOTTY;
 }
 
