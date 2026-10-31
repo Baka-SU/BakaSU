@@ -417,7 +417,7 @@ private const val WearPanelPageScale = 0.12f
 /** The lower menu controls enter first; reach maximum dimming during that early reveal. */
 private const val WearPanelDimReach = 0.15f
 
-private const val WearPanelMaxDim = 0.72f
+private const val WearPanelMaxDim = 1f
 
 /** A bound on the page overshoot, so a long pull cannot shrink it far out of shape. */
 private const val WearPageRecessLimit = 1.2f
