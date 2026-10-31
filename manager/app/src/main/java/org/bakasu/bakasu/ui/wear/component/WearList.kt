@@ -71,8 +71,6 @@ import androidx.wear.compose.material3.lazy.TransformationVariableSpec
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.ui.theme.CardConfig
-import org.koin.compose.koinInject
 
 /**
  * @author Hanhan_awa
@@ -171,9 +169,8 @@ fun WearList(
     val revealProgress = (if (panelHosted && panelContent != null) panelPull.floatValue else panelProgress).coerceAtLeast(0f)
     val pageRecess = revealProgress.coerceIn(0f, WearPageRecessLimit)
     val pageScale = 1f - WearPanelPageScale * pageRecess
-    // Keep the current background treatment while scale and dimming follow the same reveal.
-    val customBackground = koinInject<CardConfig>().isCustomBackgroundEnabled
-    val pageDim = if (customBackground) 0f else (pageRecess / WearPanelDimReach).coerceIn(0f, 1f)
+    // Leave the underlying page and its chosen background visible through the scrim.
+    val pageDim = WearPanelMaxDim * (pageRecess / WearPanelDimReach).coerceIn(0f, 1f)
     // The destination has started closing or has left; the held preview goes away at once, so the
     // closing panel uncovers the page rather than a copy of itself.
     val panelDismissals = LocalWearPanelDismissals.current
@@ -293,14 +290,8 @@ fun WearList(
             scaleX = pageScale
             scaleY = pageScale
         }
-    }.then(if (onClosePanel != null) Modifier.background(MaterialTheme.colorScheme.background) else Modifier)
+    }
     Box(Modifier.fillMaxSize().then(gestureModifier).onSizeChanged { viewportHeight = it.height.toFloat().coerceAtLeast(1f) }) {
-        // An opaque base behind the page keeps the margin its shrink leaves free of the window
-        // background while the page springs back. With a chosen background the margin belongs to
-        // that background, so nothing is drawn over it.
-        if (panelContent != null && pageRecess > 0f && !customBackground) {
-            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
-        }
         // The edge button and the room it takes stay hidden until loading ends.
         if (!isLoading && (onBack != null || onConfirm != null || backToTop)) {
             ScreenScaffold(
@@ -392,11 +383,11 @@ fun WearList(
         }
         // Hand the preview to the transparent destination once it is hosted, avoiding double-drawn rows.
         if (panelContent != null && (pullProgress.floatValue > 0f || openingPanel) && revealProgress > 0f && screenActive && !panelHosted) {
-            // The moving panel follows the display shape.
+            // Clip the moving content to the display shape without painting an opaque menu surface.
             val panelShape = if (LocalConfiguration.current.isScreenRound) CircleShape else RectangleShape
             Box(
                 Modifier.fillMaxSize().graphicsLayer { translationY = (revealProgress - 1f) * viewportHeight }
-                    .clip(panelShape).background(MaterialTheme.colorScheme.background)
+                    .clip(panelShape)
                     .clearAndSetSemantics {},
             ) {
                 CompositionLocalProvider(LocalScreenIsActive provides false) { panelContent() }
@@ -410,6 +401,8 @@ private const val WearPanelPageScale = 0.12f
 
 /** The lower menu controls enter first; reach maximum dimming during that early reveal. */
 private const val WearPanelDimReach = 0.15f
+
+private const val WearPanelMaxDim = 0.72f
 
 /** A bound on the page overshoot, so a long pull cannot shrink it far out of shape. */
 private const val WearPageRecessLimit = 1.2f
