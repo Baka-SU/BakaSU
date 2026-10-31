@@ -2,8 +2,6 @@ package org.bakasu.bakasu.ui.wear
 
 import android.os.Build
 import android.os.PowerManager
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -21,16 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.wear.compose.foundation.ScrollInfoProvider
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.RadioButton
-import androidx.wear.compose.material3.ScreenStage
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.transformedHeight
-import androidx.wear.compose.material3.scrollAway
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
@@ -41,7 +36,6 @@ import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
@@ -99,15 +93,9 @@ internal fun WearOperationsPanel(
         )
     }
     val listState = rememberPanelListState()
-    Box(Modifier.fillMaxSize()) {
-        WearList(onClosePanel = onBack, onPanelClosing = onClosing, snap = false, listState = listState) { spec ->
-            LazySegmentedColumn(actions, { it.label }) { action ->
-                WearSettingsJumpPageWidget(spec, action.label, action.onClick, icon = action.icon, enabled = action.enabled)
-            }
-        }
-        // A native overlay has its own time surface; keep the standard M3 scroll-away behavior.
-        Box(Modifier.scrollAway(ScrollInfoProvider(listState)) { if (listState.isScrollInProgress) ScreenStage.Scrolling else ScreenStage.Idle }) {
-            WearTimeText(stringResource(R.string.wear_operations))
+    WearList(onClosePanel = onBack, onPanelClosing = onClosing, snap = false, listState = listState) { spec ->
+        LazySegmentedColumn(actions, { it.label }) { action ->
+            WearSettingsJumpPageWidget(spec, action.label, action.onClick, icon = action.icon, enabled = action.enabled)
         }
     }
 }

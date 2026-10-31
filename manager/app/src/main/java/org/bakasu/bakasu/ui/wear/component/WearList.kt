@@ -243,7 +243,8 @@ fun WearList(
             start = scaffoldPadding.calculateStartPadding(layoutDirection),
             end = scaffoldPadding.calculateEndPadding(layoutDirection),
             top = maxOf(scaffoldPadding.calculateTopPadding(), timeSpace) + topContentPadding,
-            bottom = scaffoldPadding.calculateBottomPadding(),
+            // Keep the final menu button inside the straight moving edge, including on round screens.
+            bottom = maxOf(scaffoldPadding.calculateBottomPadding(), if (onClosePanel != null) 24.dp else 0.dp),
         )
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -303,7 +304,7 @@ fun WearList(
             ScreenScaffold(
                 scrollState = listState,
                 modifier = pageModifier,
-                scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
+                scrollIndicator = { if (onClosePanel == null && !LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
                 edgeButton = {
                     EdgeButton(
                         enabled = onConfirm == null || confirmEnabled,
@@ -380,7 +381,7 @@ fun WearList(
             ScreenScaffold(
                 scrollState = listState,
                 modifier = pageModifier,
-                scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
+                scrollIndicator = { if (onClosePanel == null && !LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
             ) { listContent(it) }
         }
     }
