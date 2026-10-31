@@ -18,7 +18,7 @@
     <string name="seccomp_status_not_supported">Не поддерживается</string>
     <string name="seccomp_status_disabled">Отключено</string>
     <string name="seccomp_status_strict">Строгий</string>
-    <string name="seccomp_status_filter">Фильтрация</string>
+    <string name="seccomp_status_filter">Фильтр</string>
     <string name="seccomp_status_unknown">Неизвестный</string>
     <string name="unknown">Неизвестно</string>
     <string name="superuser">Рут-доступ</string>
@@ -57,8 +57,8 @@
     <string name="reboot_download">Перезагрузить в Download</string>
     <string name="reboot_edl">Перезагрузить в EDL</string>
     <string name="about">О приложении</string>
-    <string name="get_source_code">Изучить исходный код</string>
-    <string name="get_source_code_detail">Изучить исходный код на GitHub</string>
+    <string name="get_source_code">Посмотреть исходный код</string>
+    <string name="get_source_code_detail">Посмотреть исходный код на GitHub</string>
     <string name="join_telegram_group">Присоединиться к сообществу</string>
     <string name="join_telegram_group_detail">Присоединиться к нашему Telegram-сообществу</string>
     <string name="open_source_license">Open Source лицензия</string>
@@ -81,7 +81,7 @@
     <string name="jailbreak_flash_warning">Вы находитесь в **режиме Jailbreak**. Прошивка раздела на устройстве с **заблокированным загрузчиком** нарушит защиту AVB (Android Verified Boot) и может привести к тому, что устройство **не загрузится**.\n\nПеред тем как продолжить, убедитесь, что ваш загрузчик разблокирован!</string>
     <string name="jailbreak_flash_warning_countdown">Продолжить (%1$d)</string>
     <string name="settings_auto_jailbreak">Автоматический Jailbreak</string>
-    <string name="settings_auto_jailbreak_summary">Автоматически повышать права через Magica, если при загрузке обнаружен разрешающий режим SELinux (Permissive). Требуется разрешение на автозапуск приложения.</string>
+    <string name="settings_auto_jailbreak_summary">Автоматически повышать права через Magica, если при загрузке обнаружен разрешающий режим SELinux (Permissive). Требуется предоставить приложению разрешение на автозапуск.</string>
     <string name="settings_adb_root_summary">Запустить сервис adbd с Root правами</string>
     <string name="settings_selinux_hide">Скрыть модификации SELinux</string>
     <string name="settings_selinux_hide_summary">Предотвратить обнаружение приложениями изменений SELinux</string>
@@ -145,8 +145,8 @@
     <string name="app_profile_template_save_failed">Не удалось сохранить шаблон</string>
     <string name="app_profile_template_import_empty">Буфер обмена пуст!</string>
     <string name="affected_applications">Затрагиваемые приложения</string>
-    <string name="grant_root_failed">Не удалось выдать права root!</string>
-    <string name="home_pr_build_warning">Это debug-сборка из PR. Не рекомендуется для публичного релиза</string>
+    <string name="grant_root_failed">Не удалось предоставить root-доступ!</string>
+    <string name="home_pr_build_warning">Это дебаг-сборка из PR. НЕ использовать в продакшене!</string>
     <string name="action">Действие</string>
     <string name="close">Закрыть</string>
     <string name="direct_install">Прямая установка (Рекомендуется)</string>
@@ -217,7 +217,7 @@
     <string name="dynamic_color_summary">Использовать акцентные цвета системы</string>
     <string name="choose_theme_color">Выберите цвет темы</string>
     <string name="horizon_kernel">Установка AnyKernel3</string>
-    <string name="horizon_kernel_summary">Прошить архив AnyKernel3</string>
+    <string name="horizon_kernel_summary">Прошить файл ядра AnyKernel3</string>
     <string name="root_required">Требуется root-права</string>
     <string name="failed_reboot">Не удалось перезагрузиться</string>
     <string name="custom_settings">Персонализация</string>
@@ -555,4 +555,12 @@
     <string name="module_shortcut_copy_scheme">Копировать URL-схему</string>
     <string name="module_shortcut_scheme_copied">URL-схема скопирована</string>
     <string name="internal_server_error">Ошибка сервера</string>
+    <string name="settings_shell_su_adb_only">Разрешить root в shell только для ADB</string>
+    <string name="settings_shell_su_adb_only_summary">Дополнительные проверки командной строки: root-доступ смогут получить только процессы, запущенные через adbd или корневой процесс KernelSU.</string>
+    <string name="script_downloading">Скачивание скрипта: %s</string>
+    <string name="module_flash_complete">Модуль прошит</string>
+    <string name="kernel_flash_complete">Ядро прошито</string>
+    <string name="patch_complete">Патч применён</string>
+    <string name="settings_flash_card_background">Фон карточки на экране прошивки</string>
+    <string name="settings_flash_card_background_summary">Отображать подложку карточки за логом прошивки. Функция всегда активна, если установлен кастомный фон.</string>
 </resources>

@@ -446,4 +446,10 @@
     <string name="susfs_config_disable_warning">El gestor SUSFS incorporado está deshabilitado. Habilite o instale un módulo de terceros para utilizar las funciones de SUSFS.</string>
     <string name="susfs_tab_sus_map">Mapa SUS</string>
     <string name="susfs_tab_open_redirect">Abrir redirección</string>
+    <string name="settings_shell_su_adb_only">Restringir el shell root a ADB</string>
+    <string name="settings_shell_su_adb_only_summary">Habilita checks adicionales para shells: Solo procesos de shell inicializados por adbd o un proceso root de KernelSU pueden obtener acceso root</string>
+    <string name="module_flash_complete">Modulo flasheado</string>
+    <string name="kernel_flash_complete">Kernel flasheado</string>
+    <string name="patch_complete">Parche completado</string>
+    <string name="settings_flash_card_background">Fondo de tarjeta en la pantalla flash</string>
 </resources>
