@@ -33,7 +33,7 @@ class WearNavigatorTest {
     @Test
     fun backFromAnActionReturnsToItsOperationsMenu() {
         val actions = mapOf(
-            WearOperationsPage.Home to listOf(WearRoute.Logs, WearRoute.SuSFS, WearRoute.Reboot),
+            WearOperationsPage.Home to listOf(WearRoute.SuSFS, WearRoute.Reboot),
             WearOperationsPage.SuperUser to listOf(WearRoute.Logs, WearRoute.AllowlistBackup, WearRoute.AppFilter),
             WearOperationsPage.Modules to listOf(WearRoute.ModuleRepo, WearRoute.ModuleSort),
             WearOperationsPage.Logs to listOf(WearRoute.LogOptions),

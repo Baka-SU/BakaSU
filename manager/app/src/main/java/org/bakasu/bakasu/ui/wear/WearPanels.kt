@@ -62,7 +62,6 @@ internal fun WearOperationsPanel(
     val actions = when (page) {
         WearOperationsPage.Home -> listOfNotNull(
             if (fullFeatured && susfsAvailable) WearIconAction(Icons.Rounded.VisibilityOff, stringResource(R.string.susfs_config_setting_title), { onOpen(WearRoute.SuSFS) }) else null,
-            if (fullFeatured) WearIconAction(Icons.Rounded.Article, stringResource(R.string.sulog), { onOpen(WearRoute.Logs) }) else null,
             if (rootAvailable) WearIconAction(Icons.Rounded.RestartAlt, stringResource(R.string.reboot), { onOpen(WearRoute.Reboot) }) else null,
         )
 
