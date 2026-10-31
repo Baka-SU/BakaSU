@@ -912,4 +912,5 @@
     <string name="wear_phone_connection_failed">无法连接手机</string>
     <string name="wear_bridge_active_connection">已连接 %1$s</string>
     <string name="wear_repository_url_hint">请输入仓库服务器地址</string>
+    <string name="wear_check_phone">请查看手机</string>
 </resources>

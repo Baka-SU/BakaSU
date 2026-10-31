@@ -8,8 +8,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,28 +20,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.wear.compose.material3.AlertDialog
-import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.ConfirmationDialogDefaults
+import androidx.wear.compose.material3.FailureConfirmationDialog
+import androidx.wear.compose.material3.OpenOnPhoneDialog
 import androidx.wear.compose.material3.OpenOnPhoneDialogDefaults
-import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.confirmationDialogCurvedText
+import androidx.wear.compose.material3.openOnPhoneDialogCurvedText
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.network.WearLinkFailure
 import org.bakasu.bakasu.domain.model.BridgeFailure
-import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.WearLinkEvent
 import org.bakasu.bakasu.ui.viewmodel.WearLinkResult
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
-import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 
 /**
  * Shows what [viewModel] opens: a link on the watch goes to [onWebView], a module WebUI starts
  * [WearWebUIActivity], and Back cancels while it waits. The result shows as the official
- * open-on-phone confirmation or the failure confirmation, whose curved text is short; a disconnected
- * phone shows the connection failure icon.
+ * open-on-phone confirmation or the failure confirmation, whose curved text is short; a failed phone connection uses the standard connection failure dialog.
  */
 @Composable
 internal fun WearLinkHost(viewModel: WearLinkViewModel, onWebView: (String) -> Unit) {
@@ -75,40 +70,43 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, onWebView: (String) -> U
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
     }
 
-    WearResultDialog(
-        if (result == WearLinkResult.OpenedOnPhone) WearResult(OpenOnPhoneDialogDefaults.text, success = true) else null,
-        viewModel::dismissResult,
-    )
-    // The overlay keeps the last failure while it animates out after the result is cleared.
     val failed = result as? WearLinkResult.Failed
-    WearErrorDialog(failed?.bridgeFailure?.let { wearBridgeFailureText(it) }, viewModel::dismissResult)
-    val phoneNotice = rememberCustomDialog { dismiss ->
-        val close = {
-            dismiss()
-            viewModel.dismissResult()
-        }
-        AlertDialog(
-            visible = true,
-            onDismissRequest = close,
-            icon = { WearDialogIcon(Icons.Rounded.Info) },
-            title = { Text(stringResource(R.string.wear_bridge)) },
-            text = { Text(stringResource(R.string.wear_bridge_notification)) },
-            edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
-        )
-    }
-    LaunchedEffect(result) { if (result == WearLinkResult.PhoneNotification) phoneNotice.show() else phoneNotice.hide() }
-    var shown by remember { mutableStateOf(failed) }
-    if (failed != null) shown = failed
+    // Keep the actual last outcome while its standard dialog animates out.
+    var shown by remember { mutableStateOf(result) }
+    if (result != null) shown = result
+    val shownFailure = shown as? WearLinkResult.Failed
+    // These outcomes come from the actual phone dispatch or RFCOMM connection attempt.
+    val disconnected = failed?.reason == WearLinkFailure.PHONE_UNAVAILABLE ||
+        failed?.bridgeFailure == BridgeFailure.CONNECTION || failed?.bridgeFailure == BridgeFailure.BLUETOOTH_DISABLED
+    val phoneText = if (shown == WearLinkResult.PhoneNotification) stringResource(R.string.wear_check_phone) else OpenOnPhoneDialogDefaults.text
+    val phoneTextStyle = OpenOnPhoneDialogDefaults.curvedTextStyle
+    OpenOnPhoneDialog(
+        visible = result == WearLinkResult.OpenedOnPhone || result == WearLinkResult.PhoneNotification,
+        onDismissRequest = viewModel::dismissResult,
+        curvedText = { openOnPhoneDialogCurvedText(phoneText, phoneTextStyle) },
+    )
+    val connectionText = stringResource(
+        if (shownFailure?.bridgeFailure == BridgeFailure.CONNECTION) R.string.wear_phone_connection_failed else R.string.wear_phone_disconnected,
+    )
+    val connectionTextStyle = ConfirmationDialogDefaults.curvedTextStyle
+    FailureConfirmationDialog(
+        visible = disconnected,
+        onDismissRequest = viewModel::dismissResult,
+        curvedText = { confirmationDialogCurvedText(connectionText, connectionTextStyle) },
+        content = { ConfirmationDialogDefaults.ConnectionFailureIcon() },
+    )
+    // Permission, authorization and application errors keep their actionable explanation.
+    WearErrorDialog(failed?.bridgeFailure?.takeUnless { disconnected }?.let { wearBridgeFailureText(it) }, viewModel::dismissResult)
     val failureText = stringResource(
-        when (shown?.reason) {
+        when (shownFailure?.reason) {
             WearLinkFailure.PHONE_UNAVAILABLE -> R.string.wear_phone_disconnected
             WearLinkFailure.PHONE_APP_MISSING -> R.string.wear_phone_app_missing
             WearLinkFailure.PHONE_FAILED -> R.string.wear_phone_open_failed
             WearLinkFailure.BROWSER_FAILED -> R.string.wear_browser_open_failed
-            else -> if (shown?.onPhone == true) R.string.wear_phone_open_failed else R.string.wear_link_open_failed
+            else -> if (shownFailure?.onPhone == true) R.string.wear_phone_open_failed else R.string.wear_link_open_failed
         },
     )
-    WearErrorDialog(failureText.takeIf { failed != null && failed.bridgeFailure == null }, viewModel::dismissResult)
+    WearErrorDialog(failureText.takeIf { failed != null && !disconnected && failed.bridgeFailure == null }, viewModel::dismissResult)
 }
 
 @Composable
