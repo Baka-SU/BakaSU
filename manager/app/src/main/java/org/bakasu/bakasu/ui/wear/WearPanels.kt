@@ -57,13 +57,25 @@ internal fun WearOperationsPanel(
     rootAvailable: Boolean,
     fullFeatured: Boolean,
     susfsAvailable: Boolean,
+    onReboot: (String) -> Unit,
     onClosing: () -> Unit = {},
 ) {
+    val rebootMethods = wearRebootMethods()
     val actions = when (page) {
-        WearOperationsPage.Home -> listOfNotNull(
-            if (fullFeatured && susfsAvailable) WearIconAction(Icons.Rounded.VisibilityOff, stringResource(R.string.susfs_config_setting_title), { onOpen(WearRoute.SuSFS) }) else null,
-            if (rootAvailable) WearIconAction(Icons.Rounded.RestartAlt, stringResource(R.string.reboot), { onOpen(WearRoute.Reboot) }) else null,
-        )
+        WearOperationsPage.Home -> buildList {
+            if (fullFeatured && susfsAvailable) {
+                add(WearIconAction(Icons.Rounded.VisibilityOff, stringResource(R.string.susfs_config_setting_title), { onOpen(WearRoute.SuSFS) }))
+            }
+            if (rootAvailable) {
+                if (susfsAvailable) {
+                    add(WearIconAction(Icons.Rounded.RestartAlt, stringResource(R.string.reboot), { onOpen(WearRoute.Reboot) }))
+                } else {
+                    rebootMethods.forEach { (label, reason) ->
+                        add(WearIconAction(Icons.Rounded.RestartAlt, stringResource(label), { onReboot(reason) }))
+                    }
+                }
+            }
+        }
 
         WearOperationsPage.SuperUser -> listOf(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.search_apps), onSearch),
@@ -161,21 +173,7 @@ internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction:
 @Composable
 internal fun WearRebootPanel(rootAvailable: Boolean, onBack: () -> Unit, onReboot: (String) -> Unit) {
     val listState = rememberPanelListState()
-    val context = LocalContext.current
-    val methods = linkedMapOf(
-        R.string.reboot to "",
-        R.string.reboot_soft to "soft_reboot",
-        R.string.reboot_recovery to "recovery",
-        R.string.reboot_bootloader to "bootloader",
-        R.string.reboot_download to "download",
-        R.string.reboot_edl to "edl",
-    )
-    @Suppress("DEPRECATION")
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-        context.getSystemService(PowerManager::class.java)?.isRebootingUserspaceSupported == true
-    ) {
-        methods[R.string.reboot_userspace] = "userspace"
-    }
+    val methods = wearRebootMethods()
     WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.reboot)) }
         methods.forEach { (label, reason) ->
@@ -191,6 +189,27 @@ internal fun WearRebootPanel(rootAvailable: Boolean, onBack: () -> Unit, onReboo
             }
         }
     }
+}
+
+/** Both menu layouts use the same power operations and the platform's userspace reboot capability. */
+@Composable
+private fun wearRebootMethods(): Map<Int, String> {
+    val context = LocalContext.current
+    val methods = linkedMapOf(
+        R.string.reboot to "",
+        R.string.reboot_soft to "soft_reboot",
+        R.string.reboot_recovery to "recovery",
+        R.string.reboot_bootloader to "bootloader",
+        R.string.reboot_download to "download",
+        R.string.reboot_edl to "edl",
+    )
+    @Suppress("DEPRECATION")
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+        context.getSystemService(PowerManager::class.java)?.isRebootingUserspaceSupported == true
+    ) {
+        methods[R.string.reboot_userspace] = "userspace"
+    }
+    return methods
 }
 
 @Composable

@@ -658,6 +658,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                             rootAvailable = home.systemStatus.isRootAvailable,
                                             fullFeatured = home.systemStatus.isFullFeatured,
                                             susfsAvailable = home.systemInfo.susfsEnabled,
+                                            onReboot = { homeViewModel.dispatch(HomeUiAction.Reboot(it)) },
                                             onClosing = onClosing,
                                         )
                                     }
