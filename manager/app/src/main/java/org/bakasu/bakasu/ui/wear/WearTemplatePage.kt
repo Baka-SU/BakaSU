@@ -42,6 +42,7 @@ import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.domain.model.ProfileTemplateFailure
+import org.bakasu.bakasu.domain.usecase.IsNetworkAvailableUseCase
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiAction
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiEvent
@@ -52,6 +53,7 @@ import org.bakasu.bakasu.ui.viewmodel.TemplateEditorViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateUiAction
 import org.bakasu.bakasu.ui.viewmodel.TemplateUiEvent
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
+import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
@@ -69,6 +71,7 @@ import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -85,6 +88,7 @@ internal fun WearTemplatePage(
     onOpenTemplate: (id: String, readOnly: Boolean, creation: Boolean) -> Unit,
 ) {
     val viewModel = koinViewModel<TemplateViewModel>()
+    val toast = LocalWearToast.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -111,18 +115,23 @@ internal fun WearTemplatePage(
         viewModel.events.collect { event ->
             when (event) {
                 TemplateUiEvent.ImportCompleted -> {
-                    result = WearResult(imported, success = true)
+                    toast.show(imported)
                     viewModel.dispatch(TemplateUiAction.Refresh())
                 }
 
                 is TemplateUiEvent.Exported -> {
                     clipboard.setPrimaryClip(ClipData.newPlainText(exported, event.json))
-                    result = WearResult(exported, success = true)
+                    toast.show(exported)
                 }
 
-                TemplateUiEvent.ExportEmpty -> result = WearResult(emptyExport, success = false)
+                TemplateUiEvent.ExportEmpty -> {
+                    toast.show(emptyExport)
+                }
 
-                is TemplateUiEvent.Error -> result = WearResult(event.message.ifBlank { failed }, success = false)
+                is TemplateUiEvent.Error -> {
+                    val message = event.message.ifBlank { failed }
+                    if (event.fromClipboard) toast.show(message) else result = WearResult(message, success = false)
+                }
             }
         }
     }
@@ -142,10 +151,18 @@ internal fun WearTemplatePage(
         item {
             WearActionButton(spec, Icons.Rounded.ContentPaste, stringResource(R.string.app_profile_import_from_clipboard), {
                 val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
-                if (text.isNullOrBlank()) result = WearResult(emptyClipboard, success = false) else viewModel.dispatch(TemplateUiAction.Import(text))
+                if (text.isNullOrBlank()) {
+                    toast.show(emptyClipboard)
+                } else {
+                    viewModel.dispatch(TemplateUiAction.Import(text))
+                }
             })
         }
-        item { WearActionButton(spec, Icons.Rounded.ContentCopy, exported, { viewModel.dispatch(TemplateUiAction.Export) }) }
+        item {
+            WearActionButton(spec, Icons.Rounded.ContentCopy, exported, {
+                viewModel.dispatch(TemplateUiAction.Export)
+            })
+        }
         // Items are keyed by the template ID, so a reveal stays with its template as the list changes.
         LazySegmentedColumn(state.templateList, { it.id }) { template ->
             val open = { onOpenTemplate(template.id, !template.local, false) }
