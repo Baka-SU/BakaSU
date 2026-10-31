@@ -43,7 +43,6 @@ import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
@@ -66,6 +65,7 @@ internal fun WearOperationsPanel(
     rootAvailable: Boolean,
     fullFeatured: Boolean,
     susfsAvailable: Boolean,
+    onClosing: () -> Unit = {},
 ) {
     val actions = when (page) {
         WearOperationsPage.Home -> listOfNotNull(
@@ -103,7 +103,7 @@ internal fun WearOperationsPanel(
     }
     val listState = rememberPanelListState()
     Box(Modifier.fillMaxSize()) {
-        WearList(onClosePanel = onBack, snap = true, listState = listState) { spec ->
+        WearList(onClosePanel = onBack, onPanelClosing = onClosing, snap = true, listState = listState) { spec ->
             SegmentedColumn(actions, { it.label }) { action ->
                 WearSettingsJumpPageWidget(spec, action.label, action.onClick, icon = action.icon, enabled = action.enabled)
             }

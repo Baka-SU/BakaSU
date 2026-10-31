@@ -3,14 +3,12 @@ package org.bakasu.bakasu.ui.wear
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineBreak
@@ -38,12 +36,10 @@ import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
-import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleSwipeActions
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearStatusItem
-import org.bakasu.bakasu.ui.wear.component.WearStatusTone
+
 
 /**
  * @author Hanhan_awa
@@ -91,9 +87,9 @@ internal fun WearModulesPage(
 
 /**
  * One module row: the row opens the module details. The whole container takes the active color
- * while the module is enabled, a muted red while pending removal and the neutral tonal surface otherwise. The title is the module name
- * alone; the version, any pending removal and the metamodule label follow in the quieter secondary
- * line.
+ * while the module is enabled, a medium-emphasis red while pending removal and the neutral tonal
+ * surface otherwise. The title is the module name alone; the version, any pending removal and the
+ * metamodule label follow in the quieter secondary line.
  */
 @Composable
 internal fun TransformingLazyColumnItemScope.WearModuleItem(
@@ -144,7 +140,13 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             transformation = if (actions.isEmpty()) SurfaceTransformation(spec) else null,
             colors = when {
                 module.remove -> ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    // Medium emphasis keeps the red signal but sits between the neutral tonal
+                    // container and the full-strength error container.
+                    containerColor = lerp(
+                        MaterialTheme.colorScheme.surfaceContainer,
+                        MaterialTheme.colorScheme.errorContainer,
+                        0.5f,
+                    ),
                     contentColor = MaterialTheme.colorScheme.onErrorContainer,
                     secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
                     iconColor = MaterialTheme.colorScheme.onErrorContainer,
