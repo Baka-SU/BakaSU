@@ -106,11 +106,12 @@ internal fun Modifier.wearRefreshGesture(
             var pullUp = 0f
             var crossed = false
             var canceled = !active
+            var dragging = false
+            val slop = viewConfiguration.touchSlop
             // Only a gesture that starts at a boundary pulls past it, so a fling that scrolls back
             // to the top does not open the panel with the rest of its travel.
             val startedAtTop = !listState.canScrollBackward
             val startedAtEnd = !listState.canScrollForward
-            if (!canceled && (startedAtTop || startedAtEnd)) pullStart()
             try {
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -126,13 +127,26 @@ internal fun Modifier.wearRefreshGesture(
                         break
                     }
                     if (event.changes.count { it.pressed } != 1 || !active) canceled = true
-                    val dy = pointer.position.y - pointer.previousPosition.y
+                    val total = pointer.position - down.position
+                    var dy = pointer.position.y - pointer.previousPosition.y
+                    if (!dragging && !canceled) {
+                        if (abs(total.x) <= slop && abs(total.y) <= slop) continue
+                        val canPull = if (total.y > 0f) {
+                            panel != null && startedAtTop && !listState.canScrollBackward
+                        } else {
+                            (closePanel != null || refresh != null) && startedAtEnd && !listState.canScrollForward
+                        }
+                        if (pointer.isConsumed || abs(total.x) >= abs(total.y) || !canPull) {
+                            canceled = true
+                        } else {
+                            dragging = true
+                            dy = total.y
+                            pullStart()
+                        }
+                    }
                     // A pull grows only while its boundary is held, and moving back shrinks it.
                     pullDown = if (panel != null && startedAtTop && !listState.canScrollBackward) (pullDown + dy).coerceAtLeast(0f) else 0f
                     pullUp = if ((closePanel != null || refresh != null) && startedAtEnd && !listState.canScrollForward) (pullUp - dy).coerceAtLeast(0f) else 0f
-                    // Fingers drift sideways on a round screen; only a mostly horizontal drag cancels.
-                    val dx = abs(pointer.position.x - down.position.x)
-                    if (dx > threshold && dx > maxOf(pullDown, pullUp)) canceled = true
                     if (canceled) {
                         displacement.floatValue = 0f
                         pullProgress.floatValue = 0f
@@ -145,7 +159,7 @@ internal fun Modifier.wearRefreshGesture(
                     pullProgress.floatValue = sign * pull / threshold
                     // The list follows the pull at reduced speed, making room for the pull indicator.
                     displacement.floatValue = sign * minOf(pull * 0.6f, threshold * 0.75f)
-                    if (pull > threshold / 4) pointer.consume()
+                    if (dragging) pointer.consume()
                 }
             } finally {
                 displacement.floatValue = 0f
