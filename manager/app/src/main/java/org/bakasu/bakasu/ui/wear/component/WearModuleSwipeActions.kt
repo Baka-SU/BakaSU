@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui.wear.component
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
@@ -14,7 +15,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -28,16 +28,19 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.GestureInclusion
 import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.FilledIconButton
+import androidx.wear.compose.material3.FilledTonalIconButton
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.IconButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.RevealDirection
 import androidx.wear.compose.material3.RevealValue
 import androidx.wear.compose.material3.SwipeToReveal
-import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import androidx.wear.compose.material3.rememberRevealState
@@ -64,13 +67,9 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
     val active = LocalScreenIsActive.current
     var rowSize by remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
-    val rowShape = ButtonDefaults.shape
-    val bounds = Size(rowSize.width.toFloat(), rowSize.height.toFloat())
-    // Only the straight side between the row's top and bottom corners belongs to the action.
-    val topRadius = rowShape.topEnd.toPx(bounds, density).coerceAtMost(bounds.height / 2f)
-    val bottomRadius = rowShape.bottomEnd.toPx(bounds, density).coerceAtMost(bounds.height / 2f)
-    val actionHeight = with(density) { (bounds.height - topRadius - bottomRadius).coerceAtLeast(0f).toDp() }
+    val actionHeight = (with(density) { rowSize.height.toDp() } - 8.dp).coerceAtLeast(0.dp)
     val iconSize = (actionHeight * 0.7f).coerceAtMost(ButtonDefaults.LargeIconSize)
+    val actionShapes = IconButtonDefaults.shapes(MaterialTheme.shapes.medium)
     LaunchedEffect(scrolling, active) {
         if (!active) {
             state.snapTo(RevealValue.Covered)
@@ -96,24 +95,23 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
         revealDirection = RevealDirection.RightToLeft,
         gestureInclusion = gestureInclusion,
         primaryAction = {
-            PrimaryActionButton(
+            FilledIconButton(
                 onClick = { run(primary) },
-                icon = { Icon(primary.icon, contentDescription = primary.label, modifier = Modifier.requiredSize(iconSize)) },
-                text = { Text(primary.label) },
-                modifier = Modifier.height(actionHeight),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            )
+                enabled = primary.enabled,
+                modifier = Modifier.fillMaxWidth().height(actionHeight),
+                shapes = actionShapes,
+                colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+            ) { Icon(primary.icon, contentDescription = primary.label, modifier = Modifier.requiredSize(iconSize)) }
         },
         secondaryAction = secondary?.let { action ->
             {
-                SecondaryActionButton(
+                FilledTonalIconButton(
                     onClick = { run(action) },
-                    icon = { Icon(action.icon, contentDescription = action.label, modifier = Modifier.requiredSize(iconSize)) },
-                    modifier = Modifier.height(actionHeight),
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
+                    enabled = action.enabled,
+                    modifier = Modifier.fillMaxWidth().height(actionHeight),
+                    shapes = actionShapes,
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer),
+                ) { Icon(action.icon, contentDescription = action.label, modifier = Modifier.requiredSize(iconSize)) }
             }
         },
         // The row is never dragged by the component, so a full swipe cannot happen.
