@@ -81,7 +81,7 @@ internal fun WearHomePage(
     onVersionInfo: () -> Unit = {},
     onStatusInfo: () -> Unit = {},
     backToTop: Boolean = false,
-    panelContent: @Composable (() -> Unit)? = null,
+    hasOperationsPanel: Boolean = false,
 ) {
     val unknown = stringResource(R.string.unknown)
     val status = state.systemStatus
@@ -173,7 +173,7 @@ internal fun WearHomePage(
         onBack = onBack,
         onOpenPanel = onOpenPanel.takeIf { status.isRootAvailable },
         panelLabel = stringResource(R.string.wear_operations),
-        panelContent = panelContent,
+        hasOperationsPanel = hasOperationsPanel,
         listState = listState,
         backToTop = backToTop,
     ) { spec ->

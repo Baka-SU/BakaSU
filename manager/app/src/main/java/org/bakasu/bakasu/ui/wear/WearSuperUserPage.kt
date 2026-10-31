@@ -58,7 +58,7 @@ internal fun WearSuperUserPage(
     onOpenPanel: () -> Unit,
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     backToTop: Boolean = false,
-    panelContent: @Composable (() -> Unit)? = null,
+    hasOperationsPanel: Boolean = false,
 ) {
     // As on the phone: an empty list shows the loading indicator in place of the page; once it has
     // content, refreshing shows at the pull refresh, in the edge button.
@@ -67,7 +67,7 @@ internal fun WearSuperUserPage(
     WearList(
         isLoading = loading, isRefreshing = state.isRefreshing && !loading, onRefresh = onRefresh,
         onBack = onBack, onOpenPanel = onOpenPanel, panelLabel = stringResource(R.string.wear_operations),
-        panelContent = panelContent,
+        hasOperationsPanel = hasOperationsPanel,
         snap = true, listState = listState, backToTop = backToTop,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.superuser)) }

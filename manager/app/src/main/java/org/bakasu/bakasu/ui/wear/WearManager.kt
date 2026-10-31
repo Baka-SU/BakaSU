@@ -2,11 +2,10 @@ package org.bakasu.bakasu.ui.wear
 
 import android.content.Intent
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -15,6 +14,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
@@ -29,14 +29,17 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
@@ -44,8 +47,8 @@ import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
-import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
+import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.AlertDialog
@@ -98,6 +101,8 @@ import org.bakasu.bakasu.ui.wear.component.WearHorizontalPageIndicator
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPager
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
 import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
+import org.bakasu.bakasu.ui.wear.component.WearPanelDimReach
+import org.bakasu.bakasu.ui.wear.component.WearPanelMaxDim
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
@@ -175,16 +180,26 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         },
         onExit = { activity?.finish() },
     )
+    val panelPull = remember { mutableFloatStateOf(if (navigator.top is WearRoute.Operations) 1f else 0f) }
     fun open(route: WearRoute) = navigator.open(route)
-    fun back() = navigator.back()
-    // A page keeps its panel preview under the panel's own destination instead of retracting it,
-    // so the two never trade places in view. Each time the destination starts closing or leaves,
-    // the preview is released and the page shows again.
+    fun back() {
+        val leavingPanel = navigator.top is WearRoute.Operations
+        navigator.back()
+        if (navigator.top is WearRoute.Operations) {
+            panelPull.floatValue = 1f
+        } else if (leavingPanel) {
+            panelPull.floatValue = 0f
+        }
+    }
+    // Operations remain in the logical back stack, but share the page's window and one menu instance.
     var panelDismissals by remember { mutableIntStateOf(0) }
-    // How far the page's panel has been pulled, published by the page the pull starts on.
-    val panelPull = remember { mutableFloatStateOf(0f) }
     val operationsOnTop = navigator.top is WearRoute.Operations
-    LaunchedEffect(operationsOnTop) { if (!operationsOnTop) panelDismissals++ }
+    LaunchedEffect(operationsOnTop) {
+        if (!operationsOnTop) {
+            panelPull.floatValue = 0f
+            panelDismissals++
+        }
+    }
     val appSearchInput = { open(WearRoute.AppSearch) }
     val moduleSearchInput = { open(WearRoute.ModuleSearch) }
     val logSearchInput = { open(WearRoute.LogSearch) }
@@ -193,18 +208,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         moduleViewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
         moduleViewModel.dispatch(ModuleUiAction.Refresh())
         homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
-    }
-    val panelPreview: @Composable (WearOperationsPage) -> Unit = { page ->
-        WearOperationsPanel(
-            page,
-            {},
-            {},
-            {},
-            {},
-            rootAvailable = home.systemStatus.isRootAvailable,
-            fullFeatured = home.systemStatus.isFullFeatured,
-            susfsAvailable = home.systemInfo.susfsEnabled,
-        )
     }
     val selectImageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) settingsViewModel.dispatch(SettingsUiAction.SetCustomBackground(uri.toString()))
@@ -333,15 +336,14 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
             MaterialTheme(colorScheme = transparentScheme) {
                 CompositionLocalProvider(
                     LocalWearPanelDismissals provides panelDismissals,
-                    // The panel is a window of its own, so the page behind it is no longer the active
-                    // screen; it still holds the preview the panel was pulled out of.
+                    // The shared menu takes over the pull while leaving its owning page composed.
                     LocalWearPanelHosted provides operationsOnTop,
                     LocalWearPanelPull provides panelPull,
                 ) {
                     NavDisplay(
-                        backStack = navigator.backStack,
+                        backStack = navigator.backStack.filterNot { it is WearRoute.Operations },
                         onBack = { back() },
-                        sceneStrategies = listOf(DialogSceneStrategy<NavKey>(), rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss)),
+                        sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss)),
                         entryDecorators = listOf(
                             rememberSaveableStateHolderNavEntryDecorator(),
                             rememberViewModelStoreNavEntryDecorator(),
@@ -371,34 +373,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         onSettings = dispatchSettings,
                                         onOpen = ::open,
                                         onTitleChange = { mainTitle = it },
-                                        homePanelContent = { panelPreview(WearOperationsPage.Home) },
-                                        appPanelContent = { panelPreview(WearOperationsPage.SuperUser) },
-                                        modulePanelContent = { panelPreview(WearOperationsPage.Modules) },
                                         onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
-                                    )
-                                }
-                                entry<WearRoute.Operations> { route ->
-                                    WearOperationsPanel(
-                                        page = route.page,
-                                        onBack = ::back,
-                                        onOpen = ::open,
-                                        onSearch = {
-                                            when (route.page) {
-                                                WearOperationsPage.SuperUser -> appSearchInput()
-                                                WearOperationsPage.Modules -> moduleSearchInput()
-                                                WearOperationsPage.Logs -> logSearchInput()
-                                                WearOperationsPage.Home -> Unit
-                                                WearOperationsPage.Repository -> open(WearRoute.ModuleRepoSearch)
-                                            }
-                                        },
-                                        onInstall = {
-                                            installer.pickFile()
-                                        },
-                                        rootAvailable = home.systemStatus.isRootAvailable,
-                                        fullFeatured = home.systemStatus.isFullFeatured,
-                                        susfsAvailable = home.systemInfo.susfsEnabled,
-                                        // The closing panel uncovers the page, not the preview it grew from.
-                                        onClosing = { panelDismissals++ },
                                     )
                                 }
                                 entry<WearRoute.Module> { route ->
@@ -428,7 +403,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         moduleRepoViewModel,
                                         ::back,
                                         { open(WearRoute.Operations(WearOperationsPage.Repository)) },
-                                        panelContent = { panelPreview(WearOperationsPage.Repository) },
+                                        hasOperationsPanel = true,
                                     ) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
                                 }
                                 entry<WearRoute.ModuleRepoSearch> {
@@ -556,7 +531,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.Logs)) },
                                         onEntry = { open(WearRoute.LogEntry(it.key)) },
                                         error = logError,
-                                        panelContent = { panelPreview(WearOperationsPage.Logs) },
+                                        hasOperationsPanel = true,
                                     )
                                 }
                                 entry<WearRoute.LogOptions> {
@@ -687,6 +662,68 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                     )
                 }
             }
+            val operationsPage = when (val route = navigator.top) {
+                is WearRoute.Operations -> route.page
+
+                WearRoute.Main -> when (mainTitle) {
+                    R.string.superuser -> WearOperationsPage.SuperUser
+                    R.string.module -> WearOperationsPage.Modules
+                    R.string.home -> WearOperationsPage.Home
+                    else -> null
+                }
+
+                WearRoute.Logs -> WearOperationsPage.Logs
+
+                WearRoute.ModuleRepo -> WearOperationsPage.Repository
+
+                else -> null
+            }
+            val panelStateHolder = rememberSaveableStateHolder()
+            var panelHeight by remember { mutableFloatStateOf(1f) }
+            if (operationsPage != null && (operationsOnTop || panelPull.floatValue > 0f)) {
+                // One scrim also covers pages still animating out beneath the restored menu.
+                val dim = WearPanelMaxDim * (panelPull.floatValue / WearPanelDimReach).coerceIn(0f, 1f)
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)).clearAndSetSemantics {})
+                // No window handoff at the end of a pull, and no moving circular clipping boundary.
+                Box(
+                    Modifier.fillMaxSize().onSizeChanged { panelHeight = it.height.toFloat() }
+                        .graphicsLayer { translationY = (panelPull.floatValue - 1f) * panelHeight }
+                        .clipToBounds().then(if (operationsOnTop) Modifier else Modifier.clearAndSetSemantics {}),
+                ) {
+                    CompositionLocalProvider(
+                        LocalScreenIsActive provides operationsOnTop,
+                        LocalWearPanelHosted provides operationsOnTop,
+                        LocalWearPanelPull provides panelPull,
+                    ) {
+                        WearSwipeToDismissBox(onDismissed = { if (operationsOnTop) back() }) { isBackground ->
+                            if (!isBackground) {
+                                panelStateHolder.SaveableStateProvider(operationsPage) {
+                                    WearOperationsPanel(
+                                        page = operationsPage,
+                                        onBack = ::back,
+                                        onOpen = ::open,
+                                        onSearch = {
+                                            when (operationsPage) {
+                                                WearOperationsPage.SuperUser -> appSearchInput()
+                                                WearOperationsPage.Modules -> moduleSearchInput()
+                                                WearOperationsPage.Logs -> logSearchInput()
+                                                WearOperationsPage.Home -> Unit
+                                                WearOperationsPage.Repository -> open(WearRoute.ModuleRepoSearch)
+                                            }
+                                        },
+                                        onInstall = installer::pickFile,
+                                        rootAvailable = home.systemStatus.isRootAvailable,
+                                        fullFeatured = home.systemStatus.isFullFeatured,
+                                        susfsAvailable = home.systemInfo.susfsEnabled,
+                                        onClosing = { panelDismissals++ },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            BackHandler(operationsOnTop) { back() }
             // Over the pages: waiting for a link to open, which Back cancels, and its result.
             WearLinkHost(linkViewModel) { open(WearRoute.Browser(it)) }
         }
@@ -723,17 +760,7 @@ private val WearPageTransitions: Map<String, Any> = NavDisplay.transitionSpec {
  */
 private fun <T : Any> withPageTransitions(provider: (T) -> NavEntry<T>): (T) -> NavEntry<T> = { key ->
     val entry = provider(key)
-    // A pull-down panel has already settled into view before its destination is committed. The
-    // dialog keeps the page beneath it, and draws without a scrim so the page preview it covers
-    // does not change brightness as the destination appears.
-    val transitions = if (key is WearRoute.Operations) {
-        DialogSceneStrategy.dialog(
-            DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false, scrimAlpha = 0f),
-        ) + NavDisplay.transitionSpec { EnterTransition.None togetherWith ExitTransition.None }
-    } else {
-        WearPageTransitions
-    }
-    NavEntry(key, entry.contentKey, entry.metadata + transitions) { entry.Content() }
+    NavEntry(key, entry.contentKey, entry.metadata + WearPageTransitions) { entry.Content() }
 }
 
 /**
@@ -757,9 +784,6 @@ private fun WearMainPages(
     onOpen: (WearRoute) -> Unit,
     onTitleChange: (Int) -> Unit,
     onWebUi: (InstalledModule) -> Unit,
-    homePanelContent: @Composable () -> Unit,
-    appPanelContent: @Composable () -> Unit,
-    modulePanelContent: @Composable () -> Unit,
 ) {
     val activity = LocalActivity.current
     if (!home.isInitialDataLoaded && homeError == null) {
@@ -829,7 +853,7 @@ private fun WearMainPages(
                                 onInstall = { onOpen(WearRoute.KernelInstall) },
                                 onVersionInfo = { onOpen(WearRoute.HomeVersionInfo) },
                                 onStatusInfo = { onOpen(WearRoute.HomeStatusInfo) },
-                                panelContent = homePanelContent,
+                                hasOperationsPanel = true,
                                 backToTop = true,
                             )
 
@@ -839,7 +863,7 @@ private fun WearMainPages(
                                 onRefresh = { onSuperUser(SuperUserUiAction.Refresh) },
                                 onBack = { activity?.finish() },
                                 onOpenPanel = { onOpen(WearRoute.Operations(WearOperationsPage.SuperUser)) },
-                                panelContent = appPanelContent,
+                                hasOperationsPanel = true,
                                 listState = appListState,
                                 onAppClick = { uid, packageName -> onOpen(WearRoute.App(uid, packageName)) },
                                 backToTop = true,
@@ -850,7 +874,7 @@ private fun WearMainPages(
                                 error = moduleError,
                                 onRefresh = { onModule(ModuleUiAction.Refresh(manual = true)) },
                                 onOpenPanel = { onOpen(WearRoute.Operations(WearOperationsPage.Modules)) },
-                                panelContent = modulePanelContent,
+                                hasOperationsPanel = true,
                                 listState = moduleListState,
                                 onModuleClick = { onOpen(WearRoute.Module(it)) },
                                 onWebUi = onWebUi,

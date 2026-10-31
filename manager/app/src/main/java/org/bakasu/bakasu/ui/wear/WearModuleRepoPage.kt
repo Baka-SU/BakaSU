@@ -97,7 +97,7 @@ internal fun WearModuleRepoPage(
     viewModel: ModuleRepoViewModel,
     onBack: () -> Unit,
     onOpenPanel: () -> Unit,
-    panelContent: @Composable (() -> Unit)? = null,
+    hasOperationsPanel: Boolean = false,
     onOpen: (CatalogModule) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -144,7 +144,7 @@ internal fun WearModuleRepoPage(
         onRefresh = ::retry,
         onBack = onBack,
         onOpenPanel = onOpenPanel,
-        panelContent = panelContent,
+        hasOperationsPanel = hasOperationsPanel,
         panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_repo)) }

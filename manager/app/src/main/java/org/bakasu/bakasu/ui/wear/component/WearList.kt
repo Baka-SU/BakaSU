@@ -3,7 +3,6 @@ package org.bakasu.bakasu.ui.wear.component
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.scrollable
@@ -16,28 +15,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberOverscrollEffect
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -45,7 +40,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalScrollCaptureInProgress
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -79,18 +73,10 @@ import org.bakasu.bakasu.R
  * @date 2026/10/1.
  */
 
-/**
- * How many times a settled page panel has closed or left the page. A page paints the panel preview
- * while the panel is dragged and keeps it under the panel's own destination; each count means the
- * destination is done with it, so the preview steps aside and the page shows again.
- */
+/** Signals that a menu has closed so its page can release the held reveal. */
 val LocalWearPanelDismissals = compositionLocalOf { 0 }
 
-/**
- * Whether a pulled panel's own destination covers the page. The page stops being active while the
- * destination is on top, but the preview it holds must stay: the destination draws the same content
- * over it, so the page and the destination swap without the page showing in between.
- */
+/** Whether the shared operations host currently owns the reveal. */
 val LocalWearPanelHosted = compositionLocalOf { false }
 
 /**
@@ -119,7 +105,7 @@ fun WearList(
     confirmEnabled: Boolean = true,
     backToTop: Boolean = false,
     onOpenPanel: (() -> Unit)? = null,
-    panelContent: @Composable (() -> Unit)? = null,
+    hasOperationsPanel: Boolean = false,
     onClosePanel: (() -> Unit)? = null,
     onPanelClosing: (() -> Unit)? = null,
     panelLabel: String? = null,
@@ -141,43 +127,48 @@ fun WearList(
     val pullProgress = remember { mutableFloatStateOf(0f) }
     val reduceMotion = LocalReduceMotion.current
     val screenActive = LocalScreenIsActive.current
-    // The panel's destination is a window of its own: while it covers the page, the page is no longer
-    // active even though the panel is exactly where the pull left it.
+    // The page yields gestures and reveal updates while the shared menu is active.
     val panelHosted = LocalWearPanelHosted.current
     var viewportHeight by remember { mutableFloatStateOf(1f) }
     var openingPanel by remember { mutableStateOf(false) }
     var closingPanel by remember { mutableStateOf(false) }
+    val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
     val closeProgress by animateFloatAsState(
-        if (closingPanel) 1f else 0f,
-        animationSpec = if (reduceMotion) snap() else tween(180),
+        if (closingPanel) 1f else (-pullProgress.floatValue * threshold / viewportHeight).coerceIn(0f, 1f),
+        animationSpec = if (reduceMotion || (pullProgress.floatValue < 0f && !closingPanel)) snap() else tween(180),
         label = "wear-panel-close",
         finishedListener = { if (closingPanel && it == 1f) onClosePanel?.invoke() },
     )
-    val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
+    val panelDismissals = LocalWearPanelDismissals.current
+    var lastDismissal by remember { mutableIntStateOf(panelDismissals) }
+    val panelWasDismissed = lastDismissal != panelDismissals
     // The pull the panel and the page behind it both follow.
-    val panelTarget = if (openingPanel) 1f else (pullProgress.floatValue * threshold / viewportHeight).coerceIn(0f, 1f)
-    // While the finger is on the list the panel follows it exactly; a release springs it into place.
+    val panelTarget = if (panelWasDismissed) {
+        0f
+    } else if (openingPanel) {
+        1f
+    } else {
+        (pullProgress.floatValue * threshold / viewportHeight).coerceIn(0f, 1f)
+    }
+    // Follow the finger directly; settle without resistance or spring overshoot.
     val following = reduceMotion || (pullProgress.floatValue > 0f && !openingPanel)
     val panelProgress by animateFloatAsState(
         targetValue = panelTarget,
-        animationSpec = if (following || panelHosted) snap() else tween(180),
+        animationSpec = if (following || panelHosted || !openingPanel || panelWasDismissed) snap() else tween(180),
         label = "wear-panel-reveal",
-        // The fully revealed preview stays put: the panel's destination draws the same content over
-        // it, so the page and the destination swap without the page showing in between.
+        // Committing the logical destination keeps the same menu in the shared host.
         finishedListener = { progress -> if (openingPanel && progress == 1f && screenActive) onOpenPanel?.invoke() },
     )
     // Movement, scale and scrim share the reveal, including the destination's closing animation.
     val panelPull = LocalWearPanelPull.current
-    val revealProgress = (if (panelHosted && panelContent != null) panelPull.floatValue else panelProgress).coerceAtLeast(0f)
+    val revealProgress = (if (panelHosted && hasOperationsPanel) panelPull.floatValue else panelProgress).coerceAtLeast(0f)
     val pageRecess = revealProgress.coerceIn(0f, WearPageRecessLimit)
     val pageScale = 1f - WearPanelPageScale * pageRecess
-    // Leave the underlying page and its chosen background visible through the scrim.
-    val pageDim = WearPanelMaxDim * (pageRecess / WearPanelDimReach).coerceIn(0f, 1f)
     // The destination has started closing or has left; the held preview goes away at once, so the
     // closing panel uncovers the page rather than a copy of itself.
-    val panelDismissals = LocalWearPanelDismissals.current
     LaunchedEffect(panelDismissals) {
-        if (panelDismissals > 0) {
+        if (panelWasDismissed) {
+            lastDismissal = panelDismissals
             openingPanel = false
             pullOffset.floatValue = 0f
             pullProgress.floatValue = 0f
@@ -185,9 +176,9 @@ fun WearList(
     }
     // The opening page publishes its reveal; the hosted menu publishes the reverse on closing.
     SideEffect {
-        if (panelContent != null && screenActive) {
+        if (hasOperationsPanel && screenActive && !panelHosted) {
             panelPull.floatValue = pageRecess.coerceIn(0f, 1f)
-        } else if (onClosePanel != null && screenActive) {
+        } else if (onClosePanel != null && screenActive && panelHosted) {
             panelPull.floatValue = 1f - closeProgress
         }
     }
@@ -211,11 +202,11 @@ fun WearList(
         listState,
         pullOffset,
         pullProgress,
-        enabled = screenActive && !isLoading && !isRefreshing && !isBusy,
+        enabled = screenActive && (!panelHosted || onClosePanel != null) && !isLoading && !isRefreshing && !isBusy,
         onRefresh = onRefresh,
         onOpenPanel = onOpenPanel?.let { open ->
             {
-                if (panelContent == null) {
+                if (!hasOperationsPanel) {
                     open()
                 } else {
                     // The preview finishes the reveal itself, then hands the panel to its destination.
@@ -262,7 +253,13 @@ fun WearList(
             Box(Modifier.fillMaxSize()) {
                 TransformingLazyColumn(
                     modifier = Modifier.fillMaxSize().graphicsLayer {
-                        translationY = if (panelContent == null || pullProgress.floatValue < 0f) animatedOffset else 0f
+                        translationY = if (panelHosted && onClosePanel != null) {
+                            0f
+                        } else if (!hasOperationsPanel || pullProgress.floatValue < 0f) {
+                            animatedOffset
+                        } else {
+                            0f
+                        }
                     },
                     state = listState,
                     contentPadding = contentPadding,
@@ -281,7 +278,7 @@ fun WearList(
                     content(transformationSpec)
                 }
                 // Pulling down at the top shows the panel indicator in the room the list makes for it.
-                if (onOpenPanel != null && panelContent == null) {
+                if (onOpenPanel != null && !hasOperationsPanel) {
                     WearPullIndicator(
                         pullProgress.floatValue,
                         closing = onClosePanel != null,
@@ -294,8 +291,8 @@ fun WearList(
     // The main page stays stationary; the menu is a separate surface above it. Behind an opening
     // panel the page also scales down, so the panel appears to land on a receding page.
     val pageModifier = Modifier.graphicsLayer {
-        translationY = if (onClosePanel != null) -closeProgress * viewportHeight else 0f
-        if (panelContent != null) {
+        translationY = if (onClosePanel != null && !panelHosted) -closeProgress * viewportHeight else 0f
+        if (hasOperationsPanel) {
             scaleX = pageScale
             scaleY = pageScale
         }
@@ -386,22 +383,6 @@ fun WearList(
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
             ) { listContent(it) }
         }
-        // The page itself darkens as the panel covers it.
-        if (panelContent != null && pageDim > 0f) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = pageDim)).clearAndSetSemantics {})
-        }
-        // Hand the preview to the transparent destination once it is hosted, avoiding double-drawn rows.
-        if (panelContent != null && (pullProgress.floatValue > 0f || openingPanel) && revealProgress > 0f && screenActive && !panelHosted) {
-            // Clip the moving content to the display shape without painting an opaque menu surface.
-            val panelShape = if (LocalConfiguration.current.isScreenRound) CircleShape else RectangleShape
-            Box(
-                Modifier.fillMaxSize().graphicsLayer { translationY = (revealProgress - 1f) * viewportHeight }
-                    .clip(panelShape)
-                    .clearAndSetSemantics {},
-            ) {
-                CompositionLocalProvider(LocalScreenIsActive provides false) { panelContent() }
-            }
-        }
     }
 }
 
@@ -409,9 +390,9 @@ fun WearList(
 private const val WearPanelPageScale = 0.12f
 
 /** The lower menu controls enter first; reach maximum dimming during that early reveal. */
-private const val WearPanelDimReach = 0.15f
+internal const val WearPanelDimReach = 0.15f
 
-private const val WearPanelMaxDim = 1f
+internal const val WearPanelMaxDim = 1f
 
 /** A bound on the page overshoot, so a long pull cannot shrink it far out of shape. */
 private const val WearPageRecessLimit = 1.2f

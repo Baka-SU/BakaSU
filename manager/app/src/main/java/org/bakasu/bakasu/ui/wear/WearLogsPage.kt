@@ -74,7 +74,7 @@ internal fun WearLogsPage(
     onOpenPanel: () -> Unit,
     onEntry: (SulogEntry) -> Unit,
     error: String? = null,
-    panelContent: @Composable (() -> Unit)? = null,
+    hasOperationsPanel: Boolean = false,
 ) {
     val statusFailure = when (state.sulogStatus) {
         "unsupported" -> stringResource(R.string.sulog_unsupported_title)
@@ -92,7 +92,7 @@ internal fun WearLogsPage(
         onBack = onBack,
         onOpenPanel = onOpenPanel,
         panelLabel = stringResource(R.string.wear_operations),
-        panelContent = panelContent,
+        hasOperationsPanel = hasOperationsPanel,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.sulog)) }
         // The active query; tapping it clears the search.
