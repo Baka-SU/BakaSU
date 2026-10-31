@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.BackHand
 import androidx.compose.material.icons.rounded.Check
@@ -382,6 +383,16 @@ internal fun WearDpiPage(
                 { onOpen(WearRoute.Selection(WearSelection.ScreenShape)) },
                 icon = Icons.Rounded.AspectRatio,
                 description = screenShapeLabel(preferences.shape),
+            )
+        }
+        item {
+            WearSettingsSwitchWidget(
+                spec,
+                stringResource(R.string.icon_switch_title),
+                state.useAltIcon,
+                { onAction(SettingsUiAction.SetAlternateIcon(it)) },
+                icon = Icons.Rounded.Apps,
+                secondaryLabel = stringResource(R.string.icon_switch_summary),
             )
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_display_interaction)) }

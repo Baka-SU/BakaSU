@@ -282,28 +282,28 @@ internal fun WearSettingsPage(
                             SettingsUiAction.SetModuleUpdateCheck(!state.checkModuleUpdate),
                         ),
                     )
-                    if (status.isFullFeatured) {
+                }
+                if (category == WearSettingsCategory.Security && status.isFullFeatured) {
+                    add(
+                        SettingsToggle(
+                            SettingsSection.PrivilegesStartup,
+                            R.string.settings_soft_reboot,
+                            R.string.settings_soft_reboot_summary,
+                            status.isLateLoadMode || state.useSoftReboot,
+                            SettingsUiAction.SetUseSoftReboot(!state.useSoftReboot),
+                        ),
+                    )
+                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
                         add(
                             SettingsToggle(
-                                SettingsSection.AppBehavior,
-                                R.string.settings_soft_reboot,
-                                R.string.settings_soft_reboot_summary,
-                                status.isLateLoadMode || state.useSoftReboot,
-                                SettingsUiAction.SetUseSoftReboot(!state.useSoftReboot),
+                                SettingsSection.PrivilegesStartup,
+                                R.string.settings_adb_root,
+                                R.string.settings_adb_root_summary,
+                                state.isAdbRootEnabled,
+                                SettingsUiAction.SetAdbRoot(!state.isAdbRootEnabled),
                             ),
                         )
                     }
-                    add(
-                        SettingsToggle(
-                            SettingsSection.AppBehavior,
-                            R.string.icon_switch_title,
-                            R.string.icon_switch_summary,
-                            state.useAltIcon,
-                            SettingsUiAction.SetAlternateIcon(!state.useAltIcon),
-                        ),
-                    )
-                }
-                if (category == WearSettingsCategory.Security && status.isFullFeatured) {
                     add(
                         SettingsToggle(
                             SettingsSection.MountIsolation,
@@ -343,17 +343,6 @@ internal fun WearSettingsPage(
                     )
                 }
                 if (category == WearSettingsCategory.Advanced && status.isFullFeatured) {
-                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
-                        add(
-                            SettingsToggle(
-                                SettingsSection.PrivilegesStartup,
-                                R.string.settings_adb_root,
-                                R.string.settings_adb_root_summary,
-                                state.isAdbRootEnabled,
-                                SettingsUiAction.SetAdbRoot(!state.isAdbRootEnabled),
-                            ),
-                        )
-                    }
                     if (status.isLateLoadMode) {
                         add(
                             SettingsToggle(
