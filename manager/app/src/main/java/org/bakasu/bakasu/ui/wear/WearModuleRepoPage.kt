@@ -73,6 +73,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.formatFileSize
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
@@ -263,6 +264,9 @@ internal fun WearOnlineModulePage(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
+                        if (module.metamodule) {
+                            WearBadge(stringResource(R.string.module_meta_label), Modifier.padding(top = 4.dp))
+                        }
                         if (module.authors.isNotBlank()) {
                             Text(
                                 module.authors,
