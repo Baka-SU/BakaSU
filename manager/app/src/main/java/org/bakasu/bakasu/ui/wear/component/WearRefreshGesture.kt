@@ -91,7 +91,7 @@ internal fun Modifier.wearRefreshGesture(
                 action()
             } else {
                 pullProgress.floatValue = sign * crown.accumulated / crownTarget
-                displacement.floatValue = pullProgress.floatValue * threshold * 0.75f
+                displacement.floatValue = pullProgress.floatValue * threshold
             }
         } else {
             displacement.floatValue = 0f
@@ -157,8 +157,8 @@ internal fun Modifier.wearRefreshGesture(
                     crossed = pull >= threshold
                     val sign = if (pullDown > 0f) 1f else -1f
                     pullProgress.floatValue = sign * pull / threshold
-                    // The list follows the pull at reduced speed, making room for the pull indicator.
-                    displacement.floatValue = sign * minOf(pull * 0.6f, threshold * 0.75f)
+                    // Match finger travel without resistance or a displacement cap.
+                    displacement.floatValue = sign * pull
                     if (dragging) pointer.consume()
                 }
             } finally {

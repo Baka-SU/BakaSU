@@ -100,7 +100,7 @@ internal fun WearOperationsPanel(
     }
     val listState = rememberPanelListState()
     Box(Modifier.fillMaxSize()) {
-        WearList(onClosePanel = onBack, onPanelClosing = onClosing, snap = true, listState = listState) { spec ->
+        WearList(onClosePanel = onBack, onPanelClosing = onClosing, snap = false, listState = listState) { spec ->
             LazySegmentedColumn(actions, { it.label }) { action ->
                 WearSettingsJumpPageWidget(spec, action.label, action.onClick, icon = action.icon, enabled = action.enabled)
             }

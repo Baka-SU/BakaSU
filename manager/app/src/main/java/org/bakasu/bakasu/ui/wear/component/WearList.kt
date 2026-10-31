@@ -1,9 +1,8 @@
 package org.bakasu.bakasu.ui.wear.component
 
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableDefaults
@@ -139,7 +138,6 @@ fun WearList(
     }
     val pullOffset = remember { mutableFloatStateOf(0f) }
     val pullProgress = remember { mutableFloatStateOf(0f) }
-    val motion = MaterialTheme.motionScheme
     val reduceMotion = LocalReduceMotion.current
     val screenActive = LocalScreenIsActive.current
     // The panel's destination is a window of its own: while it covers the page, the page is no longer
@@ -150,7 +148,7 @@ fun WearList(
     var closingPanel by remember { mutableStateOf(false) }
     val closeProgress by animateFloatAsState(
         if (closingPanel) 1f else 0f,
-        animationSpec = if (reduceMotion) snap() else motion.defaultSpatialSpec(),
+        animationSpec = if (reduceMotion) snap() else tween(180),
         label = "wear-panel-close",
         finishedListener = { if (closingPanel && it == 1f) onClosePanel?.invoke() },
     )
@@ -161,7 +159,7 @@ fun WearList(
     val following = reduceMotion || (pullProgress.floatValue > 0f && !openingPanel)
     val panelProgress by animateFloatAsState(
         targetValue = panelTarget,
-        animationSpec = if (following || panelHosted) snap() else spring(0.85f, Spring.StiffnessMediumLow),
+        animationSpec = if (following || panelHosted) snap() else tween(180),
         label = "wear-panel-reveal",
         // The fully revealed preview stays put: the panel's destination draws the same content over
         // it, so the page and the destination swap without the page showing in between.
@@ -201,16 +199,10 @@ fun WearList(
             pullProgress.floatValue = 0f
         }
     }
-    // The list follows a boundary pull closely and springs back with a small bounce when it ends.
+    // Boundary drags follow the finger without resistance; release returns without a spring.
     val animatedOffset by animateFloatAsState(
         pullOffset.floatValue,
-        animationSpec = if (reduceMotion) {
-            snap()
-        } else if (pullOffset.floatValue == 0f) {
-            motion.defaultSpatialSpec()
-        } else {
-            motion.fastSpatialSpec()
-        },
+        animationSpec = if (reduceMotion || pullOffset.floatValue != 0f) snap() else tween(180),
         label = "wear-boundary-pull",
     )
     // Keep the gesture on the stationary viewport while its pages move underneath it.
