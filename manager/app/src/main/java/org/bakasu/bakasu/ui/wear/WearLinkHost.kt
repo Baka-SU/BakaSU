@@ -28,6 +28,7 @@ import androidx.wear.compose.material3.confirmationDialogCurvedText
 import androidx.wear.compose.material3.openOnPhoneDialogCurvedText
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.network.WearLinkFailure
+import org.bakasu.bakasu.domain.model.BridgeFailure
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.WearLinkEvent
 import org.bakasu.bakasu.ui.viewmodel.WearLinkResult
@@ -70,7 +71,7 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, onWebView: (String) -> U
     )
     // The overlay keeps the last failure while it animates out after the result is cleared.
     val failed = result as? WearLinkResult.Failed
-    WearErrorDialog(failed?.bridgeFailure?.let { stringResource(it.resId) }, viewModel::dismissResult)
+    WearErrorDialog(failed?.bridgeFailure?.let { wearBridgeFailureText(it) }, viewModel::dismissResult)
     val phoneNotice = rememberCustomDialog { dismiss ->
         val close = {
             dismiss()
@@ -110,3 +111,8 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, onWebView: (String) -> U
         }
     }
 }
+
+@Composable
+internal fun wearBridgeFailureText(failure: BridgeFailure): String = stringResource(
+    if (failure == BridgeFailure.CONNECTION) R.string.wear_phone_connection_failed else failure.resId,
+)

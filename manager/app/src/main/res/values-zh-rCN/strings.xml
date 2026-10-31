@@ -911,4 +911,5 @@
     <string name="wear_bridge_phone_help">关联手表后，请在手表的“手机 WebUI 连接”设置中输入生成的配对码。</string>
     <string name="wear_bridge_no_peers">没有已配对的蓝牙设备，请先在系统设置中配对手机。</string>
     <string name="wear_bridge_disconnect_message">是否移除已保存的手机与手表连接？</string>
+    <string name="wear_phone_connection_failed">无法连接手机</string>
 </resources>

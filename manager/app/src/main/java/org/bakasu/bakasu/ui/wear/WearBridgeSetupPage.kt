@@ -49,7 +49,7 @@ internal fun WearBridgeSetupPage(onBack: () -> Unit) {
     var choosing by rememberSaveable { mutableStateOf(false) }
     var editing by rememberSaveable { mutableStateOf(false) }
     val selected = peers.firstOrNull { it.address == chosen } ?: state.peer?.takeIf { chosen.isEmpty() || chosen == it.address }
-    WearErrorDialog(error?.let { stringResource(it.resId) }, viewModel::clearError)
+    WearErrorDialog(error?.let { wearBridgeFailureText(it) }, viewModel::clearError)
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { viewModel.refresh() }
     LaunchedEffect(viewModel) { viewModel.refresh() }
     LaunchedEffect(state.paired, state.peer?.address) { if (state.paired) code = "" }
