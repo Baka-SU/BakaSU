@@ -663,4 +663,12 @@
     <string name="superuser_root_access_required">Uygulamaları yüklemek için Root erişimi gereklidir.</string>
     <string name="superuser_service_start_failed">RootService başlatılamadı. Uygulamaları yüklemek için tekrar deneyin.</string>
     <string name="superuser_packages_load_failed">Uygulamalar RootService üzerinden yüklenemedi. Lütfen tekrar deneyin.</string>
+    <string name="settings_shell_su_adb_only">Shell root erişimini ADB ile sınırla</string>
+    <string name="settings_shell_su_adb_only_summary">Kabuklar için ek denetimleri etkinleştir: Yalnızca adbd veya bir KernelSU root süreci tarafından başlatılan kabuk süreçleri root erişimi elde edebilir</string>
+    <string name="module_flash_complete">Modül yüklendi</string>
+    <string name="kernel_flash_complete">Çekirdek yüklendi</string>
+    <string name="patch_complete">Yama tamamlandı</string>
+    <string name="settings_flash_card_background">Açılış ekranındaki kart arka planı</string>
+    <string name="settings_flash_card_background_summary">Yanıp sönen günlüğün arkasına bir kart arka planı çizin. Özel bir arka plan ayarlandığında her zaman görünür durumda kalır.</string>
+    <string name="feature_status_forced_summary">Bu özellik, önyükleme yapılandırması tarafından zorunlu kılınmıştır ve değiştirilemez.</string>
 </resources>
