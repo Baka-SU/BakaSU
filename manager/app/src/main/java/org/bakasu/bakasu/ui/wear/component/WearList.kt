@@ -138,7 +138,7 @@ fun WearList(
         if (closingPanel) 1f else (-pullProgress.floatValue * threshold / viewportHeight).coerceIn(0f, 1f),
         animationSpec = if (reduceMotion || draggingPanel || (pullProgress.floatValue < 0f && !closingPanel)) snap() else tween(180),
         label = "wear-panel-close",
-        finishedListener = { if (closingPanel && it == 1f) onClosePanel?.invoke() },
+        finishedListener = { if (closingPanel && it == 1f && screenActive) onClosePanel?.invoke() },
     )
     val panelDismissals = LocalWearPanelDismissals.current
     var lastDismissal by remember { mutableIntStateOf(panelDismissals) }
@@ -186,6 +186,13 @@ fun WearList(
     // A page that leaves the screen gives up a pull in progress, unless the panel it handed over to
     // is the reason the page is not active: that panel is still showing the same content.
     LaunchedEffect(screenActive, panelHosted) {
+        // An outgoing menu must not complete a delayed Back against the newly opened page.
+        if (!screenActive && onClosePanel != null) {
+            closingPanel = false
+            draggingPanel = false
+            pullOffset.floatValue = 0f
+            pullProgress.floatValue = 0f
+        }
         if (!screenActive && !panelHosted) {
             openingPanel = false
             pullOffset.floatValue = 0f
@@ -198,6 +205,7 @@ fun WearList(
         animationSpec = if (reduceMotion || pullOffset.floatValue != 0f) snap() else tween(180),
         label = "wear-boundary-pull",
     )
+    val currentPanelPull = { if (onClosePanel != null) -closeProgress * viewportHeight else panelProgress * viewportHeight }
     // Keep the gesture on the stationary viewport while its pages move underneath it.
     val gestureModifier = Modifier.wearRefreshGesture(
         listState,
@@ -224,8 +232,9 @@ fun WearList(
             null
         },
         panelLabel = panelLabel,
+        currentPanelPull = currentPanelPull,
         onPullStart = {
-            val currentPull = if (onClosePanel != null) -closeProgress * viewportHeight else panelProgress * viewportHeight
+            val currentPull = currentPanelPull()
             openingPanel = false
             closingPanel = false
             draggingPanel = true

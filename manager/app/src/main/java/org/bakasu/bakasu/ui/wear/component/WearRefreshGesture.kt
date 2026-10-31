@@ -52,6 +52,7 @@ internal fun Modifier.wearRefreshGesture(
     onOpenPanel: (() -> Unit)? = null,
     onClosePanel: (() -> Unit)? = null,
     panelLabel: String? = null,
+    currentPanelPull: () -> Float = { 0f },
     onPullStart: () -> Float = { 0f },
     onPullEnd: () -> Unit = {},
 ): Modifier {
@@ -61,6 +62,7 @@ internal fun Modifier.wearRefreshGesture(
     val refresh by rememberUpdatedState(onRefresh)
     val panel by rememberUpdatedState(onOpenPanel)
     val closePanel by rememberUpdatedState(onClosePanel)
+    val heldPanelPull by rememberUpdatedState(currentPanelPull)
     val pullStart by rememberUpdatedState(onPullStart)
     val pullEnd by rememberUpdatedState(onPullEnd)
     val haptic = LocalHapticFeedback.current
@@ -114,6 +116,7 @@ internal fun Modifier.wearRefreshGesture(
             // to the top does not open the panel with the rest of its travel.
             val startedAtTop = !listState.canScrollBackward
             val startedAtEnd = !listState.canScrollForward
+            val resumingPanel = heldPanelPull()
             try {
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -133,10 +136,13 @@ internal fun Modifier.wearRefreshGesture(
                     var dy = pointer.position.y - pointer.previousPosition.y
                     if (!dragging && !canceled) {
                         if (abs(total.x) <= slop && abs(total.y) <= slop) continue
-                        val canPull = if (total.y > 0f) {
-                            panel != null && startedAtTop && !listState.canScrollBackward
-                        } else {
-                            (closePanel != null || refresh != null) && startedAtEnd && !listState.canScrollForward
+                        // A settling panel can be caught from either direction. An ordinary
+                        // boundary pull still starts only towards its own action.
+                        val canPull = when {
+                            resumingPanel > 0f -> panel != null && startedAtTop && !listState.canScrollBackward
+                            resumingPanel < 0f -> closePanel != null && startedAtEnd && !listState.canScrollForward
+                            total.y > 0f -> panel != null && startedAtTop && !listState.canScrollBackward
+                            else -> (closePanel != null || refresh != null) && startedAtEnd && !listState.canScrollForward
                         }
                         if (pointer.isConsumed || abs(total.x) >= abs(total.y) || !canPull) {
                             canceled = true
