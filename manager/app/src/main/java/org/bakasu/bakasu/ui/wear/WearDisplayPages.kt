@@ -19,7 +19,6 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.LayersClear
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.Palette
@@ -338,17 +337,6 @@ internal fun WearDpiPage(
                 { onOpen(WearRoute.Selection(WearSelection.TimeDisplay)) },
                 icon = Icons.Rounded.Schedule,
                 description = timeDisplayLabel(preferences.timeDisplay),
-            )
-        }
-        item {
-            WearSettingsSwitchWidget(
-                spec,
-                stringResource(R.string.wear_time_immersive),
-                preferences.immersiveTime,
-                { preferenceViewModel.set(WearPreference.ImmersiveTime, it) },
-                enabled = preferences.timeDisplay != "hidden",
-                icon = Icons.Rounded.LayersClear,
-                secondaryLabel = stringResource(R.string.wear_time_immersive_summary),
             )
         }
         SegmentedColumn(

@@ -5,11 +5,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -26,6 +28,7 @@ fun WearChoicePage(
     isLoading: Boolean = false,
     onRefresh: (() -> Unit)? = null,
     labelMaxLines: Int = 3,
+    extraContent: TransformingLazyColumnScope.(TransformationSpec) -> Unit = {},
     onChoose: (String) -> Unit,
 ) {
     WearList(onBack = onBack, snap = true, isLoading = isLoading, onRefresh = onRefresh) { spec ->
@@ -42,5 +45,6 @@ fun WearChoicePage(
                 label = { Text(label, maxLines = labelMaxLines, overflow = TextOverflow.Ellipsis) },
             )
         }
+        extraContent(spec)
     }
 }

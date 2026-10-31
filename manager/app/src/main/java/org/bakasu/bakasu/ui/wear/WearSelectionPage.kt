@@ -25,6 +25,7 @@ import org.bakasu.bakasu.ui.viewmodel.WearPreference
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.settings.WearChoicePage
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 
 /**
  * @author Hanhan_awa
@@ -46,6 +47,19 @@ internal fun WearSelectionPage(
             WearPreference.TimeDisplay.options.map { it to timeDisplayLabel(it) },
             preferences.timeDisplay,
             onBack,
+            extraContent = { spec ->
+                item {
+                    WearSettingsSwitchWidget(
+                        spec,
+                        stringResource(R.string.wear_time_immersive),
+                        preferences.immersiveTime,
+                        { preferenceViewModel.set(WearPreference.ImmersiveTime, it) },
+                        enabled = preferences.timeDisplay != "hidden",
+                        icon = Icons.Rounded.Schedule,
+                        secondaryLabel = stringResource(R.string.wear_time_immersive_summary),
+                    )
+                }
+            },
         ) { preferenceViewModel.set(WearPreference.TimeDisplay, it) }
 
         WearSelection.Palette -> WearChoicePage(
