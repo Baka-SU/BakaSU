@@ -91,7 +91,6 @@ class ProfileTemplateRepository(
         try {
             DataOutputStream(Tasks.await(client.getOutputStream(channel), 5, TimeUnit.SECONDS)).use { output ->
                 val bytes = runCatching {
-                    check(networkStatusRepository.isAvailable())
                     JSONObject(checkNotNull(fetchRemoteBodies())).toString().toByteArray()
                 }.getOrNull()
                 output.writeBoolean(bytes != null)
@@ -158,11 +157,11 @@ class ProfileTemplateRepository(
 
     /**
      * The official templates for browsing. Nothing is stored; [addOnline] adds a chosen one. Without
-     * a network nothing is requested; a failed direct download is retried through the paired phone.
+     * a usable direct route, a failed download is retried through the paired phone.
      */
     suspend fun fetchOnline(): Result<List<ProfileTemplate>> = withContext(Dispatchers.IO) {
         val online = networkStatusRepository.isAvailable()
-        val bodies = (if (online) fetchRemoteBodies() else null) ?: fetchBodiesFromPhone()
+        val bodies = fetchRemoteBodies() ?: fetchBodiesFromPhone()
             ?: return@withContext Result.failure(ProfileTemplateException(if (online) ProfileTemplateFailure.RequestFailed else ProfileTemplateFailure.Offline))
         val templates = bodies.values.mapNotNull { body ->
             runCatching { JSONObject(body).toTemplate() }.getOrNull()?.copy(local = false)
@@ -271,7 +270,7 @@ class ProfileTemplateRepository(
      * fetched by the paired phone's Manager instead.
      */
     private suspend fun fetchRemoteTemplates(): Boolean = runCatching {
-        val bodies = (if (networkStatusRepository.isAvailable()) fetchRemoteBodies() else null) ?: fetchBodiesFromPhone()
+        val bodies = fetchRemoteBodies() ?: fetchBodiesFromPhone()
             ?: return false
         var fetchedAny = bodies.isEmpty()
         bodies.forEach { (id, body) ->

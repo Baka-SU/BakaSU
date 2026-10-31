@@ -308,7 +308,7 @@ val repositoryModule = module {
     singleOf(::ModuleCatalogRepository)
     single { ModuleReleaseRepository(get(), get(applicationScopeQualifier)) }
     singleOf(::ModuleIconRepository)
-    single { KernelSuRegistryRepository(get(), get(), get(), get()) }
+    single { KernelSuRegistryRepository(get(), get(), get()) }
     singleOf(::RepositorySourceStore)
     singleOf(::ModuleRepository)
     singleOf(::ModulePreferencesRepository)

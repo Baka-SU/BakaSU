@@ -19,7 +19,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bakasu.bakasu.data.module.RepositorySourceStore
-import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.data.network.documentResponse
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
@@ -35,7 +34,6 @@ import org.bakasu.bakasu.domain.model.RepositoryFailure
 class KernelSuRegistryRepository private constructor(
     private val application: Application,
     private val httpClient: OkHttpClient,
-    private val networkStatus: NetworkStatusRepository,
     private val sourceStore: RepositorySourceStore?,
     val baseUrl: String,
     private val repositories: ConcurrentHashMap<String, KernelSuRegistryRepository>,
@@ -43,9 +41,8 @@ class KernelSuRegistryRepository private constructor(
     constructor(
         application: Application,
         httpClient: OkHttpClient,
-        networkStatus: NetworkStatusRepository,
         sourceStore: RepositorySourceStore? = null,
-    ) : this(application, httpClient, networkStatus, sourceStore, RegistryUrls.DEFAULT_BASE_URL, ConcurrentHashMap()) {
+    ) : this(application, httpClient, sourceStore, RegistryUrls.DEFAULT_BASE_URL, ConcurrentHashMap()) {
         repositories[baseUrl] = this
     }
 
@@ -68,7 +65,7 @@ class KernelSuRegistryRepository private constructor(
         require(parsed != null && parsed.isHttps && parsed.username.isEmpty() && parsed.password.isEmpty()) { "Invalid registry URL" }
         val normalized = RegistryUrls.normalizeBaseUrl(parsed.newBuilder().query(null).fragment(null).build().toString())
         return repositories.computeIfAbsent(normalized) {
-            KernelSuRegistryRepository(application, httpClient, networkStatus, sourceStore, normalized, repositories)
+            KernelSuRegistryRepository(application, httpClient, sourceStore, normalized, repositories)
         }
     }
 
@@ -89,7 +86,6 @@ class KernelSuRegistryRepository private constructor(
 
     private fun fetch(url: String, owner: Job): String {
         owner.ensureActive()
-        if (!networkStatus.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)
         val request = Request.Builder().url(url).cacheControl(CacheControl.Builder().noCache().build()).build()
         var cancellation: DisposableHandle? = null
         try {
