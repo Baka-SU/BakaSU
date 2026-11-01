@@ -1,13 +1,16 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
+import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
 import org.bakasu.bakasu.ui.viewmodel.WearPreference
 import org.bakasu.bakasu.ui.viewmodel.wear
+import org.bakasu.bakasu.ui.wear.component.showWearToast
 import org.koin.android.ext.android.inject
 
 /**
@@ -32,6 +35,18 @@ abstract class WearActivity : ComponentActivity() {
     @Deprecated("Deprecated in Java")
     @Suppress("DEPRECATION")
     override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
-        super.startActivityForResult(withDocumentPickerFallback(intent, getPreference.wear(WearPreference.Picker)), requestCode, options)
+        val pickerMode = getPreference.wear(WearPreference.Picker)
+        if (pickerMode == "system" && isSystemDocumentPickerUnavailable(intent)) {
+            showWearToast(getString(R.string.wear_no_system_file_picker))
+            super.onActivityResult(requestCode, RESULT_CANCELED, null)
+            return
+        }
+        try {
+            super.startActivityForResult(withDocumentPickerFallback(intent, pickerMode), requestCode, options)
+        } catch (error: ActivityNotFoundException) {
+            if (intent.action !in DocumentActions) throw error
+            showWearToast(getString(R.string.wear_no_system_file_picker))
+            super.onActivityResult(requestCode, RESULT_CANCELED, null)
+        }
     }
 }

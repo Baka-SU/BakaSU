@@ -731,6 +731,7 @@
     <string name="wear_link_mode">Open module WebUI</string>
     <string name="wear_watch_webui">Open on watch</string>
     <string name="wear_picker_mode">File picker</string>
+    <string name="wear_no_system_file_picker">No application can handle this action</string>
     <string name="wear_auto">Automatic</string>
     <string name="wear_builtin_picker">Built-in picker</string>
     <string name="wear_system_picker">System picker</string>

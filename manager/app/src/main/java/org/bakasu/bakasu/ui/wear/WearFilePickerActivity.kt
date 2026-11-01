@@ -43,7 +43,12 @@ class WearFilePickerActivity : WearActivity() {
     }
 }
 
-private val DocumentActions = setOf(Intent.ACTION_OPEN_DOCUMENT, Intent.ACTION_CREATE_DOCUMENT, Intent.ACTION_GET_CONTENT)
+internal val DocumentActions = setOf(Intent.ACTION_OPEN_DOCUMENT, Intent.ACTION_CREATE_DOCUMENT, Intent.ACTION_GET_CONTENT)
+
+internal fun Context.isSystemDocumentPickerUnavailable(intent: Intent): Boolean = intent.action in DocumentActions && packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+    ?.activityInfo?.name.let {
+        it == null || it.endsWith("DocumentsStub") || it == WearFilePickerActivity::class.java.name
+    }
 
 /**
  * The SAF [intent] unchanged while a system picker can take it; otherwise the same intent limited

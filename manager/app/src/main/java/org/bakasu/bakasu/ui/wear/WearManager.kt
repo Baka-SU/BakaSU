@@ -91,8 +91,6 @@ import org.bakasu.bakasu.ui.wear.component.WearHorizontalPager
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
 import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
@@ -184,12 +182,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         clearSettingsFeedback()
         settingsViewModel.dispatch(it)
     }
-    // Ordinary switches speak through their state; DPI uses a toast and background results use a dialog.
+    // Ordinary switches speak through their state; selected settings results use a toast.
     // Blocking failures and follow-up instructions stay visible until the user dismisses them.
-    val backgroundNotice = settingsMessageResource?.takeIf { it.first == R.string.background_set_success || it.first == R.string.background_removed }
-    val backgroundResult = backgroundNotice?.let { (id, _) -> WearResult(stringResource(id), success = true) }
-    WearResultDialog(backgroundResult) { clearSettingsFeedback() }
-    val settingsNotice = settingsMessageResource?.takeUnless { it == backgroundNotice }?.let { (id, arg) ->
+    val settingsNotice = settingsMessageResource?.let { (id, arg) ->
         if (arg == null) stringResource(id) else stringResource(id, arg)
     }
     val settingsNoticeDialog = rememberCustomDialog { dismiss ->
@@ -264,10 +259,12 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                     settingsMessageResource = null
                     val message = if (event.formatArg == null) resources.getString(event.stringResource) else resources.getString(event.stringResource, event.formatArg)
                     when (event.stringResource) {
-                        R.string.dpi_applied_success ->
+                        R.string.dpi_applied_success,
+                        R.string.icon_switched,
+                        R.string.background_set_success,
+                        R.string.background_removed,
+                        ->
                             toast.show(message)
-
-                        R.string.icon_switched -> Unit
 
                         R.string.background_crop_failed, R.string.settings_selinux_hide_failed -> settingsError = message
 

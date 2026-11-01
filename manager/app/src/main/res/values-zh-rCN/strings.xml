@@ -696,6 +696,7 @@
     <string name="wear_link_mode">模块 WebUI 打开方式</string>
     <string name="wear_watch_webui">在手表上打开</string>
     <string name="wear_picker_mode">文件选择器</string>
+    <string name="wear_no_system_file_picker">没有应用程序能够处理这项操作</string>
     <string name="wear_auto">自动</string>
     <string name="wear_builtin_picker">内置选择器</string>
     <string name="wear_system_picker">系统选择器</string>
