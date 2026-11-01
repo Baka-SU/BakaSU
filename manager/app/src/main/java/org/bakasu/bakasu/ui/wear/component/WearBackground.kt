@@ -38,11 +38,10 @@ import org.koin.compose.koinInject
  */
 
 /**
- * The watchOS black page base. The app's single backdrop, including the user's cropped image and
- * chosen dimming; the components drawn over it are made translucent by the theme, so the image
- * shows through them. Black remains the fallback with no image, or until the image has loaded.
+ * Renders a Wear content layer's black base and selected image backdrop. WearManagerTheme uses one
+ * activity-level instance for content outside Navigation 3, while each navigation entry gets its
+ * own instance so incoming and outgoing scenes render their backgrounds independently.
  * The plain black base follows predictive back; a selected image and its dim layer remain intact.
- * Rendered by WearManagerTheme outside page transitions.
  */
 @Composable
 fun WearBackground(content: @Composable BoxScope.() -> Unit) {

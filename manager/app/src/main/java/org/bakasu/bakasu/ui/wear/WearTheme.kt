@@ -187,7 +187,9 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
         LocalBackgroundRenderState provides backgroundState,
     ) {
         MaterialTheme(colorScheme = themedColors, typography = wearTypography(config.isHighContrastMode), motionScheme = MotionScheme.expressive()) {
-            // The selected image and dim layer belong to the shared page background.
+            // Keep an activity-level backdrop for surfaces outside Navigation 3. Each navigation
+            // entry renders its own backdrop as well, so outgoing and incoming scenes transition
+            // with independent image layers.
             WearBackground {
                 WearToastHost {
                     // Older installs prepare their saved background color before the first content is shown.

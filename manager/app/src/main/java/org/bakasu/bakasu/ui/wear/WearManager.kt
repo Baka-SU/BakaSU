@@ -84,6 +84,7 @@ import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearPanelPull
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
+import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPageIndicator
@@ -291,17 +292,10 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Box(Modifier.fillMaxSize()) {
-            // The navigation host paints the page base itself: the scene's swipe-dismiss box
-            // fills the screen with MaterialTheme.colorScheme.background, which would cover the
-            // theme's backdrop image. The role is transparent inside the host so the backdrop
-            // stays visible, and every entry restores the opaque base for its own components
-            // (dialogs, the swipe and pager scrims) with PageBaseDecorator.
-            // The scheme is remembered: ColorScheme has no equals, so a fresh copy on every
-            // recomposition would invalidate the whole navigation subtree through
-            // LocalColorScheme, which is a static composition local.
+            // Keep the scene background opaque for predictive-back scrims. Each navigation entry
+            // renders its own selected backdrop inside the animated scene.
             val hostScheme = MaterialTheme.colorScheme
-            val transparentScheme = remember(hostScheme) { hostScheme.copy(background = Color.Transparent) }
-            MaterialTheme(colorScheme = transparentScheme) {
+            MaterialTheme(colorScheme = hostScheme) {
                 NavDisplay(
                     backStack = navigator.backStack.filterNot { it is WearRoute.Operations },
                     onBack = { back() },
@@ -683,7 +677,9 @@ private val PageBaseDecorator: NavEntryDecorator<NavKey> =
         val scheme = MaterialTheme.colorScheme
         val pageScheme = remember(scheme) { scheme.copy(background = Color.Black) }
         MaterialTheme(colorScheme = pageScheme) {
-            entry.Content()
+            WearBackground {
+                entry.Content()
+            }
         }
     }
 
