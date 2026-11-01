@@ -33,17 +33,17 @@ extern int avc_ss_reset(u32 seqno);
 extern int avc_ss_reset(struct selinux_avc *avc, u32 seqno);
 #endif
 // reset avc cache table, otherwise the new rules will not take effect if already denied
-static void reset_avc_cache()
+static void reset_avc_cache(u32 seqno)
 {
 #if ((!defined(KSU_COMPAT_USE_SELINUX_STATE)) || LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0))
-    avc_ss_reset(0);
-    selnl_notify_policyload(0);
-    selinux_status_update_policyload(0);
+    avc_ss_reset(seqno);
+    selnl_notify_policyload(seqno);
+    selinux_status_update_policyload(seqno);
 #else
     struct selinux_avc *avc = selinux_state.avc;
-    avc_ss_reset(avc, 0);
-    selnl_notify_policyload(0);
-    selinux_status_update_policyload(&selinux_state, 0);
+    avc_ss_reset(avc, seqno);
+    selnl_notify_policyload(seqno);
+    selinux_status_update_policyload(&selinux_state, seqno);
 #endif
     selinux_xfrm_notify_policyload();
 }
@@ -89,6 +89,7 @@ struct selinux_fs_info {
 #ifndef KSU_COMPAT_USE_SELINUX_STATE
 static struct mutex *ksu_sel_mutex_ptr = NULL;
 rwlock_t *ksu_policy_rwlock_ptr = NULL;
+static u32 *latest_granting_ptr = NULL;
 #endif // #ifndef KSU_COMPAT_USE_SELINUX_STATE
 
 static inline void ksu_lock_sel_mutex_legacy(void)
@@ -310,14 +311,20 @@ void apply_kernelsu_rules()
     ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_POLICY_MUTEX)
+    pol->latest_granting = old_pol->latest_granting + 1;
     rcu_assign_pointer(selinux_state.policy, pol);
     synchronize_rcu();
     ksu_destroy_sepolicy(old_pol);
 
-    reset_avc_cache();
+    reset_avc_cache(pol->latest_granting);
 out_unlock:
     mutex_unlock(&selinux_state.policy_mutex);
 #else
+#if defined(KSU_COMPAT_USE_SELINUX_STATE) && !defined(SELINUX_POLICY_INSTEAD_SELINUX_SS)
+    u32 seqno = ++selinux_state.ss->latest_granting;
+#else
+    u32 seqno = ++(*latest_granting_ptr);
+#endif
     /* Save the old policydb to free later. */
     memcpy(oldpolicydb, policydb_ptr, sizeof(*policydb_ptr));
 
@@ -326,7 +333,7 @@ out_unlock:
     memcpy(policydb_ptr, newpolicydb, sizeof(*policydb_ptr));
     ksu_unlock_sepolicy_legacy();
 
-    reset_avc_cache();
+    reset_avc_cache(seqno);
 
     /* Free the old policydb. */
     ksu_destroy_policydb(oldpolicydb);
@@ -335,7 +342,7 @@ out_free:
     /* Free buffer */
     kfree(oldpolicydb);
     ksu_unlock_sel_mutex_legacy();
-#endif
+#endif // !(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_POLICY_MUTEX))
 }
 
 #define KSU_SEPOLICY_MAX_BATCH_SIZE (8U * 1024U * 1024U)
@@ -715,11 +722,12 @@ int handle_sepolicy(void __user *user_data, u64 data_len)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_POLICY_MUTEX)
     // 5.10+
+    pol->latest_granting = old_pol->latest_granting + 1;
     rcu_assign_pointer(selinux_state.policy, pol);
     synchronize_rcu();
     ksu_destroy_sepolicy(old_pol);
 
-    reset_avc_cache();
+    reset_avc_cache(pol->latest_granting);
     ret = success_cmd_count;
     goto out_unlock;
 
@@ -729,6 +737,11 @@ out_unlock:
     mutex_unlock(&selinux_state.policy_mutex);
 #else
     ret = success_cmd_count;
+#if defined(KSU_COMPAT_USE_SELINUX_STATE) && !defined(SELINUX_POLICY_INSTEAD_SELINUX_SS)
+    u32 seqno = ++selinux_state.ss->latest_granting;
+#else
+    u32 seqno = ++(*latest_granting_ptr);
+#endif
     /* Save the old policydb to free later. */
     memcpy(oldpolicydb, policydb_ptr, sizeof(*policydb_ptr));
 
@@ -737,7 +750,7 @@ out_unlock:
     memcpy(policydb_ptr, newpolicydb, sizeof(*policydb_ptr));
     ksu_unlock_sepolicy_legacy();
 
-    reset_avc_cache();
+    reset_avc_cache(seqno);
 
     /* Free the old policydb. */
     ksu_destroy_policydb(oldpolicydb);
@@ -768,12 +781,15 @@ void __init ksu_selinux_init()
 #ifdef CONFIG_KALLSYMS_ALL
     ksu_sel_mutex_ptr = (struct mutex *)ksu_resolve_symbol_for_functable_hook("sel_mutex");
     ksu_policy_rwlock_ptr = (rwlock_t *)ksu_resolve_symbol_for_functable_hook("policy_rwlock");
+    latest_granting_ptr = (u32 *)ksu_resolve_symbol_for_functable_hook("latest_granting");
 #else
     extern struct mutex sel_mutex;
     extern rwlock_t policy_rwlock;
+    extern u32 latest_granting;
 
     ksu_sel_mutex_ptr = &sel_mutex;
     ksu_policy_rwlock_ptr = &policy_rwlock;
+    latest_granting_ptr = &latest_granting;
 #endif
 
 #endif
