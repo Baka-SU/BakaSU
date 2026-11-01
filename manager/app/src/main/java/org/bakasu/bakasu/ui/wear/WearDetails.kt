@@ -46,12 +46,19 @@ import org.bakasu.bakasu.domain.model.AppControlAction
 import org.bakasu.bakasu.domain.model.AppProfile
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.domain.model.InstalledModule
+import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.ui.component.PackageIcon
+import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiAction
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiEvent
 import org.bakasu.bakasu.ui.viewmodel.AppProfileViewModel
+import org.bakasu.bakasu.ui.viewmodel.TemplateUiAction
+import org.bakasu.bakasu.ui.viewmodel.TemplateUiEvent
+import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileConfig
+import org.bakasu.bakasu.ui.wear.component.WearAppProfileModePage
+import org.bakasu.bakasu.ui.wear.component.WearAppProfileTemplateChoicePage
 import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearCompactItemSpacing
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
@@ -221,6 +228,215 @@ internal fun WearModuleDetail(
     }
 }
 
+@Composable
+internal fun WearAppProfileModeRoute(
+    uid: Int,
+    packageName: String,
+    appLabel: String,
+    onBack: () -> Unit,
+    onOpen: (WearRoute) -> Unit,
+    onSaved: () -> Unit,
+) {
+    val viewModel = koinViewModel<AppProfileViewModel>(
+        key = "wear-app-profile-mode-$uid-$packageName",
+        parameters = { parametersOf(uid, packageName) },
+    )
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    var error by remember { mutableStateOf<String?>(null) }
+    var hasResumed by rememberSaveable { mutableStateOf(false) }
+    var openCustomAfterSave by remember { mutableStateOf(false) }
+    val failed = stringResource(R.string.failed_to_update_app_profile, appLabel)
+    val failedSepolicy = stringResource(R.string.failed_to_update_sepolicy, appLabel)
+
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is AppProfileUiEvent.Error -> {
+                    openCustomAfterSave = false
+                    error = failed
+                }
+
+                AppProfileUiEvent.SepolicyUpdateFailed -> {
+                    openCustomAfterSave = false
+                    error = failedSepolicy
+                }
+
+                AppProfileUiEvent.Saved -> {
+                    error = null
+                    onSaved()
+                    if (openCustomAfterSave) {
+                        openCustomAfterSave = false
+                        onOpen(WearRoute.AppProfileCustom(uid, packageName))
+                    }
+                }
+            }
+        }
+    }
+    ActivityResumeEffect(viewModel) {
+        if (hasResumed) {
+            viewModel.dispatch(AppProfileUiAction.Load)
+        } else {
+            hasResumed = true
+        }
+    }
+    WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
+
+    val profile = state.profile
+    if (profile == null) {
+        WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
+            item { WearPageHeader(spec, stringResource(R.string.profile)) }
+            if (!state.isLoading) item { WearStatusItem(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
+        }
+    } else {
+        WearAppProfileModePage(
+            profile = profile,
+            onBack = onBack,
+            onChooseProfile = { viewModel.dispatch(AppProfileUiAction.Save(it)) },
+            onChooseTemplate = { onOpen(WearRoute.AppProfileTemplateChoice(uid, packageName)) },
+            onChooseCustom = {
+                val customProfile = if (profile.allowSu) {
+                    profile.copy(rootUseDefault = false, rootTemplate = null)
+                } else {
+                    profile.copy(nonRootUseDefault = false)
+                }
+                if (customProfile == profile) {
+                    onOpen(WearRoute.AppProfileCustom(uid, packageName))
+                } else {
+                    openCustomAfterSave = true
+                    viewModel.dispatch(AppProfileUiAction.Save(customProfile))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+internal fun WearAppProfileTemplateChoiceRoute(
+    uid: Int,
+    packageName: String,
+    onBack: () -> Unit,
+    onSaved: () -> Unit,
+) {
+    val viewModel = koinViewModel<AppProfileViewModel>(
+        key = "wear-app-profile-template-$uid-$packageName",
+        parameters = { parametersOf(uid, packageName) },
+    )
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val templateViewModel = koinViewModel<TemplateViewModel>(
+        key = "wear-templates",
+        parameters = { parametersOf(true) },
+    )
+    val templates by templateViewModel.uiState.collectAsStateWithLifecycle()
+    var error by remember { mutableStateOf<String?>(null) }
+    val failed = stringResource(R.string.operation_failed)
+    val templateLoadFailed = stringResource(R.string.wear_load_failed)
+
+    LaunchedEffect(templateViewModel) {
+        templateViewModel.dispatch(TemplateUiAction.Refresh())
+        templateViewModel.events.collect { event ->
+            if (event is TemplateUiEvent.Error) error = event.message.ifBlank { templateLoadFailed }
+        }
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is AppProfileUiEvent.Error, AppProfileUiEvent.SepolicyUpdateFailed -> error = failed
+
+                AppProfileUiEvent.Saved -> {
+                    error = null
+                    onSaved()
+                    onBack()
+                }
+            }
+        }
+    }
+    WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
+
+    val profile = state.profile
+    if (profile == null) {
+        WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
+            item { WearPageHeader(spec, stringResource(R.string.profile_template)) }
+            if (!state.isLoading) item { WearStatusItem(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
+        }
+    } else {
+        WearAppProfileTemplateChoicePage(
+            profile = profile,
+            templates = templates.templateList,
+            isRefreshing = templates.isRefreshing,
+            onBack = onBack,
+            onRefresh = { templateViewModel.dispatch(TemplateUiAction.Refresh()) },
+            onChoose = { template: ProfileTemplate ->
+                viewModel.dispatch(
+                    AppProfileUiAction.Save(
+                        profile.copy(
+                            rootUseDefault = false,
+                            rootTemplate = template.id,
+                            uid = template.uid,
+                            gid = template.gid,
+                            groups = template.groups,
+                            capabilities = template.capabilities,
+                            context = template.context,
+                            rules = template.rules.joinToString("\n"),
+                            namespace = template.namespace,
+                        ),
+                    ),
+                )
+            },
+        )
+    }
+}
+
+@Composable
+internal fun WearAppProfileCustomRoute(
+    uid: Int,
+    packageName: String,
+    appLabel: String,
+    onBack: () -> Unit,
+    onOpen: (WearRoute) -> Unit,
+    onSaved: () -> Unit,
+) {
+    val viewModel = koinViewModel<AppProfileViewModel>(
+        key = "wear-app-profile-custom-$uid-$packageName",
+        parameters = { parametersOf(uid, packageName) },
+    )
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    var error by remember { mutableStateOf<String?>(null) }
+    var detailPage by rememberSaveable { mutableStateOf("") }
+    val failed = stringResource(R.string.failed_to_update_app_profile, appLabel)
+    val failedOperation = stringResource(R.string.operation_failed)
+    val failedSepolicy = stringResource(R.string.failed_to_update_sepolicy, appLabel)
+
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            error = when (event) {
+                is AppProfileUiEvent.Error -> if (detailPage == "actions") failedOperation else failed
+                AppProfileUiEvent.SepolicyUpdateFailed -> failedSepolicy
+                AppProfileUiEvent.Saved -> null
+            }
+            if (event is AppProfileUiEvent.Saved) onSaved()
+        }
+    }
+    WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
+
+    val profile = state.profile
+    if (profile != null) {
+        WearAppProfileConfig(
+            profile,
+            state.defaultUmountModules,
+            state.sepolicyValid,
+            { viewModel.dispatch(AppProfileUiAction.ValidateSepolicy(it)) },
+            { viewModel.dispatch(AppProfileUiAction.Save(it)) },
+            onManageTemplates = { onOpen(WearRoute.Templates) },
+            onViewTemplate = { onOpen(WearRoute.TemplateEditor(it, readOnly = true, creation = false)) },
+            onBack = onBack,
+        )
+    } else {
+        WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
+            item { WearPageHeader(spec, stringResource(R.string.profile_custom)) }
+        }
+    }
+}
+
 /**
  * A read-only row in the layout and type sizes of a Wear button: the icon centered beside its label
  * and a quieter secondary label, which wraps rather than running into the icon.
@@ -262,7 +478,7 @@ internal fun WearAppDetail(
     val state by viewModel.state.collectAsStateWithLifecycle()
     var error by remember { mutableStateOf<String?>(null) }
     var detailPage by rememberSaveable { mutableStateOf("") }
-    var editingProfile by rememberSaveable { mutableStateOf(false) }
+    var hasResumed by rememberSaveable { mutableStateOf(false) }
     val failed = stringResource(R.string.failed_to_update_app_profile, group.mainApp.label)
     val failedOperation = stringResource(R.string.operation_failed)
     val failedSepolicy = stringResource(R.string.failed_to_update_sepolicy, group.mainApp.label)
@@ -285,6 +501,13 @@ internal fun WearAppDetail(
             if (event is AppProfileUiEvent.Saved) onSaved()
         }
     }
+    ActivityResumeEffect(viewModel) {
+        if (hasResumed) {
+            viewModel.dispatch(AppProfileUiAction.Load)
+        } else {
+            hasResumed = true
+        }
+    }
 
     WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
     if (detailPage.isNotEmpty()) {
@@ -302,113 +525,96 @@ internal fun WearAppDetail(
         }
         return
     }
-    if (editingProfile) {
-        WearSubPage({ editingProfile = false }) {
-            state.profile?.let { profile ->
-                WearAppProfileConfig(
-                    profile,
-                    state.defaultUmountModules,
-                    state.sepolicyValid,
-                    { viewModel.dispatch(AppProfileUiAction.ValidateSepolicy(it)) },
-                    save,
-                    onManageTemplates = { onOpen(WearRoute.Templates) },
-                    onViewTemplate = { onOpen(WearRoute.TemplateEditor(it, readOnly = true, creation = false)) },
-                    onBack = { editingProfile = false },
-                )
-            }
-        }
-    } else {
-        WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
-            val profile = state.profile
-            if (profile != null) {
-                // As in the design, the page opens with the app title card instead of a page title.
-                item {
-                    WearModuleInfoCard(spec) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            PackageIcon(
-                                packageName = if (group.isWebViewZygote) "android" else group.mainApp.packageName,
-                                contentDescription = null,
-                                modifier = Modifier.size(ButtonDefaults.LargeIconSize),
+    WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
+        val profile = state.profile
+        if (profile != null) {
+            // As in the design, the page opens with the app title card instead of a page title.
+            item {
+                WearModuleInfoCard(spec) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PackageIcon(
+                            packageName = if (group.isWebViewZygote) "android" else group.mainApp.packageName,
+                            contentDescription = null,
+                            modifier = Modifier.size(ButtonDefaults.LargeIconSize),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(group.mainApp.label, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                group.mainApp.displayIdentifier,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(group.mainApp.label, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                Text(
-                                    group.mainApp.displayIdentifier,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
                         }
                     }
                 }
-                item { WearSectionHeader(spec, stringResource(R.string.wear_authorization)) }
+            }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_authorization)) }
+            item {
+                WearSettingsSwitchWidget(
+                    spec,
+                    label = stringResource(R.string.superuser),
+                    checked = profile.allowSu,
+                    onCheckedChange = { save(profile.copy(allowSu = it)) },
+                    enabled = !isManager && !group.isWebViewZygote,
+                    icon = Icons.Rounded.Security,
+                    secondaryLabel = stringResource(R.string.wear_root_access),
+                )
+            }
+            item {
+                WearSettingsJumpPageWidget(
+                    spec,
+                    stringResource(R.string.wear_profile_mode),
+                    { onOpen(WearRoute.AppProfileMode(group.uid, group.primaryPackageName)) },
+                    icon = Icons.Rounded.AccountCircle,
+                    enabled = !isManager,
+                    description = stringResource(
+                        if (if (profile.allowSu) profile.rootUseDefault else profile.nonRootUseDefault) {
+                            R.string.profile_default
+                        } else if (profile.allowSu && profile.rootTemplate != null) {
+                            R.string.profile_template
+                        } else {
+                            R.string.profile_custom
+                        },
+                    ),
+                )
+            }
+            if (!profile.allowSu) {
                 item {
                     WearSettingsSwitchWidget(
                         spec,
-                        label = stringResource(R.string.superuser),
-                        checked = profile.allowSu,
-                        onCheckedChange = { save(profile.copy(allowSu = it)) },
-                        enabled = !isManager && !group.isWebViewZygote,
-                        icon = Icons.Rounded.Security,
-                        secondaryLabel = stringResource(R.string.wear_root_access),
+                        stringResource(R.string.profile_umount_modules),
+                        if (profile.nonRootUseDefault) state.defaultUmountModules else profile.umountModules,
+                        { save(profile.copy(umountModules = it, nonRootUseDefault = false)) },
+                        enabled = !isManager && !profile.nonRootUseDefault,
+                        secondaryLabel = stringResource(R.string.profile_umount_modules_summary),
+                        icon = Icons.Rounded.Extension,
                     )
                 }
-                item {
-                    WearSettingsJumpPageWidget(
-                        spec,
-                        stringResource(R.string.wear_profile_mode),
-                        { editingProfile = true },
-                        icon = Icons.Rounded.AccountCircle,
-                        enabled = !isManager,
-                        description = stringResource(
-                            if (if (profile.allowSu) profile.rootUseDefault else profile.nonRootUseDefault) {
-                                R.string.profile_default
-                            } else if (profile.allowSu && profile.rootTemplate != null) {
-                                R.string.profile_template
-                            } else {
-                                R.string.profile_custom
-                            },
-                        ),
-                    )
-                }
-                if (!profile.allowSu) {
-                    item {
-                        WearSettingsSwitchWidget(
-                            spec,
-                            stringResource(R.string.profile_umount_modules),
-                            if (profile.nonRootUseDefault) state.defaultUmountModules else profile.umountModules,
-                            { save(profile.copy(umountModules = it, nonRootUseDefault = false)) },
-                            enabled = !isManager && !profile.nonRootUseDefault,
-                            secondaryLabel = stringResource(R.string.profile_umount_modules_summary),
-                            icon = Icons.Rounded.Extension,
-                        )
-                    }
-                }
-                item { WearSectionHeader(spec, stringResource(R.string.wear_app_operations)) }
-                item {
-                    WearSettingsJumpPageWidget(
-                        spec,
-                        stringResource(R.string.affected_applications),
-                        { detailPage = "affected" },
-                        description = stringResource(R.string.wear_same_uid_apps),
-                    )
-                }
-                if (!group.isWebViewZygote) {
-                    item {
-                        WearSettingsJumpPageWidget(
-                            spec,
-                            stringResource(R.string.wear_app_operations),
-                            { detailPage = "actions" },
-                            description = stringResource(R.string.wear_app_operations_summary),
-                        )
-                    }
-                }
-            } else {
-                item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
             }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_app_operations)) }
+            item {
+                WearSettingsJumpPageWidget(
+                    spec,
+                    stringResource(R.string.affected_applications),
+                    { detailPage = "affected" },
+                    description = stringResource(R.string.wear_same_uid_apps),
+                )
+            }
+            if (!group.isWebViewZygote) {
+                item {
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(R.string.wear_app_operations),
+                        { detailPage = "actions" },
+                        description = stringResource(R.string.wear_app_operations_summary),
+                    )
+                }
+            }
+        } else {
+            item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
         }
     }
 }

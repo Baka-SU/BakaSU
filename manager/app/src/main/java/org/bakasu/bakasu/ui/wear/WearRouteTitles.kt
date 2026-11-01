@@ -34,6 +34,12 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     is WearRoute.App -> R.string.profile
 
+    is WearRoute.AppProfileMode -> R.string.profile
+
+    is WearRoute.AppProfileTemplateChoice -> R.string.profile_template
+
+    is WearRoute.AppProfileCustom -> R.string.profile_custom
+
     WearRoute.AppFilter -> R.string.wear_filter_sort
 
     WearRoute.AppSearch, WearRoute.AppSearchResults -> R.string.search_apps

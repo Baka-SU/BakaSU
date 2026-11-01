@@ -442,6 +442,38 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     onOpen = ::open,
                                 )
                             }
+                            entry<WearRoute.AppProfileMode> { route ->
+                                WearAppProfileModeRoute(
+                                    route.uid,
+                                    route.packageName,
+                                    superuser.appGroupList.firstOrNull {
+                                        it.uid == route.uid && it.primaryPackageName == route.packageName
+                                    }?.mainApp?.label ?: route.packageName,
+                                    onBack = ::back,
+                                    onOpen = ::open,
+                                    onSaved = { superUserViewModel.dispatch(SuperUserUiAction.StatusChanged) },
+                                )
+                            }
+                            entry<WearRoute.AppProfileTemplateChoice> { route ->
+                                WearAppProfileTemplateChoiceRoute(
+                                    route.uid,
+                                    route.packageName,
+                                    onBack = ::back,
+                                    onSaved = { superUserViewModel.dispatch(SuperUserUiAction.StatusChanged) },
+                                )
+                            }
+                            entry<WearRoute.AppProfileCustom> { route ->
+                                WearAppProfileCustomRoute(
+                                    route.uid,
+                                    route.packageName,
+                                    superuser.appGroupList.firstOrNull {
+                                        it.uid == route.uid && it.primaryPackageName == route.packageName
+                                    }?.mainApp?.label ?: route.packageName,
+                                    onBack = ::back,
+                                    onOpen = ::open,
+                                    onSaved = { superUserViewModel.dispatch(SuperUserUiAction.StatusChanged) },
+                                )
+                            }
                             entry<WearRoute.AppFilter> {
                                 WearSuperUserPanel(superuser, ::back, superUserViewModel::dispatch)
                             }

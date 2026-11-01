@@ -250,15 +250,6 @@ fun WearAppProfileConfig(
     } else {
         WearList(onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.profile)) }
-            item {
-                WearSettingsJumpPageWidget(
-                    spec,
-                    stringResource(R.string.profile),
-                    { page = R.string.profile },
-                    description = stringResource(mode),
-                    icon = Icons.Rounded.Security,
-                )
-            }
             if (!profile.allowSu) {
                 item {
                     WearSettingsSwitchWidget(
