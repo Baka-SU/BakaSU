@@ -11,6 +11,9 @@
 #include <linux/stat.h>
 #include <linux/namei.h>
 #include <linux/kernel.h> // for container_of in UL
+#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
+#include <linux/susfs.h>
+#endif
 
 #include "policy/allowlist.h"
 #include "manager/apk_sign.h"
@@ -421,6 +424,9 @@ void ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
     // and user install an new app before task_work executed
     // ^ race here
     track_throne(TRACK_THRONE_FROM_RENAMEAT | TRACK_THRONE_FORCE_SYNCHRONOUS);
+#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
+    susfs_parse_priority_app_strings();
+#endif
 }
 #endif
 
