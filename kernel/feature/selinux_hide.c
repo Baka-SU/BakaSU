@@ -1133,8 +1133,7 @@ static void *selinux_hide_symtab_search(struct symtab *s, const char *key)
  * aliases and missing indexed entries fall back to the live name lookup.
  * No pointers or mappings are retained beyond the protected policy lifetime.
  */
-static void *selinux_hide_lookup_live_symbol(struct policydb *pol, unsigned int sym,
-                                            u32 value, const char *key)
+static void *selinux_hide_lookup_live_symbol(struct policydb *pol, unsigned int sym, u32 value, const char *key)
 {
     void *datum = NULL;
     const char *name = NULL;
@@ -1380,7 +1379,7 @@ static int ksu_security_context_to_sid(struct policydb *orig_policydb, struct si
     if (orig_sid_p)
         *orig_sid_p = SECSID_NULL;
 
-        // removed: if (force)
+    // removed: if (force)
 retry:
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_SELINUX_POLICY_STRUCT)
     rcu_read_lock();
