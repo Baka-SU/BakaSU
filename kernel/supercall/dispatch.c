@@ -9,6 +9,7 @@
 #include <linux/uaccess.h>
 #include <linux/version.h>
 #ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs.h>
 #include <linux/susfs_def.h>
 #endif
 
@@ -1168,6 +1169,12 @@ int ksu_handle_susfs_cmd(unsigned int cmd, void __user **arg)
         return 0;
     }
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
+#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
+    case CMD_SUSFS_SET_PRIORITY_UID_FILTER: {
+        susfs_set_priority_uid_filter(arg);
+        return 0;
+    }
+#endif // CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
     case CMD_SUSFS_ENABLE_AVC_LOG_SPOOFING: {
         susfs_set_avc_log_spoofing(arg);
         return 0;
