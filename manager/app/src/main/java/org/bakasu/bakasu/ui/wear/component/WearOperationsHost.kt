@@ -44,7 +44,6 @@ internal fun WearOperationsHost(
         }
         wasOpen = menuOpen
     }
-    val stateHolder = rememberSaveableStateHolder()
     var height by remember { mutableFloatStateOf(1f) }
     val screenActive = LocalScreenIsActive.current
     CompositionLocalProvider(
@@ -58,6 +57,8 @@ internal fun WearOperationsHost(
                 content()
             }
             if (!menuClosed && menuKey != null && (menuOpen || pull.floatValue > 0f)) {
+                // Keep position while a child page covers the menu, but discard it when the reveal ends.
+                val stateHolder = rememberSaveableStateHolder()
                 val dim = WearPanelMaxDim * (pull.floatValue / WearPanelDimReach).coerceIn(0f, 1f)
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)).clearAndSetSemantics {})
                 Box(

@@ -103,7 +103,8 @@ internal fun WearOperationsPanel(
             WearIconAction(Icons.Rounded.Cloud, stringResource(R.string.repo_manage), { onOpen(WearRoute.RepositorySources) }),
         )
     }
-    val listState = rememberPanelListState()
+    // Start the reveal at the end on its first layout, before the preview is shown.
+    val listState = rememberTransformingLazyColumnState(initialAnchorItemIndex = actions.lastIndex.coerceAtLeast(0))
     WearList(onClosePanel = onBack, onPanelClosing = onClosing, snap = false, listState = listState) { spec ->
         LazySegmentedColumn(actions, { it.label }) { action ->
             WearSettingsJumpPageWidget(spec, action.label, action.onClick, icon = action.icon, enabled = action.enabled)
@@ -114,7 +115,7 @@ internal fun WearOperationsPanel(
 @Composable
 internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onAction: (SuperUserUiAction) -> Unit) {
     val listState = rememberPanelListState()
-    WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
+    WearList(onBack = onBack, snap = true, listState = listState) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_filter_sort)) }
         item {
             WearSettingsSwitchWidget(
@@ -149,7 +150,7 @@ internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onA
 @Composable
 internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction: (ModuleUiAction) -> Unit) {
     val listState = rememberPanelListState()
-    WearList(onBack = onBack, onClosePanel = onBack, snap = true, listState = listState) { spec ->
+    WearList(onBack = onBack, snap = true, listState = listState) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_sort)) }
         item {
             WearSettingsSwitchWidget(

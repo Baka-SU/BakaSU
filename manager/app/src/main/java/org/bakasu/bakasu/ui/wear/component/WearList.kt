@@ -324,7 +324,7 @@ fun WearList(
             ScreenScaffold(
                 scrollState = listState,
                 modifier = pageModifier,
-                scrollIndicator = { if (onClosePanel == null && !LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
+                scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
                 edgeButton = {
                     EdgeButton(
                         enabled = onConfirm == null || confirmEnabled,
@@ -401,7 +401,7 @@ fun WearList(
             ScreenScaffold(
                 scrollState = listState,
                 modifier = pageModifier,
-                scrollIndicator = { if (onClosePanel == null && !LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
+                scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
             ) { listContent(it) }
         }
     }
