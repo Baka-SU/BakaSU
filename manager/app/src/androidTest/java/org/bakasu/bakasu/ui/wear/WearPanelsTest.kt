@@ -87,6 +87,19 @@ class WearPanelsTest(private val round: Boolean, private val page: WearOperation
     }
 
     @Test
+    fun downwardPullAtTopClosesOperationsPanel() {
+        showPanels()
+        previewMenu()
+        compose.runOnIdle { menuOpen = true }
+        menuList().performScrollToIndex(0)
+        compose.onNodeWithTag("menu", useUnmergedTree = true).performTouchInput {
+            swipe(Offset(centerX, height * 0.25f), Offset(centerX, height * 0.85f), 300)
+        }
+        compose.runOnIdle { assertFalse("A downward pull at the top must close the operations panel", menuOpen) }
+        compose.onNodeWithTag("menu", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
     fun filterUsesBackButtonAndDoesNotCloseOnBottomPull() {
         showPanels()
         compose.runOnIdle {
@@ -130,7 +143,6 @@ class WearPanelsTest(private val round: Boolean, private val page: WearOperation
                                         menuKey = page,
                                         menuOpen = menuOpen,
                                         menuActive = menuOpen,
-                                        onBack = { menuOpen = false },
                                         menuContent = { onClosing ->
                                             Box(Modifier.fillMaxSize().testTag("menu")) {
                                                 WearOperationsPanel(

@@ -2,7 +2,6 @@ package org.bakasu.bakasu.ui.wear
 
 import android.content.Intent
 import android.os.Build
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -95,6 +94,7 @@ import org.bakasu.bakasu.ui.wear.component.WearHorizontalPageIndicator
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPager
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
 import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
+import org.bakasu.bakasu.ui.wear.component.WearOperationsBackHandler
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
@@ -303,7 +303,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                 NavDisplay(
                     backStack = navigator.backStack.filterNot { it is WearRoute.Operations },
                     onBack = { back() },
-                    sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss)),
+                    sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = !operationsOnTop && (Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss))),
                     entryDecorators = listOf(
                         rememberSaveableStateHolderNavEntryDecorator(),
                         rememberViewModelStoreNavEntryDecorator(),
@@ -670,7 +670,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 menuKey = operationsPage,
                                 menuOpen = menu != null,
                                 menuActive = menu != null && navigator.top == menu,
-                                onBack = closeMenu,
                                 menuContent = { onClosing ->
                                     if (operationsPage != null) {
                                         WearOperationsPanel(
@@ -701,7 +700,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                     ),
                 )
             }
-            BackHandler(operationsOnTop) { back() }
+            WearOperationsBackHandler(operationsOnTop) { back() }
             // Over the pages: waiting for a link to open, which Back cancels, and its result.
             WearLinkHost(linkViewModel) { open(WearRoute.Browser(it)) }
         }

@@ -107,6 +107,7 @@ fun WearList(
     onOpenPanel: (() -> Unit)? = null,
     hasOperationsPanel: Boolean = false,
     onClosePanel: (() -> Unit)? = null,
+    closePanelOnPullDown: Boolean = false,
     onPanelClosing: (() -> Unit)? = null,
     panelLabel: String? = null,
     snap: Boolean = false,
@@ -134,9 +135,10 @@ fun WearList(
     var closingPanel by remember { mutableStateOf(false) }
     var draggingPanel by remember { mutableStateOf(false) }
     val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
+    val closeDirection = if (closePanelOnPullDown) 1f else -1f
     val closeProgress by animateFloatAsState(
-        if (closingPanel) 1f else (-pullProgress.floatValue * threshold / viewportHeight).coerceIn(0f, 1f),
-        animationSpec = if (reduceMotion || draggingPanel || (pullProgress.floatValue < 0f && !closingPanel)) snap() else tween(180),
+        if (closingPanel) 1f else (closeDirection * pullProgress.floatValue * threshold / viewportHeight).coerceIn(0f, 1f),
+        animationSpec = if (reduceMotion || draggingPanel || (closeDirection * pullProgress.floatValue > 0f && !closingPanel)) snap() else tween(180),
         label = "wear-panel-close",
         finishedListener = { if (closingPanel && it == 1f && screenActive) onClosePanel?.invoke() },
     )
@@ -211,7 +213,7 @@ fun WearList(
         animationSpec = if (reduceMotion || pullOffset.floatValue != 0f) snap() else tween(180),
         label = "wear-boundary-pull",
     )
-    val currentPanelPull = { if (onClosePanel != null) -closeProgress * viewportHeight else panelProgress * viewportHeight }
+    val currentPanelPull = { if (onClosePanel != null) closeDirection * closeProgress * viewportHeight else panelProgress * viewportHeight }
     // Keep the gesture on the stationary viewport while its pages move underneath it.
     val gestureModifier = Modifier.wearRefreshGesture(
         listState,
@@ -219,6 +221,7 @@ fun WearList(
         pullProgress,
         enabled = screenActive && (!panelHosted || onClosePanel != null) && !isLoading && !isRefreshing && !isBusy,
         onRefresh = onRefresh,
+        closePanelOnPullDown = closePanelOnPullDown,
         onOpenPanel = onOpenPanel?.let { open ->
             {
                 if (!hasOperationsPanel) {
@@ -299,7 +302,7 @@ fun WearList(
                     content(transformationSpec)
                 }
                 // Pulling down at the top shows the panel indicator in the room the list makes for it.
-                if (onOpenPanel != null && !hasOperationsPanel) {
+                if ((onOpenPanel != null && !hasOperationsPanel) || (onClosePanel != null && closePanelOnPullDown)) {
                     WearPullIndicator(
                         pullProgress.floatValue,
                         closing = onClosePanel != null,
@@ -312,7 +315,7 @@ fun WearList(
     // The main page stays stationary; the menu is a separate surface above it. Behind an opening
     // panel the page also scales down, so the panel appears to land on a receding page.
     val pageModifier = Modifier.graphicsLayer {
-        translationY = if (onClosePanel != null && !panelHosted) -closeProgress * viewportHeight else 0f
+        translationY = if (onClosePanel != null) closeDirection * closeProgress * viewportHeight else 0f
         if (hasOperationsPanel) {
             scaleX = pageScale
             scaleY = pageScale

@@ -33,8 +33,9 @@ internal val WearPullThreshold = 48.dp
 
 /**
  * Pulls past the list boundaries. At the top, pulling down (or turning the crown up) opens the page's
- * panel; at the end, pulling up (or, in a panel, turning the crown down) closes the panel, and
- * pulling up refreshes the main list. Releasing past
+ * panel, or closes it when [closePanelOnPullDown] is set. At the end, pulling up refreshes the main
+ * list or closes a panel that uses upward dismissal. Turning the crown down past the end still
+ * closes either kind of panel. Releasing past
  * the 48dp threshold commits; ordinary scrolling and shorter pulls do nothing.
  *
  * Apply it to the whole screen (list and edge button), so a pull that starts on the edge button at
@@ -51,6 +52,7 @@ internal fun Modifier.wearRefreshGesture(
     onRefresh: (() -> Unit)?,
     onOpenPanel: (() -> Unit)? = null,
     onClosePanel: (() -> Unit)? = null,
+    closePanelOnPullDown: Boolean = false,
     panelLabel: String? = null,
     currentPanelPull: () -> Float = { 0f },
     onPullStart: () -> Float = { 0f },
@@ -59,9 +61,10 @@ internal fun Modifier.wearRefreshGesture(
     // Lists without any boundary action keep their gestures untouched.
     if (onRefresh == null && onOpenPanel == null && onClosePanel == null) return this
     val active by rememberUpdatedState(enabled)
-    val refresh by rememberUpdatedState(onRefresh)
     val panel by rememberUpdatedState(onOpenPanel)
     val closePanel by rememberUpdatedState(onClosePanel)
+    val downAction by rememberUpdatedState(if (closePanelOnPullDown) onClosePanel else onOpenPanel)
+    val upAction by rememberUpdatedState(if (closePanelOnPullDown) onRefresh else onClosePanel ?: onRefresh)
     val heldPanelPull by rememberUpdatedState(currentPanelPull)
     val pullStart by rememberUpdatedState(onPullStart)
     val pullEnd by rememberUpdatedState(onPullEnd)
@@ -75,13 +78,13 @@ internal fun Modifier.wearRefreshGesture(
     val crown = remember { CrownPull() }
     return this.onPreRotaryScrollEvent { event ->
         // A panel closes past its end with the crown turned down; a page opens its panel past the
-        // top with the crown turned up, mirroring the touch pulls.
+        // top with the crown turned up. Touch dismissal may instead use a downward pull at the top.
         val closing = closePanel != null
         val action = closePanel ?: panel
         val now = SystemClock.uptimeMillis()
         val atBoundary = if (closing) !listState.canScrollForward else !listState.canScrollBackward
         val delta = if (closing) event.verticalScrollPixels else -event.verticalScrollPixels
-        val sign = if (closing) -1f else 1f
+        val sign = if (closing && !closePanelOnPullDown) -1f else 1f
         if (action == null || !active || !atBoundary || delta <= 0f || now - crown.lastEvent > 600) crown.accumulated = 0f
         crown.lastEvent = now
         if (action != null && active && atBoundary && delta > 0f) {
@@ -124,9 +127,9 @@ internal fun Modifier.wearRefreshGesture(
                     if (!pointer.pressed) {
                         if (!canceled && active) {
                             if (pullDown >= threshold) {
-                                panel?.invoke()
+                                downAction?.invoke()
                             } else if (pullUp >= threshold) {
-                                (closePanel ?: refresh)?.invoke()
+                                upAction?.invoke()
                             }
                         }
                         break
@@ -139,10 +142,10 @@ internal fun Modifier.wearRefreshGesture(
                         // A settling panel can be caught from either direction. An ordinary
                         // boundary pull still starts only towards its own action.
                         val canPull = when {
-                            resumingPanel > 0f -> panel != null && startedAtTop && !listState.canScrollBackward
-                            resumingPanel < 0f -> closePanel != null && startedAtEnd && !listState.canScrollForward
-                            total.y > 0f -> panel != null && startedAtTop && !listState.canScrollBackward
-                            else -> (closePanel != null || refresh != null) && startedAtEnd && !listState.canScrollForward
+                            resumingPanel > 0f -> downAction != null && startedAtTop && !listState.canScrollBackward
+                            resumingPanel < 0f -> upAction != null && startedAtEnd && !listState.canScrollForward
+                            total.y > 0f -> downAction != null && startedAtTop && !listState.canScrollBackward
+                            else -> upAction != null && startedAtEnd && !listState.canScrollForward
                         }
                         if (pointer.isConsumed || abs(total.x) >= abs(total.y) || !canPull) {
                             canceled = true
@@ -157,8 +160,8 @@ internal fun Modifier.wearRefreshGesture(
                         }
                     }
                     // A pull grows only while its boundary is held, and moving back shrinks it.
-                    pullDown = if (panel != null && startedAtTop && !listState.canScrollBackward) (pullDown + dy).coerceAtLeast(0f) else 0f
-                    pullUp = if ((closePanel != null || refresh != null) && startedAtEnd && !listState.canScrollForward) (pullUp - dy).coerceAtLeast(0f) else 0f
+                    pullDown = if (downAction != null && startedAtTop && !listState.canScrollBackward) (pullDown + dy).coerceAtLeast(0f) else 0f
+                    pullUp = if (upAction != null && startedAtEnd && !listState.canScrollForward) (pullUp - dy).coerceAtLeast(0f) else 0f
                     if (canceled) {
                         displacement.floatValue = 0f
                         pullProgress.floatValue = 0f

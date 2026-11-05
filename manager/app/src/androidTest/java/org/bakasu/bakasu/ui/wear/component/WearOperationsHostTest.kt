@@ -5,6 +5,7 @@ import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.ViewConfiguration
+import androidx.activity.BackEventCompat
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,8 +20,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
@@ -86,7 +91,76 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
         compose.onNodeWithTag("menu").assertDoesNotExist()
     }
 
-    private fun showHost() {
+    @Test
+    fun horizontalSwipesDoNotCloseMenu() {
+        showHost(initiallyOpen = true)
+        compose.onNodeWithTag("menu").performTouchInput {
+            swipe(Offset(1f, centerY), Offset(width - 1f, centerY), 300)
+            swipe(Offset(width - 1f, centerY), Offset(1f, centerY), 300)
+        }
+        assertFullMenu()
+    }
+
+    @Test
+    fun downwardPullClosesMenuOnlyAfterThreshold() {
+        showHost(initiallyOpen = true)
+        compose.onNodeWithTag("menu").performTouchInput {
+            swipe(Offset(centerX, height * 0.25f), Offset(centerX, height * 0.30f), 300)
+        }
+        assertFullMenu()
+        compose.onNodeWithTag("menu").performTouchInput {
+            swipe(Offset(centerX, height * 0.25f), Offset(centerX, height * 0.85f), 300)
+        }
+        compose.runOnIdle { assertFalse("A downward pull at the top must close the menu", menuOpen) }
+        compose.onNodeWithTag("menu").assertDoesNotExist()
+    }
+
+    @Test
+    fun scrollingDownFromTheEndDoesNotCloseMenu() {
+        showHost(initiallyOpen = true)
+        menuList().performScrollToIndex(7)
+        compose.onNodeWithTag("menu").performTouchInput {
+            swipe(Offset(centerX, height * 0.25f), Offset(centerX, height * 0.85f), 300)
+        }
+        assertFullMenu()
+    }
+
+    @Test
+    fun upwardPullAtTheEndDoesNotCloseMenu() {
+        showHost(initiallyOpen = true)
+        menuList().performScrollToIndex(7)
+        compose.onNodeWithTag("menu").performTouchInput {
+            swipe(Offset(centerX, height * 0.85f), Offset(centerX, height * 0.15f), 300)
+        }
+        assertFullMenu()
+    }
+
+    @Test
+    fun predictiveBackFromEitherEdgeDoesNotCloseMenu() {
+        showHost(initiallyOpen = true)
+        listOf(BackEventCompat.EDGE_LEFT, BackEventCompat.EDGE_RIGHT).forEach { edge ->
+            compose.runOnIdle {
+                compose.activity.onBackPressedDispatcher.dispatchOnBackStarted(BackEventCompat(0f, 0f, 0f, edge))
+            }
+            compose.runOnIdle {
+                compose.activity.onBackPressedDispatcher.dispatchOnBackProgressed(BackEventCompat(100f, 0f, 0.8f, edge))
+            }
+            compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+            assertFullMenu()
+        }
+    }
+
+    @Test
+    fun backButtonStillClosesMenu() {
+        showHost(initiallyOpen = true)
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.runOnIdle { assertFalse(menuOpen) }
+    }
+
+    private fun menuList() = compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(hasTestTag("menu")), useUnmergedTree = true)
+
+    private fun showHost(initiallyOpen: Boolean = false) {
+        menuOpen = initiallyOpen
         compose.setContent {
             val configuration = Configuration(LocalConfiguration.current).apply {
                 screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
@@ -100,13 +174,13 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
                                 menuKey = "operations",
                                 menuOpen = menuOpen,
                                 menuActive = menuOpen,
-                                onBack = { menuOpen = false },
                                 menuContent = { onClosing ->
                                     menuState = rememberTransformingLazyColumnState()
                                     Box(Modifier.fillMaxSize().testTag("menu")) {
                                         WearList(
                                             listState = menuState,
                                             onClosePanel = { menuOpen = false },
+                                            closePanelOnPullDown = true,
                                             onPanelClosing = onClosing,
                                         ) { spec ->
                                             items(8) { WearChip(spec, stringResource(R.string.wear_filter_sort)) }
@@ -120,6 +194,7 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
                                     Page()
                                 }
                             }
+                            WearOperationsBackHandler(menuOpen) { menuOpen = false }
                         }
                     }
                 }

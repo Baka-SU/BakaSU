@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear.component
 
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,7 +29,6 @@ internal fun WearOperationsHost(
     menuKey: Any?,
     menuOpen: Boolean,
     menuActive: Boolean,
-    onBack: () -> Unit,
     menuContent: @Composable (onClosing: () -> Unit) -> Unit,
     content: @Composable () -> Unit,
 ) {
@@ -64,20 +64,26 @@ internal fun WearOperationsHost(
                 Box(
                     Modifier.fillMaxSize().hierarchicalFocusGroup(active = menuActive && screenActive)
                         .onSizeChanged { height = it.height.toFloat() }
-                        .graphicsLayer { translationY = (pull.floatValue - 1f) * height }
+                        .graphicsLayer { translationY = if (menuOpen) 0f else (pull.floatValue - 1f) * height }
                         .clipToBounds().then(if (menuActive) Modifier else Modifier.clearAndSetSemantics {}),
                 ) {
                     CompositionLocalProvider(LocalScreenIsActive provides (menuActive && screenActive)) {
-                        WearSwipeToDismissBox(onDismissed = { if (menuActive) onBack() }) { isBackground ->
-                            if (!isBackground) {
-                                stateHolder.SaveableStateProvider(menuKey) {
-                                    menuContent { dismissals++ }
-                                }
-                            }
+                        stateHolder.SaveableStateProvider(menuKey) {
+                            menuContent { dismissals++ }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/** Menus ignore system back gestures while keeping button and accessibility Back available. */
+@Composable
+internal fun WearOperationsBackHandler(enabled: Boolean, onBack: () -> Unit) {
+    PredictiveBackHandler(enabled) { progress ->
+        var gestured = false
+        progress.collect { gestured = true }
+        if (!gestured) onBack()
     }
 }
