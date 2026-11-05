@@ -6,7 +6,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -715,17 +719,35 @@ private val PageBaseDecorator: NavEntryDecorator<NavKey> =
         }
     }
 
-private val WearPageTransitions: Map<String, Any> = NavDisplay.transitionSpec {
-    (
-        slideInHorizontally(initialOffsetX = { it / 2 }, animationSpec = spring(0.8f, 300f)) +
-            scaleIn(initialScale = 0.8f, animationSpec = spring(1f, 500f)) +
-            fadeIn(animationSpec = spring(1f, 1500f))
+private val WearPageTransitions: Map<String, Any> = if (Build.VERSION.SDK_INT >= 36) {
+    val popTransition = (
+        scaleIn(initialScale = 0.9f, animationSpec = tween(easing = LinearEasing)) +
+            slideInHorizontally(initialOffsetX = { -it / 4 }, animationSpec = tween(easing = LinearEasing)) +
+            fadeIn(initialAlpha = 0.5f, animationSpec = tween(easing = LinearEasing))
         ) togetherWith
         (
-            scaleOut(targetScale = 0.85f, animationSpec = spring(1f, 150f)) +
-                slideOutHorizontally(targetOffsetX = { -it / 2 }, animationSpec = spring(0.8f, 200f)) +
-                fadeOut(targetAlpha = 0f, animationSpec = spring(1f, 1400f))
+            slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(easing = LinearEasing)) +
+                scaleOut(targetScale = 0.9f, animationSpec = tween(easing = LinearEasing))
             )
+
+    // Finish forward navigation immediately so a quick predictive back has no entrance animation
+    // to overlap. Both back paths keep the same scale handoff, including gesture cancellation.
+    NavDisplay.transitionSpec { EnterTransition.None togetherWith ExitTransition.None } +
+        NavDisplay.popTransitionSpec { popTransition } +
+        NavDisplay.predictivePopTransitionSpec { popTransition }
+} else {
+    NavDisplay.transitionSpec {
+        (
+            slideInHorizontally(initialOffsetX = { it / 2 }, animationSpec = spring(0.8f, 300f)) +
+                scaleIn(initialScale = 0.8f, animationSpec = spring(1f, 500f)) +
+                fadeIn(animationSpec = spring(1f, 1500f))
+            ) togetherWith
+            (
+                scaleOut(targetScale = 0.85f, animationSpec = spring(1f, 150f)) +
+                    slideOutHorizontally(targetOffsetX = { -it / 2 }, animationSpec = spring(0.8f, 200f)) +
+                    fadeOut(targetAlpha = 0f, animationSpec = spring(1f, 1400f))
+                )
+    }
 }
 
 /**
