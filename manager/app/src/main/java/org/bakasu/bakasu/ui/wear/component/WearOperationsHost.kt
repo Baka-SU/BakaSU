@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.wear.compose.foundation.LocalScreenIsActive
+import androidx.wear.compose.foundation.hierarchicalFocusGroup
 
 /** Keeps a menu in its owning navigation entry, including while that entry animates away. */
 @Composable
@@ -52,12 +53,16 @@ internal fun WearOperationsHost(
         LocalWearPanelPull provides pull,
     ) {
         Box(Modifier.fillMaxSize()) {
-            content()
+            // A preview must leave crown focus on its page until the menu finishes opening.
+            Box(Modifier.fillMaxSize().hierarchicalFocusGroup(active = screenActive && !menuOpen)) {
+                content()
+            }
             if (!menuClosed && menuKey != null && (menuOpen || pull.floatValue > 0f)) {
                 val dim = WearPanelMaxDim * (pull.floatValue / WearPanelDimReach).coerceIn(0f, 1f)
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)).clearAndSetSemantics {})
                 Box(
-                    Modifier.fillMaxSize().onSizeChanged { height = it.height.toFloat() }
+                    Modifier.fillMaxSize().hierarchicalFocusGroup(active = menuActive && screenActive)
+                        .onSizeChanged { height = it.height.toFloat() }
                         .graphicsLayer { translationY = (pull.floatValue - 1f) * height }
                         .clipToBounds().then(if (menuActive) Modifier else Modifier.clearAndSetSemantics {}),
                 ) {

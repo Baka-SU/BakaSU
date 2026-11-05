@@ -135,6 +135,7 @@ android {
         versionCode = managerVersionCode
         versionName = managerVersionName
         applicationId = managerPackageName
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val isPrBuild = rootProject.extra["isPrBuild"] as Boolean
         buildConfigField("boolean", "IS_PR_BUILD", isPrBuild.toString())
@@ -196,6 +197,8 @@ aboutLibraries {
 
 dependencies {
     testImplementation(libs.junit4)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.runner)
     lintChecks(project(":lint-rules"))
     baselineProfile(project(":baselineprofile"))
 
@@ -230,6 +233,8 @@ dependencies {
 
     implementation(libs.androidx.compose.runtime.tracing)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // Keep the debug APK aligned with Compose UI tests under AGP's tested-app constraints.
+    debugImplementation(libs.androidx.concurrent.futures.ktx)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.androidx.lifecycle.runtime.compose)
