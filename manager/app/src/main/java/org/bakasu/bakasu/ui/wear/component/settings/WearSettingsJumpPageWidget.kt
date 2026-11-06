@@ -11,7 +11,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.SurfaceTransformation
@@ -19,6 +18,7 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 
 /**
  * A settings entry that opens another page: a neutral filled tonal button with an optional leading
@@ -54,7 +54,7 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
             {
                 val iconModifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)
                 if (isLoading) {
-                    CircularProgressIndicator(iconModifier.semantics { contentDescription = loadingDescription })
+                    WearLoadingIndicator(iconModifier.semantics { contentDescription = loadingDescription })
                 } else {
                     Icon(it, contentDescription = null, modifier = iconModifier)
                 }
