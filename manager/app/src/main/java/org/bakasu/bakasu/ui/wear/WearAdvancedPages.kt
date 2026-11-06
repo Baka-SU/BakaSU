@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -282,9 +283,16 @@ internal fun WearUmountPage(onBack: () -> Unit, onAdd: () -> Unit) {
             if (it is UmountManagerUiEvent.Message && !it.added) result = WearResult(it.message, success = it.success)
         }
     }
-    WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.umount_path_manager)) }
-        item { WearActionButton(spec, Icons.Rounded.Add, stringResource(R.string.add_umount_path), onAdd) }
+    WearList(
+        isLoading = state.isLoading,
+        onBack = onBack,
+        fixedHeader = {
+            Column {
+                WearPageHeader(stringResource(R.string.umount_path_manager))
+                WearActionButton(Icons.Rounded.Add, stringResource(R.string.add_umount_path), onAdd)
+            }
+        },
+    ) { spec ->
         items(state.umountPaths, key = { it.path }) { entry ->
             WearActionButton(spec, Icons.Rounded.Delete, entry.path, {
                 selected = entry

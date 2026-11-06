@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
@@ -33,6 +34,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -92,6 +94,7 @@ val LocalWearPanelPull = compositionLocalOf { mutableFloatStateOf(0f) }
  * The list uses the [ScreenScaffold] content padding (5.2% side and 10% vertical margins); items
  * raise the top and bottom padding with `minimumVerticalContentPadding` when they sit at an edge.
  * [snap] centers items after a fling or crown rotation, for lists of similarly sized items.
+ * [fixedHeader] stays above the list and reserves its measured height without covering list items.
  */
 @Composable
 fun WearList(
@@ -114,6 +117,7 @@ fun WearList(
     itemSpacing: Dp = WearItemSpacing,
     topContentPadding: Dp = 0.dp,
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
+    fixedHeader: (@Composable () -> Unit)? = null,
     content: TransformingLazyColumnScope.(TransformationSpec) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -274,40 +278,62 @@ fun WearList(
                 WearLoadingIndicator(Modifier.semantics { contentDescription = loadingDescription })
             }
         } else {
-            Box(Modifier.fillMaxSize()) {
-                TransformingLazyColumn(
-                    modifier = Modifier.fillMaxSize().graphicsLayer {
-                        translationY = if (panelHosted && onClosePanel != null) {
-                            0f
-                        } else if (!hasOperationsPanel || pullProgress.floatValue < 0f) {
-                            animatedOffset
-                        } else {
-                            0f
-                        }
-                    },
-                    state = listState,
-                    contentPadding = contentPadding,
-                    verticalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.Top),
-                    flingBehavior = if (snap) {
-                        TransformingLazyColumnDefaults.snapFlingBehavior(listState)
-                    } else {
-                        ScrollableDefaults.flingBehavior()
-                    },
-                    rotaryScrollableBehavior = if (snap) {
-                        RotaryScrollableDefaults.snapBehavior(listState)
-                    } else {
-                        RotaryScrollableDefaults.behavior(listState)
-                    },
-                ) {
-                    content(transformationSpec)
+            Column(Modifier.fillMaxSize()) {
+                if (fixedHeader != null) {
+                    Box(
+                        Modifier.padding(
+                            start = contentPadding.calculateStartPadding(layoutDirection),
+                            end = contentPadding.calculateEndPadding(layoutDirection),
+                            top = contentPadding.calculateTopPadding(),
+                            bottom = itemSpacing,
+                        ),
+                    ) {
+                        fixedHeader()
+                    }
                 }
-                // Pulling down at the top shows the panel indicator in the room the list makes for it.
-                if ((onOpenPanel != null && !hasOperationsPanel) || (onClosePanel != null && closePanelOnPullDown)) {
-                    WearPullIndicator(
-                        pullProgress.floatValue,
-                        closing = onClosePanel != null,
-                        Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
-                    )
+                Box(Modifier.weight(1f).then(if (fixedHeader != null) Modifier.clipToBounds() else Modifier)) {
+                    TransformingLazyColumn(
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            translationY = if (panelHosted && onClosePanel != null) {
+                                0f
+                            } else if (!hasOperationsPanel || pullProgress.floatValue < 0f) {
+                                animatedOffset
+                            } else {
+                                0f
+                            }
+                        },
+                        state = listState,
+                        contentPadding = if (fixedHeader == null) {
+                            contentPadding
+                        } else {
+                            PaddingValues(
+                                start = contentPadding.calculateStartPadding(layoutDirection),
+                                end = contentPadding.calculateEndPadding(layoutDirection),
+                                bottom = contentPadding.calculateBottomPadding(),
+                            )
+                        },
+                        verticalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.Top),
+                        flingBehavior = if (snap) {
+                            TransformingLazyColumnDefaults.snapFlingBehavior(listState)
+                        } else {
+                            ScrollableDefaults.flingBehavior()
+                        },
+                        rotaryScrollableBehavior = if (snap) {
+                            RotaryScrollableDefaults.snapBehavior(listState)
+                        } else {
+                            RotaryScrollableDefaults.behavior(listState)
+                        },
+                    ) {
+                        content(transformationSpec)
+                    }
+                    // Pulling down at the top shows the panel indicator in the room the list makes for it.
+                    if ((onOpenPanel != null && !hasOperationsPanel) || (onClosePanel != null && closePanelOnPullDown)) {
+                        WearPullIndicator(
+                            pullProgress.floatValue,
+                            closing = onClosePanel != null,
+                            Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
+                        )
+                    }
                 }
             }
         }

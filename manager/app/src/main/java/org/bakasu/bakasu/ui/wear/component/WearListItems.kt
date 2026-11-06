@@ -45,13 +45,27 @@ fun TransformingLazyColumnItemScope.WearPageHeader(
     transformationSpec: TransformationSpec,
     title: String,
 ) {
+    WearPageHeader(
+        title,
+        modifier = Modifier.transformedHeight(this, transformationSpec)
+            .minimumVerticalContentPadding(ListHeaderDefaults.minimumTopListContentPadding),
+        transformation = SurfaceTransformation(transformationSpec),
+    )
+}
+
+/** The same page heading without list transformations when placed in a fixed header. */
+@Composable
+fun WearPageHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    transformation: SurfaceTransformation? = null,
+) {
     if (LocalWearTimeOptions.current.mode == "title") return
     val side = maxOf(14.dp, (LocalConfiguration.current.screenWidthDp * 0.073f).dp)
     val defaults = ListHeaderDefaults.ContentPadding
     ListHeader(
-        modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec)
-            .minimumVerticalContentPadding(ListHeaderDefaults.minimumTopListContentPadding),
-        transformation = SurfaceTransformation(transformationSpec),
+        modifier = modifier.fillMaxWidth(),
+        transformation = transformation,
         contentPadding = PaddingValues(
             start = side,
             end = side,
@@ -111,13 +125,38 @@ fun TransformingLazyColumnItemScope.WearActionButton(
     compact: Boolean = false,
     largeIcon: Boolean = false,
 ) {
+    WearActionButton(
+        icon, label, onClick,
+        modifier = Modifier.transformedHeight(this, transformationSpec)
+            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
+        enabled = enabled,
+        secondaryText = secondaryText,
+        colors = colors,
+        compact = compact,
+        largeIcon = largeIcon,
+        transformation = SurfaceTransformation(transformationSpec),
+    )
+}
+
+/** A Wear action outside a scrolling list, sharing the same appearance and sizing. */
+@Composable
+fun WearActionButton(
+    icon: ImageVector?,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    secondaryText: String? = null,
+    colors: ButtonColors = wearButtonColors(),
+    compact: Boolean = false,
+    largeIcon: Boolean = false,
+    transformation: SurfaceTransformation? = null,
+) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec)
-            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)
-            .wearCompactRow(compact),
-        transformation = SurfaceTransformation(transformationSpec),
+        modifier = modifier.fillMaxWidth().wearCompactRow(compact),
+        transformation = transformation,
         colors = colors,
         contentPadding = if (largeIcon) ButtonDefaults.ButtonWithLargeIconContentPadding else ButtonDefaults.ContentPadding,
         icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
