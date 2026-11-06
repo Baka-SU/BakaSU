@@ -1,9 +1,17 @@
 package org.bakasu.bakasu.ui.wear.component
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.History
@@ -16,16 +24,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.FilledTonalIconButton
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.viewmodel.WearSearchViewModel
@@ -46,57 +59,63 @@ fun WearSearchPage(
     val history by viewModel.history.collectAsStateWithLifecycle()
     val listState = rememberTransformingLazyColumnState()
     var query by rememberSaveable(historyScope) { mutableStateOf(initialQuery) }
-    var editing by rememberSaveable { mutableStateOf(false) }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     fun submit(value: String) {
         if (value.isBlank()) return
         viewModel.record(value)
+        keyboard?.hide()
+        focusManager.clearFocus()
         onSearch(value.trim())
     }
-    val input = rememberWearRemoteInput(title, onUnavailable = { editing = true }) {
-        query = it
-        submit(it)
-    }
-    if (editing) {
-        WearSubPage({ editing = false }) {
-            WearTextInputPage(title, query, imeAction = ImeAction.Search, autoFocus = true) {
-                query = it
-                editing = false
-                submit(it)
-            }
-        }
-        return
-    }
-    WearList(onBack = onBack, listState = listState) { spec ->
-        item { WearPageHeader(spec, title) }
-        item {
-            WearScaledItem(spec) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = input, modifier = Modifier.weight(1f), colors = ButtonDefaults.filledTonalButtonColors()) {
-                        Text(query.ifBlank { stringResource(R.string.wear_search_input) }, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    FilledTonalIconButton(onClick = { submit(query) }, enabled = query.isNotBlank(), modifier = Modifier.size(ButtonDefaults.Height)) {
-                        Icon(Icons.Rounded.Search, contentDescription = title)
+    Box(Modifier.imePadding()) {
+        WearList(onBack = onBack, listState = listState) { spec ->
+            item { WearPageHeader(spec, title) }
+            item {
+                WearScaledItem(spec) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        BasicTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { submit(query) }),
+                            modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.Height)
+                                .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
+                                .padding(12.dp).semantics { contentDescription = title },
+                            decorationBox = { field ->
+                                Box(contentAlignment = Alignment.CenterStart) {
+                                    if (query.isEmpty()) Text(stringResource(R.string.wear_search_input), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    field()
+                                }
+                            },
+                        )
+                        FilledTonalIconButton(onClick = { submit(query) }, enabled = query.isNotBlank(), modifier = Modifier.size(ButtonDefaults.Height)) {
+                            Icon(Icons.Rounded.Search, contentDescription = title)
+                        }
                     }
                 }
             }
-        }
-        if (onAdvanced != null) {
-            item {
-                WearActionButton(spec, Icons.Rounded.Tune, stringResource(R.string.wear_search_advanced), onAdvanced, colors = ButtonDefaults.filledTonalButtonColors())
+            if (onAdvanced != null) {
+                item {
+                    WearActionButton(spec, Icons.Rounded.Tune, stringResource(R.string.wear_search_advanced), onAdvanced, colors = ButtonDefaults.filledTonalButtonColors())
+                }
             }
-        }
-        item { WearSectionHeader(spec, stringResource(R.string.wear_search_history)) }
-        if (history.isEmpty()) {
-            item { WearEmptyState(spec, Icons.Rounded.History, stringResource(R.string.wear_search_history_empty)) }
-        }
-        history.forEach { previous ->
-            item(key = previous) {
-                WearModuleSwipeActions(
-                    spec,
-                    scrolling = listState.isScrollInProgress,
-                    primary = WearIconAction(Icons.Rounded.Delete, stringResource(R.string.delete), { viewModel.remove(previous) }),
-                ) {
-                    WearActionButton(Icons.Rounded.History, previous, { submit(previous) }, colors = ButtonDefaults.filledTonalButtonColors())
+            item { WearSectionHeader(spec, stringResource(R.string.wear_search_history)) }
+            if (history.isEmpty()) {
+                item { WearEmptyState(spec, Icons.Rounded.History, stringResource(R.string.wear_search_history_empty)) }
+            }
+            history.forEach { previous ->
+                item(key = previous) {
+                    WearModuleSwipeActions(
+                        spec,
+                        scrolling = listState.isScrollInProgress,
+                        primary = WearIconAction(Icons.Rounded.Delete, stringResource(R.string.delete), { viewModel.remove(previous) }),
+                    ) {
+                        WearActionButton(Icons.Rounded.History, previous, { submit(previous) }, colors = ButtonDefaults.filledTonalButtonColors())
+                    }
                 }
             }
         }
