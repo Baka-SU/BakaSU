@@ -117,6 +117,16 @@ sealed interface WearRoute : NavKey {
         NeedsRoot
 
     @Serializable
+    data class AffectedApps(val uid: Int, val packageName: String) :
+        WearRoute,
+        NeedsRoot
+
+    @Serializable
+    data class AppActions(val uid: Int, val packageName: String) :
+        WearRoute,
+        NeedsRoot
+
+    @Serializable
     data class AppProfileMode(val uid: Int, val packageName: String) :
         WearRoute,
         NeedsRoot

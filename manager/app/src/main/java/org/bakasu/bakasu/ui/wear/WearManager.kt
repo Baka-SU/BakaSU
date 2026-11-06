@@ -516,6 +516,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     onBack = ::back,
                                 )
                             }
+                            // Saved profiles already flow into the app list through ProfileRepository.
                             entry<WearRoute.App> { route ->
                                 val group = superuser.appGroupList.firstOrNull {
                                     it.uid == route.uid && it.primaryPackageName == route.packageName
@@ -524,9 +525,19 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     group = group,
                                     isManager = group?.uid?.let { it in superuser.managerUids } == true,
                                     onBack = ::back,
-                                    onSaved = { superUserViewModel.dispatch(SuperUserUiAction.StatusChanged) },
                                     onOpen = ::open,
                                 )
+                            }
+                            entry<WearRoute.AffectedApps> { route ->
+                                WearAffectedAppsPage(
+                                    group = superuser.appGroupList.firstOrNull {
+                                        it.uid == route.uid && it.primaryPackageName == route.packageName
+                                    },
+                                    onBack = ::back,
+                                )
+                            }
+                            entry<WearRoute.AppActions> { route ->
+                                WearAppActionsRoute(route.uid, route.packageName, onBack = ::back)
                             }
                             entry<WearRoute.AppProfileMode> { route ->
                                 WearAppProfileModeRoute(
@@ -536,16 +547,15 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         it.uid == route.uid && it.primaryPackageName == route.packageName
                                     }?.mainApp?.label ?: route.packageName,
                                     onBack = ::back,
-                                    onOpen = ::open,
-                                    onSaved = { superUserViewModel.dispatch(SuperUserUiAction.StatusChanged) },
+                                    // A save may finish after Back has already started closing this page.
+                                    onOpen = { destination -> if (navigator.top == route) open(destination) },
                                 )
                             }
                             entry<WearRoute.AppProfileTemplateChoice> { route ->
                                 WearAppProfileTemplateChoiceRoute(
                                     route.uid,
                                     route.packageName,
-                                    onBack = ::back,
-                                    onSaved = { superUserViewModel.dispatch(SuperUserUiAction.StatusChanged) },
+                                    onBack = { if (navigator.top == route) back() },
                                 )
                             }
                             entry<WearRoute.AppProfileCustom> { route ->
@@ -557,7 +567,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     }?.mainApp?.label ?: route.packageName,
                                     onBack = ::back,
                                     onOpen = ::open,
-                                    onSaved = { superUserViewModel.dispatch(SuperUserUiAction.StatusChanged) },
                                 )
                             }
                             entry<WearRoute.AppFilter> {
@@ -900,18 +909,43 @@ private val DynamicManagerTransitions: Map<String, Any> = if (Build.VERSION.SDK_
     emptyMap()
 }
 
+// Use inverse endpoints for app entry and return so their scale and position agree.
+private val WearAppPageTransitions: Map<String, Any> = WearPageTransitions +
+    if (Build.VERSION.SDK_INT >= 36) {
+        NavDisplay.transitionSpec {
+            (
+                slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(easing = LinearEasing)) +
+                    scaleIn(initialScale = 0.9f, animationSpec = tween(easing = LinearEasing))
+                ) togetherWith
+                (
+                    scaleOut(targetScale = 0.9f, animationSpec = tween(easing = LinearEasing)) +
+                        slideOutHorizontally(targetOffsetX = { -it / 4 }, animationSpec = tween(easing = LinearEasing)) +
+                        fadeOut(targetAlpha = 0.5f, animationSpec = tween(easing = LinearEasing))
+                    )
+        }
+    } else {
+        emptyMap()
+    }
+
 /**
- * Attaches [WearPageTransitions] as defaults while allowing explicitly configured entry transitions.
+ * Attaches each page's transition defaults while allowing explicit entry transitions.
  * A scene's metadata is built from its entry's metadata last. The key and the
  * content key are carried over unchanged, leaving the entry's saveable state and ViewModel scopes
  * as they were.
  */
-private fun <T : Any> withPageTransitions(
+internal fun <T : Any> withPageTransitions(
     provider: (T) -> NavEntry<T>,
     pageContent: @Composable (T, @Composable () -> Unit) -> Unit,
 ): (T) -> NavEntry<T> = { key ->
     val entry = provider(key)
-    NavEntry(key, entry.contentKey, WearPageTransitions + entry.metadata) { pageContent(key) { entry.Content() } }
+    val transitions = when (key) {
+        is WearRoute.App, is WearRoute.AffectedApps, is WearRoute.AppActions,
+        is WearRoute.AppProfileMode, is WearRoute.AppProfileTemplateChoice, is WearRoute.AppProfileCustom,
+        -> WearAppPageTransitions
+
+        else -> WearPageTransitions
+    }
+    NavEntry(key, entry.contentKey, transitions + entry.metadata) { pageContent(key) { entry.Content() } }
 }
 
 /**

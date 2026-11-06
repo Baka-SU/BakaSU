@@ -71,7 +71,6 @@ import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
-import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
@@ -235,7 +234,6 @@ internal fun WearAppProfileModeRoute(
     appLabel: String,
     onBack: () -> Unit,
     onOpen: (WearRoute) -> Unit,
-    onSaved: () -> Unit,
 ) {
     val viewModel = koinViewModel<AppProfileViewModel>(
         key = "wear-app-profile-mode-$uid-$packageName",
@@ -263,7 +261,6 @@ internal fun WearAppProfileModeRoute(
 
                 AppProfileUiEvent.Saved -> {
                     error = null
-                    onSaved()
                     if (openCustomAfterSave) {
                         openCustomAfterSave = false
                         onOpen(WearRoute.AppProfileCustom(uid, packageName))
@@ -315,7 +312,6 @@ internal fun WearAppProfileTemplateChoiceRoute(
     uid: Int,
     packageName: String,
     onBack: () -> Unit,
-    onSaved: () -> Unit,
 ) {
     val viewModel = koinViewModel<AppProfileViewModel>(
         key = "wear-app-profile-template-$uid-$packageName",
@@ -344,7 +340,6 @@ internal fun WearAppProfileTemplateChoiceRoute(
 
                 AppProfileUiEvent.Saved -> {
                     error = null
-                    onSaved()
                     onBack()
                 }
             }
@@ -393,7 +388,6 @@ internal fun WearAppProfileCustomRoute(
     appLabel: String,
     onBack: () -> Unit,
     onOpen: (WearRoute) -> Unit,
-    onSaved: () -> Unit,
 ) {
     val viewModel = koinViewModel<AppProfileViewModel>(
         key = "wear-app-profile-custom-$uid-$packageName",
@@ -401,19 +395,16 @@ internal fun WearAppProfileCustomRoute(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     var error by remember { mutableStateOf<String?>(null) }
-    var detailPage by rememberSaveable { mutableStateOf("") }
     val failed = stringResource(R.string.failed_to_update_app_profile, appLabel)
-    val failedOperation = stringResource(R.string.operation_failed)
     val failedSepolicy = stringResource(R.string.failed_to_update_sepolicy, appLabel)
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             error = when (event) {
-                is AppProfileUiEvent.Error -> if (detailPage == "actions") failedOperation else failed
+                is AppProfileUiEvent.Error -> failed
                 AppProfileUiEvent.SepolicyUpdateFailed -> failedSepolicy
                 AppProfileUiEvent.Saved -> null
             }
-            if (event is AppProfileUiEvent.Saved) onSaved()
         }
     }
     WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
@@ -442,7 +433,6 @@ internal fun WearAppDetail(
     group: InstalledAppGroup?,
     isManager: Boolean,
     onBack: () -> Unit,
-    onSaved: () -> Unit,
     onOpen: (WearRoute) -> Unit,
 ) {
     if (group == null) {
@@ -461,10 +451,8 @@ internal fun WearAppDetail(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     var error by remember { mutableStateOf<String?>(null) }
-    var detailPage by rememberSaveable { mutableStateOf("") }
     var hasResumed by rememberSaveable { mutableStateOf(false) }
     val failed = stringResource(R.string.failed_to_update_app_profile, group.mainApp.label)
-    val failedOperation = stringResource(R.string.operation_failed)
     val failedSepolicy = stringResource(R.string.failed_to_update_sepolicy, group.mainApp.label)
     val suNotAllowed = stringResource(R.string.su_not_allowed, group.mainApp.label)
     val save: (AppProfile) -> Unit = { profile ->
@@ -477,12 +465,10 @@ internal fun WearAppDetail(
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             error = when (event) {
-                is AppProfileUiEvent.Error -> if (detailPage == "actions") failedOperation else failed
+                is AppProfileUiEvent.Error -> failed
                 AppProfileUiEvent.SepolicyUpdateFailed -> failedSepolicy
                 AppProfileUiEvent.Saved -> null
             }
-            // The app list refreshes only when a saved profile changed it.
-            if (event is AppProfileUiEvent.Saved) onSaved()
         }
     }
     ActivityResumeEffect(viewModel) {
@@ -494,22 +480,8 @@ internal fun WearAppDetail(
     }
 
     WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
-    if (detailPage.isNotEmpty()) {
-        WearSubPage({ detailPage = "" }) {
-            WearList(onBack = { detailPage = "" }) { spec ->
-                item { WearPageHeader(spec, stringResource(if (detailPage == "affected") R.string.affected_applications else R.string.wear_app_operations)) }
-                if (detailPage == "affected") {
-                    group.apps.forEach { app -> item { WearInfoCard(spec) { WearDetailField(Icons.Rounded.Apps, app.label, app.displayIdentifier) } } }
-                } else {
-                    listOf(AppControlAction.LAUNCH to R.string.launch_app, AppControlAction.FORCE_STOP to R.string.force_stop_app).forEach { (action, label) ->
-                        item { WearActionButton(spec, Icons.Rounded.Apps, stringResource(label), { viewModel.dispatch(AppProfileUiAction.ControlApp(action)) }) }
-                    }
-                }
-            }
-        }
-        return
-    }
-    WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
+    // Returning from a profile page reloads its values without replacing the visible app details.
+    WearList(isLoading = state.isLoading && state.profile == null, onBack = onBack) { spec ->
         val profile = state.profile
         if (profile != null) {
             // As in the design, the page opens with the app title card instead of a page title.
@@ -583,7 +555,7 @@ internal fun WearAppDetail(
                 WearSettingsJumpPageWidget(
                     spec,
                     stringResource(R.string.affected_applications),
-                    { detailPage = "affected" },
+                    { onOpen(WearRoute.AffectedApps(group.uid, group.primaryPackageName)) },
                     description = stringResource(R.string.wear_same_uid_apps),
                 )
             }
@@ -592,13 +564,49 @@ internal fun WearAppDetail(
                     WearSettingsJumpPageWidget(
                         spec,
                         stringResource(R.string.wear_app_operations),
-                        { detailPage = "actions" },
+                        { onOpen(WearRoute.AppActions(group.uid, group.primaryPackageName)) },
                         description = stringResource(R.string.wear_app_operations_summary),
                     )
                 }
             }
         } else {
             item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.operation_failed), tone = WearStatusTone.ERROR) }
+        }
+    }
+}
+
+@Composable
+internal fun WearAffectedAppsPage(group: InstalledAppGroup?, onBack: () -> Unit) {
+    WearList(onBack = onBack) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.affected_applications)) }
+        if (group == null) {
+            item { WearStatusItem(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
+        } else {
+            group.apps.forEach { app ->
+                item { WearInfoCard(spec) { WearDetailField(Icons.Rounded.Apps, app.label, app.displayIdentifier) } }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun WearAppActionsRoute(uid: Int, packageName: String, onBack: () -> Unit) {
+    val viewModel = koinViewModel<AppProfileViewModel>(
+        key = "wear-app-actions-$uid-$packageName",
+        parameters = { parametersOf(uid, packageName) },
+    )
+    var error by remember { mutableStateOf<String?>(null) }
+    val failed = stringResource(R.string.operation_failed)
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            if (event is AppProfileUiEvent.Error) error = failed
+        }
+    }
+    WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
+    WearList(onBack = onBack) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.wear_app_operations)) }
+        listOf(AppControlAction.LAUNCH to R.string.launch_app, AppControlAction.FORCE_STOP to R.string.force_stop_app).forEach { (action, label) ->
+            item { WearActionButton(spec, Icons.Rounded.Apps, stringResource(label), { viewModel.dispatch(AppProfileUiAction.ControlApp(action)) }) }
         }
     }
 }
