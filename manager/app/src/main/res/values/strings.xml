@@ -940,4 +940,10 @@
     <string name="wear_bridge_active_connection">Connected to %1$s</string>
     <string name="wear_repository_url_hint">Enter a repository server URL</string>
     <string name="wear_check_phone">Check your phone</string>
+    <string name="wear_web_tools">Page controls</string>
+    <string name="wear_web_scale">Page size: %1$d%%</string>
+    <string name="wear_web_move">Move page</string>
+    <string name="wear_web_move_hint">Drag to reveal corners, then tap ✓</string>
+    <string name="wear_web_move_done">Done moving</string>
+    <string name="wear_web_reset">Reset page position and size</string>
 </resources>

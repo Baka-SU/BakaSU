@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <style>
+        * { box-sizing: border-box; }
+        html, body { margin: 0; background: #eef4ff; color: #162840; font: 16px sans-serif; }
+        body { min-height: 1400px; padding: 68px 36px; }
+        h1 { font-size: 23px; text-align: center; }
+        button { min-height: 36px; border: 0; border-radius: 6px; background: #324f96; color: white; }
+        .corner { position: fixed; width: 40px; height: 40px; z-index: 2; }
+        #tl { top: 0; left: 0; } #tr { top: 0; right: 0; }
+        #bl { bottom: 0; left: 0; } #br { bottom: 0; right: 0; }
+        #center { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100px; }
+        p { line-height: 1.6; }
+        #result { text-align: center; min-height: 24px; }
+    </style>
+</head>
+<body>
+<button class="corner" id="tl">TL</button><button class="corner" id="tr">TR</button>
+<button class="corner" id="bl">BL</button><button class="corner" id="br">BR</button>
+<h1>Module WebUI</h1>
+<div id="result">Viewport test</div>
+<button id="center">Action</button>
+<p>This page disables browser zoom. The host must scale the whole page and keep all four fixed corner buttons reachable.</p>
+<p>Scroll this content normally without moving the window or triggering Back.</p>
+<script>
+    window.clicks = [];
+    document.querySelectorAll('button').forEach(button => {
+        button.onclick = () => {
+            clicks.push(button.id);
+            document.getElementById('result').textContent = clicks.join(', ');
+        };
+    });
+</script>
+</body>
+</html>
