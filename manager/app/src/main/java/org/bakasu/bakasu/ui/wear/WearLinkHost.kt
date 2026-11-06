@@ -5,8 +5,6 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -14,8 +12,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,12 +22,12 @@ import org.bakasu.bakasu.ui.viewmodel.WearLinkEvent
 import org.bakasu.bakasu.ui.viewmodel.WearLinkResult
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
-import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
+import org.bakasu.bakasu.ui.wear.component.WearLoadingOverlay
 import org.bakasu.bakasu.ui.wear.component.WearPhoneTransferDialog
 
 /** Opens local pages and hosts the shared permission and phone-transfer feedback. */
 @Composable
-internal fun WearLinkHost(viewModel: WearLinkViewModel, onWebView: (String) -> Unit) {
+internal fun WearLinkHost(viewModel: WearLinkViewModel, showLoading: Boolean, onWebView: (String) -> Unit) {
     val context = LocalContext.current
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val result by viewModel.result.collectAsStateWithLifecycle()
@@ -62,9 +58,7 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, onWebView: (String) -> U
     DisposableEffect(viewModel) { onDispose { viewModel.cancel() } }
     BackHandler(loading || permissionRequest != null) { viewModel.cancel() }
     WearPhoneTransferDialog(transfer, onCancel = viewModel::cancel, onDismiss = viewModel::dismissTransfer)
-    if (loading && transfer == null && permissionRequest == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { WearLoadingIndicator(contained = true) }
-    }
+    if (showLoading) WearLoadingOverlay()
     val failed = result as? WearLinkResult.Failed
     val failureText = stringResource(
         when (failed?.reason) {

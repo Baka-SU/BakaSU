@@ -32,10 +32,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
@@ -63,6 +65,7 @@ import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.LkmSelection
 import org.bakasu.bakasu.domain.model.SuperUserLoadFailure
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
+import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerOperation
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerUiAction
@@ -108,6 +111,7 @@ import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 private const val HOME = 0
@@ -131,6 +135,11 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val settingsViewModel = koinViewModel<SettingsViewModel>()
     val preferenceViewModel = koinViewModel<WearPreferencesViewModel>()
     val linkViewModel = koinViewModel<WearLinkViewModel>()
+    val linkLoading by linkViewModel.loading.collectAsStateWithLifecycle()
+    val linkTransfer by linkViewModel.transfer.collectAsStateWithLifecycle()
+    val linkPermissionRequest by linkViewModel.permissionRequest.collectAsStateWithLifecycle()
+    val showLinkLoading = linkLoading && linkTransfer == null && linkPermissionRequest == null
+    val themeConfig = koinInject<ThemeConfig>()
     val preferences by preferenceViewModel.state.collectAsStateWithLifecycle()
     var mainTitle by rememberSaveable { mutableIntStateOf(R.string.home) }
     val home by homeViewModel.uiState.collectAsStateWithLifecycle()
@@ -375,6 +384,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
             val hostScheme = MaterialTheme.colorScheme
             MaterialTheme(colorScheme = hostScheme) {
                 NavDisplay(
+                    modifier = Modifier.fillMaxSize().then(if (showLinkLoading && themeConfig.isEnableBlur) Modifier.blur(12.dp) else Modifier),
                     backStack = navigator.backStack.filterNot { it is WearRoute.Operations },
                     onBack = { back() },
                     sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = !operationsOnTop && (Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss))),
@@ -850,7 +860,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
             }
             WearOperationsBackHandler(operationsOnTop) { back() }
             // Over the pages: waiting for a link to open, which Back cancels, and its result.
-            WearLinkHost(linkViewModel) { open(WearRoute.Browser(it)) }
+            WearLinkHost(linkViewModel, showLinkLoading) { open(WearRoute.Browser(it)) }
             WearRepositoryConnectionDialog(moduleRepoEntry.failure, ::openModuleRepo, moduleRepoEntry::cancel)
         }
     }
