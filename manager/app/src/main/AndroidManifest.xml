@@ -213,6 +213,7 @@
             android:exported="false"
             android:theme="@style/Theme.KernelSU.WebUI"
             android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden" />
+        <activity android:name=".ui.webui.BridgeRequestActivity" android:exported="false" android:theme="@style/Theme.KernelSU" />
         <activity android:name=".ui.webui.WearBridgeSetupActivity" android:exported="false" android:theme="@style/Theme.KernelSU" />
         <service android:name=".data.webui.CompanionBridgeService" android:exported="false" android:foregroundServiceType="connectedDevice" />
         <service android:name=".data.webui.BridgeCompanionDeviceService" android:exported="true" android:permission="android.permission.BIND_COMPANION_DEVICE_SERVICE">
@@ -243,18 +244,6 @@
             android:authorities="${applicationId}.wearfiles"
             android:exported="false"
             android:grantUriPermissions="false" />
-
-        <!-- Serves phone-assisted template downloads over the Wear Data Layer.
-             Exported for Google Play services, which only delivers events from this app on paired
-             devices signed with the same key. -->
-        <service
-            android:name=".data.webui.WearWebUiService"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.google.android.gms.wearable.CHANNEL_EVENT" />
-                <data android:scheme="wear" android:host="*" android:pathPrefix="/resukisu/templates" />
-            </intent-filter>
-        </service>
 
         <activity
             android:name=".ui.screen.themeSettings.crop.BackgroundCropActivity"

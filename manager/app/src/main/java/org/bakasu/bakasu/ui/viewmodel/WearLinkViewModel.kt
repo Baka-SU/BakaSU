@@ -15,7 +15,9 @@ import org.bakasu.bakasu.data.network.WearLinkRepository
 import org.bakasu.bakasu.data.network.WearLinkTarget
 import org.bakasu.bakasu.domain.model.BridgeException
 import org.bakasu.bakasu.domain.model.BridgeFailure
+import org.bakasu.bakasu.domain.usecase.ConfigureCompanionBridgeUseCase
 import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveCompanionBridgeUseCase
 
 /**
  * @author Hanhan_awa
@@ -28,11 +30,8 @@ sealed interface WearLinkEvent {
     data class WebUi(val moduleId: String) : WearLinkEvent
 }
 
-/** How opening ended when the phone was involved or it failed; shown once as an overlay. */
+/** A local link failure, presented separately from the shared phone transfer state. */
 sealed interface WearLinkResult {
-    data object OpenedOnPhone : WearLinkResult
-    data object PhoneNotification : WearLinkResult
-
     /** A null [reason] is an unexpected failure; [onPhone] marks a module WebUI the phone could not open. */
     data class Failed(val reason: WearLinkFailure?, val onPhone: Boolean = false, val bridgeFailure: BridgeFailure? = null) : WearLinkResult
 }
@@ -44,6 +43,8 @@ sealed interface WearLinkResult {
 class WearLinkViewModel(
     private val repository: WearLinkRepository,
     private val getPreference: GetStringPreferenceUseCase,
+    observeBridge: ObserveCompanionBridgeUseCase,
+    private val configureBridge: ConfigureCompanionBridgeUseCase,
 ) : ViewModel() {
     private val mutableEvents = MutableSharedFlow<WearLinkEvent>()
     val events = mutableEvents.asSharedFlow()
@@ -52,6 +53,10 @@ class WearLinkViewModel(
     private val mutableResult = MutableStateFlow<WearLinkResult?>(null)
     val result = mutableResult.asStateFlow()
     private var task: Job? = null
+    val transfer = observeBridge.transfer
+    val permissionRequest = observeBridge.permissionRequest
+    fun answerPermission(id: String, granted: Boolean) = configureBridge.answerPermission(id, granted)
+    fun dismissTransfer() = configureBridge.dismissTransfer()
 
     private val mode get() = getPreference.wear(WearPreference.Link)
 
@@ -69,7 +74,7 @@ class WearLinkViewModel(
             // The repository has already started the browser.
             WearLinkTarget.BROWSER -> Unit
 
-            WearLinkTarget.PHONE -> mutableResult.value = WearLinkResult.OpenedOnPhone
+            WearLinkTarget.PHONE -> Unit
         }
     }
 
@@ -81,7 +86,7 @@ class WearLinkViewModel(
         val mode = mode
         if (mode == "phone" || mode != "webview" && !repository.hasWebView()) {
             run(onPhone = true) {
-                mutableResult.value = if (repository.openWebUiOnPhone(moduleId, moduleName)) WearLinkResult.OpenedOnPhone else WearLinkResult.PhoneNotification
+                repository.openWebUiOnPhone(moduleId, moduleName)
             }
         } else if (repository.hasWebView()) {
             viewModelScope.launch { mutableEvents.emit(WearLinkEvent.WebUi(moduleId)) }
@@ -100,6 +105,7 @@ class WearLinkViewModel(
 
     fun cancel() {
         task?.cancel()
+        configureBridge.cancelTransfer()
     }
 
     /** One opening at a time, shown as loading until it ends; a failure becomes the result. */
@@ -111,6 +117,8 @@ class WearLinkViewModel(
                 block()
             } catch (error: CancellationException) {
                 throw error
+            } catch (error: BridgeException) {
+                // The shared phone dialog presents the bridge outcome, including template requests.
             } catch (error: Exception) {
                 mutableResult.value = WearLinkResult.Failed((error as? WearLinkException)?.reason, onPhone, (error as? BridgeException)?.reason)
             } finally {

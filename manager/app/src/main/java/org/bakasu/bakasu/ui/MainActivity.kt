@@ -119,6 +119,7 @@ open class MainActivity : ComponentActivity() {
 
             setContent {
                 KernelSUTheme {
+                    org.bakasu.bakasu.ui.webui.PhoneBridgeReceiverHost()
                     when (val state = startupState.collectAsStateWithLifecycle().value) {
                         is StartupState.Failed -> StartupFailureContent(state.message)
                         else -> NavContainer(settingsViewModel, intentChannel)

@@ -47,7 +47,6 @@ import androidx.wear.compose.foundation.ScrollInfoProvider
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AppScaffold
-import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.EdgeButton
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ScreenScaffold
@@ -61,6 +60,7 @@ import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
@@ -149,7 +149,7 @@ private fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
                 when (val event = state.uiEvent) {
                     // A waiting spinner; the branded loading screen is only shown at app startup.
                     WebUIEvent.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        WearLoadingIndicator()
                     }
 
                     else -> Box(Modifier.fillMaxSize()) {
@@ -160,7 +160,7 @@ private fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
                         if (!state.pageLoaded) {
                             WearBackground {
                                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator()
+                                    WearLoadingIndicator()
                                 }
                             }
                         }

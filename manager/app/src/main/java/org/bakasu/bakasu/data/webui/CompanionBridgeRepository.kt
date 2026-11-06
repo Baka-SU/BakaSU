@@ -2,6 +2,7 @@ package org.bakasu.bakasu.data.webui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.Application
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
@@ -10,11 +11,13 @@ import android.companion.CompanionDeviceManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
 import android.util.Log
 import androidx.core.content.ContextCompat
 import java.io.Closeable
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.lang.ref.WeakReference
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -22,27 +25,39 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.bakasu.bakasu.data.AppSettingsRepository
+import org.bakasu.bakasu.domain.model.BridgeAction
 import org.bakasu.bakasu.domain.model.BridgeException
 import org.bakasu.bakasu.domain.model.BridgeFailure
 import org.bakasu.bakasu.domain.model.BridgePeer
+import org.bakasu.bakasu.domain.model.BridgeRequest
+import org.bakasu.bakasu.domain.model.BridgeStage
 import org.bakasu.bakasu.domain.model.BridgeState
+import org.bakasu.bakasu.domain.model.BridgeTransfer
 
 @SuppressLint("MissingPermission") // Constructed only after adapter() checks Bluetooth access.
 internal class BridgeConnection(val socket: BluetoothSocket, private val onClosed: (BridgeConnection) -> Unit) : Closeable {
     val peer: String = socket.remoteDevice.address.uppercase(Locale.ROOT)
     val input = DataInputStream(socket.inputStream.buffered())
     val output = DataOutputStream(socket.outputStream.buffered())
+    internal var challenge = ""
     private var closed = false
 
     @Synchronized override fun close() {
@@ -56,7 +71,7 @@ internal class BridgeConnection(val socket: BluetoothSocket, private val onClose
     }
 }
 
-/** CDM selects the phone's permitted watch; secure RFCOMM carries mutually authenticated app calls. */
+/** Bonded devices request consent over secure RFCOMM; WebUI calls keep the existing app authentication. */
 @SuppressLint("MissingPermission") // adapter() checks BLUETOOTH_CONNECT before Bluetooth access.
 class CompanionBridgeRepository(
     private val application: Application,
@@ -66,13 +81,11 @@ class CompanionBridgeRepository(
     companion object {
         internal val SERVICE_UUID: UUID = UUID.fromString("4127a3ac-74f1-48fd-a418-7e81b39e117f")
         internal const val WIRE_VERSION = "bakasu-webui-rfcomm-1"
-        internal const val PROVISION = "provision"
-        internal const val OPEN = "open"
-        private const val PROVISION_TIMEOUT_SECONDS = 5L
         private const val ADDRESS = "wear_bridge_address"
         private const val NAME = "wear_bridge_name"
         private const val SECRET = "wear_bridge_secret"
         private const val ENABLED = "wear_bridge_enabled"
+        private const val REMEMBERED = "wear_bridge_remembered"
         private val deadlines = Executors.newSingleThreadScheduledExecutor { task -> Thread(task, "webui-bt-handshake").apply { isDaemon = true } }
 
         internal fun <T> handshake(socket: BluetoothSocket, timeoutSeconds: Long = 15, block: () -> T): T {
@@ -97,6 +110,7 @@ class CompanionBridgeRepository(
         preferences.getString(ADDRESS)?.let { BridgePeer(it, preferences.getString(NAME).orEmpty().ifBlank { it }) },
         preferences.getBoolean(ENABLED, false),
         connected = activeConnections.isNotEmpty(),
+        remembered = preferences.getBoolean(REMEMBERED, false),
     )
 
     fun refresh() {
@@ -112,7 +126,7 @@ class CompanionBridgeRepository(
         }
     }
 
-    private fun connected(connection: BridgeConnection) {
+    internal fun markConnected(connection: BridgeConnection) {
         synchronized(activeConnections) {
             activeConnections.add(connection)
             mutableState.update { it.copy(connected = true) }
@@ -150,26 +164,17 @@ class CompanionBridgeRepository(
         return BridgePeer(address, name)
     }
 
-    /** Shows a watch restored from a previous association without granting access yet. */
-    fun adopt(address: String, name: String) {
-        if (isWatch || state.value.peer != null) return
-        preferences.putString(ADDRESS, address.uppercase(Locale.ROOT))
-        preferences.putString(NAME, name)
-        preferences.putString(SECRET, null)
-        preferences.putBoolean(ENABLED, false)
+    fun setRemembered(remembered: Boolean) {
+        preferences.putBoolean(REMEMBERED, remembered)
         refresh()
     }
 
-    /** Authorizes [address] and starts the receiver; the watch fetches the key on first use. */
-    fun link(address: String, name: String) {
-        adapter()
-        if (isWatch) throw BridgeException(BridgeFailure.ASSOCIATION)
-        state.value.peer?.takeIf { !it.address.equals(address, true) }?.let { disconnect() }
-        preferences.putString(ADDRESS, address.uppercase(Locale.ROOT))
-        preferences.putString(NAME, name)
-        if (preferences.getString(SECRET).isNullOrBlank()) preferences.putString(SECRET, newSecret())
-        setEnabled(true)
-        observePresence(address)
+    internal fun savePeer(peer: BridgePeer, secret: String, remember: Boolean = false) {
+        if (!state.value.peer?.address.equals(peer.address, true)) closeConnections()
+        preferences.putString(ADDRESS, peer.address.uppercase(Locale.ROOT))
+        preferences.putString(NAME, peer.name)
+        preferences.putString(SECRET, secret)
+        preferences.putBoolean(REMEMBERED, remember)
         refresh()
     }
 
@@ -181,9 +186,12 @@ class CompanionBridgeRepository(
             .onFailure { Log.w("CompanionBridge", "Presence observation unavailable", it) }
     }
 
-    private fun newSecret(): String = UUID.randomUUID().toString() + UUID.randomUUID().toString()
+    internal fun newSecret(): String = UUID.randomUUID().toString() + UUID.randomUUID().toString()
+
+    val needsReceiverSetup get() = !preferences.contains(ENABLED)
 
     fun setEnabled(enabled: Boolean) {
+        if (enabled) adapter()
         preferences.putBoolean(ENABLED, enabled)
         refresh()
         if (enabled) startServer() else stopServer()
@@ -209,6 +217,7 @@ class CompanionBridgeRepository(
         preferences.putString(NAME, null)
         preferences.putString(SECRET, null)
         preferences.putBoolean(ENABLED, false)
+        preferences.putBoolean(REMEMBERED, false)
         refresh()
     }
 
@@ -234,76 +243,222 @@ class CompanionBridgeRepository(
         }
     }
 
-    /**
-     * Fetches the shared key from a phone that already authorizes this watch. The phone answers
-     * only for its stored watch, so no watch-side pairing is needed.
-     */
-    suspend fun provision(): BridgePeer = withContext(Dispatchers.IO) {
-        val cached = state.value.peer
-        val candidates = buildList {
-            cached?.let(::add)
-            bondedPeers().filterNot { peer -> cached?.address.equals(peer.address, true) == true }.forEach(::add)
-        }.distinctBy { it.address.uppercase(Locale.ROOT) }
-        for (peer in candidates) {
-            val secret = runCatching { provisionSocket(peer.address) }.getOrNull() ?: continue
-            if (secret.length < 32) continue
-            preferences.putString(ADDRESS, peer.address.uppercase(Locale.ROOT))
-            preferences.putString(NAME, peer.name)
-            preferences.putString(SECRET, secret)
-            refresh()
-            return@withContext peer
+    private val transferMutex = Mutex()
+    private var outgoingJob: Job? = null
+    private val permissions = BridgePermissionRequest()
+    val permissionRequest = permissions.id
+    private val mutableTransfer = MutableStateFlow<BridgeTransfer?>(null)
+    val transfer = mutableTransfer.asStateFlow()
+    private val mutableRequest = MutableStateFlow<BridgeRequest?>(null)
+    val incomingRequest = mutableRequest.asStateFlow()
+    private var pendingRequest: PendingBridgeRequest? = null
+
+    @Volatile private var resumedActivity: WeakReference<Activity>? = null
+
+    init {
+        if (!isWatch) {
+            application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+                override fun onActivityResumed(activity: Activity) {
+                    resumedActivity = WeakReference(activity)
+                }
+                override fun onActivityPaused(activity: Activity) {
+                    if (resumedActivity?.get() === activity) resumedActivity = null
+                }
+                override fun onActivityCreated(activity: Activity, state: Bundle?) = Unit
+                override fun onActivityStarted(activity: Activity) = Unit
+                override fun onActivityStopped(activity: Activity) = Unit
+                override fun onActivitySaveInstanceState(activity: Activity, state: Bundle) = Unit
+                override fun onActivityDestroyed(activity: Activity) = Unit
+            })
         }
-        throw BridgeException(BridgeFailure.SETUP_REQUIRED)
     }
 
-    suspend fun ensureProvisioned(): BridgePeer = state.value.peer?.takeIf { !preferences.getString(SECRET).isNullOrBlank() } ?: provision()
+    fun answerPermission(id: String, granted: Boolean) = permissions.answer(id, granted)
 
-    /** Drops a key the phone no longer accepts so the next call fetches a fresh one. */
-    fun forgetSecret() {
-        preferences.putString(SECRET, null)
-        refresh()
+    private suspend fun requirePermission() {
+        if (Build.VERSION.SDK_INT < 31 || ContextCompat.checkSelfPermission(application, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) return
+        if (!permissions.await()) throw BridgeException(BridgeFailure.PERMISSION)
     }
 
-    private fun provisionSocket(address: String): String {
-        val socket = adapter().getRemoteDevice(address).createRfcommSocketToServiceRecord(SERVICE_UUID)
+    fun dismissTransfer() {
+        mutableTransfer.value = null
+    }
+    fun cancelTransfer() {
+        outgoingJob?.cancel()
+        permissions.cancel()
+        mutableTransfer.value = null
+    }
+
+    @Synchronized
+    internal fun beginRequest(request: BridgeRequest): PendingBridgeRequest {
+        check(pendingRequest == null) { "A phone request is already pending" }
+        return PendingBridgeRequest(request).also {
+            pendingRequest = it
+            mutableRequest.value = request
+        }
+    }
+
+    @Synchronized
+    fun presentRequest(id: String) {
+        pendingRequest?.takeIf { it.request.id == id }?.presented?.complete(Unit)
+    }
+
+    @Synchronized
+    fun approveRequest(id: String, remember: Boolean?) {
+        pendingRequest?.takeIf { it.request.id == id }?.approval?.complete(remember)
+    }
+
+    @Synchronized
+    fun completeRequest(id: String, opened: Boolean) {
+        pendingRequest?.takeIf { it.request.id == id }?.opened?.complete(opened)
+    }
+
+    @Synchronized
+    internal fun readyRequest(id: String) {
+        mutableRequest.value?.takeIf { it.id == id }?.let { mutableRequest.value = it.copy(readyToOpen = true) }
+    }
+
+    @Synchronized
+    internal fun endRequest(id: String) {
+        if (pendingRequest?.request?.id != id) return
+        pendingRequest?.approval?.cancel()
+        pendingRequest?.opened?.cancel()
+        pendingRequest = null
+        mutableRequest.value = null
+    }
+
+    internal suspend fun showRequest(intent: Intent): Boolean = withContext(Dispatchers.Main) {
+        resumedActivity?.get()?.takeUnless { it.isFinishing }?.let {
+            runCatching { it.startActivity(intent) }.onFailure { error -> Log.w("CompanionBridge", "Request needs a notification", error) }.isSuccess
+        } ?: false
+    }
+
+    internal fun savedSecret(address: String): String? = preferences.getString(SECRET)?.takeIf { state.value.peer?.address.equals(address, true) }
+
+    /** Permission, consent and credentials are completed before the requested action is started. */
+    suspend fun handoff(action: BridgeAction, value: String = "", title: String = ""): ByteArray = transferMutex.withLock {
+        outgoingJob = currentCoroutineContext().job
+        var token: String? = null
         try {
-            return handshake(socket, PROVISION_TIMEOUT_SECONDS) {
-                socket.connect()
-                val connection = connection(socket)
+            mutableTransfer.value = null
+            requirePermission()
+            mutableTransfer.value = BridgeTransfer(BridgeStage.CONNECTING)
+            require(BridgeHandoff.valid(action, value))
+            val bonded = bondedPeers()
+            if (bonded.isEmpty()) throw BridgeException(BridgeFailure.NOT_PAIRED)
+            val candidates = bonded.sortedBy { !it.address.equals(state.value.peer?.address, true) }
+            var reachedPhone = false
+            for (peer in candidates) {
                 try {
-                    connection.output.apply {
-                        writeUTF(WIRE_VERSION)
-                        writeUTF(PROVISION)
-                        flush()
+                    val result = socketRequest(peer.address) { connection ->
+                        val initialServerNonce = handshake(connection.socket, 5) {
+                            connection.socket.connect()
+                            connection.output.apply {
+                                writeUTF(WIRE_VERSION)
+                                writeUTF(BridgeHandoff.OPERATION)
+                                flush()
+                            }
+                            check(connection.input.readUTF() == "ready")
+                            connection.input.readUTF()
+                        }
+                        reachedPhone = true
+                        val operation = BridgeHandoff.authenticationAction(action, value, title)
+                        val nonce = UUID.randomUUID().toString()
+                        val previousKey = savedSecret(peer.address)
+                        connection.output.apply {
+                            writeUTF(action.name)
+                            writeUTF(value)
+                            writeUTF(title)
+                            writeUTF(nonce)
+                            writeUTF(previousKey?.let { BridgeAuthentication.proof(it, "client", operation, nonce, initialServerNonce) }.orEmpty())
+                            flush()
+                        }
+                        while (true) {
+                            val status = handshake(connection.socket, 10) { connection.input.readUTF() }
+                            when (status) {
+                                "waiting" -> {
+                                    mutableTransfer.value = BridgeTransfer(BridgeStage.WAITING)
+                                    connection.output.apply {
+                                        writeBoolean(true)
+                                        flush()
+                                    }
+                                }
+
+                                "approved" -> break
+
+                                "rejected" -> throw BridgeException(BridgeFailure.REJECTED)
+
+                                "notifications-required" -> throw BridgeException(BridgeFailure.NOTIFICATIONS)
+
+                                else -> throw BridgeException(BridgeFailure.CONNECTION)
+                            }
+                        }
+                        handshake(connection.socket) {
+                            val key = connection.input.readUTF()
+                            require(key.length >= 32)
+                            val serverNonce = connection.input.readUTF()
+                            val proof = connection.input.readUTF()
+                            check(BridgeAuthentication.matches(proof, BridgeAuthentication.proof(key, "server", operation, nonce, serverNonce)))
+                            savePeer(peer, key)
+                            connection.output.apply {
+                                writeUTF(BridgeAuthentication.proof(key, "client", operation, nonce, serverNonce))
+                                flush()
+                            }
+                            check(connection.input.readBoolean())
+                            markConnected(connection)
+                        }
+                        mutableTransfer.value = BridgeTransfer(BridgeStage.CONNECTING)
+                        if (action == BridgeAction.WEB_UI) {
+                            token = WearWebUiSession.offer(value, title, peer.address)
+                            startServer()
+                            awaitServer()
+                        }
+                        connection.output.apply {
+                            writeUTF("ready")
+                            flush()
+                        }
+                        val bytes = handshake(connection.socket, if (action == BridgeAction.TEMPLATES) 60 else 30) {
+                            val (type, payload) = with(WearWebUiProtocol) { connection.input.readFrame() }
+                            if (type != WearWebUiProtocol.FRAME_OK) throw BridgeException(BridgeFailure.CONNECTION)
+                            payload
+                        }
+                        mutableTransfer.value = BridgeTransfer(if (action == BridgeAction.TEMPLATES) BridgeStage.COMPLETED else BridgeStage.OPENED)
+                        bytes
                     }
-                    connection.input.readUTF()
-                } finally {
-                    connection.close()
+                    return@withLock result
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    if (reachedPhone) throw error
                 }
             }
+            throw BridgeException(BridgeFailure.CONNECTION)
+        } catch (error: CancellationException) {
+            mutableTransfer.value = null
+            token?.let {
+                WearWebUiSession.end(it)
+                stopServer()
+            }
+            throw error
         } catch (error: Exception) {
-            runCatching { socket.close() }
-            throw BridgeException(BridgeFailure.CONNECTION, error)
+            token?.let {
+                WearWebUiSession.end(it)
+                stopServer()
+            }
+            val failure = (error as? BridgeException)?.reason ?: BridgeFailure.CONNECTION
+            mutableTransfer.value = BridgeTransfer(BridgeStage.FAILED, failure)
+            throw BridgeException(failure, error)
+        } finally {
+            outgoingJob = null
         }
     }
 
-    private fun credential(address: String): String = preferences.getString(SECRET)?.takeIf { state.value.peer?.address.equals(address, true) }
-        ?: throw BridgeException(BridgeFailure.SETUP_REQUIRED)
-
-    internal fun connect(address: String, operation: String): BridgeConnection {
-        val key = credential(address)
+    private suspend fun <T> socketRequest(address: String, block: suspend (BridgeConnection) -> T): T = coroutineScope {
         val socket = adapter().getRemoteDevice(address).createRfcommSocketToServiceRecord(SERVICE_UUID)
-        return connectSocket(socket, operation, key)
-    }
-
-    /** Setup and opening are cancellable; canceling the Wear spinner closes the actual socket. */
-    internal suspend fun <T> request(address: String, operation: String, block: (BridgeConnection) -> T): T {
-        val key = credential(address)
-        val socket = adapter().getRemoteDevice(address).createRfcommSocketToServiceRecord(SERVICE_UUID)
-        return suspendCancellableCoroutine { continuation ->
-            val worker = applicationScope.launch(Dispatchers.IO) {
+        suspendCancellableCoroutine { continuation ->
+            val worker = launch(Dispatchers.IO) {
                 try {
-                    val result = connectSocket(socket, operation, key).use { connection -> handshake(socket) { block(connection) } }
+                    val result = connection(socket).use { block(it) }
                     if (continuation.isActive) continuation.resume(result)
                 } catch (error: Exception) {
                     if (continuation.isActive) continuation.resumeWithException(error)
@@ -314,6 +469,15 @@ class CompanionBridgeRepository(
                 worker.cancel()
             }
         }
+    }
+
+    private fun credential(address: String): String = preferences.getString(SECRET)?.takeIf { state.value.peer?.address.equals(address, true) }
+        ?: throw BridgeException(BridgeFailure.SETUP_REQUIRED)
+
+    internal fun connect(address: String, operation: String): BridgeConnection {
+        val key = credential(address)
+        val socket = adapter().getRemoteDevice(address).createRfcommSocketToServiceRecord(SERVICE_UUID)
+        return connectSocket(socket, operation, key)
     }
 
     private fun connectSocket(socket: BluetoothSocket, operation: String, key: String): BridgeConnection {
@@ -336,7 +500,7 @@ class CompanionBridgeRepository(
                     flush()
                 }
                 check(connection.input.readBoolean())
-                connected(connection)
+                markConnected(connection)
                 connection
             }
         } catch (error: Exception) {
@@ -345,25 +509,24 @@ class CompanionBridgeRepository(
         }
     }
 
-    /** A connection is never handed to the root backend before peer and app proofs both match. */
+    /** Handoffs first require consent; root WebUI calls always require the existing peer and app proof. */
     internal fun authenticate(connection: BridgeConnection): String = handshake(connection.socket) {
         val peer = connection.socket.remoteDevice.address
         check(connection.input.readUTF() == WIRE_VERSION)
         val operation = connection.input.readUTF()
-        if (operation == PROVISION) {
-            // The phone hands its key to the one watch the user authorized, and only while enabled.
-            check(!isWatch && state.value.enabled && state.value.peer?.address.equals(peer, true))
-            val secret = preferences.getString(SECRET)?.takeIf { it.isNotBlank() }
-            check(!secret.isNullOrEmpty())
+        if (operation == BridgeHandoff.OPERATION) {
+            check(!isWatch && state.value.enabled)
+            check(adapter().bondedDevices.any { it.address.equals(peer, true) })
+            connection.challenge = UUID.randomUUID().toString()
             connection.output.apply {
-                writeUTF(secret)
+                writeUTF("ready")
+                writeUTF(connection.challenge)
                 flush()
             }
-            connected(connection)
             return@handshake operation
         }
-        check(state.value.peer?.address.equals(peer, true))
-        check(operation in if (isWatch) setOf(WearWebUiProtocol.CLAIM_PATH, WearWebUiProtocol.RPC_PATH, WearWebUiProtocol.CLOSED_PATH) else setOf(OPEN))
+        check(isWatch && state.value.peer?.address.equals(peer, true))
+        check(operation in setOf(WearWebUiProtocol.CLAIM_PATH, WearWebUiProtocol.RPC_PATH, WearWebUiProtocol.CLOSED_PATH))
         val key = preferences.getString(SECRET)
         check(!key.isNullOrEmpty())
         val clientNonce = connection.input.readUTF()
@@ -378,7 +541,7 @@ class CompanionBridgeRepository(
             writeBoolean(true)
             flush()
         }
-        connected(connection)
+        markConnected(connection)
         operation
     }
 

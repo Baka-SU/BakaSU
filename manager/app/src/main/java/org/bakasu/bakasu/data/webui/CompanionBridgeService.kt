@@ -28,13 +28,16 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.packageinfo.AppIconDataSource
 import org.bakasu.bakasu.data.packageinfo.InstalledPackageRepository
+import org.bakasu.bakasu.data.profile.ProfileTemplateRepository
+import org.bakasu.bakasu.domain.model.BridgeAction
 import org.bakasu.bakasu.domain.model.BridgeException
 import org.bakasu.bakasu.domain.model.BridgeFailure
+import org.bakasu.bakasu.domain.model.BridgePeer
+import org.bakasu.bakasu.domain.model.BridgeRequest
 import org.bakasu.bakasu.domain.usecase.RefreshInstalledModulesUseCase
 import org.koin.android.ext.android.inject
 
@@ -59,6 +62,7 @@ class CompanionBridgeService : Service() {
     private val packageRepository: InstalledPackageRepository by inject()
     private val icons: AppIconDataSource by inject()
     private val refreshModules: RefreshInstalledModulesUseCase by inject()
+    private val templates: ProfileTemplateRepository by inject()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val sockets = ConcurrentHashMap.newKeySet<BluetoothSocket>()
     private var server: BluetoothServerSocket? = null
@@ -71,7 +75,7 @@ class CompanionBridgeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (repository.state.value.peer == null || repository.isWatch && !WearWebUiSession.isActive || !repository.isWatch && !repository.state.value.enabled) {
+        if (repository.isWatch && !WearWebUiSession.isActive || !repository.isWatch && !repository.state.value.enabled) {
             stopSelf()
             return START_NOT_STICKY
         }
@@ -115,19 +119,7 @@ class CompanionBridgeService : Service() {
         try {
             repository.connection(socket).use { connection ->
                 when (repository.authenticate(connection)) {
-                    CompanionBridgeRepository.PROVISION -> Unit
-
-                    CompanionBridgeRepository.OPEN -> {
-                        val response = try {
-                            if (openPhonePage(socket.remoteDevice.address)) "opened" else "notification"
-                        } catch (error: BridgeException) {
-                            if (error.reason == BridgeFailure.NOTIFICATIONS) "notifications-required" else "failed"
-                        }
-                        connection.output.apply {
-                            writeUTF(response)
-                            flush()
-                        }
-                    }
+                    BridgeHandoff.OPERATION -> serveHandoff(connection)
 
                     WearWebUiProtocol.CLAIM_PATH -> serveWebUiClaim(connection)
 
@@ -150,39 +142,128 @@ class CompanionBridgeService : Service() {
         }
     }
 
-    private suspend fun openPhonePage(peer: String): Boolean {
-        val request = UUID.randomUUID().toString()
-        val ready = CompletableDeferred<Boolean>()
-        BridgeActivityLaunch.pending[request] = ready
-        val intent = Intent().setClassName(this, "org.bakasu.bakasu.ui.webui.RemoteWebUIActivity")
-            .putExtra(BridgeActivityLaunch.PEER, peer).putExtra(BridgeActivityLaunch.REQUEST, request).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        try {
-            val dispatched = runCatching { withContext(Dispatchers.Main) { startActivity(intent) } }
-                .onFailure { Log.i(TAG, "Phone page needs the notification entry", it) }.isSuccess
-            val opened = if (dispatched) withTimeoutOrNull(3_000) { ready.await() } else null
-            if (opened == true) return true
-            if (opened == false) throw BridgeException(BridgeFailure.CONNECTION)
-            if (!notifications.areNotificationsEnabled() || notifications.getNotificationChannel(CHANNEL)?.importance == NotificationManager.IMPORTANCE_NONE ||
-                Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-            ) {
-                throw BridgeException(BridgeFailure.NOTIFICATIONS)
-            }
-            val pending = PendingIntent.getActivity(this, OPEN_ID, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-            notifications.notify(
-                OPEN_ID,
-                NotificationCompat.Builder(this, CHANNEL)
-                    .setSmallIcon(android.R.drawable.stat_sys_upload_done)
-                    .setContentTitle(getString(R.string.wear_bridge_notification_title))
-                    .setContentText(getString(R.string.wear_bridge_notification))
-                    .setContentIntent(pending).setAutoCancel(true).build(),
+    private suspend fun serveHandoff(connection: BridgeConnection) {
+        val request = CompanionBridgeRepository.handshake(connection.socket) {
+            val action = BridgeAction.valueOf(connection.input.readUTF())
+            val value = connection.input.readUTF()
+            val title = connection.input.readUTF()
+            require(BridgeHandoff.valid(action, value))
+            val clientNonce = connection.input.readUTF()
+            val clientProof = connection.input.readUTF()
+            val operation = BridgeHandoff.authenticationAction(action, value, title)
+            val key = repository.savedSecret(connection.peer)
+            val authenticated = key != null && BridgeAuthentication.matches(
+                clientProof,
+                BridgeAuthentication.proof(key, "client", operation, clientNonce, connection.challenge),
             )
-            return false
+            val peer = BridgePeer(connection.peer, connection.socket.remoteDevice.name.orEmpty().ifBlank { connection.peer })
+            Triple(
+                repository.beginRequest(BridgeRequest(UUID.randomUUID().toString(), peer, action, value, title, !authenticated || !repository.state.value.remembered)),
+                clientNonce,
+                if (authenticated) key else null,
+            )
+        }
+        val pending = request.first
+        val details = pending.request
+        val operation = BridgeHandoff.authenticationAction(details.action, details.value, details.title)
+        try {
+            val intent = Intent().setClassName(this, "org.bakasu.bakasu.ui.webui.BridgeRequestActivity")
+                .putExtra(BridgeActivityLaunch.REQUEST, details.id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val dispatched = repository.showRequest(intent)
+            if (!dispatched || withTimeoutOrNull(1_000) { pending.presented.await() } == null) {
+                notifyRequest(intent)
+            }
+            // A small round trip detects cancellation/disconnection while the user reads the phone.
+            val answered = withTimeoutOrNull(BridgeHandoff.CONFIRMATION_TIMEOUT_MS) {
+                while (!pending.approval.isCompleted) {
+                    connection.output.apply {
+                        writeUTF("waiting")
+                        flush()
+                    }
+                    CompanionBridgeRepository.handshake(connection.socket, 10) { check(connection.input.readBoolean()) }
+                    withTimeoutOrNull(1_000) { pending.approval.await() }
+                }
+                true
+            } == true
+            if (!answered) throw BridgeException(BridgeFailure.CONNECTION)
+            val remember = pending.approval.await()
+            if (remember == null) {
+                connection.output.apply {
+                    writeUTF("rejected")
+                    flush()
+                }
+                return
+            }
+            notifications.cancel(OPEN_ID)
+            val key = request.third ?: repository.newSecret()
+            CompanionBridgeRepository.handshake(connection.socket) {
+                connection.output.apply {
+                    writeUTF("approved")
+                    writeUTF(key)
+                    writeUTF(connection.challenge)
+                    writeUTF(BridgeAuthentication.proof(key, "server", operation, request.second, connection.challenge))
+                    flush()
+                }
+                check(BridgeAuthentication.matches(connection.input.readUTF(), BridgeAuthentication.proof(key, "client", operation, request.second, connection.challenge)))
+                repository.savePeer(details.peer, key, remember)
+                repository.markConnected(connection)
+                connection.output.apply {
+                    writeBoolean(true)
+                    flush()
+                }
+                // The watch creates the WebUI session only now, after approval, then starts listening.
+                check(connection.input.readUTF() == "ready")
+            }
+            if (details.action == BridgeAction.TEMPLATES) {
+                val bytes = templates.onlineBodiesForPhone()
+                with(WearWebUiProtocol) { connection.output.writeFrame(if (bytes == null) FRAME_ERROR else FRAME_OK, bytes ?: byteArrayOf()) }
+                return
+            }
+            val opened = if (details.action == BridgeAction.WEB_UI) {
+                val ready = CompletableDeferred<Boolean>()
+                BridgeActivityLaunch.pending[details.id] = ready
+                try {
+                    repository.readyRequest(details.id)
+                    withTimeoutOrNull(25_000) { ready.await() } == true
+                } finally {
+                    BridgeActivityLaunch.pending.remove(details.id)
+                }
+            } else {
+                repository.readyRequest(details.id)
+                withTimeoutOrNull(25_000) { pending.opened.await() } == true
+            }
+            with(WearWebUiProtocol) { connection.output.writeFrame(if (opened) FRAME_OK else FRAME_ERROR, byteArrayOf()) }
+        } catch (error: BridgeException) {
+            connection.output.apply {
+                writeUTF(if (error.reason == BridgeFailure.NOTIFICATIONS) "notifications-required" else "failed")
+                flush()
+            }
         } finally {
-            BridgeActivityLaunch.pending.remove(request)
+            repository.endRequest(details.id)
+            notifications.cancel(OPEN_ID)
         }
     }
 
+    private fun notifyRequest(intent: Intent) {
+        if (!notifications.areNotificationsEnabled() || notifications.getNotificationChannel(CHANNEL)?.importance == NotificationManager.IMPORTANCE_NONE ||
+            Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            throw BridgeException(BridgeFailure.NOTIFICATIONS)
+        }
+        val pending = PendingIntent.getActivity(this, OPEN_ID, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        notifications.notify(
+            OPEN_ID,
+            NotificationCompat.Builder(this, CHANNEL)
+                .setSmallIcon(android.R.drawable.stat_sys_upload_done)
+                .setContentTitle(getString(R.string.wear_bridge_notification_title))
+                .setContentText(getString(R.string.wear_bridge_notification))
+                .setContentIntent(pending).setAutoCancel(true).build(),
+        )
+    }
+
     override fun onDestroy() {
+        repository.incomingRequest.value?.id?.let(repository::endRequest)
+        notifications.cancel(OPEN_ID)
         repository.setListening(false)
         repository.closeConnections()
         runCatching { server?.close() }.onFailure { Log.w(TAG, "Listener close failed", it) }

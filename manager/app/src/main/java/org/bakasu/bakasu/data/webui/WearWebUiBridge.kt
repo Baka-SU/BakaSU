@@ -56,25 +56,27 @@ object WearWebUiProtocol {
     }
 }
 
-/**
- * The watch's only WebUI session: one module, offered to one phone Bluetooth peer. That node may claim it once
- * within [CLAIM_WINDOW_MS] of the offer; afterwards only calls from the same peer carrying the
- * session's random token are served. A new offer or the phone closing the page ends it.
- */
-object WearWebUiSession {
-    private const val CLAIM_WINDOW_MS = 30_000L
+/** A module offer starts after phone consent, and only that phone may claim it once. */
+internal class WebUiSession(
+    val token: String,
+    val moduleId: String,
+    val moduleName: String,
+    val phonePeer: String,
+    private val offeredAt: Long,
+) {
+    var claimed = false
+        private set
 
-    private class Session(
-        val token: String,
-        val moduleId: String,
-        val moduleName: String,
-        val phonePeer: String,
-        val offeredAt: Long,
-    ) {
-        var claimed = false
+    fun claim(peer: String, now: Long): Boolean {
+        if (claimed || !phonePeer.equals(peer, true) || now - offeredAt !in 0 until 30_000L) return false
+        claimed = true
+        return true
     }
+}
 
-    private var current: Session? = null
+/** The single watch session, bound to one module and one authenticated phone. */
+object WearWebUiSession {
+    private var current: WebUiSession? = null
 
     val isActive: Boolean @Synchronized get() = current != null
 
@@ -86,29 +88,25 @@ object WearWebUiSession {
     /** Offers a session for [moduleId] to [phonePeer]; the returned token withdraws it. */
     @Synchronized
     fun offer(moduleId: String, moduleName: String, phonePeer: String): String = UUID.randomUUID().toString().also {
-        current = Session(it, moduleId, moduleName, phonePeer, SystemClock.elapsedRealtime())
+        current = WebUiSession(it, moduleId, moduleName, phonePeer, SystemClock.elapsedRealtime())
     }
 
     /** The pending session as JSON for the node it was offered to, at most once; otherwise null. */
     @Synchronized
     fun claim(peerAddress: String): JSONObject? {
-        val session = current?.takeIf {
-            !it.claimed && it.phonePeer == peerAddress &&
-                SystemClock.elapsedRealtime() - it.offeredAt < CLAIM_WINDOW_MS
-        } ?: return null
-        session.claimed = true
+        val session = current?.takeIf { it.claim(peerAddress, SystemClock.elapsedRealtime()) } ?: return null
         return JSONObject().put("token", session.token).put("module", session.moduleId).put("name", session.moduleName)
     }
 
     /** The module of the claimed session when [token] and [peerAddress] both match it, otherwise null. */
     @Synchronized
-    fun moduleFor(token: String, peerAddress: String): String? = current?.takeIf { it.claimed && it.token == token && it.phonePeer == peerAddress }?.moduleId
+    fun moduleFor(token: String, peerAddress: String): String? = current?.takeIf { it.claimed && it.token == token && it.phonePeer.equals(peerAddress, true) }?.moduleId
 
     /** Ends the session of [token]; a phone may only end the session it claimed. */
     @Synchronized
     fun end(token: String, peerAddress: String? = null) {
         val session = current ?: return
-        if (session.token == token && (peerAddress == null || session.phonePeer == peerAddress)) current = null
+        if (session.token == token && (peerAddress == null || session.phonePeer.equals(peerAddress, true))) current = null
     }
 }
 

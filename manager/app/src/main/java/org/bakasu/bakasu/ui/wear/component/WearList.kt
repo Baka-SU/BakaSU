@@ -271,7 +271,7 @@ fun WearList(
         )
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(Modifier.semantics { contentDescription = loadingDescription })
+                WearLoadingIndicator(Modifier.semantics { contentDescription = loadingDescription })
             }
         } else {
             Box(Modifier.fillMaxSize()) {
@@ -355,7 +355,7 @@ fun WearList(
                         ),
                     ) {
                         // The pull refresh starts at the end of the list, so its progress shows here, where
-                        // the finger is: a ring that fills with the pull, then a spinner while refreshing.
+                        // the finger is: a ring that fills with the pull, then the loading animation while refreshing.
                         if (onClosePanel != null && pullProgress.floatValue < 0f) {
                             WearPullIndicator(-pullProgress.floatValue, closing = true)
                         } else if (pullProgress.floatValue < 0f) {
@@ -367,10 +367,7 @@ fun WearList(
                                 strokeWidth = CircularProgressIndicatorDefaults.IndeterminateStrokeWidth,
                             )
                         } else if (isRefreshing) {
-                            CircularProgressIndicator(
-                                Modifier.size(24.dp),
-                                colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current),
-                            )
+                            WearLoadingIndicator(Modifier.size(24.dp), color = LocalContentColor.current)
                         } else if (onConfirm != null && confirmLabel != null) {
                             Text(confirmLabel)
                         } else {

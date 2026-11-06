@@ -2,6 +2,8 @@ package org.bakasu.bakasu.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -12,6 +14,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.bakasu.bakasu.domain.model.BridgeException
 import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.domain.model.ProfileTemplateException
 import org.bakasu.bakasu.domain.model.ProfileTemplateFailure
@@ -52,6 +55,13 @@ class OnlineTemplateViewModel(
         state.copy(addedIds = local.filter(ProfileTemplate::local).mapTo(mutableSetOf(), ProfileTemplate::id))
     }.stateIn(viewModelScope, SharingStarted.Eagerly, OnlineTemplateUiState())
 
+    private var loadJob: Job? = null
+
+    fun cancelLoad() {
+        loadJob?.cancel()
+        online.update { it.copy(loading = false) }
+    }
+
     init {
         load()
     }
@@ -64,15 +74,21 @@ class OnlineTemplateViewModel(
     }
 
     private fun load() {
+        loadJob?.cancel()
         online.update { it.copy(loading = true) }
-        viewModelScope.launch {
-            fetchOnlineTemplates().fold(
-                onSuccess = { templates -> online.update { it.copy(templates = templates, loading = false) } },
-                onFailure = { error ->
-                    online.update { it.copy(loading = false) }
-                    mutableEvents.emit(OnlineTemplateUiEvent.LoadFailed(error.toFailure()))
-                },
-            )
+        loadJob = viewModelScope.launch {
+            try {
+                fetchOnlineTemplates().fold(
+                    onSuccess = { templates -> online.update { it.copy(templates = templates, loading = false) } },
+                    onFailure = { error ->
+                        online.update { it.copy(loading = false) }
+                        if (error is CancellationException) throw error
+                        if (error !is BridgeException) mutableEvents.emit(OnlineTemplateUiEvent.LoadFailed(error.toFailure()))
+                    },
+                )
+            } finally {
+                online.update { it.copy(loading = false) }
+            }
         }
     }
 

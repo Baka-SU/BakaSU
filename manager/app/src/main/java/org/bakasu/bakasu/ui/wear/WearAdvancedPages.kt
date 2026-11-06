@@ -2,6 +2,8 @@ package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -24,11 +26,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.lazy.transformedHeight
 import java.util.Locale
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.UmountPath
@@ -55,6 +61,7 @@ import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
+import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 import org.koin.compose.viewmodel.koinViewModel
@@ -259,12 +266,11 @@ internal fun WearDynamicManagerPage(onBack: () -> Unit, onChanged: () -> Unit) {
 private enum class UmountInput { Path, Flags }
 
 @Composable
-internal fun WearUmountPage(onBack: () -> Unit) {
+internal fun WearUmountPage(onBack: () -> Unit, onAdd: () -> Unit) {
     val viewModel = koinViewModel<UmountManagerScreenViewModel>()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var result by remember { mutableStateOf<WearResult?>(null) }
     WearResultDialog(result) { result = null }
-    val failed = stringResource(R.string.operation_failed)
     var selected by remember { mutableStateOf<UmountPath?>(null) }
     val remove = rememberWearConfirmDialog(stringResource(R.string.delete), stringResource(R.string.confirm_delete), destructive = true) {
         selected?.let { viewModel.dispatch(UmountManagerUiAction.Remove(it)) }
@@ -272,12 +278,40 @@ internal fun WearUmountPage(onBack: () -> Unit) {
     }
     LaunchedEffect(viewModel) {
         viewModel.dispatch(UmountManagerUiAction.Refresh())
-        viewModel.events.collect { if (it is UmountManagerUiEvent.Message) result = WearResult(it.message, success = it.message != failed) }
+        viewModel.events.collect {
+            if (it is UmountManagerUiEvent.Message && !it.added) result = WearResult(it.message, success = it.success)
+        }
     }
+    WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.umount_path_manager)) }
+        item { WearActionButton(spec, Icons.Rounded.Add, stringResource(R.string.add_umount_path), onAdd) }
+        items(state.umountPaths, key = { it.path }) { entry ->
+            WearActionButton(spec, Icons.Rounded.Delete, entry.path, {
+                selected = entry
+                remove.show()
+            }, secondaryText = entry.flags.toUmountFlagName())
+        }
+    }
+}
+
+@Composable
+internal fun WearAddUmountPage(onBack: () -> Unit) {
+    val viewModel = koinViewModel<UmountManagerScreenViewModel>()
+    var result by remember { mutableStateOf<WearResult?>(null) }
+    WearResultDialog(result) { result = null }
+    val failed = stringResource(R.string.operation_failed)
+    var submitting by rememberSaveable { mutableStateOf(false) }
     var input by rememberSaveable { mutableStateOf<UmountInput?>(null) }
     var path by rememberSaveable { mutableStateOf("") }
     var flags by rememberSaveable { mutableStateOf("0") }
-
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect {
+            if (it is UmountManagerUiEvent.Message && it.added && submitting) {
+                submitting = false
+                if (it.success) onBack() else result = WearResult(it.message, success = false)
+            }
+        }
+    }
     val editing = input
     if (editing != null) {
         WearSubPage({ input = null }) {
@@ -291,44 +325,37 @@ internal fun WearUmountPage(onBack: () -> Unit) {
         }
         return
     }
-
-    WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.umount_path_manager)) }
-        // A TransformingLazyColumn item places only its last child, so each entry is a single button.
-        items(state.umountPaths, key = { it.path }) { entry ->
-            WearActionButton(spec, Icons.Rounded.Delete, entry.path, {
-                selected = entry
-                remove.show()
-            }, secondaryText = entry.flags.toUmountFlagName())
-        }
-        item {
+    WearList(onBack = onBack, isBusy = submitting) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.add_umount_path)) }
+        SegmentedColumn(UmountInput.entries, { it }) { field ->
             WearSettingsJumpPageWidget(
                 spec,
-                stringResource(R.string.add_umount_path),
-                { input = UmountInput.Path },
-                icon = Icons.Rounded.Folder,
-                description = path.ifEmpty { null },
+                stringResource(if (field == UmountInput.Path) R.string.add_umount_path else R.string.umount_flags),
+                { input = field },
+                icon = if (field == UmountInput.Path) Icons.Rounded.Folder else Icons.Rounded.Flag,
+                description = if (field == UmountInput.Path) path.ifEmpty { null } else flags,
+                enabled = !submitting,
             )
         }
-        item {
-            WearSettingsJumpPageWidget(
-                spec,
-                stringResource(R.string.umount_flags),
-                { input = UmountInput.Flags },
-                icon = Icons.Rounded.Flag,
-                description = flags,
-            )
-        }
-        item { WearInfoCard(spec) { Text(stringResource(R.string.umount_flags_hint)) } }
         item {
             WearActionButton(spec, Icons.Rounded.Add, stringResource(R.string.add), {
                 val parsed = flags.toIntOrNull()
                 if (!path.startsWith('/') || parsed == null) {
                     result = WearResult(failed, success = false)
                 } else {
+                    submitting = true
                     viewModel.dispatch(UmountManagerUiAction.Add(path, parsed))
                 }
-            })
+            }, enabled = !submitting)
+        }
+        item {
+            Text(
+                stringResource(R.string.umount_flags_hint),
+                modifier = Modifier.fillMaxWidth().transformedHeight(this, spec).padding(horizontal = 8.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

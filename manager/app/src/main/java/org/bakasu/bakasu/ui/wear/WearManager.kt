@@ -166,6 +166,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         onChange = {
             clearSettingsFeedback()
             moduleRepoEntry.cancel()
+            linkViewModel.cancel()
         },
         // Search results live on their own page; leaving it clears the query of its list.
         onLeave = { route ->
@@ -608,8 +609,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                             entry<WearRoute.DynamicManager> {
                                 WearDynamicManagerPage(::back) { homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false)) }
                             }
+                            entry<WearRoute.AddUmount> { WearAddUmountPage(::back) }
                             entry<WearRoute.Umount> {
-                                WearUmountPage(::back)
+                                WearUmountPage(::back) { open(WearRoute.AddUmount) }
                             }
                             entry<WearRoute.Uninstall> {
                                 WearUninstallPage(::back) { restore -> open(WearRoute.UninstallFlash(restore)) }

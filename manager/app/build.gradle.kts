@@ -272,9 +272,7 @@ dependencies {
     implementation(libs.markdown)
     implementation(libs.markwon.tables)
     implementation(libs.androidx.webkit)
-    implementation(libs.androidx.wear.remote.interactions)
     implementation(libs.androidx.wear.input)
-    implementation(libs.play.services.wearable)
 
     implementation(libs.lsposed.cxx)
 

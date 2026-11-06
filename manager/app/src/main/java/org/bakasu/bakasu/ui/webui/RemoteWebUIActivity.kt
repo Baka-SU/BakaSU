@@ -33,7 +33,7 @@ import org.koin.compose.koinInject
 
 /**
  * The phone side of a watch module's WebUI, opened internally after Bluetooth app authentication.
- * The activity claims the module session from the explicitly paired watch over secure RFCOMM. The
+ * The activity claims the module session from the approved watch over secure RFCOMM. The
  * page, its files and its `ksu` bridge commands are all served by the watch, so every change the
  * page makes is applied on the watch; closing the page tells the watch to end the session and
  * reload its modules.
@@ -74,14 +74,22 @@ class RemoteWebUIActivity : ComponentActivity() {
                     backend = remote
                     webUIState.moduleName = remote.moduleName
                     webUIState.modDir = "/data/adb/modules/${remote.moduleId}"
-                    createWebView(
-                        this@RemoteWebUIActivity,
-                        webUIState,
-                        remote,
-                        settingsRepository,
-                        restrictToModule = true,
-                        colorsCssProvider = { currentColorsCss.value },
-                    )
+                    val created = runCatching {
+                        createWebView(
+                            this@RemoteWebUIActivity,
+                            webUIState,
+                            remote,
+                            settingsRepository,
+                            restrictToModule = true,
+                            colorsCssProvider = { currentColorsCss.value },
+                        )
+                    }.isSuccess
+                    if (!created) {
+                        remote.close()
+                        BridgeActivityLaunch.failed(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
+                        webUIState.uiEvent = WebUIEvent.Error(claimFailed)
+                        return@LaunchedEffect
+                    }
                     BridgeActivityLaunch.ready(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
                 }
                 DisposableEffect(Unit) { onDispose { webUIState.dispose() } }

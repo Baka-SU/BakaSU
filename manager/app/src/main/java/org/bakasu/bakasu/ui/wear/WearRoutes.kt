@@ -191,6 +191,9 @@ sealed interface WearRoute : NavKey {
     data object Umount : WearRoute, NeedsRoot
 
     @Serializable
+    data object AddUmount : WearRoute, NeedsRoot
+
+    @Serializable
     data object Uninstall : WearRoute, NeedsRoot
 
     /** Restoring the stock image or uninstalling permanently. */

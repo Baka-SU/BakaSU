@@ -4,20 +4,11 @@ import android.app.Application
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import androidx.wear.remote.interactions.RemoteActivityHelper
 import androidx.webkit.WebViewCompat
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import org.bakasu.bakasu.data.webui.CompanionBridgeRepository
-import org.bakasu.bakasu.data.webui.WearWebUiSession
-import org.bakasu.bakasu.domain.model.BridgeException
-import org.bakasu.bakasu.domain.model.BridgeFailure
+import org.bakasu.bakasu.domain.model.BridgeAction
 
 enum class WearLinkTarget { WEBVIEW, BROWSER, PHONE }
 
@@ -73,77 +64,11 @@ class WearLinkRepository(private val application: Application, private val bridg
                 )
             }.onFailure { throw WearLinkException(WearLinkFailure.BROWSER_FAILED, it) }
         }
-        if (target == WearLinkTarget.PHONE) {
-            val helper = RemoteActivityHelper(application, java.util.concurrent.Executor { it.run() })
-            val availability = withTimeoutOrNull(1_000) { helper.availabilityStatus.first() }
-            if (availability == RemoteActivityHelper.STATUS_UNAVAILABLE ||
-                availability == RemoteActivityHelper.STATUS_TEMPORARILY_UNAVAILABLE
-            ) {
-                throw WearLinkException(WearLinkFailure.PHONE_UNAVAILABLE)
-            }
-            startOnPhone(Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE), null)
-        }
+        if (target == WearLinkTarget.PHONE) bridge.handoff(BridgeAction.LINK, url)
         target
     }
 
-    /**
-     * Opens the WebUI through the app that authorizes this watch, fetching the shared key on first
-     * use. False means the phone posted its notification instead of opening the page.
-     */
-    suspend fun openWebUiOnPhone(moduleId: String, moduleName: String): Boolean = withContext(Dispatchers.IO) {
-        var token = ""
-        try {
-            var peer = bridge.ensureProvisioned()
-            token = WearWebUiSession.offer(moduleId, moduleName, peer.address)
-            bridge.startServer()
-            bridge.awaitServer()
-            val response = try {
-                bridge.request(peer.address, CompanionBridgeRepository.OPEN) { it.input.readUTF() }
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                // The phone may have revoked or rotated the key; fetch it once more before giving up.
-                WearWebUiSession.end(token)
-                bridge.forgetSecret()
-                peer = runCatching { bridge.provision() }.getOrElse { throw error }
-                token = WearWebUiSession.offer(moduleId, moduleName, peer.address)
-                bridge.startServer()
-                bridge.awaitServer()
-                bridge.request(peer.address, CompanionBridgeRepository.OPEN) { it.input.readUTF() }
-            }
-            when (response) {
-                "opened" -> true
-                "notification" -> false
-                "notifications-required" -> throw BridgeException(BridgeFailure.NOTIFICATIONS)
-                else -> throw BridgeException(BridgeFailure.CONNECTION)
-            }
-        } catch (error: Exception) {
-            WearWebUiSession.end(token)
-            bridge.stopServer()
-            throw error
-        }
-    }
-
-    /** Starts [intent] on phone [nodeId], or any connected phone when null; a failed dispatch is reported. */
-    private suspend fun startOnPhone(intent: Intent, nodeId: String?) {
-        val helper = RemoteActivityHelper(application, java.util.concurrent.Executor { it.run() })
-        val future = helper.startRemoteActivity(intent, nodeId)
-        try {
-            suspendCancellableCoroutine<Unit> { continuation ->
-                future.addListener({
-                    try {
-                        future.get()
-                        if (continuation.isActive) continuation.resume(Unit)
-                    } catch (error: Exception) {
-                        if (continuation.isActive) continuation.resumeWithException(error)
-                    }
-                }, java.util.concurrent.Executor { it.run() })
-                continuation.invokeOnCancellation { future.cancel(true) }
-            }
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            throw WearLinkException(WearLinkFailure.PHONE_FAILED, error)
-        }
+    suspend fun openWebUiOnPhone(moduleId: String, moduleName: String) {
+        bridge.handoff(BridgeAction.WEB_UI, moduleId, moduleName)
     }
 }

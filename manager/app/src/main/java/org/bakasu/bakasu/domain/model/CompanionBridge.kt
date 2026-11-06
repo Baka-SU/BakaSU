@@ -11,8 +11,26 @@ enum class BridgeFailure(@param:StringRes val resId: Int) {
     CONNECTION(R.string.wear_bridge_connect_failed),
     ASSOCIATION(R.string.wear_bridge_association_unsupported),
     NOTIFICATIONS(R.string.wear_bridge_notification_required),
+    NOT_PAIRED(R.string.wear_bridge_not_paired),
+    REJECTED(R.string.wear_bridge_rejected),
 }
 
 class BridgeException(val reason: BridgeFailure, cause: Throwable? = null) : Exception(reason.name, cause)
 data class BridgePeer(val address: String, val name: String)
-data class BridgeState(val peer: BridgePeer? = null, val enabled: Boolean = false, val connected: Boolean = false)
+data class BridgeState(val peer: BridgePeer? = null, val enabled: Boolean = false, val connected: Boolean = false, val remembered: Boolean = false)
+
+enum class BridgeAction { WEB_UI, LINK, TEMPLATES }
+
+enum class BridgeStage { CONNECTING, WAITING, OPENED, COMPLETED, FAILED }
+
+data class BridgeTransfer(val stage: BridgeStage, val failure: BridgeFailure? = null)
+
+data class BridgeRequest(
+    val id: String,
+    val peer: BridgePeer,
+    val action: BridgeAction,
+    val value: String,
+    val title: String,
+    val requiresConfirmation: Boolean,
+    val readyToOpen: Boolean = false,
+)

@@ -83,6 +83,8 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     WearRoute.Umount -> R.string.umount_path_manager
 
+    WearRoute.AddUmount -> R.string.add_umount_path
+
     WearRoute.Uninstall, is WearRoute.UninstallFlash -> R.string.settings_uninstall
 
     WearRoute.KernelInstall, is WearRoute.BootFlash, is WearRoute.KernelFlash -> R.string.install

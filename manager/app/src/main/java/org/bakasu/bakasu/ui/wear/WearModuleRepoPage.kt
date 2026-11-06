@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.ui.wear
 
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tag
-import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,13 +48,10 @@ import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.CompactButton
-import androidx.wear.compose.material3.ConfirmationDialogDefaults
-import androidx.wear.compose.material3.FailureConfirmationDialog
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.confirmationDialogCurvedText
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
@@ -80,10 +75,9 @@ import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearRepositoryConnectionDialog
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
@@ -429,7 +423,7 @@ private fun WearModuleIcon(size: Dp) {
 /**
  * A module download as in the design: the progress runs around the screen edge, leaving the time at
  * the top, with the module, its state, the percentage and the downloaded size in the center. The
- * ring reads [fraction] when it draws, so it follows the transfer; without a known size it spins.
+ * ring reads [fraction] when it draws, so it follows the transfer; without a known size it shows the loading animation.
  * A failure says why and offers to retry; swiping back leaves.
  */
 @Composable
@@ -442,8 +436,6 @@ private fun WearModuleDownloadScreen(name: String, version: String, state: Modul
             if (!failed) {
                 if (sizeKnown || state.phase == ModuleDownloadPhase.VERIFYING) {
                     CircularProgressIndicator(progress = fraction, modifier = ringModifier, startAngle = 300f, endAngle = 240f)
-                } else {
-                    CircularProgressIndicator(ringModifier, strokeWidth = CircularProgressIndicatorDefaults.largeStrokeWidth)
                 }
             }
             Column(
@@ -451,7 +443,7 @@ private fun WearModuleDownloadScreen(name: String, version: String, state: Modul
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                WearModuleIcon(48.dp)
+                if (!failed && !sizeKnown && state.phase != ModuleDownloadPhase.VERIFYING) WearLoadingIndicator() else WearModuleIcon(48.dp)
                 // The name is the focus; the state and its numbers follow in smaller, quieter styles.
                 Text(
                     name,
