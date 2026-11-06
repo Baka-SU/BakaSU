@@ -29,4 +29,10 @@ class WearSearchViewModel(
         mutableHistory.value = recent
         setPreference(key, JSONArray(recent).toString())
     }
+
+    fun remove(query: String) {
+        val recent = mutableHistory.value.filterNot { it == query.trim() }
+        mutableHistory.value = recent
+        setPreference(key, JSONArray(recent).toString())
+    }
 }

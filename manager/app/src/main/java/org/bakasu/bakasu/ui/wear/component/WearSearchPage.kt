@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tune
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.FilledTonalIconButton
@@ -42,6 +44,7 @@ fun WearSearchPage(
 ) {
     val viewModel = koinViewModel<WearSearchViewModel>(key = "wear-search:$historyScope", parameters = { parametersOf(historyScope) })
     val history by viewModel.history.collectAsStateWithLifecycle()
+    val listState = rememberTransformingLazyColumnState()
     var query by rememberSaveable(historyScope) { mutableStateOf(initialQuery) }
     var editing by rememberSaveable { mutableStateOf(false) }
     fun submit(value: String) {
@@ -63,7 +66,7 @@ fun WearSearchPage(
         }
         return
     }
-    WearList(onBack = onBack) { spec ->
+    WearList(onBack = onBack, listState = listState) { spec ->
         item { WearPageHeader(spec, title) }
         item {
             WearScaledItem(spec) {
@@ -83,9 +86,18 @@ fun WearSearchPage(
             }
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_search_history)) }
+        if (history.isEmpty()) {
+            item { WearEmptyState(spec, Icons.Rounded.History, stringResource(R.string.wear_search_history_empty)) }
+        }
         history.forEach { previous ->
             item(key = previous) {
-                WearActionButton(spec, Icons.Rounded.History, previous, { submit(previous) }, colors = ButtonDefaults.filledTonalButtonColors())
+                WearModuleSwipeActions(
+                    spec,
+                    scrolling = listState.isScrollInProgress,
+                    primary = WearIconAction(Icons.Rounded.Delete, stringResource(R.string.delete), { viewModel.remove(previous) }),
+                ) {
+                    WearActionButton(Icons.Rounded.History, previous, { submit(previous) }, colors = ButtonDefaults.filledTonalButtonColors())
+                }
             }
         }
     }
