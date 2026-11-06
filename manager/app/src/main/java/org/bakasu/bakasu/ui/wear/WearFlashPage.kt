@@ -139,6 +139,15 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
                 item {
                     WearActionButton(
                         spec,
+                        Icons.Rounded.Article,
+                        logTitle,
+                        { showLog = true },
+                        secondaryText = stringResource(R.string.wear_install_log_summary),
+                    )
+                }
+                item {
+                    WearActionButton(
+                        spec,
                         Icons.Rounded.Save,
                         stringResource(R.string.save_log),
                         saveLog,
