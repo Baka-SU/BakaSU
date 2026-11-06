@@ -30,11 +30,17 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 @RunWith(Parameterized::class)
-class WearAppTransitionsTest(private val destination: WearRoute, private val round: Boolean) {
+class WearPageTransitionsTest(private val destination: WearRoute, private val round: Boolean) {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private val app: WearRoute = if (destination is WearRoute.App) WearRoute.Main else WearRoute.App(10000, "test.app")
+    private val app: WearRoute = when (destination) {
+        is WearRoute.AffectedApps, is WearRoute.AppActions, is WearRoute.AppProfileMode,
+        is WearRoute.AppProfileTemplateChoice, is WearRoute.AppProfileCustom,
+        -> WearRoute.App(10000, "test.app")
+
+        else -> WearRoute.Main
+    }
     private val stack = NavBackStack<NavKey>(app)
 
     @Test
@@ -79,6 +85,22 @@ class WearAppTransitionsTest(private val destination: WearRoute, private val rou
         compose.onNodeWithTag("child").assertDoesNotExist()
     }
 
+    @Test
+    fun predictiveBackBeforeEntryFinishesCanComplete() {
+        showPages()
+        openPage(elapsedMillis = 16)
+        compose.runOnIdle {
+            compose.activity.onBackPressedDispatcher.dispatchOnBackStarted(backEvent(0f))
+            compose.activity.onBackPressedDispatcher.dispatchOnBackProgressed(backEvent(0.6f))
+        }
+        compose.mainClock.advanceTimeBy(32)
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        settle()
+        assertEquals(app, stack.last())
+        assertAtOrigin("app")
+        compose.onNodeWithTag("child").assertDoesNotExist()
+    }
+
     private fun showPages() {
         assumeTrue(Build.VERSION.SDK_INT >= 36)
         compose.setContent {
@@ -106,9 +128,9 @@ class WearAppTransitionsTest(private val destination: WearRoute, private val rou
         compose.mainClock.autoAdvance = false
     }
 
-    private fun openPage() {
+    private fun openPage(elapsedMillis: Long = 96) {
         compose.runOnIdle { stack.add(destination) }
-        compose.mainClock.advanceTimeBy(96)
+        compose.mainClock.advanceTimeBy(elapsedMillis)
     }
 
     private fun settle() {
@@ -134,6 +156,10 @@ class WearAppTransitionsTest(private val destination: WearRoute, private val rou
             WearRoute.AppProfileMode(10000, "test.app"),
             WearRoute.AppProfileTemplateChoice(10000, "test.app"),
             WearRoute.AppProfileCustom(10000, "test.app"),
+            WearRoute.Module("test.module"),
+            WearRoute.ModuleRepo,
+            WearRoute.Settings(WearSettingsCategory.General),
+            WearRoute.HomeVersionInfo,
         ).flatMap { destination -> listOf(true, false).map { round -> arrayOf(destination, round) } }
     }
 }

@@ -5,7 +5,6 @@ import android.os.Build
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.spring
@@ -889,9 +888,18 @@ private val WearPageTransitions: Map<String, Any> = if (Build.VERSION.SDK_INT >=
                 scaleOut(targetScale = 0.9f, animationSpec = tween(easing = LinearEasing))
             )
 
-    // Finish forward navigation immediately so a quick predictive back has no entrance animation
-    // to overlap. Both back paths keep the same scale handoff, including gesture cancellation.
-    NavDisplay.transitionSpec { EnterTransition.None togetherWith ExitTransition.None } +
+    // Keep entry and return in NavDisplay, with inverse endpoints for interruption and cancellation.
+    NavDisplay.transitionSpec {
+        (
+            slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(easing = LinearEasing)) +
+                scaleIn(initialScale = 0.9f, animationSpec = tween(easing = LinearEasing))
+            ) togetherWith
+            (
+                scaleOut(targetScale = 0.9f, animationSpec = tween(easing = LinearEasing)) +
+                    slideOutHorizontally(targetOffsetX = { -it / 4 }, animationSpec = tween(easing = LinearEasing)) +
+                    fadeOut(targetAlpha = 0.5f, animationSpec = tween(easing = LinearEasing))
+                )
+    } +
         NavDisplay.popTransitionSpec { popTransition } +
         NavDisplay.predictivePopTransitionSpec { popTransition }
 } else {
@@ -909,8 +917,7 @@ private val WearPageTransitions: Map<String, Any> = if (Build.VERSION.SDK_INT >=
     }
 }
 
-// Only this group opts into forward motion on API 36+. NavDisplay owns both directions so a
-// predictive back can interrupt the same animation rather than overlap a second animation host.
+// This group retains its shorter entrance; NavDisplay still owns both navigation directions.
 private val DynamicManagerTransitions: Map<String, Any> = if (Build.VERSION.SDK_INT >= 36) {
     NavDisplay.transitionSpec {
         (
@@ -921,24 +928,6 @@ private val DynamicManagerTransitions: Map<String, Any> = if (Build.VERSION.SDK_
 } else {
     emptyMap()
 }
-
-// Use inverse endpoints for app entry and return so their scale and position agree.
-private val WearAppPageTransitions: Map<String, Any> = WearPageTransitions +
-    if (Build.VERSION.SDK_INT >= 36) {
-        NavDisplay.transitionSpec {
-            (
-                slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(easing = LinearEasing)) +
-                    scaleIn(initialScale = 0.9f, animationSpec = tween(easing = LinearEasing))
-                ) togetherWith
-                (
-                    scaleOut(targetScale = 0.9f, animationSpec = tween(easing = LinearEasing)) +
-                        slideOutHorizontally(targetOffsetX = { -it / 4 }, animationSpec = tween(easing = LinearEasing)) +
-                        fadeOut(targetAlpha = 0.5f, animationSpec = tween(easing = LinearEasing))
-                    )
-        }
-    } else {
-        emptyMap()
-    }
 
 /**
  * Attaches each page's transition defaults while allowing explicit entry transitions.
@@ -951,14 +940,7 @@ internal fun <T : Any> withPageTransitions(
     pageContent: @Composable (T, @Composable () -> Unit) -> Unit,
 ): (T) -> NavEntry<T> = { key ->
     val entry = provider(key)
-    val transitions = when (key) {
-        is WearRoute.App, is WearRoute.AffectedApps, is WearRoute.AppActions,
-        is WearRoute.AppProfileMode, is WearRoute.AppProfileTemplateChoice, is WearRoute.AppProfileCustom,
-        -> WearAppPageTransitions
-
-        else -> WearPageTransitions
-    }
-    NavEntry(key, entry.contentKey, transitions + entry.metadata) { pageContent(key) { entry.Content() } }
+    NavEntry(key, entry.contentKey, WearPageTransitions + entry.metadata) { pageContent(key) { entry.Content() } }
 }
 
 /**

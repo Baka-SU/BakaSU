@@ -38,4 +38,13 @@
 - Wear AVD 本轮因磁盘空间不足未能启动，因此上述复测使用已连接的 Android 模拟器。未修改其屏幕或系统配置。真实手表的系统振动仍需设备确认，模拟器验证不代表物理触感验收。
 - `git diff --check` 通过。
 
-进入动画恢复将在菜单修复提交后单独实施和提交；纵向退出阻尼保持现状。
+菜单修复提交：`0471fd17`，`fix(wear): restore upward menu dismissal and scope gesture blocking`。
+
+## 进入动画恢复
+
+- API 36 及以上普通 Wear 页面恢复进入动画，复用应用详情页已使用的平移、缩放及背景淡出过渡，并与返回过渡保持相反端点。进入和返回均交由同一个 `NavDisplay`，不增加第二层动画容器。
+- 移除仅应用详情页使用的重复过渡配置。动态管理器保留已有短动画，API 36 以下行为不变；普通返回与预测性返回的配置不变。
+- `WearAppTransitionsTest` 扩展并更名为 `WearPageTransitionsTest`，新增模块、仓库、设置和首页详情路径，覆盖正常进入与按钮返回、进入中预测性返回取消、进入第一帧后立即预测性返回完成。
+- 在独立的 API 37 Wear 临时模拟器上运行 `WearPageTransitionsTest`，**60 项通过**，耗时 85.324 秒；覆盖 10 个目标页面、圆屏/方屏和 3 类过渡场景。临时实例使用已有 Wear 系统镜像与 D 盘独立数据目录，未更改现有 AVD。
+- 测试结束后已关闭临时模拟器。自动审批审查以 `blocked by policy` 拒绝清理 `D:\Temp\bakasu-entry-validation`，该临时目录保留，未改用其他方式删除。
+- `spotlessCheck`、`assembleRelease`、`lintRelease`、`:app:assembleDebug`、`:app:assembleDebugAndroidTest` 全部通过，`git diff --check` 通过。纵向退出阻尼保持现状。
