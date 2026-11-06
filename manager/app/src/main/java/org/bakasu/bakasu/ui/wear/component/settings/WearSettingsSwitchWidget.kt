@@ -23,7 +23,7 @@ import org.bakasu.bakasu.ui.wear.component.wearCompactRow
  * @date 2026/10/1.
  */
 
-/** A settings switch; per the Wear switch button guidance the label takes up to 3 lines and the summary up to 2. */
+/** A settings switch; labels take up to 3 lines and summaries default to 2, with room for longer details when needed. */
 @Composable
 fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
     transformationSpec: TransformationSpec,
@@ -36,6 +36,7 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
     compact: Boolean = false,
     largeIcon: Boolean = false,
     iconContent: (@Composable BoxScope.() -> Unit)? = null,
+    secondaryLabelMaxLines: Int = 2,
 ) {
     SwitchButton(
         modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec)
@@ -48,7 +49,7 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
         onCheckedChange = onCheckedChange,
         enabled = enabled,
         icon = iconContent ?: icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
-        secondaryLabel = secondaryLabel?.let { text -> { Text(text, maxLines = 2, overflow = TextOverflow.Ellipsis) } },
+        secondaryLabel = secondaryLabel?.let { text -> { Text(text, maxLines = secondaryLabelMaxLines, overflow = TextOverflow.Ellipsis) } },
         label = { Text(label, maxLines = 3, overflow = TextOverflow.Ellipsis) },
     )
 }

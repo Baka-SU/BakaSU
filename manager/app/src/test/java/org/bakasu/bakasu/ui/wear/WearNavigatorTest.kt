@@ -81,4 +81,63 @@ class WearNavigatorTest {
         navigator.back()
         assertEquals(WearRoute.Operations(WearOperationsPage.Modules), navigator.top)
     }
+
+    @Test
+    fun logSearchShowsResultsAndKeepsQueryThroughDetailsAndEditing() {
+        var query = ""
+        val navigator = WearNavigator(
+            NavBackStack<NavKey>(WearRoute.Main),
+            {},
+            { if (it == WearRoute.LogSearchResults) query = "" },
+            { fail("Unexpected app exit") },
+        )
+        val menu = WearRoute.Operations(WearOperationsPage.Logs)
+        navigator.open(WearRoute.Logs)
+        navigator.open(menu)
+        navigator.open(WearRoute.LogSearch)
+        navigator.submitSearch(WearRoute.LogSearchResults, " root ") { query = it }
+        assertEquals(WearRoute.LogSearchResults, navigator.top)
+        assertEquals("root", query)
+        assertNull(navigator.operationsFor(WearRoute.LogSearchResults))
+        navigator.open(WearRoute.LogEntry("entry"))
+        navigator.back()
+        assertEquals("root", query)
+        navigator.open(WearRoute.LogSearch)
+        navigator.submitSearch(WearRoute.LogSearchResults, " shell ") { query = it }
+        assertEquals(1, navigator.backStack.count { it == WearRoute.LogSearchResults })
+        assertEquals("shell", query)
+        navigator.back()
+        assertEquals("", query)
+        assertEquals(menu, navigator.top)
+        navigator.back()
+        assertEquals(WearRoute.Logs, navigator.top)
+    }
+
+    @Test
+    fun blankLogSearchClosesInputWithoutOpeningResults() {
+        val navigator = navigator()
+        navigator.open(WearRoute.Logs)
+        navigator.open(WearRoute.LogSearch)
+        navigator.submitSearch(WearRoute.LogSearchResults, " ") { fail("Blank query dispatched") }
+        assertEquals(WearRoute.Logs, navigator.top)
+    }
+
+    @Test
+    fun dynamicManagerInputsReturnToTheirOwningPageAndCloseWhenRootIsLost() {
+        val navigator = navigator()
+        navigator.open(WearRoute.DynamicManager)
+        navigator.open(WearRoute.DynamicManagerManual)
+        for (input in listOf(WearRoute.DynamicManagerSize, WearRoute.DynamicManagerHash)) {
+            navigator.open(input)
+            navigator.back()
+            assertEquals(WearRoute.DynamicManagerManual, navigator.top)
+        }
+        navigator.back()
+        navigator.open(WearRoute.DynamicManagerApps)
+        navigator.open(WearRoute.DynamicManagerSearch)
+        navigator.back()
+        assertEquals(WearRoute.DynamicManagerApps, navigator.top)
+        navigator.closeUnavailable(fullFeatured = false, susfs = false, rootAvailable = false)
+        assertEquals(listOf(WearRoute.Main), navigator.backStack.toList())
+    }
 }

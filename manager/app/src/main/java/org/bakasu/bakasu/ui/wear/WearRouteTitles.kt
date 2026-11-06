@@ -48,7 +48,7 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     WearRoute.Logs, is WearRoute.LogEntry -> R.string.sulog
 
-    WearRoute.LogSearch -> R.string.sulog_search_placeholder
+    WearRoute.LogSearch, WearRoute.LogSearchResults -> R.string.sulog_search_placeholder
 
     WearRoute.LogOptions -> R.string.sulog_filter_title
 
@@ -82,6 +82,14 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
     WearRoute.SuSFS -> R.string.susfs_config_title
 
     WearRoute.DynamicManager -> R.string.dynamic_manager_title
+
+    WearRoute.DynamicManagerManual -> R.string.dynamic_manager_manual_config
+
+    WearRoute.DynamicManagerApps, WearRoute.DynamicManagerSearch -> R.string.search_apps
+
+    WearRoute.DynamicManagerSize -> R.string.signature_size
+
+    WearRoute.DynamicManagerHash -> R.string.signature_hash
 
     WearRoute.Umount -> R.string.umount_path_manager
 

@@ -27,6 +27,7 @@ import org.bakasu.bakasu.domain.usecase.SetStringSetPreferenceUseCase
 data class SulogScreenState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val isEnabling: Boolean = false,
     val sulogStatus: String = "",
     val isSulogEnabled: Boolean = false,
     val searchText: String = "",
@@ -56,6 +57,7 @@ data class SulogFileSelector(
 typealias SulogUiState = SulogScreenState
 
 sealed interface SulogUiAction {
+    data object LoadInitialData : SulogUiAction
     data object Refresh : SulogUiAction
     data object RefreshLatest : SulogUiAction
     data object Enable : SulogUiAction
@@ -67,6 +69,7 @@ sealed interface SulogUiAction {
 
 sealed interface SulogUiEvent {
     data class Error(val message: String) : SulogUiEvent
+    data object Enabled : SulogUiEvent
 }
 
 class SulogViewModel(
@@ -77,6 +80,8 @@ class SulogViewModel(
     getStringSetPreference: GetStringSetPreferenceUseCase,
     private val setStringSetPreference: SetStringSetPreferenceUseCase,
 ) : ViewModel() {
+    private val sourceState = observeState()
+    private val enabling = MutableStateFlow(false)
     private val search = MutableStateFlow("")
     private val filters = MutableStateFlow(
         getStringSetPreference(PREF_SULOG_FILTERS)
@@ -85,17 +90,20 @@ class SulogViewModel(
             .ifEmpty(::defaultSulogEventFilters),
     )
     private var refreshJob: Job? = null
+    private var enableJob: Job? = null
     private val mutableEvents = MutableSharedFlow<SulogUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<SulogUiEvent> = mutableEvents.asSharedFlow()
 
     val state: StateFlow<SulogUiState> = combine(
-        observeState(),
+        sourceState,
         search,
         filters,
-    ) { source, query, selectedFilters ->
+        enabling,
+    ) { source, query, selectedFilters, isEnabling ->
         SulogUiState(
             isLoading = source.isLoading,
             isRefreshing = source.isRefreshing,
+            isEnabling = isEnabling,
             sulogStatus = source.status,
             isSulogEnabled = source.enabled,
             searchText = query,
@@ -115,16 +123,13 @@ class SulogViewModel(
 
     fun dispatch(action: SulogUiAction) {
         when (action) {
+            SulogUiAction.LoadInitialData -> if (sourceState.value.isLoading && refreshJob?.isActive != true) refresh(null)
+
             SulogUiAction.Refresh -> refresh(state.value.selectedFilePath)
 
             SulogUiAction.RefreshLatest -> refresh(null)
 
-            SulogUiAction.Enable -> viewModelScope.launch {
-                val result = setSulogEnabled(true)
-                result.exceptionOrNull()?.let {
-                    mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))
-                } ?: refresh(state.value.selectedFilePath)
-            }
+            SulogUiAction.Enable -> enable()
 
             SulogUiAction.CleanFile -> state.value.selectedFilePath?.let { path ->
                 viewModelScope.launch {
@@ -145,6 +150,25 @@ class SulogViewModel(
             }
 
             is SulogUiAction.SelectFile -> refresh(action.path)
+        }
+    }
+
+    private fun enable() {
+        if (enableJob?.isActive == true) return
+        enableJob = viewModelScope.launch {
+            enabling.value = true
+            try {
+                val result = setSulogEnabled(true)
+                result.exceptionOrNull()?.let {
+                    mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))
+                } ?: run {
+                    mutableEvents.emit(SulogUiEvent.Enabled)
+                    refresh(state.value.selectedFilePath)
+                    refreshJob?.join()
+                }
+            } finally {
+                enabling.value = false
+            }
         }
     }
 

@@ -164,6 +164,9 @@ sealed interface WearRoute : NavKey {
     data object LogSearch : WearRoute, NeedsRoot
 
     @Serializable
+    data object LogSearchResults : WearRoute, NeedsRoot
+
+    @Serializable
     data class Settings(val category: WearSettingsCategory) : WearRoute
 
     @Serializable
@@ -190,7 +193,22 @@ sealed interface WearRoute : NavKey {
     data object SuSFS : WearRoute, NeedsRoot
 
     @Serializable
-    data object DynamicManager : WearRoute, NeedsRoot
+    data object DynamicManager : WearRoute, DynamicManagerRoute
+
+    @Serializable
+    data object DynamicManagerManual : WearRoute, DynamicManagerRoute
+
+    @Serializable
+    data object DynamicManagerApps : WearRoute, DynamicManagerRoute
+
+    @Serializable
+    data object DynamicManagerSize : WearRoute, DynamicManagerRoute
+
+    @Serializable
+    data object DynamicManagerHash : WearRoute, DynamicManagerRoute
+
+    @Serializable
+    data object DynamicManagerSearch : WearRoute, DynamicManagerRoute
 
     @Serializable
     data object Umount : WearRoute, NeedsRoot
@@ -251,6 +269,9 @@ sealed interface WearRoute : NavKey {
 
 /** A destination that needs a full-featured root manager; it closes when root goes away. */
 interface NeedsRoot
+
+/** Destinations sharing the dynamic manager model and manual configuration draft. */
+interface DynamicManagerRoute : NeedsRoot
 
 val WearRoute.needsRoot: Boolean
     get() = when (this) {

@@ -69,41 +69,53 @@ import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 internal fun WearLogsPage(
     state: SulogUiState,
     onBack: () -> Unit,
-    onClearSearch: () -> Unit,
+    onEnable: () -> Unit,
     onRefresh: () -> Unit,
-    onOpenPanel: () -> Unit,
+    onOpenPanel: (() -> Unit)? = null,
     onEntry: (SulogEntry) -> Unit,
     error: String? = null,
     hasOperationsPanel: Boolean = false,
+    onEditSearch: (() -> Unit)? = null,
 ) {
-    val statusFailure = when (state.sulogStatus) {
-        "unsupported" -> stringResource(R.string.sulog_unsupported_title)
-        "managed" -> stringResource(R.string.feature_status_managed_summary)
-        else -> null
-    }
-    val failures = listOfNotNull(error, state.errorMessage, statusFailure).filter { it.isNotBlank() }.distinct()
+    val failures = listOfNotNull(error, state.errorMessage).filter { it.isNotBlank() }.distinct()
     WearErrorDialog(failures.takeIf { it.isNotEmpty() && !state.isLoading && !state.isRefreshing }?.joinToString("\n"))
     // As on the phone: the log refreshes by the pull gesture, whose progress shows in the edge
     // button, and the first load shows only the loading indicator.
     WearList(
         isLoading = state.isLoading,
-        isRefreshing = state.isRefreshing && !state.isLoading,
+        isRefreshing = (state.isRefreshing || state.isEnabling) && !state.isLoading,
         onRefresh = onRefresh,
         onBack = onBack,
         onOpenPanel = onOpenPanel,
         panelLabel = stringResource(R.string.wear_operations),
         hasOperationsPanel = hasOperationsPanel,
     ) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.sulog)) }
-        // The active query; tapping it clears the search.
-        if (state.searchText.isNotBlank()) {
+        item { WearPageHeader(spec, stringResource(if (onEditSearch != null) R.string.sulog_search_placeholder else R.string.sulog)) }
+        when (state.sulogStatus) {
+            "unsupported" -> item { WearStatusItem(spec, Icons.Rounded.Warning, stringResource(R.string.sulog_unsupported_title)) }
+
+            "managed" -> item { WearStatusItem(spec, Icons.Rounded.Warning, stringResource(R.string.feature_status_managed_summary)) }
+
+            "forced" -> item { WearStatusItem(spec, Icons.Rounded.Warning, stringResource(R.string.feature_status_forced_summary)) }
+
+            "supported" if !state.isSulogEnabled -> item {
+                WearActionButton(
+                    spec,
+                    Icons.Rounded.Article,
+                    stringResource(R.string.sulog_disabled_title),
+                    onEnable,
+                    secondaryText = stringResource(R.string.sulog_enable_action),
+                    enabled = !state.isLoading && !state.isRefreshing && !state.isEnabling,
+                )
+            }
+        }
+        if (onEditSearch != null) {
             item {
                 WearActionButton(
                     spec,
-                    Icons.Rounded.SearchOff,
+                    Icons.Rounded.Search,
                     state.searchText,
-                    onClearSearch,
-                    secondaryText = stringResource(R.string.wear_clear_search),
+                    onEditSearch,
                     colors = ButtonDefaults.filledTonalButtonColors(),
                 )
             }

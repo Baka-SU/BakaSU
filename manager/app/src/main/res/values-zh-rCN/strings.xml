@@ -539,6 +539,9 @@
     <string name="dynamic_manager_clear_config">清除动态管理器</string>
     <string name="dynamic_manager_clear_config_summary">禁用动态管理器配置</string>
     <string name="dynamic_manager_fixed_manager_summary">%1$s\n由 %2$s 管理</string>
+    <string name="dynamic_manager_source_debug">Debug</string>
+    <string name="dynamic_manager_source_toolkit">KernelSU Toolkit</string>
+    <string name="dynamic_manager_source_kernel">Kernel</string>
     <string name="dynamic_manager_grant_confirm_title">确认授权？</string>
     <string name="dynamic_manager_grant_confirm_message">所选 App 将成为动态管理器，若当前已设置动态管理器，其将会立刻失效\n\n这将授予对于此设备的最高权限，如果你不知道这意味着什么，请取消。</string>
     <string name="dynamic_manager_clear_confirm_title">清除动态管理器</string>
