@@ -1,9 +1,11 @@
 package org.bakasu.bakasu.ui.wear.component
 
 import android.content.res.Configuration
+import android.os.Build
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
+import android.view.View
 import android.view.ViewConfiguration
 import androidx.activity.BackEventCompat
 import androidx.activity.ComponentActivity
@@ -16,7 +18,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -53,6 +59,13 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
     private var menuOpen by mutableStateOf(false)
     private lateinit var pageState: TransformingLazyColumnState
     private lateinit var menuState: TransformingLazyColumnState
+    private lateinit var composeView: View
+    private val hapticEvents = mutableListOf<HapticFeedbackType>()
+    private val haptics = object : HapticFeedback {
+        override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
+            hapticEvents += hapticFeedbackType
+        }
+    }
 
     @Test
     fun crownOpensFullMenuAndReturnsFocusAfterClosing() {
@@ -95,26 +108,44 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
     }
 
     @Test
-    fun horizontalSwipesDoNotCloseMenu() {
+    fun horizontalSwipesDoNotCloseMenuOrVibrate() {
         showHost(initiallyOpen = true)
         compose.onNodeWithTag("menu").performTouchInput {
             swipe(Offset(1f, centerY), Offset(width - 1f, centerY), 300)
             swipe(Offset(width - 1f, centerY), Offset(1f, centerY), 300)
         }
         assertFullMenu()
+        compose.runOnIdle { assertTrue("Ignored horizontal gestures must not emit haptics", hapticEvents.isEmpty()) }
     }
 
     @Test
-    fun downwardPullClosesMenuOnlyAfterThreshold() {
+    fun systemBackExclusionExistsOnlyWhileMenuIsActive() {
+        if (Build.VERSION.SDK_INT < 29) return
+        showHost()
+        val originalExclusions = compose.runOnIdle { composeView.systemGestureExclusionRects.toList() }
+        compose.runOnIdle { menuOpen = true }
+        compose.runOnIdle {
+            assertTrue(
+                "An active menu must exclude both system back edges",
+                composeView.systemGestureExclusionRects.any { it.left <= 0 && it.right >= composeView.width && it.height() > 0 },
+            )
+            menuOpen = false
+        }
+        compose.runOnIdle { assertEquals(originalExclusions, composeView.systemGestureExclusionRects) }
+    }
+
+    @Test
+    fun upwardPullClosesMenuOnlyAfterThreshold() {
         showHost(initiallyOpen = true)
+        menuList().performScrollToIndex(7)
         compose.onNodeWithTag("menu").performTouchInput {
-            swipe(Offset(centerX, height * 0.25f), Offset(centerX, height * 0.30f), 300)
+            swipe(Offset(centerX, height * 0.85f), Offset(centerX, height * 0.70f), 300)
         }
         assertFullMenu()
         compose.onNodeWithTag("menu").performTouchInput {
-            swipe(Offset(centerX, height * 0.25f), Offset(centerX, height * 0.85f), 300)
+            swipe(Offset(centerX, height * 0.85f), Offset(centerX, height * 0.25f), 300)
         }
-        compose.runOnIdle { assertFalse("A downward pull at the top must close the menu", menuOpen) }
+        compose.runOnIdle { assertFalse("An upward pull at the bottom must close the menu", menuOpen) }
         compose.onNodeWithTag("menu").assertDoesNotExist()
     }
 
@@ -129,11 +160,10 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
     }
 
     @Test
-    fun upwardPullAtTheEndDoesNotCloseMenu() {
+    fun downwardPullAtTheTopDoesNotCloseMenu() {
         showHost(initiallyOpen = true)
-        menuList().performScrollToIndex(7)
         compose.onNodeWithTag("menu").performTouchInput {
-            swipe(Offset(centerX, height * 0.85f), Offset(centerX, height * 0.15f), 300)
+            swipe(Offset(centerX, height * 0.25f), Offset(centerX, height * 0.85f), 300)
         }
         assertFullMenu()
     }
@@ -186,7 +216,8 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
                 screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
                     if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
             }
-            CompositionLocalProvider(LocalConfiguration provides configuration) {
+            CompositionLocalProvider(LocalConfiguration provides configuration, LocalHapticFeedback provides haptics) {
+                composeView = LocalView.current
                 MaterialTheme {
                     AppScaffold(timeText = {}) {
                         Box(Modifier.fillMaxSize().testTag("viewport")) {
@@ -200,7 +231,6 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
                                         WearList(
                                             listState = menuState,
                                             onClosePanel = { menuOpen = false },
-                                            closePanelOnPullDown = true,
                                             onPanelClosing = onClosing,
                                         ) { spec ->
                                             items(8) { WearChip(spec, stringResource(R.string.wear_filter_sort)) }

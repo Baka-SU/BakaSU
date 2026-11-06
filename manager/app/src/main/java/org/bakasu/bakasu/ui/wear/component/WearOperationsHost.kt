@@ -2,8 +2,10 @@ package org.bakasu.bakasu.ui.wear.component
 
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -18,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.wear.compose.foundation.LocalScreenIsActive
@@ -63,6 +66,16 @@ internal fun WearOperationsHost(
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)).clearAndSetSemantics {})
                 Box(
                     Modifier.fillMaxSize().hierarchicalFocusGroup(active = menuActive && screenActive)
+                        // Keep horizontal back and its haptics local to the active menu.
+                        .then(
+                            if (menuActive && screenActive) {
+                                Modifier.systemGestureExclusion().pointerInput(Unit) {
+                                    detectHorizontalDragGestures { change, _ -> change.consume() }
+                                }
+                            } else {
+                                Modifier
+                            },
+                        )
                         .onSizeChanged { height = it.height.toFloat() }
                         .graphicsLayer { translationY = if (menuOpen) 0f else (pull.floatValue - 1f) * height }
                         .clipToBounds().then(if (menuActive) Modifier else Modifier.clearAndSetSemantics {}),

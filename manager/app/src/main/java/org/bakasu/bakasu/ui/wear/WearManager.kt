@@ -388,7 +388,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                     modifier = Modifier.fillMaxSize().then(if (showLinkLoading && themeConfig.isEnableBlur) Modifier.blur(12.dp) else Modifier),
                     backStack = navigator.backStack.filterNot { it is WearRoute.Operations },
                     onBack = { back() },
-                    sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = !operationsOnTop && (Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss))),
+                    sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss)),
                     entryDecorators = listOf(
                         rememberSaveableStateHolderNavEntryDecorator(),
                         rememberViewModelStoreNavEntryDecorator(),

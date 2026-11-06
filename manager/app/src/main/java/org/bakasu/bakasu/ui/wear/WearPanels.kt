@@ -112,7 +112,7 @@ internal fun WearOperationsPanel(
     }
     // Start the reveal at the end on its first layout, before the preview is shown.
     val listState = rememberTransformingLazyColumnState(initialAnchorItemIndex = actions.lastIndex.coerceAtLeast(0))
-    WearList(onClosePanel = onBack, closePanelOnPullDown = true, onPanelClosing = onClosing, snap = false, listState = listState) { spec ->
+    WearList(onClosePanel = onBack, onPanelClosing = onClosing, snap = false, listState = listState) { spec ->
         LazySegmentedColumn(actions, { it.label }) { action ->
             WearSettingsJumpPageWidget(
                 spec,
