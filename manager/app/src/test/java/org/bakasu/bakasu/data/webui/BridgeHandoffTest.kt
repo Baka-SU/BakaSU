@@ -22,6 +22,7 @@ class BridgeHandoffTest {
         }
         val id = checkNotNull(permission.id.value)
         permission.answer(id, true)
+        assertNull(permission.id.value)
         permission.answer(id, true)
         request.await()
         assertEquals(1, opened)

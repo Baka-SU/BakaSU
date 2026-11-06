@@ -36,7 +36,10 @@ internal class BridgePermissionRequest {
     }
 
     fun answer(id: String, granted: Boolean) {
-        if (mutableId.value == id) answer?.complete(granted)
+        if (mutableId.value == id) {
+            mutableId.value = null
+            answer?.complete(granted)
+        }
     }
 
     fun cancel() {

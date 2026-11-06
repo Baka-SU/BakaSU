@@ -933,4 +933,10 @@
     <string name="wear_bridge_bluetooth_short">请开启蓝牙</string>
     <string name="wear_bridge_pair_short">尚未配对手机</string>
     <string name="wear_bridge_notification_short">请允许手机通知</string>
+    <string name="wear_web_tools">网页控制</string>
+    <string name="wear_web_scale">网页大小：%1$d%%</string>
+    <string name="wear_web_move">移动网页</string>
+    <string name="wear_web_move_hint">拖动以显示四角，点击 ✓ 完成</string>
+    <string name="wear_web_move_done">完成移动</string>
+    <string name="wear_web_reset">重置网页位置与大小</string>
 </resources>
