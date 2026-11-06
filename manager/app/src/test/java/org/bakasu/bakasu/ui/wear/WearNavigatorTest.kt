@@ -11,6 +11,26 @@ class WearNavigatorTest {
     private fun navigator() = WearNavigator(NavBackStack<NavKey>(WearRoute.Main), {}, {}, { fail("Unexpected app exit") })
 
     @Test
+    fun patchingWithoutRootReturnsToThePageBeforeInstallation() {
+        val navigator = navigator()
+        navigator.open(WearRoute.KernelInstall)
+        navigator.replace(WearRoute.LkmInstall)
+        navigator.back()
+        assertEquals(listOf(WearRoute.Main), navigator.backStack.toList())
+    }
+
+    @Test
+    fun rootedInstallationKeepsTheModeChooserWhenReturningFromPatching() {
+        val navigator = navigator()
+        navigator.open(WearRoute.KernelInstall)
+        navigator.open(WearRoute.LkmInstall)
+        navigator.back()
+        assertEquals(WearRoute.KernelInstall, navigator.top)
+        navigator.open(WearRoute.Ak3Install())
+        assertEquals(WearRoute.Ak3Install(), navigator.top)
+    }
+
+    @Test
     fun changelogReturnsToTheModuleUpdatePage() {
         val navigator = navigator()
         navigator.open(WearRoute.Module("module"))

@@ -740,7 +740,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 }
                             }
                             entry<WearRoute.KernelInstall> {
-                                WearInstallPage(::back, ::open)
+                                WearInstallPage(::back, ::open) {
+                                    if (navigator.top == WearRoute.KernelInstall) navigator.replace(WearRoute.LkmInstall)
+                                }
                             }
                             entry<WearRoute.LkmInstall> {
                                 WearLkmInstallPage(::back, ::open)

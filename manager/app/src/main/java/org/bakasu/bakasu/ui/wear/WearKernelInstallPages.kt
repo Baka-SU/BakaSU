@@ -20,14 +20,18 @@ import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
@@ -35,6 +39,8 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.InstallEnvironment
+import org.bakasu.bakasu.ui.viewmodel.InstallUiAction
+import org.bakasu.bakasu.ui.viewmodel.InstallUiState
 import org.bakasu.bakasu.ui.viewmodel.InstallViewModel
 import org.bakasu.bakasu.ui.viewmodel.KernelFlashUiAction
 import org.bakasu.bakasu.ui.viewmodel.KernelFlashUiEvent
@@ -43,6 +49,7 @@ import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearFlashStatus
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearLoadFailureScreen
 import org.bakasu.bakasu.ui.wear.component.WearLogPage
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
@@ -60,12 +67,37 @@ import org.koin.compose.viewmodel.koinViewModel
 /** The phone's LKM install methods: patch a selected image, patch the current slot, or the inactive slot after OTA. */
 private enum class LkmMethod { SELECT_FILE, DIRECT, INACTIVE_SLOT }
 
+/** Each destination refreshes its own environment when it becomes active, preserving its draft. */
+@Composable
+private fun rememberInstallState(viewModel: InstallViewModel): InstallUiState {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val active = LocalScreenIsActive.current
+    var expectedRefresh by remember(viewModel) { mutableIntStateOf(viewModel.state.value.refreshVersion + 1) }
+    LifecycleResumeEffect(viewModel, active) {
+        if (active) {
+            expectedRefresh = viewModel.state.value.refreshVersion + 1
+            viewModel.dispatch(InstallUiAction.Refresh)
+        }
+        onPauseOrDispose { expectedRefresh = viewModel.state.value.refreshVersion + 1 }
+    }
+    return state.copy(loading = state.loading || state.refreshVersion < expectedRefresh)
+}
+
 /** The phone Install screen's two tabs become two entries: LKM patching and AnyKernel3 flashing. */
 @Composable
-internal fun WearInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit) {
-    val installState by koinViewModel<InstallViewModel>().state.collectAsStateWithLifecycle()
+internal fun WearInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit, onPatchWithoutRoot: () -> Unit) {
+    val viewModel = koinViewModel<InstallViewModel>()
+    val installState = rememberInstallState(viewModel)
     val environment = installState.environment
-    WearList(isLoading = installState.loading, onBack = onBack, snap = true) { spec ->
+    val active = LocalScreenIsActive.current
+    LaunchedEffect(installState, active) {
+        if (active && !installState.loading && installState.error == null && !environment.rootAvailable) onPatchWithoutRoot()
+    }
+    if (!installState.loading && installState.error != null) {
+        WearLoadFailureScreen(installState.error.ifBlank { stringResource(R.string.wear_load_failed) }, onBack) { viewModel.dispatch(InstallUiAction.Refresh) }
+        return
+    }
+    WearList(isLoading = installState.loading || !environment.rootAvailable, onBack = onBack, snap = true) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.install)) }
         item {
             WearSettingsJumpPageWidget(
@@ -96,7 +128,8 @@ internal fun WearInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit) {
  */
 @Composable
 internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit) {
-    val installState by koinViewModel<InstallViewModel>().state.collectAsStateWithLifecycle()
+    val viewModel = koinViewModel<InstallViewModel>()
+    val installState = rememberInstallState(viewModel)
     val environment = installState.environment
     var method by rememberSaveable { mutableStateOf<LkmMethod?>(null) }
     var bootUri by rememberSaveable { mutableStateOf<String?>(null) }
@@ -136,7 +169,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
     val canSelectPartition = method == LkmMethod.DIRECT || method == LkmMethod.INACTIVE_SLOT
     val suffix = if (method == LkmMethod.INACTIVE_SLOT) environment.inactiveSlotSuffix else environment.activeSlotSuffix
     val shownPartition = partition ?: defaultPartition(environment)
-    val ready = method != null && (method != LkmMethod.SELECT_FILE || bootUri != null)
+    val ready = !installState.loading && installState.error == null && method in methods && (method != LkmMethod.SELECT_FILE || bootUri != null)
     fun flash(kmi: String?) = onOpen(
         WearRoute.BootFlash(
             bootUri = if (method == LkmMethod.SELECT_FILE) bootUri else null,
@@ -150,6 +183,10 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
         ),
     )
 
+    if (!installState.loading && installState.error != null) {
+        WearLoadFailureScreen(installState.error.ifBlank { stringResource(R.string.wear_load_failed) }, onBack) { viewModel.dispatch(InstallUiAction.Refresh) }
+        return
+    }
     when (choosing) {
         "partition" -> WearSubPage({ choosing = null }) {
             WearChoicePage(
@@ -169,6 +206,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
                 environment.supportedKmis.map { it to it },
                 "",
                 { choosing = null },
+                enabled = ready,
             ) {
                 choosing = null
                 flash(it)
@@ -176,6 +214,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
         }
 
         else -> WearList(
+            isLoading = installState.loading,
             onBack = onBack,
             snap = true,
             onConfirm = {
@@ -302,7 +341,8 @@ private fun Uri.fileName(): String = lastPathSegment?.substringAfterLast('/') ?:
 /** AnyKernel3: pick the ZIP, choose the slot on A/B devices, then flash. */
 @Composable
 internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit, initialUri: String? = null) {
-    val installState by koinViewModel<InstallViewModel>().state.collectAsStateWithLifecycle()
+    val viewModel = koinViewModel<InstallViewModel>()
+    val installState = rememberInstallState(viewModel)
     val environment = installState.environment
     var zipUri by rememberSaveable { mutableStateOf(initialUri) }
     var slot by rememberSaveable { mutableStateOf<String?>(null) }
@@ -314,8 +354,13 @@ internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit,
     LaunchedEffect(environment.isAbDevice, activeSlot) {
         if (environment.isAbDevice && slot == null) slot = activeSlot
     }
-    val ready = zipUri != null && (!environment.isAbDevice || slot != null)
+    val ready = !installState.loading && installState.error == null && environment.rootAvailable && zipUri != null && (!environment.isAbDevice || slot != null)
+    if (!installState.loading && installState.error != null) {
+        WearLoadFailureScreen(installState.error.ifBlank { stringResource(R.string.wear_load_failed) }, onBack) { viewModel.dispatch(InstallUiAction.Refresh) }
+        return
+    }
     WearList(
+        isLoading = installState.loading,
         onBack = onBack,
         snap = true,
         onConfirm = { zipUri?.let { onOpen(WearRoute.KernelFlash(it, slot, skipKsud)) } },
@@ -323,6 +368,9 @@ internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit,
         confirmLabel = stringResource(R.string.install_next),
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.GKI_install_methods)) }
+        if (!environment.rootAvailable) {
+            item { WearStatusItem(spec, Icons.Rounded.Warning, stringResource(R.string.root_required), tone = WearStatusTone.ERROR) }
+        }
         item {
             WearSettingsJumpPageWidget(
                 spec,
