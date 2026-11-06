@@ -850,6 +850,7 @@
     <string name="wear_uninstall_summary">重启后移除</string>
     <string name="wear_update_to">更新到 %1$s</string>
     <string name="wear_update_download">下载更新</string>
+    <string name="wear_update_changelog_summary">点击加载更新日志</string>
     <string name="wear_update_reading_changelog">正在读取更新日志</string>
     <string name="wear_update_changelog_unavailable">无法读取更新日志</string>
     <string name="wear_module_repo_summary">浏览与下载在线模块</string>

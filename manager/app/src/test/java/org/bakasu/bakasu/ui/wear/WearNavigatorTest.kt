@@ -11,6 +11,18 @@ class WearNavigatorTest {
     private fun navigator() = WearNavigator(NavBackStack<NavKey>(WearRoute.Main), {}, {}, { fail("Unexpected app exit") })
 
     @Test
+    fun changelogReturnsToTheModuleUpdatePage() {
+        val navigator = navigator()
+        navigator.open(WearRoute.Module("module"))
+        navigator.open(WearRoute.ModuleUpdate("module"))
+        navigator.open(WearRoute.ModuleChangelog("module"))
+        navigator.back()
+        assertEquals(WearRoute.ModuleUpdate("module"), navigator.top)
+        navigator.back()
+        assertEquals(WearRoute.Module("module"), navigator.top)
+    }
+
+    @Test
     fun openingANestedPageKeepsOnlyItsOwnersMenu() {
         val navigator = navigator()
         val modules = WearRoute.Operations(WearOperationsPage.Modules)

@@ -196,6 +196,7 @@ import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
 import org.bakasu.bakasu.ui.viewmodel.InstallViewModel
 import org.bakasu.bakasu.ui.viewmodel.KernelFlashViewModel
 import org.bakasu.bakasu.ui.viewmodel.MainIntentViewModel
+import org.bakasu.bakasu.ui.viewmodel.ModuleChangelogViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
@@ -486,6 +487,7 @@ val viewModelModule = module {
     viewModelOf(::KernelFlashViewModel)
     viewModelOf(::SettingsViewModel)
     viewModelOf(::ModuleViewModel)
+    viewModel { parameters -> ModuleChangelogViewModel(parameters.get(), get()) }
     viewModelOf(::SuperUserViewModel)
     viewModelOf(::SuSFSViewModel)
     viewModelOf(::ModuleDownloadViewModel)

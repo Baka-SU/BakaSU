@@ -371,7 +371,15 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 WearExecuteModulePage(route.id, ::back) { moduleViewModel.dispatch(ModuleUiAction.Refresh()) }
                             }
                             entry<WearRoute.ModuleUpdate> { route ->
-                                WearModuleUpdatePage(modules.moduleList.firstOrNull { it.id == route.id }, ::back, installer::update)
+                                WearModuleUpdatePage(
+                                    modules.moduleList.firstOrNull { it.id == route.id },
+                                    ::back,
+                                    installer::update,
+                                    onChangelog = { open(WearRoute.ModuleChangelog(route.id)) },
+                                )
+                            }
+                            entry<WearRoute.ModuleChangelog> { route ->
+                                WearModuleChangelogPage(modules.moduleList.firstOrNull { it.id == route.id }, ::back)
                             }
                             entry<WearRoute.ModuleInstall> { route ->
                                 WearFlashPage(FlashOperation.Module(route.uri), ::back, installer.onInstalled)

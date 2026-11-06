@@ -39,6 +39,11 @@ sealed interface WearRoute : NavKey {
         NeedsRoot
 
     @Serializable
+    data class ModuleChangelog(val id: String) :
+        WearRoute,
+        NeedsRoot
+
+    @Serializable
     data class ModuleInstall(val uri: String) :
         WearRoute,
         NeedsRoot

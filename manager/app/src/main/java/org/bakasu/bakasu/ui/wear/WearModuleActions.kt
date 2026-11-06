@@ -1,7 +1,5 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -16,68 +14,52 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.ModuleUpdateMetadata
-import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiAction
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
+import org.bakasu.bakasu.ui.viewmodel.ModuleChangelogViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
-import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 import org.bakasu.bakasu.ui.wear.component.WearLogPage
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
-import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.toLogLines
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
- * A module update with the phone's use cases: the changelog is read first, then [onDownload]
- * downloads the ZIP on the shared module download page, which installs it.
+ * The changelog opens separately, so its length and availability do not block the download.
+ * [onDownload] downloads the ZIP on the shared module download page, which installs it.
  */
 @Composable
-internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, onDownload: (InstalledModule, ModuleUpdateMetadata) -> Unit) {
-    val fetchRemoteText = koinInject<FetchRemoteTextUseCase>()
-    var changelog by rememberSaveable { mutableStateOf<String?>(null) }
-    var changelogError by rememberSaveable { mutableStateOf<String?>(null) }
+internal fun WearModuleUpdatePage(
+    module: InstalledModule?,
+    onBack: () -> Unit,
+    onDownload: (InstalledModule, ModuleUpdateMetadata) -> Unit,
+    onChangelog: () -> Unit,
+) {
     val update = module?.moduleUpdate
-    LaunchedEffect(update?.changelog) {
-        val url = update?.changelog ?: return@LaunchedEffect
-        if (changelog == null) {
-            fetchRemoteText(url).fold(
-                onSuccess = { changelog = it },
-                onFailure = { changelogError = it.message.orEmpty() },
-            )
-        }
-    }
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_update)) }
         if (module != null && update != null) {
-            // The module and its version change lead; the changelog follows as quieter body text.
+            // The module and its version change lead, followed by the two actions.
             item {
                 WearModuleInfoCard(spec) {
                     Text(
@@ -94,55 +76,59 @@ internal fun WearModuleUpdatePage(module: InstalledModule?, onBack: () -> Unit, 
                     )
                 }
             }
-            item { WearSectionHeader(spec, stringResource(R.string.module_changelog)) }
-            when {
-                changelogError != null -> item {
-                    WearStatusItem(
-                        spec,
-                        Icons.Rounded.Error,
-                        stringResource(R.string.module_changelog_failed, changelogError.orEmpty()),
-                        tone = WearStatusTone.ERROR,
-                    )
-                }
+            item {
+                WearActionButton(
+                    spec,
+                    Icons.Rounded.Article,
+                    stringResource(R.string.module_changelog),
+                    onChangelog,
+                    enabled = update.changelog.isNotBlank(),
+                    secondaryText = stringResource(if (update.changelog.isBlank()) R.string.wear_update_changelog_unavailable else R.string.wear_update_changelog_summary),
+                    colors = ButtonDefaults.filledTonalButtonColors(),
+                )
+            }
+            item {
+                WearActionButton(
+                    spec,
+                    Icons.Rounded.Download,
+                    stringResource(R.string.wear_update_download),
+                    { onDownload(module, update) },
+                    enabled = !module.remove && update.zipUrl.isNotBlank(),
+                    secondaryText = stringResource(R.string.wear_update_to, update.version),
+                )
+            }
+        }
+    }
+}
 
-                changelog == null -> item {
-                    WearScaledItem(spec) {
-                        WearLoadingIndicator(Modifier.align(Alignment.Center).size(ButtonDefaults.IconSize))
-                    }
-                }
+@Composable
+internal fun WearModuleChangelogPage(module: InstalledModule?, onBack: () -> Unit) {
+    val url = module?.moduleUpdate?.changelog.orEmpty()
+    val viewModel = koinViewModel<ModuleChangelogViewModel>(key = url, parameters = { parametersOf(url) })
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    WearList(isLoading = state.loading, onBack = onBack) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.module_changelog)) }
+        when {
+            state.loading -> Unit
 
-                // The whole changelog, split only at line breaks so each list item stays short.
-                else -> changelogChunks(changelog.orEmpty()).forEach { chunk ->
-                    item {
-                        WearInfoCard(spec) {
-                            Text(chunk, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+            state.error != null -> {
+                item {
+                    WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.module_changelog_failed, state.error.orEmpty()), tone = WearStatusTone.ERROR)
+                }
+                item {
+                    WearActionButton(spec, Icons.Rounded.Download, stringResource(R.string.network_retry), viewModel::load)
                 }
             }
-            // Like the phone, the update is offered only after its changelog has been read; the
-            // download itself runs on the shared module download page.
-            item {
-                Button(
-                    onClick = { onDownload(module, update) },
-                    enabled = changelog != null,
-                    modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
-                        .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
-                    transformation = SurfaceTransformation(spec),
-                    icon = { Icon(Icons.Rounded.Download, contentDescription = null) },
-                    secondaryLabel = {
-                        Text(
-                            when {
-                                changelogError != null -> stringResource(R.string.wear_update_changelog_unavailable)
-                                changelog == null -> stringResource(R.string.wear_update_reading_changelog)
-                                else -> stringResource(R.string.wear_update_to, update.version)
-                            },
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                ) {
-                    Text(stringResource(R.string.wear_update_download), maxLines = 2, overflow = TextOverflow.Ellipsis)
+
+            state.content.isBlank() -> item {
+                WearStatusItem(spec, Icons.Rounded.Article, stringResource(R.string.wear_update_changelog_unavailable))
+            }
+
+            else -> changelogChunks(state.content).forEach { chunk ->
+                item {
+                    WearInfoCard(spec) {
+                        Text(chunk, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }

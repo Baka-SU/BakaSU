@@ -14,6 +14,8 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     is WearRoute.ModuleUpdate -> R.string.module_update
 
+    is WearRoute.ModuleChangelog -> R.string.module_changelog
+
     is WearRoute.ModuleInstall -> R.string.confirm_installation
 
     WearRoute.ModuleSort, WearRoute.ModuleRepoSort -> R.string.wear_sort
