@@ -58,9 +58,11 @@ internal fun WearOperationsPanel(
     fullFeatured: Boolean,
     susfsAvailable: Boolean,
     onReboot: (String) -> Unit,
+    moduleRepoLoading: Boolean = false,
     onClosing: () -> Unit = {},
 ) {
     val rebootMethods = wearRebootMethods()
+    val moduleRepoLabel = stringResource(R.string.module_repo)
     val actions = when (page) {
         WearOperationsPage.Home -> buildList {
             if (fullFeatured && susfsAvailable) {
@@ -87,7 +89,12 @@ internal fun WearOperationsPanel(
         WearOperationsPage.Modules -> listOf(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.search_modules), onSearch),
             WearIconAction(Icons.Rounded.Add, stringResource(R.string.install), onInstall),
-            WearIconAction(Icons.Rounded.Cloud, stringResource(R.string.module_repo), { onOpen(WearRoute.ModuleRepo) }),
+            WearIconAction(
+                Icons.Rounded.Cloud,
+                moduleRepoLabel,
+                { onOpen(WearRoute.ModuleRepo) },
+                enabled = !moduleRepoLoading,
+            ),
             WearIconAction(Icons.Rounded.Sort, stringResource(R.string.wear_sort), { onOpen(WearRoute.ModuleSort) }),
         )
 
@@ -107,7 +114,14 @@ internal fun WearOperationsPanel(
     val listState = rememberTransformingLazyColumnState(initialAnchorItemIndex = actions.lastIndex.coerceAtLeast(0))
     WearList(onClosePanel = onBack, closePanelOnPullDown = true, onPanelClosing = onClosing, snap = false, listState = listState) { spec ->
         LazySegmentedColumn(actions, { it.label }) { action ->
-            WearSettingsJumpPageWidget(spec, action.label, action.onClick, icon = action.icon, enabled = action.enabled)
+            WearSettingsJumpPageWidget(
+                spec,
+                action.label,
+                action.onClick,
+                icon = action.icon,
+                enabled = action.enabled,
+                isLoading = page == WearOperationsPage.Modules && action.label == moduleRepoLabel && moduleRepoLoading,
+            )
         }
     }
 }

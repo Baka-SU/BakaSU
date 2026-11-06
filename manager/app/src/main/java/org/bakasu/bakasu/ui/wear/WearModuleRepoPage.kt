@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,7 +62,6 @@ import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
-import org.bakasu.bakasu.domain.model.RepositoryError
 import org.bakasu.bakasu.domain.model.RepositoryFailure
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
@@ -81,6 +81,7 @@ import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearRepositoryConnectionDialog
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
@@ -102,42 +103,17 @@ internal fun WearModuleRepoPage(
     onOpen: (CatalogModule) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    // Opening the repository loads its index, which also checks that the watch can reach it over
-    // any network: the paired phone, the watch Wi-Fi or its mobile data.
     var failure by remember { mutableStateOf<RepositoryFailure?>(null) }
-    var refreshRequest by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var refreshRequest by remember { mutableIntStateOf(0) }
     fun retry() {
         failure = null
         refreshRequest++
     }
-    val failureReason = stringResource(if (failure?.reason == RepositoryError.OFFLINE) R.string.wear_no_internet else R.string.wear_repo_unreachable)
-    // Every connection failure asks to retry; cached results stay available after dismissing it.
-    val connectDialog = rememberCustomDialog { dismiss ->
-        val leave = {
-            dismiss()
-            if (state.modules.isEmpty()) onBack() else failure = null
-        }
-        AlertDialog(
-            visible = true,
-            onDismissRequest = leave,
-            icon = { WearDialogIcon(Icons.Rounded.Error, tint = MaterialTheme.colorScheme.error) },
-            title = { Text(stringResource(R.string.wear_repo_connect_failed)) },
-            text = { Text(failureReason) },
-            confirmButton = {
-                AlertDialogDefaults.ConfirmButton(
-                    onClick = {
-                        dismiss()
-                        retry()
-                    },
-                )
-            },
-            dismissButton = { AlertDialogDefaults.DismissButton(onClick = leave) },
-        )
-    }
+    WearRepositoryConnectionDialog(failure, ::retry) { failure = null }
     LaunchedEffect(viewModel, state.repositoryUrl, refreshRequest) {
         failure = null
-        failure = viewModel.refreshAndGetFailure()
-        if (failure != null) connectDialog.show()
+        // The menu already loaded the index. Only a pull refresh or retry forces another request.
+        failure = viewModel.refreshAndGetFailure(force = refreshRequest > 0)
     }
     WearList(
         isLoading = state.isRefreshing && state.modules.isEmpty(),
@@ -177,8 +153,6 @@ internal fun WearModuleRepoSearchPage(viewModel: ModuleRepoViewModel, onBack: ()
     WearSearchPage(stringResource(R.string.search_modules), "repository:${state.repositoryUrl}", state.search, onBack, onAdvanced) {
         viewModel.dispatch(ModuleRepoUiAction.Search(it.trim()))
         onSubmit()
-        // A search before the repository has loaded tries to load it first.
-        if (state.modules.isEmpty() && !state.isRefreshing) viewModel.dispatch(ModuleRepoUiAction.Refresh)
     }
 }
 

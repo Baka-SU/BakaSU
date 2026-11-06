@@ -184,10 +184,10 @@ class ModuleRepoViewModel(
         }
     }
 
-    /** Includes immediately rejected offline requests, which never enter the refreshing state. */
-    suspend fun refreshAndGetFailure(): RepositoryFailure? {
+    /** Returns the request failure even when the repository keeps previously loaded modules. */
+    suspend fun refreshAndGetFailure(force: Boolean = true): RepositoryFailure? {
         val url = activeRepository() ?: return null
-        refreshCatalog(url, true)
+        refreshCatalog(url, force)
         return observeSources.failures.value[url]
     }
 

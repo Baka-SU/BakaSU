@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -96,6 +97,7 @@ import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
 import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
 import org.bakasu.bakasu.ui.wear.component.WearOperationsBackHandler
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
+import org.bakasu.bakasu.ui.wear.component.WearRepositoryConnectionDialog
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
@@ -150,13 +152,21 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         )
     }
 
+    val moduleRepoScope = rememberCoroutineScope()
+    val moduleRepoEntry = remember(moduleRepoViewModel, moduleRepoScope) {
+        WearModuleRepoEntry(moduleRepoScope) { moduleRepoViewModel.refreshAndGetFailure() }
+    }
+
     // Settings feedback belongs to the page that caused it; navigating clears it.
     fun clearSettingsFeedback() {
         settingsError = null
         settingsMessageResource = null
     }
     val navigator = rememberWearNavigator(
-        onChange = ::clearSettingsFeedback,
+        onChange = {
+            clearSettingsFeedback()
+            moduleRepoEntry.cancel()
+        },
         // Search results live on their own page; leaving it clears the query of its list.
         onLeave = { route ->
             when (route) {
@@ -170,6 +180,13 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     )
     fun open(route: WearRoute) = navigator.open(route)
     fun back() = navigator.back()
+    fun openModuleRepo() {
+        val menu = WearRoute.Operations(WearOperationsPage.Modules)
+        if (navigator.top != menu) return
+        moduleRepoEntry.open {
+            if (navigator.top == menu) open(WearRoute.ModuleRepo)
+        }
+    }
     val operationsOnTop = navigator.top is WearRoute.Operations
     val appSearchInput = { open(WearRoute.AppSearch) }
     val moduleSearchInput = { open(WearRoute.ModuleSearch) }
@@ -675,7 +692,10 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         WearOperationsPanel(
                                             page = operationsPage,
                                             onBack = closeMenu,
-                                            onOpen = ::open,
+                                            onOpen = { destination ->
+                                                if (destination == WearRoute.ModuleRepo) openModuleRepo() else open(destination)
+                                            },
+                                            moduleRepoLoading = moduleRepoEntry.isLoading,
                                             onSearch = {
                                                 when (operationsPage) {
                                                     WearOperationsPage.SuperUser -> appSearchInput()
@@ -685,12 +705,18 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                     WearOperationsPage.Repository -> open(WearRoute.ModuleRepoSearch)
                                                 }
                                             },
-                                            onInstall = installer::pickFile,
+                                            onInstall = {
+                                                moduleRepoEntry.cancel()
+                                                installer.pickFile()
+                                            },
                                             rootAvailable = home.systemStatus.isRootAvailable,
                                             fullFeatured = home.systemStatus.isFullFeatured,
                                             susfsAvailable = home.systemInfo.susfsEnabled,
                                             onReboot = { homeViewModel.dispatch(HomeUiAction.Reboot(it)) },
-                                            onClosing = onClosing,
+                                            onClosing = {
+                                                moduleRepoEntry.cancel()
+                                                onClosing()
+                                            },
                                         )
                                     }
                                 },
@@ -703,6 +729,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
             WearOperationsBackHandler(operationsOnTop) { back() }
             // Over the pages: waiting for a link to open, which Back cancels, and its result.
             WearLinkHost(linkViewModel) { open(WearRoute.Browser(it)) }
+            WearRepositoryConnectionDialog(moduleRepoEntry.failure, ::openModuleRepo, moduleRepoEntry::cancel)
         }
     }
 }

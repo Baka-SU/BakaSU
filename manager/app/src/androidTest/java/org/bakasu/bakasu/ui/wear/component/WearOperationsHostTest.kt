@@ -28,12 +28,15 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
+import androidx.compose.ui.test.swipeUp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
+import org.bakasu.bakasu.ui.wear.WearSuperUserPanel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -155,6 +158,23 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
         showHost(initiallyOpen = true)
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.runOnIdle { assertFalse(menuOpen) }
+    }
+
+    @Test
+    fun filterBottomScrollingNeverNavigatesBack() {
+        var backs = 0
+        compose.setContent {
+            MaterialTheme {
+                AppScaffold(timeText = {}) {
+                    Box(Modifier.fillMaxSize().testTag("filter")) {
+                        WearSuperUserPanel(SuperUserUiState(), { backs++ }) {}
+                    }
+                }
+            }
+        }
+        repeat(16) { rotateCrown(96f) }
+        repeat(3) { compose.onNodeWithTag("filter").performTouchInput { swipeUp() } }
+        compose.runOnIdle { assertEquals(0, backs) }
     }
 
     private fun menuList() = compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(hasTestTag("menu")), useUnmergedTree = true)

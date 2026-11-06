@@ -93,7 +93,7 @@ class ModuleCatalogRepository(
                                 mutableRefreshingSources.value = mutableRefreshingSources.value + url
                                 SourceRequest(source, sourceGenerations[url] ?: 0)
                             }
-                            val result = attempt { loadSource(request.source) }
+                            val result = attempt { loadSource(request.source, forceNetwork = force) }
                             stateMutex.withLock commit@{
                                 val current = mutableSources.value.firstOrNull { it.url == url } ?: return@commit false
                                 if ((sourceGenerations[url] ?: 0) != request.generation) return@commit false
@@ -349,9 +349,9 @@ class ModuleCatalogRepository(
         }
     }
 
-    private suspend fun loadSource(source: RepositorySource): RepositoryFeed {
+    private suspend fun loadSource(source: RepositorySource, forceNetwork: Boolean = false): RepositoryFeed {
         if (source.apiType == RepositoryApiType.KERNEL_SU) return loadKernelSuSource(source)
-        val body = networkRequestRepository.fetch("${source.url}json/modules.json").getOrThrow()
+        val body = networkRequestRepository.fetch("${source.url}json/modules.json", forceNetwork = forceNetwork).getOrThrow()
         val feed = MmrlRepositoryParser.parse(source.url, body)
         return feed.copy(
             source = feed.source.copy(
