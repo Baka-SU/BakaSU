@@ -38,10 +38,10 @@ class WearMainActivity : WearActivity() {
         // background would keep that base black after the Compose layer becomes transparent.
         window.setBackgroundDrawableResource(android.R.color.transparent)
         lifecycleScope.launch { ensureManagerInstalled() }
-        // As on the phone, Home and the app list start loading at launch.
+        // Repository data is not restored with the Activity's saved state.
+        superUserViewModel.dispatch(SuperUserUiAction.LoadInitialData)
         if (savedInstanceState == null) {
             homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
-            superUserViewModel.dispatch(SuperUserUiAction.Refresh)
             intent?.let { intentChannel.trySend(it) }
         }
         val startupState = observeStartupState()

@@ -554,6 +554,9 @@
     <string name="dynamic_manager_clear_config">Clear dynamic manager</string>
     <string name="dynamic_manager_clear_config_summary">Disable the dynamic manager configuration</string>
     <string name="dynamic_manager_fixed_manager_summary">%1$s\nmanaged by %2$s</string>
+    <string name="dynamic_manager_source_debug">Debug</string>
+    <string name="dynamic_manager_source_toolkit">KernelSU Toolkit</string>
+    <string name="dynamic_manager_source_kernel">Kernel</string>
     <string name="dynamic_manager_grant_confirm_title">Confirm authorization?</string>
     <string name="dynamic_manager_grant_confirm_message">The selected app will become the dynamic manager. If a dynamic manager is already configured, it will be invalidated immediately.\n\nThis grants the highest permission level for this device. If you do not know what this means, cancel.</string>
     <string name="dynamic_manager_clear_confirm_title">Clear dynamic manager</string>

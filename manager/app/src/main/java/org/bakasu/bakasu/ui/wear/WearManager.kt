@@ -64,6 +64,10 @@ import org.bakasu.bakasu.domain.model.LkmSelection
 import org.bakasu.bakasu.domain.model.SuperUserLoadFailure
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
+import org.bakasu.bakasu.ui.viewmodel.DynamicManagerOperation
+import org.bakasu.bakasu.ui.viewmodel.DynamicManagerUiAction
+import org.bakasu.bakasu.ui.viewmodel.DynamicManagerUiEvent
+import org.bakasu.bakasu.ui.viewmodel.DynamicManagerViewModel
 import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
 import org.bakasu.bakasu.ui.viewmodel.HomeUiEvent
 import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
@@ -98,8 +102,11 @@ import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
 import org.bakasu.bakasu.ui.wear.component.WearOperationsBackHandler
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.bakasu.bakasu.ui.wear.component.WearRepositoryConnectionDialog
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
+import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -120,6 +127,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     // Shared by the repository list and its search page, which are separate routes.
     val moduleRepoViewModel = koinViewModel<ModuleRepoViewModel>()
     val sulogViewModel = koinViewModel<SulogViewModel>()
+    val dynamicManagerViewModel = koinViewModel<DynamicManagerViewModel>()
     val settingsViewModel = koinViewModel<SettingsViewModel>()
     val preferenceViewModel = koinViewModel<WearPreferencesViewModel>()
     val linkViewModel = koinViewModel<WearLinkViewModel>()
@@ -129,6 +137,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val superuser by superUserViewModel.uiState.collectAsStateWithLifecycle()
     val modules by moduleViewModel.uiState.collectAsStateWithLifecycle()
     val logs by sulogViewModel.uiState.collectAsStateWithLifecycle()
+    val dynamicManager by dynamicManagerViewModel.uiState.collectAsStateWithLifecycle()
     val settings by settingsViewModel.uiState.collectAsStateWithLifecycle()
 
     var settingsError by remember { mutableStateOf<String?>(null) }
@@ -136,6 +145,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     var moduleError by remember { mutableStateOf<String?>(null) }
     var homeError by remember { mutableStateOf<String?>(null) }
     var logError by remember { mutableStateOf<String?>(null) }
+    var dynamicManagerResult by remember { mutableStateOf<WearResult?>(null) }
+    var signatureSize by rememberSaveable { mutableStateOf("") }
+    var signatureHash by rememberSaveable { mutableStateOf("") }
     val operationFailedText = stringResource(R.string.operation_failed)
     // Missing root shows as a dialog; other list load failures show on the list.
     val superuserError = superuser.loadFailure
@@ -174,12 +186,22 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                 WearRoute.AppSearchResults -> superUserViewModel.dispatch(SuperUserUiAction.Search(""))
                 WearRoute.ModuleSearchResults -> moduleViewModel.dispatch(ModuleUiAction.Search(""))
                 WearRoute.ModuleRepo, WearRoute.ModuleRepoSearchResults -> moduleRepoViewModel.dispatch(ModuleRepoUiAction.Search(""))
+                WearRoute.LogSearchResults -> sulogViewModel.dispatch(SulogUiAction.Search(""))
                 else -> Unit
             }
         },
         onExit = { activity?.finish() },
     )
-    fun open(route: WearRoute) = navigator.open(route)
+    fun open(route: WearRoute) {
+        if (navigator.top != route) {
+            when (route) {
+                WearRoute.Logs -> sulogViewModel.dispatch(SulogUiAction.RefreshLatest)
+                WearRoute.DynamicManagerApps -> dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Search(""))
+                else -> Unit
+            }
+        }
+        navigator.open(route)
+    }
     fun back() = navigator.back()
     fun openModuleRepo() {
         val menu = WearRoute.Operations(WearOperationsPage.Modules)
@@ -233,10 +255,44 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     }
     ActivityResumeEffect(homeViewModel) {
         homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = true))
+        superUserViewModel.dispatch(SuperUserUiAction.LoadInitialData)
+    }
+    // Restored detail/filter/search destinations also need the process-local log repository.
+    val logsActive = navigator.backStack.any { it == WearRoute.Logs || it == WearRoute.LogSearchResults }
+    ActivityResumeEffect(sulogViewModel, logsActive) {
+        if (logsActive) sulogViewModel.dispatch(SulogUiAction.LoadInitialData)
     }
     LaunchedEffect(sulogViewModel) {
-        sulogViewModel.events.collect { event -> if (event is SulogUiEvent.Error) logError = event.message }
+        sulogViewModel.events.collect { event ->
+            when (event) {
+                is SulogUiEvent.Error -> logError = event.message.ifBlank { resources.getString(R.string.operation_failed) }
+                SulogUiEvent.Enabled -> settingsViewModel.dispatch(SettingsUiAction.LoadFeatureSettings)
+            }
+        }
     }
+    val dynamicManagerActive = navigator.backStack.any { it is DynamicManagerRoute }
+    val dynamicManagerSucceeded = stringResource(R.string.dynamic_manager_set_success)
+    val dynamicManagerCleared = stringResource(R.string.dynamic_manager_disabled_success)
+    LaunchedEffect(dynamicManagerActive, dynamicManagerViewModel) {
+        if (dynamicManagerActive) {
+            dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Refresh)
+            dynamicManagerViewModel.events.collect { event ->
+                if (event is DynamicManagerUiEvent.OperationCompleted) {
+                    dynamicManagerResult = when {
+                        !event.success -> WearResult(operationFailedText, success = false)
+                        event.operation == DynamicManagerOperation.Clear -> WearResult(dynamicManagerCleared, success = true)
+                        else -> WearResult(dynamicManagerSucceeded, success = true)
+                    }
+                    if (event.success) homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
+                }
+            }
+        } else {
+            signatureSize = ""
+            signatureHash = ""
+            dynamicManagerResult = null
+        }
+    }
+    WearResultDialog(dynamicManagerResult) { dynamicManagerResult = null }
     LaunchedEffect(homeViewModel) {
         homeViewModel.events.collect { event -> if (event is HomeUiEvent.Error) homeError = event.message }
     }
@@ -529,19 +585,13 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 WearAllowlistBackupPage(superUserViewModel, ::back)
                             }
                             entry<WearRoute.Logs> {
-                                // Opening the SU log shows the latest file; returning from its own pages keeps
-                                // the file chosen there.
-                                var loaded by rememberSaveable { mutableStateOf(false) }
-                                LaunchedEffect(Unit) {
-                                    if (!loaded) {
-                                        loaded = true
-                                        sulogViewModel.dispatch(SulogUiAction.RefreshLatest)
-                                    }
-                                }
                                 WearLogsPage(
                                     state = logs,
                                     onBack = ::back,
-                                    onClearSearch = { sulogViewModel.dispatch(SulogUiAction.Search("")) },
+                                    onEnable = {
+                                        logError = null
+                                        sulogViewModel.dispatch(SulogUiAction.Enable)
+                                    },
                                     onRefresh = {
                                         logError = null
                                         sulogViewModel.dispatch(SulogUiAction.Refresh)
@@ -566,11 +616,32 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                             }
                             entry<WearRoute.LogSearch> {
                                 WearSearchPage(stringResource(R.string.sulog_search_placeholder), "sulog", logs.searchText, ::back, onAdvanced = { open(WearRoute.LogOptions) }) {
-                                    sulogViewModel.dispatch(SulogUiAction.Search(it))
-                                    back()
+                                    navigator.submitSearch(WearRoute.LogSearchResults, it) { query ->
+                                        sulogViewModel.dispatch(SulogUiAction.Search(query))
+                                    }
                                 }
                             }
+                            entry<WearRoute.LogSearchResults> {
+                                WearLogsPage(
+                                    state = logs,
+                                    onBack = ::back,
+                                    onEnable = {
+                                        logError = null
+                                        sulogViewModel.dispatch(SulogUiAction.Enable)
+                                    },
+                                    onRefresh = {
+                                        logError = null
+                                        sulogViewModel.dispatch(SulogUiAction.Refresh)
+                                    },
+                                    onEntry = { open(WearRoute.LogEntry(it.key)) },
+                                    onEditSearch = logSearchInput,
+                                    error = logError,
+                                )
+                            }
                             entry<WearRoute.Settings> { route ->
+                                ActivityResumeEffect(settingsViewModel) {
+                                    settingsViewModel.dispatch(SettingsUiAction.LoadFeatureSettings)
+                                }
                                 WearSettingsPage(
                                     settings,
                                     home.systemStatus,
@@ -614,8 +685,38 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                             entry<WearRoute.SuSFS> {
                                 WearSuSFSPage(::back) { open(WearRoute.Reboot) }
                             }
-                            entry<WearRoute.DynamicManager> {
-                                WearDynamicManagerPage(::back) { homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false)) }
+                            entry<WearRoute.DynamicManager>(metadata = DynamicManagerTransitions) {
+                                WearDynamicManagerPage(dynamicManager, ::back, ::open) {
+                                    dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Clear)
+                                }
+                            }
+                            entry<WearRoute.DynamicManagerManual>(metadata = DynamicManagerTransitions) {
+                                WearDynamicManagerManualPage(dynamicManager, signatureSize, signatureHash, ::back, ::open) { size, hash ->
+                                    dynamicManagerViewModel.dispatch(DynamicManagerUiAction.SetManual(size, hash))
+                                }
+                            }
+                            entry<WearRoute.DynamicManagerApps>(metadata = DynamicManagerTransitions) {
+                                WearDynamicManagerAppsPage(dynamicManager, ::back, { open(WearRoute.DynamicManagerSearch) }) {
+                                    dynamicManagerViewModel.dispatch(DynamicManagerUiAction.SelectApp(it))
+                                }
+                            }
+                            entry<WearRoute.DynamicManagerSize>(metadata = DynamicManagerTransitions) {
+                                WearTextInputPage(stringResource(R.string.signature_size), signatureSize) {
+                                    signatureSize = it
+                                    back()
+                                }
+                            }
+                            entry<WearRoute.DynamicManagerHash>(metadata = DynamicManagerTransitions) {
+                                WearTextInputPage(stringResource(R.string.signature_hash), signatureHash) {
+                                    signatureHash = it
+                                    back()
+                                }
+                            }
+                            entry<WearRoute.DynamicManagerSearch>(metadata = DynamicManagerTransitions) {
+                                WearSearchPage(stringResource(R.string.search_apps), "dynamic-manager", dynamicManager.search, ::back) {
+                                    dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Search(it))
+                                    back()
+                                }
                             }
                             entry<WearRoute.AddUmount> { WearAddUmountPage(::back) }
                             entry<WearRoute.Umount> {
@@ -786,9 +887,22 @@ private val WearPageTransitions: Map<String, Any> = if (Build.VERSION.SDK_INT >=
     }
 }
 
+// Only this group opts into forward motion on API 36+. NavDisplay owns both directions so a
+// predictive back can interrupt the same animation rather than overlap a second animation host.
+private val DynamicManagerTransitions: Map<String, Any> = if (Build.VERSION.SDK_INT >= 36) {
+    NavDisplay.transitionSpec {
+        (
+            slideInHorizontally(initialOffsetX = { it / 4 }, animationSpec = tween(180)) +
+                fadeIn(animationSpec = tween(180))
+            ) togetherWith ExitTransition.None
+    }
+} else {
+    emptyMap()
+}
+
 /**
- * Attaches [WearPageTransitions] to every entry a provider builds. A scene's metadata is built from
- * its entry's metadata last, so the entry wins over the Wear scene's own transition. The key and the
+ * Attaches [WearPageTransitions] as defaults while allowing explicitly configured entry transitions.
+ * A scene's metadata is built from its entry's metadata last. The key and the
  * content key are carried over unchanged, leaving the entry's saveable state and ViewModel scopes
  * as they were.
  */
@@ -797,7 +911,7 @@ private fun <T : Any> withPageTransitions(
     pageContent: @Composable (T, @Composable () -> Unit) -> Unit,
 ): (T) -> NavEntry<T> = { key ->
     val entry = provider(key)
-    NavEntry(key, entry.contentKey, entry.metadata + WearPageTransitions) { pageContent(key) { entry.Content() } }
+    NavEntry(key, entry.contentKey, WearPageTransitions + entry.metadata) { pageContent(key) { entry.Content() } }
 }
 
 /**
@@ -853,7 +967,7 @@ private fun WearMainPages(
         )
         when (pages.getOrNull(pagerState.currentPage)) {
             HOME -> onHome(HomeUiAction.Refresh(showIndicator = false))
-            SUPERUSER -> if (superuser.appGroupList.isEmpty() && !superuser.isRefreshing) onSuperUser(SuperUserUiAction.Refresh)
+            SUPERUSER -> onSuperUser(SuperUserUiAction.LoadInitialData)
             MODULES -> if ((modules.moduleList.isEmpty() || modules.isNeedRefresh) && !modules.isRefreshing) onModule(ModuleUiAction.Refresh())
         }
     }

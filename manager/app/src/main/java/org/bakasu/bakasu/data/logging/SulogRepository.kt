@@ -4,7 +4,6 @@ import android.os.SystemClock
 import com.topjohnwu.superuser.io.SuFile
 import com.topjohnwu.superuser.io.SuFileInputStream
 import java.io.InputStreamReader
-import java.time.LocalDate
 import java.util.ArrayDeque
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -36,16 +35,9 @@ class SulogRepository(
                 it.copy(isRefreshing = !it.isLoading, errorMessage = null)
             }
             runCatching {
-                val files = listFiles()
+                val files = listSulogFiles(SuFile(SULOG_DIR), includeEmpty = false)
                 currentCoroutineContext().ensureActive()
-                val selectedFile = when {
-                    files.isEmpty() -> null
-
-                    preferredFilePath != null ->
-                        files.firstOrNull { it.path == preferredFilePath } ?: files.first()
-
-                    else -> files.first()
-                }
+                val selectedFile = files.selectedSulogFile(preferredFilePath)
                 val lines = selectedFile?.let { readFile(it.path) }.orEmpty()
                 currentCoroutineContext().ensureActive()
                 val status = ksuCliRepository.getFeatureStatus("sulog")
@@ -88,26 +80,14 @@ class SulogRepository(
     suspend fun clean(path: String): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             val file = SuFile(path)
-            val success = if (mutableState.value.files.firstOrNull()?.path == path) {
+            // The writer may still hold the newest file open, even when it is empty and hidden.
+            val success = if (listSulogFiles(SuFile(SULOG_DIR), includeEmpty = true).firstOrNull()?.path == path) {
                 file.clear()
             } else {
                 file.delete()
             }
             check(success)
         }
-    }
-
-    private fun listFiles(): List<SulogFile> {
-        val names = SuFile(SULOG_DIR).list().orEmpty().mapNotNull { name ->
-            val match = FILE_NAME_REGEX.matchEntire(name) ?: return@mapNotNull null
-            val date = LocalDate.parse(match.groupValues[1])
-            val rotation = match.groupValues[2].takeIf(String::isNotEmpty)?.toInt() ?: 0
-            Triple(name, date, rotation)
-        }.sortedWith(
-            compareByDescending<Triple<String, LocalDate, Int>> { it.second }
-                .thenByDescending { it.third },
-        ).map { it.first }
-        return names.map { SulogFile(name = it, path = "$SULOG_DIR/$it") }
     }
 
     private fun readFile(path: String): List<String> {
@@ -128,6 +108,5 @@ class SulogRepository(
     private companion object {
         const val SULOG_DIR = "/data/adb/ksu/log"
         const val LINE_LIMIT = 1000
-        val FILE_NAME_REGEX = Regex("""sulog-(\d{4}-\d{2}-\d{2})(?:-(\d+))?\.log""")
     }
 }

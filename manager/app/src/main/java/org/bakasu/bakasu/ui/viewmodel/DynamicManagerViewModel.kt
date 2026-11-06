@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui.viewmodel
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -56,6 +57,7 @@ class DynamicManagerViewModel(
     private val setManualDynamicManager: SetManualDynamicManagerUseCase,
     private val clearDynamicManager: ClearDynamicManagerUseCase,
 ) : ViewModel() {
+    private var submitJob: Job? = null
     private val search = MutableStateFlow("")
     private val mutableEvents = MutableSharedFlow<DynamicManagerUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<DynamicManagerUiEvent> = mutableEvents.asSharedFlow()
@@ -110,7 +112,8 @@ class DynamicManagerViewModel(
         operation: DynamicManagerOperation,
         command: suspend () -> Result<Unit>,
     ) {
-        viewModelScope.launch {
+        if (submitJob?.isActive == true) return
+        submitJob = viewModelScope.launch {
             val success = command().isSuccess
             mutableEvents.emit(DynamicManagerUiEvent.OperationCompleted(operation, success))
         }
