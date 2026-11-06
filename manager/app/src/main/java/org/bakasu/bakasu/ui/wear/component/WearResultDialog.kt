@@ -1,47 +1,46 @@
 package org.bakasu.bakasu.ui.wear.component
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Error
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.res.stringResource
-import androidx.wear.compose.material3.AlertDialog
-import androidx.wear.compose.material3.AlertDialogDefaults
-import androidx.wear.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.wear.compose.material3.ConfirmationDialog
+import androidx.wear.compose.material3.ConfirmationDialogDefaults
+import androidx.wear.compose.material3.FailureConfirmationDialog
+import androidx.wear.compose.material3.SuccessConfirmationDialog
 import androidx.wear.compose.material3.Text
-import org.bakasu.bakasu.R
-import org.bakasu.bakasu.ui.component.rememberCustomDialog
+import androidx.wear.compose.material3.confirmationDialogCurvedText
 
-/** One result, acknowledged in the same scrolling dialog as a Home warning. */
+/** An operation result whose [brief] message fits the curved confirmation text. */
 data class WearResult(val message: String, val success: Boolean, val brief: Boolean = false)
 
+/** Official Wear result feedback: curved text for brief messages, body text for longer ones. */
 @Composable
 fun WearResultDialog(result: WearResult?, onDismiss: () -> Unit) {
-    val dialog = rememberCustomDialog { dismiss ->
-        val close = {
-            dismiss()
-            onDismiss()
-        }
-        AlertDialog(
-            visible = true,
-            onDismissRequest = close,
-            icon = {
-                WearDialogIcon(
-                    if (result?.success == true) Icons.Rounded.CheckCircle else Icons.Rounded.Error,
-                    tint = if (result?.success == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                )
-            },
-            title = { Text(if (result?.brief == true) result.message else stringResource(if (result?.success == true) R.string.wear_complete_status else R.string.operation_failed)) },
-            text = if (result?.brief == true) {
-                null
-            } else {
-                { Text(result?.message.orEmpty()) }
-            },
-            edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
-        )
-    }
-    LaunchedEffect(result) {
-        if (result != null) dialog.show() else dialog.hide()
+    // Keep the result visible during the exit animation after the caller clears it.
+    var shown by remember { mutableStateOf(result) }
+    if (result != null) shown = result
+    val success = shown?.success != false
+    val brief = shown?.brief == true
+    val message = shown?.message.orEmpty()
+    val curvedStyle = ConfirmationDialogDefaults.curvedTextStyle
+    SuccessConfirmationDialog(
+        visible = result != null && brief && success,
+        onDismissRequest = onDismiss,
+        curvedText = { confirmationDialogCurvedText(message, curvedStyle) },
+    )
+    FailureConfirmationDialog(
+        visible = result != null && brief && !success,
+        onDismissRequest = onDismiss,
+        curvedText = { confirmationDialogCurvedText(message, curvedStyle) },
+    )
+    ConfirmationDialog(
+        visible = result != null && !brief,
+        onDismissRequest = onDismiss,
+        text = { Text(message) },
+        colors = if (success) ConfirmationDialogDefaults.successColors() else ConfirmationDialogDefaults.failureColors(),
+    ) {
+        if (success) ConfirmationDialogDefaults.SuccessIcon() else ConfirmationDialogDefaults.FailureIcon()
     }
 }
