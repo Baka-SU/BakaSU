@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <style>
+        * { box-sizing: border-box; }
+        html, body { margin: 0; background: #f5f5f5; color: #292b30; font: 11px sans-serif; }
+        nav { display: flex; height: 56px; align-items: stretch; }
+        button { flex: 1; min-width: 0; padding: 6px 0; border: 0; background: transparent; color: #777; font: inherit; }
+        button[aria-current] { color: #1a1c20; font-weight: bold; }
+        svg { display: block; width: 22px; height: 22px; margin: 0 auto 4px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+    </style>
+</head>
+<body>
+<nav aria-label="Module navigation">
+    <button id="status" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>Status</button>
+    <button id="config"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7Z"/><circle cx="12" cy="12" r="4"/></svg>Config</button>
+    <button id="modules"><svg viewBox="0 0 24 24"><path d="M2 6V4h8l3 3h9v14H2Zm0 1h20"/></svg>Modules</button>
+    <button id="info"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 10v7m0-12v2"/></svg>Info</button>
+</nav>
+<script>
+    window.clicks = [];
+    document.querySelectorAll('button').forEach(button => {
+        button.onclick = () => {
+            clicks.push(button.id);
+            document.querySelector('[aria-current]')?.removeAttribute('aria-current');
+            button.setAttribute('aria-current', 'page');
+        };
+    });
+</script>
+</body>
+</html>

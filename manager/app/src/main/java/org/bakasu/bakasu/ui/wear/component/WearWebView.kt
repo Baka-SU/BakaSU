@@ -2,6 +2,8 @@ package org.bakasu.bakasu.ui.wear.component
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
@@ -15,15 +17,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CenterFocusStrong
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,159 +37,114 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.FilledTonalIconButton
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.IconButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
-import kotlin.math.ceil
+import kotlin.math.abs
+import kotlin.math.hypot
+import kotlin.math.sqrt
 import org.bakasu.bakasu.R
 
-/** Full-window web content, with independent page density and explicit corner access on round screens. */
+/** Centers web content clear of the round bezel and the page controls. */
 @Composable
 internal fun WearWebView(webView: WebView, onBack: () -> Unit, modifier: Modifier = Modifier) {
     val round = LocalConfiguration.current.isScreenRound
     var scalePercent by remember(webView) { mutableIntStateOf(80) }
-    var offset by remember(webView, round) { mutableStateOf(Offset.Zero) }
-    var size by remember { mutableStateOf(IntSize.Zero) }
+    var resetPosition by remember(webView) { mutableIntStateOf(0) }
     var toolsOpen by remember(webView) { mutableStateOf(false) }
-    var moving by remember(webView, round) { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     val scale = scalePercent / 100f
+    val buttonSize = IconButtonDefaults.SmallButtonSize
+    val controlsHeight = with(LocalDensity.current) { (buttonSize + 16.dp).toPx() }
 
-    LaunchedEffect(webView, toolsOpen, moving) {
-        if (!toolsOpen && !moving) focus.requestFocus()
+    LaunchedEffect(webView, toolsOpen) {
+        if (!toolsOpen) focus.requestFocus()
     }
-    BackHandler(toolsOpen || moving) {
-        toolsOpen = false
-        moving = false
-    }
-    // Web content is a viewport, not a Wear list: no list padding or reserved EdgeButton height.
+    BackHandler(toolsOpen) { toolsOpen = false }
     ScreenScaffold(
         modifier = modifier.imePadding(),
         contentPadding = PaddingValues(0.dp),
         timeText = {},
         overscrollEffect = null,
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding).clipToBounds().onSizeChanged { size = it }) {
+        Box(Modifier.fillMaxSize().padding(padding).clipToBounds()) {
             AndroidView(
                 factory = { WearWebViewViewport(it, webView) },
-                update = { it.update(scale, offset) },
+                update = { it.update(scale, round, controlsHeight, resetPosition) },
                 onRelease = { it.removeView(webView) },
                 modifier = Modifier.fillMaxSize()
                     .onRotaryScrollEvent {
-                        if (toolsOpen || moving) return@onRotaryScrollEvent false
+                        if (toolsOpen) return@onRotaryScrollEvent false
                         webView.scrollBy(0, (it.verticalScrollPixels / scale).toInt())
                         true
                     }
                     .focusRequester(focus).focusable(),
             )
-            if (toolsOpen || moving) {
-                val moveHint = stringResource(R.string.wear_web_move_hint)
-                // Claim the whole gesture from DOWN to UP. Moving the viewport must never click
-                // the page underneath or turn into the parent's swipe-to-dismiss gesture.
+            if (toolsOpen) {
                 Box(
-                    Modifier.fillMaxSize()
-                        .then(if (toolsOpen) Modifier.background(MaterialTheme.colorScheme.background) else Modifier)
-                        .semantics { if (moving) contentDescription = moveHint }
-                        .pointerInput(moving, size) {
+                    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+                        .pointerInput(Unit) {
+                            // The panel must not pass gestures through to the web page.
                             awaitEachGesture {
-                                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                                down.consume()
-                                var distance = Offset.Zero
-                                var dragging = false
+                                awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial).consume()
                                 do {
                                     val event = awaitPointerEvent(PointerEventPass.Initial)
-                                    val change = event.changes.firstOrNull { it.id == down.id }
-                                    if (moving && change != null && change.pressed) {
-                                        val delta = change.positionChange()
-                                        distance += delta
-                                        if (dragging || distance.getDistance() > viewConfiguration.touchSlop) {
-                                            val movement = if (dragging) delta else distance
-                                            offset = Offset(
-                                                (offset.x + movement.x).coerceIn(-size.width / 4f, size.width / 4f),
-                                                (offset.y + movement.y).coerceIn(-size.height / 4f, size.height / 4f),
-                                            )
-                                            dragging = true
-                                        }
-                                    }
                                     event.changes.forEach { it.consume() }
                                 } while (event.changes.any { it.pressed })
                             }
                         },
                 )
-            }
-            if (toolsOpen) {
                 Column(
                     Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        FilledTonalIconButton(onClick = {
-                            toolsOpen = false
-                            onBack()
-                        }) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilledTonalIconButton(
+                            onClick = {
+                                toolsOpen = false
+                                onBack()
+                            },
+                            modifier = Modifier.size(buttonSize),
+                        ) {
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back))
                         }
-                        if (round) {
-                            FilledTonalIconButton(onClick = {
+                        FilledTonalIconButton(
+                            onClick = {
+                                resetPosition++
+                                scalePercent = 80
                                 toolsOpen = false
-                                moving = true
-                            }) {
-                                Icon(Icons.Rounded.OpenWith, stringResource(R.string.wear_web_move))
-                            }
-                        }
-                        FilledTonalIconButton(onClick = {
-                            offset = Offset.Zero
-                            scalePercent = 80
-                            toolsOpen = false
-                        }) {
+                            },
+                            modifier = Modifier.size(buttonSize),
+                        ) {
                             Icon(Icons.Rounded.CenterFocusStrong, stringResource(R.string.wear_web_reset))
                         }
                     }
                     FilledTonalButton(onClick = { scalePercent = if (scalePercent >= 100) 60 else scalePercent + 20 }) {
                         Text(stringResource(R.string.wear_web_scale, scalePercent))
                     }
-                    FilledTonalIconButton(onClick = { toolsOpen = false }) {
+                    FilledTonalIconButton(onClick = { toolsOpen = false }, modifier = Modifier.size(buttonSize)) {
                         Icon(Icons.Rounded.Close, stringResource(R.string.close))
                     }
                 }
             } else {
-                if (moving) {
-                    Text(
-                        stringResource(R.string.wear_web_move_hint),
-                        modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(0.7f).padding(top = 24.dp)
-                            .background(MaterialTheme.colorScheme.background).padding(4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        textAlign = TextAlign.Center,
-                    )
-                }
                 FilledTonalIconButton(
-                    onClick = { if (moving) moving = false else toolsOpen = true },
-                    onLongClick = if (round && !moving) ({ moving = true }) else null,
-                    onLongClickLabel = if (round && !moving) stringResource(R.string.wear_web_move) else null,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+                    onClick = { toolsOpen = true },
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp).size(buttonSize),
                 ) {
-                    Icon(
-                        if (moving) Icons.Rounded.Check else Icons.Rounded.Tune,
-                        stringResource(if (moving) R.string.wear_web_move_done else R.string.wear_web_tools),
-                    )
+                    Icon(Icons.Rounded.Tune, stringResource(R.string.wear_web_tools))
                 }
             }
         }
@@ -197,17 +152,27 @@ internal fun WearWebView(webView: WebView, onBack: () -> Unit, modifier: Modifie
 }
 
 /**
- * Measure a larger viewport before scaling it, so the result still fills the entire window. This
- * shrinks CSS pixels as well as text, including pages that disable browser zoom. Android's native
- * child transforms also map touch coordinates back to the WebView after scaling and panning.
+ * Measures short pages at their content height so a navigation-only WebUI is centered. Long pages
+ * scroll inside the available rectangle. Native child transforms preserve WebView touch mapping.
  */
-// Created only by AndroidView with an existing module/browser WebView; never inflated from XML.
 @SuppressLint("ViewConstructor")
 private class WearWebViewViewport(context: Context, private val webView: WebView) : ViewGroup(context) {
     private var pageScale = 0.8f
+    private var round = false
+    private var controlsHeight = 0f
+    private var resetPosition = 0
+    private var offsetX = 0f
+    private var offsetY = 0f
+    private var downX = 0f
+    private var downY = 0f
+    private var lastX = 0f
+    private var lastY = 0f
+    private var panning = false
+    private var fromMargin = false
+    private var gestureDecided = false
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 
     init {
-        // Configure only watch WebViews, before their first layout/load.
         webView.settings.apply {
             useWideViewPort = true
             loadWithOverviewMode = true
@@ -219,28 +184,127 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
         webView.pivotY = 0f
     }
 
-    fun update(scale: Float, offset: Offset) {
-        if (pageScale != scale) {
+    fun update(scale: Float, isRound: Boolean, controlsPx: Float, reset: Int) {
+        if (pageScale != scale || round != isRound || controlsHeight != controlsPx || resetPosition != reset) {
             pageScale = scale
+            round = isRound
+            controlsHeight = controlsPx
+            resetPosition = reset
+            offsetX = 0f
+            offsetY = 0f
             requestLayout()
         }
         webView.scaleX = scale
         webView.scaleY = scale
-        webView.translationX = offset.x
-        webView.translationY = offset.y
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
         setMeasuredDimension(width, height)
+        // A centered square fits inside the round bezel. Reserve the controls and their touch
+        // target separately so they cannot cover a page's fixed bottom navigation.
+        val inset = if (round) minOf(width, height) * (1f - 1f / sqrt(2f)) / 2f else 0f
+        val pageWidth = (width - 2 * inset).coerceAtLeast(1f)
+        val pageHeight = (height - controlsHeight - inset).coerceAtLeast(1f)
         webView.measure(
-            MeasureSpec.makeMeasureSpec(ceil(width / pageScale).toInt(), MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec(ceil(height / pageScale).toInt(), MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec((pageWidth / pageScale).toInt().coerceAtLeast(1), MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec((pageHeight / pageScale).toInt().coerceAtLeast(1), MeasureSpec.AT_MOST),
         )
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         webView.layout(0, 0, webView.measuredWidth, webView.measuredHeight)
+        positionPage()
+    }
+
+    private fun positionPage() {
+        val pageWidth = webView.width * pageScale
+        val pageHeight = webView.height * pageScale
+        val centeredLeft = (width - pageWidth) / 2f
+        val centeredTop = minOf((height - pageHeight) / 2f, height - controlsHeight - pageHeight).coerceAtLeast(0f)
+        var minTop = 0f
+        var maxTop = (height - controlsHeight - pageHeight).coerceAtLeast(0f)
+        var minLeft = 0f
+        var maxLeft = (width - pageWidth).coerceAtLeast(0f)
+        val radius = minOf(width, height) / 2f
+        if (round) {
+            val halfHeight = sqrt((radius * radius - pageWidth * pageWidth / 4f).coerceAtLeast(0f))
+            minTop = (height / 2f - halfHeight).coerceAtMost(maxTop)
+            maxTop = minOf(maxTop, height / 2f + halfHeight - pageHeight).coerceAtLeast(minTop)
+        }
+        val pageTop = (centeredTop + offsetY).coerceIn(minTop, maxTop)
+        if (round) {
+            val farthestY = maxOf(abs(pageTop - height / 2f), abs(pageTop + pageHeight - height / 2f))
+            val halfWidth = sqrt((radius * radius - farthestY * farthestY).coerceAtLeast(0f))
+            minLeft = width / 2f - halfWidth
+            maxLeft = (width / 2f + halfWidth - pageWidth).coerceAtLeast(minLeft)
+        }
+        val pageLeft = (centeredLeft + offsetX).coerceIn(minLeft, maxLeft)
+        offsetX = pageLeft - centeredLeft
+        offsetY = pageTop - centeredTop
+        webView.translationX = pageLeft
+        webView.translationY = pageTop
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            downX = event.x
+            downY = event.y
+            lastX = event.x
+            lastY = event.y
+            panning = false
+            gestureDecided = false
+            fromMargin = event.x < webView.translationX || event.x > webView.translationX + webView.width * pageScale ||
+                event.y < webView.translationY || event.y > webView.translationY + webView.height * pageScale
+            // A page drag belongs to the browser, not the enclosing swipe-to-dismiss surface.
+            parent.requestDisallowInterceptTouchEvent(true)
+        }
+        val handled = super.dispatchTouchEvent(event)
+        if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            parent.requestDisallowInterceptTouchEvent(false)
+        }
+        return handled
+    }
+
+    override fun requestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {
+        // Keep observing until the gesture is classified. Scrolling and pinch gestures still
+        // receive their original events unless a one-finger pan is claimed.
+        parent.requestDisallowInterceptTouchEvent(disallowIntercept)
+    }
+
+    override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
+        if (event.pointerCount != 1) {
+            gestureDecided = true
+            return false
+        }
+        if (event.actionMasked == MotionEvent.ACTION_MOVE && !gestureDecided) {
+            val dx = event.x - downX
+            val dy = event.y - downY
+            if (hypot(dx, dy) > touchSlop) {
+                val diagonal = abs(dx) > abs(dy) * 0.5f && abs(dy) > abs(dx) * 0.5f
+                val horizontal = abs(dx) > abs(dy) && !webView.canScrollHorizontally(if (dx > 0) -1 else 1)
+                val shortPage = !webView.canScrollVertically(-1) && !webView.canScrollVertically(1)
+                panning = fromMargin || diagonal || horizontal || shortPage
+                gestureDecided = true
+            }
+        }
+        // Interception sends ACTION_CANCEL to the WebView, preventing click-through after a pan.
+        return panning
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_MOVE && event.pointerCount == 1) {
+            if (!gestureDecided) onInterceptTouchEvent(event)
+            if (panning) {
+                offsetX = (offsetX + event.x - lastX).coerceIn(-width / 4f, width / 4f)
+                offsetY = (offsetY + event.y - lastY).coerceIn(-height / 4f, height / 4f)
+                positionPage()
+            }
+            lastX = event.x
+            lastY = event.y
+        }
+        return true
     }
 }
