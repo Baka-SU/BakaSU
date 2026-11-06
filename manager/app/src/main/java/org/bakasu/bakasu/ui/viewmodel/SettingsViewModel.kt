@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.viewmodel
 
+import android.os.Build
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +21,7 @@ import org.bakasu.bakasu.domain.model.PlatformSetting
 import org.bakasu.bakasu.domain.model.SettingsPlatformSnapshot
 import org.bakasu.bakasu.domain.model.coerceCompatibleWith
 import org.bakasu.bakasu.domain.usecase.ConfigureSuLogUseCase
+import org.bakasu.bakasu.domain.usecase.GetCurrentAppLocaleUseCase
 import org.bakasu.bakasu.domain.usecase.GetKernelFeatureSettingsUseCase
 import org.bakasu.bakasu.domain.usecase.GetPlatformFeatureStatusUseCase
 import org.bakasu.bakasu.domain.usecase.LoadSettingsPlatformUseCase
@@ -132,6 +134,7 @@ sealed interface SettingsUiAction {
     data object SaveCardConfig : SettingsUiAction
     data class SetLanguageDialogVisible(val visible: Boolean) : SettingsUiAction
     data class SetLanguage(val localeTag: String) : SettingsUiAction
+    data object RefreshLanguage : SettingsUiAction
     data object RestartActivity : SettingsUiAction
     data object ApplyDpi : SettingsUiAction
     data class SetTempDpi(val dpi: Int) : SettingsUiAction
@@ -160,6 +163,7 @@ sealed interface SettingsUiEvent {
 
 class SettingsViewModel(
     private val loadSettings: LoadSettingsPlatformUseCase,
+    private val getCurrentAppLocale: GetCurrentAppLocaleUseCase,
     private val updateAppearance: UpdateAppearanceUseCase,
     private val updatePlatform: UpdatePlatformSettingUseCase,
     private val getPlatformFeatureStatus: GetPlatformFeatureStatusUseCase,
@@ -254,7 +258,14 @@ class SettingsViewModel(
 
     fun setLanguageDialogVisible(visible: Boolean) = mutableState.update { it.copy(showLanguageDialog = visible) }
     fun handleLanguageChange(localeTag: String) {
-        updatePlatformAsync(PlatformSetting.Locale(localeTag))
+        viewModelScope.launch {
+            updatePlatform(PlatformSetting.Locale(localeTag))
+                .onSuccess {
+                    applySnapshot(it, resetTempDpi = false)
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) restartActivityForLanguage()
+                }
+                .onFailure(::emitError)
+        }
     }
 
     fun restartActivityForLanguage() {
@@ -500,6 +511,11 @@ class SettingsViewModel(
             is SettingsUiAction.SetLanguageDialogVisible -> setLanguageDialogVisible(action.visible)
 
             is SettingsUiAction.SetLanguage -> handleLanguageChange(action.localeTag)
+
+            SettingsUiAction.RefreshLanguage -> {
+                val locale = getCurrentAppLocale()
+                mutableState.update { it.copy(currentAppLocale = locale) }
+            }
 
             SettingsUiAction.RestartActivity -> restartActivityForLanguage()
 

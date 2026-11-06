@@ -265,6 +265,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     ActivityResumeEffect(homeViewModel) {
         homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = true))
         superUserViewModel.dispatch(SuperUserUiAction.LoadInitialData)
+        settingsViewModel.dispatch(SettingsUiAction.RefreshLanguage)
     }
     // Restored detail/filter/search destinations also need the process-local log repository.
     val logsActive = navigator.backStack.any { it == WearRoute.Logs || it == WearRoute.LogSearchResults }

@@ -118,7 +118,6 @@ internal fun WearSelectionPage(
                 icon = { selectionIcon(selection, it) },
             ) {
                 onAction(SettingsUiAction.SetLanguage(it))
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) onAction(SettingsUiAction.RestartActivity)
             }
         }
 

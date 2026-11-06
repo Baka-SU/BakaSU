@@ -332,13 +332,13 @@ internal fun WearDpiPage(
     val pending = (state.tempDpi.toFloat() / systemDpi).coerceIn(0.75f, 1.5f)
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_display_touch)) }
-        item {
+        SegmentedColumn(listOf(R.string.wear_time_display, R.string.settings_language), { it }) { label ->
             WearSettingsJumpPageWidget(
                 spec,
-                stringResource(R.string.wear_time_display),
-                { onOpen(WearRoute.Selection(WearSelection.TimeDisplay)) },
-                icon = Icons.Rounded.Schedule,
-                description = timeDisplayLabel(preferences.timeDisplay),
+                stringResource(label),
+                { onOpen(WearRoute.Selection(if (label == R.string.wear_time_display) WearSelection.TimeDisplay else WearSelection.Language)) },
+                icon = if (label == R.string.wear_time_display) Icons.Rounded.Schedule else Icons.Rounded.Translate,
+                description = if (label == R.string.wear_time_display) timeDisplayLabel(preferences.timeDisplay) else state.currentAppLocale?.let { it.getDisplayName(it) } ?: stringResource(R.string.language_system_default),
             )
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_display_screen_layout)) }
