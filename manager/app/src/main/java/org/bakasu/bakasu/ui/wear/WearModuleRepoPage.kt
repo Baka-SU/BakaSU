@@ -1,7 +1,5 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,9 +24,9 @@ import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.AlertDialog
@@ -52,13 +51,15 @@ import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
-import org.bakasu.bakasu.domain.model.RepositoryFailure
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
+import org.bakasu.bakasu.ui.viewmodel.CatalogContent
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
@@ -75,9 +76,9 @@ import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearLoadFailureScreen
 import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearRepositoryConnectionDialog
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
@@ -85,6 +86,7 @@ import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
+import org.bakasu.bakasu.ui.wear.component.wearRepositoryFailureText
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -97,17 +99,17 @@ internal fun WearModuleRepoPage(
     onOpen: (CatalogModule) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var failure by remember { mutableStateOf<RepositoryFailure?>(null) }
-    var refreshRequest by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
     fun retry() {
-        failure = null
-        refreshRequest++
+        viewModel.refresh()
     }
-    WearRepositoryConnectionDialog(failure, ::retry) { failure = null }
-    LaunchedEffect(viewModel, state.repositoryUrl, refreshRequest) {
-        failure = null
-        // The menu already loaded the index. Only a pull refresh or retry forces another request.
-        failure = viewModel.refreshAndGetFailure(force = refreshRequest > 0)
+    LifecycleResumeEffect(viewModel, state.repositoryUrl) {
+        val request = scope.launch { viewModel.refreshAndGetFailure() }
+        onPauseOrDispose { request.cancel() }
+    }
+    if (!state.isRefreshing && state.content == CatalogContent.FAILED) {
+        WearLoadFailureScreen(wearRepositoryFailureText(state.failures[state.repositoryUrl]), onBack, ::retry)
+        return
     }
     WearList(
         isLoading = state.isRefreshing && state.modules.isEmpty(),
@@ -119,7 +121,7 @@ internal fun WearModuleRepoPage(
         panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
-        if (state.modules.isEmpty() && state.search.isBlank() && !state.isRefreshing && failure == null) {
+        if (state.modules.isEmpty() && state.search.isBlank() && !state.isRefreshing) {
             item {
                 WearEmptyState(
                     spec,
@@ -150,16 +152,19 @@ internal fun WearModuleRepoSearchPage(viewModel: ModuleRepoViewModel, onBack: ()
     }
 }
 
-/**
- * A repository module's data, shared by its page and section routes so a section opens without
- * loading the module again; each route has its own ViewModel store, so it lives in the activity's.
- */
+/** Each detail route loads from the server; closing it releases its document state. */
 @Composable
-private fun catalogModuleViewModel(moduleId: String, repositoryUrl: String): ModuleDetailViewModel = koinViewModel(
-    viewModelStoreOwner = LocalActivity.current as ComponentActivity,
-    key = "wear-catalog-$repositoryUrl#$moduleId",
-    parameters = { parametersOf(moduleId, repositoryUrl) },
-)
+private fun catalogModuleViewModel(moduleId: String, repositoryUrl: String): ModuleDetailViewModel {
+    val viewModel = koinViewModel<ModuleDetailViewModel>(
+        key = "wear-catalog-$repositoryUrl#$moduleId",
+        parameters = { parametersOf(moduleId, repositoryUrl) },
+    )
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refresh()
+        onPauseOrDispose { }
+    }
+    return viewModel
+}
 
 /** The download confirmation; confirming opens the download route for the chosen file. */
 @Composable
@@ -211,9 +216,16 @@ internal fun WearOnlineModulePage(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val module = state.module
     val requestDownload = rememberModuleDownload(module?.moduleName.orEmpty(), installer)
-    WearList(isLoading = state.loading, onBack = onBack) { spec ->
+    if (!state.loading && (state.error != null || state.repositoryFailure != null)) {
+        WearLoadFailureScreen(
+            if (state.error == ModuleCatalogFailure.NotFound) stringResource(R.string.repo_module_unavailable) else wearRepositoryFailureText(state.repositoryFailure),
+            onBack,
+            { viewModel.dispatch(ModuleDetailUiAction.Retry) },
+        )
+        return
+    }
+    WearList(isLoading = state.loading && module == null, isRefreshing = state.loading && module != null, onBack = onBack) { spec ->
         if (module == null) item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
-        if (state.error != null) item { WearActionButton(spec, Icons.Rounded.Cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
         if (module != null) {
             // As in the design: the module icon, name and authors, then its main actions. As the
             // first item the icon takes the card's minimum list padding, a share of the screen
@@ -305,21 +317,27 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String
     val requestDownload = rememberModuleDownload(module?.moduleName.orEmpty(), installer)
     // The README is its own document, loaded once the module details are.
     val readme = module?.let { state.documents[it.readmeUrl.ifBlank { it.sourceUrl }] }
-    LaunchedEffect(module?.catalogId, module?.detailLoaded, module?.registryMetadata?.buildId) {
-        if (section == "readme" && module?.detailLoaded == true) viewModel.loadReadme()
+    LaunchedEffect(module?.catalogId, module?.detailLoaded, module?.registryMetadata?.buildId, state.loading) {
+        if (section == "readme" && !state.loading && module?.detailLoaded == true) viewModel.loadReadme()
     }
     val readmeLoading = section == "readme" && module != null && (!module.detailLoaded || readme == null || readme.loading) && state.error == null
-    WearList(isLoading = state.loading || readmeLoading, onBack = onBack) { spec ->
+    if (!state.loading && (state.error != null || state.repositoryFailure != null || (section == "readme" && readme?.failed == true))) {
+        val detailFailed = state.error != null || state.repositoryFailure != null
+        WearLoadFailureScreen(
+            if (state.error == ModuleCatalogFailure.NotFound) stringResource(R.string.repo_module_unavailable) else wearRepositoryFailureText(if (detailFailed) state.repositoryFailure else readme?.failure),
+            onBack,
+            { if (detailFailed) viewModel.dispatch(ModuleDetailUiAction.Retry) else viewModel.loadReadme(retry = true) },
+        )
+        return
+    }
+    val loading = state.loading || readmeLoading
+    val hasContent = module != null && (section != "readme" || readme?.document != null)
+    WearList(isLoading = loading && !hasContent, isRefreshing = loading && hasContent, onBack = onBack) { spec ->
         item { WearPageHeader(spec, module?.moduleName ?: stringResource(R.string.module_repo)) }
-        if (state.error != null) item { WearActionButton(spec, Icons.Rounded.Cloud, stringResource(R.string.network_retry), { viewModel.dispatch(ModuleDetailUiAction.Retry) }) }
         if (module != null) {
             when (section) {
                 "readme" -> when {
-                    readmeLoading -> Unit
-
-                    readme?.failed == true -> item {
-                        WearActionButton(spec, Icons.Rounded.Cloud, stringResource(R.string.network_retry), { viewModel.loadReadme(retry = true) })
-                    }
+                    readmeLoading && readme?.document == null -> Unit
 
                     else -> {
                         val document = readme?.document

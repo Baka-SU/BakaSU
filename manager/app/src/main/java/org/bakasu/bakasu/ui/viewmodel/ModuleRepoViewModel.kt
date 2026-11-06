@@ -47,9 +47,9 @@ data class ModuleRepoUiState(
     val failures: Map<String, RepositoryFailure> = emptyMap(),
 ) {
     val content: CatalogContent get() = when {
-        modules.isNotEmpty() -> CatalogContent.MODULES
-        isRefreshing -> CatalogContent.LOADING
+        isRefreshing && modules.isEmpty() -> CatalogContent.LOADING
         sources.any { it.url == repositoryUrl && it.url in failures } -> CatalogContent.FAILED
+        modules.isNotEmpty() -> CatalogContent.MODULES
         search.isNotBlank() -> CatalogContent.SEARCH_EMPTY
         else -> CatalogContent.SOURCE_EMPTY
     }
@@ -184,7 +184,7 @@ class ModuleRepoViewModel(
         }
     }
 
-    /** Returns the request failure even when the repository keeps previously loaded modules. */
+    /** The entry menu waits for a successful server response before navigating. */
     suspend fun refreshAndGetFailure(force: Boolean = true): RepositoryFailure? {
         val url = activeRepository() ?: return null
         refreshCatalog(url, force)

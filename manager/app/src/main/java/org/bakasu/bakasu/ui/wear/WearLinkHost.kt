@@ -63,7 +63,7 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, onWebView: (String) -> U
     BackHandler(loading || permissionRequest != null) { viewModel.cancel() }
     WearPhoneTransferDialog(transfer, onCancel = viewModel::cancel, onDismiss = viewModel::dismissTransfer)
     if (loading && transfer == null && permissionRequest == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { WearLoadingIndicator() }
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { WearLoadingIndicator(contained = true) }
     }
     val failed = result as? WearLinkResult.Failed
     val failureText = stringResource(

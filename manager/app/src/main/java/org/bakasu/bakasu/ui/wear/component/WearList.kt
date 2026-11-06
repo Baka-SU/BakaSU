@@ -334,6 +334,13 @@ fun WearList(
                             Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
                         )
                     }
+                    if (isRefreshing) {
+                        WearLoadingIndicator(
+                            Modifier.align(Alignment.TopCenter).padding(top = if (fixedHeader == null) contentPadding.calculateTopPadding() else 0.dp)
+                                .semantics { contentDescription = loadingDescription },
+                            contained = true,
+                        )
+                    }
                 }
             }
         }
@@ -356,12 +363,9 @@ fun WearList(
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
                 edgeButton = {
                     EdgeButton(
-                        enabled = onConfirm == null || confirmEnabled,
+                        enabled = !isRefreshing && (onConfirm == null || confirmEnabled),
                         onClick = {
-                            // While refreshing, the edge button only shows the progress of the pull refresh.
-                            if (isRefreshing) {
-                                Unit
-                            } else if (onClosePanel != null) {
+                            if (onClosePanel != null) {
                                 onPanelClosing?.invoke()
                                 onClosePanel()
                             } else if (onConfirm != null) {
@@ -380,8 +384,8 @@ fun WearList(
                             overscrollEffect = rememberOverscrollEffect(),
                         ),
                     ) {
-                        // The pull refresh starts at the end of the list, so its progress shows here, where
-                        // the finger is: a ring that fills with the pull, then the loading animation while refreshing.
+                        // The gesture starts at the end of the list. After release, the refresh
+                        // animation appears over the content on its own circular surface.
                         if (onClosePanel != null && pullProgress.floatValue < 0f) {
                             WearPullIndicator(-pullProgress.floatValue, closing = true)
                         } else if (pullProgress.floatValue < 0f) {
@@ -392,8 +396,6 @@ fun WearList(
                                 // The pull ring keeps the thin stroke of the spinner that follows it.
                                 strokeWidth = CircularProgressIndicatorDefaults.IndeterminateStrokeWidth,
                             )
-                        } else if (isRefreshing) {
-                            WearLoadingIndicator(Modifier.size(24.dp), color = LocalContentColor.current)
                         } else if (onConfirm != null && confirmLabel != null) {
                             Text(confirmLabel)
                         } else {

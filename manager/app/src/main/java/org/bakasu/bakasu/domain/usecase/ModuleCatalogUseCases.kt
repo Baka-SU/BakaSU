@@ -37,7 +37,7 @@ class IsCatalogModuleCurrentUseCase(private val repository: ModuleCatalogReposit
 }
 
 class GetModuleReadmeUseCase(private val repository: ModuleCatalogRepository) {
-    suspend operator fun invoke(module: CatalogModule, retry: Boolean = false) = repository.readme(module, retry)
+    suspend operator fun invoke(module: CatalogModule) = repository.readme(module)
 }
 
 class GetModuleReleaseDetailsUseCase(private val repository: ModuleReleaseRepository) {

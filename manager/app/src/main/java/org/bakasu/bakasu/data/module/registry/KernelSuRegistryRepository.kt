@@ -175,10 +175,10 @@ class KernelSuRegistryRepository private constructor(
         }
     }
 
-    suspend fun loadCatalog(): RegistryClient.CatalogLoad = withClient { client.loadCatalog() }
+    suspend fun loadCatalog(): RegistryClient.CatalogLoad = withClient { client.loadCatalog(allowCache = false) }
 
     suspend fun loadDetail(moduleId: String): RegistryClient.DetailLoad = withClient {
-        client.loadDetail(moduleId).also { rememberDetail(it.detail) }
+        client.loadDetail(moduleId, allowCache = false).also { rememberDetail(it.detail) }
     }
 
     fun currentCatalog(): RegistryCatalog? = publishedCatalog
@@ -225,12 +225,12 @@ class KernelSuRegistryRepository private constructor(
     }
 
     suspend fun readme(module: CatalogModule): ModuleReadme? = withClient {
-        val catalog = client.catalog()
+        val catalog = client.catalog(allowCache = false)
         if (catalog.find(module.moduleId) == null) throw ModuleNotInIndexException(module.moduleId)
         val detail = details[module.moduleId]?.takeIf { it.buildId == catalog.buildId }
-            ?: client.loadDetail(module.moduleId).detail.also { rememberDetail(it) }
+            ?: client.loadDetail(module.moduleId, allowCache = false).detail.also { rememberDetail(it) }
         if (module.registryMetadata?.buildId != detail.buildId) throw BuildMismatchException("README build changed")
-        client.loadReadme(detail)?.let { ModuleReadme(it.html, client.baseUrl, DocumentFormat.HTML, DocumentPolicy.SameOrigin(client.baseUrl)) }
+        client.loadReadme(detail, allowCache = false)?.let { ModuleReadme(it.html, client.baseUrl, DocumentFormat.HTML, DocumentPolicy.SameOrigin(client.baseUrl)) }
     }
 
     suspend fun resolveUpdate(moduleId: String, updateJsonUrl: String, zipUrl: String, versionCode: Int): ModuleUpdateVerification {

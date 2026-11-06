@@ -61,7 +61,7 @@ internal fun WearSuperUserPage(
     hasOperationsPanel: Boolean = false,
 ) {
     // As on the phone: an empty list shows the loading indicator in place of the page; once it has
-    // content, refreshing shows at the pull refresh, in the edge button.
+    // content, refreshing overlays a contained indicator without removing the list.
     val loading = state.isRefreshing && state.appGroupList.isEmpty() && state.search.isEmpty()
     WearErrorDialog(error.takeUnless { state.isRefreshing })
     WearList(
