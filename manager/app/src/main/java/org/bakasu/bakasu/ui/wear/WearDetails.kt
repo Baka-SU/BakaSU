@@ -130,7 +130,7 @@ internal fun WearModuleDetail(
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(module.version.ifBlank { unknown }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             if (module.metamodule) {
-                                WearBadge(stringResource(R.string.wear_meta_badge), containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.tertiary)
+                                WearBadge(stringResource(R.string.wear_meta_badge))
                             }
                             if (module.remove) {
                                 WearBadge(stringResource(R.string.wear_pending_removal), containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.error)
