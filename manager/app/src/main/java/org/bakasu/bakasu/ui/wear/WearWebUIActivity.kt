@@ -6,51 +6,31 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
-import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.rotary.onRotaryScrollEvent
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
-import androidx.wear.compose.foundation.ScrollInfoProvider
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.CircularProgressIndicator
-import androidx.wear.compose.material3.EdgeButton
 import androidx.wear.compose.material3.Icon
-import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.AppSettingsRepository
@@ -64,7 +44,7 @@ import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
-import org.bakasu.bakasu.ui.wear.component.WearTimeText
+import org.bakasu.bakasu.ui.wear.component.WearWebView
 import org.bakasu.bakasu.ui.webui.HandleConfigurationChanges
 import org.bakasu.bakasu.ui.webui.HandleWebViewLifecycle
 import org.bakasu.bakasu.ui.webui.MonetColorsProvider
@@ -143,7 +123,7 @@ private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) 
 private fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
     val back: () -> Unit = { if (state.webCanGoBack) state.webView?.goBack() else onFinish() }
     BackHandler { back() }
-    AppScaffold(timeText = { WearTimeText(state.moduleName.ifBlank { stringResource(R.string.wear_webui) }) }, containerColor = Color.Transparent) {
+    AppScaffold(timeText = {}, containerColor = Color.Transparent) {
         WearSwipeToDismissBox(onDismissed = back) { background ->
             if (!background) {
                 when (val event = state.uiEvent) {
@@ -155,7 +135,7 @@ private fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
                     else -> Box(Modifier.fillMaxSize()) {
                         // Keep the WebView attached while a prompt is open, including its history,
                         // file result launcher and lifecycle observer.
-                        WearWebContent(state, back)
+                        WearModuleWebView(state, back)
                         // Pages over the WebView take the opaque app backdrop so it does not show through.
                         if (!state.pageLoaded) {
                             WearBackground {
@@ -176,97 +156,21 @@ private fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
     }
 }
 
+/** Keep module loading and its JS/file/lifecycle handlers on the shared full-window watch surface. */
 @Composable
-private fun WearWebContent(state: WebUIState, onBack: () -> Unit) {
-    val webView = state.webView
-    var offset by remember(webView) { mutableIntStateOf(0) }
-    var scrollable by remember(webView) { mutableStateOf(false) }
-    var atBottom by remember(webView) { mutableStateOf(false) }
-    LaunchedEffect(webView, state.pageLoaded) {
-        offset = webView?.scrollY ?: 0
-        scrollable = webView?.let { it.canScrollVertically(-1) || it.canScrollVertically(1) } == true
-        atBottom = webView?.canScrollVertically(1) != true
-    }
-    val edgeSpace = with(LocalDensity.current) { 64.dp.toPx() }
-    val provider = remember(webView, edgeSpace) {
-        object : ScrollInfoProvider {
-            override val isScrollAwayValid get() = true
-            override val isScrollable get() = scrollable
-            override val isScrollInProgress get() = false
-            override val anchorItemOffset get() = offset.toFloat()
-            override val lastItemOffset get() = if (atBottom) edgeSpace else 0f
-        }
-    }
-    DisposableEffect(webView) {
-        webView?.isVerticalScrollBarEnabled = true
-        webView?.setBackgroundColor(android.graphics.Color.BLACK)
-        webView?.setOnScrollChangeListener { _, _, y, _, _ ->
-            offset = y
-            scrollable = webView.canScrollVertically(-1) || webView.canScrollVertically(1)
-            atBottom = !webView.canScrollVertically(1)
-        }
-        onDispose { webView?.setOnScrollChangeListener(null) }
-    }
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(webView) { if (webView != null) focus.requestFocus() }
-    // An inset rectangle keeps module controls inside the circular display. Module HTML remains
-    // unchanged; the asset loader and JS bridge stay shared with the phone.
-    val configuration = LocalConfiguration.current
-    ScreenScaffold(scrollInfoProvider = provider, edgeButton = {
-        EdgeButton(onClick = onBack) {
-            Icon(Icons.Rounded.ArrowBack, stringResource(R.string.back))
-        }
-    }) { padding ->
-        BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
-            val side = if (configuration.isScreenRound) maxWidth * 0.1465f else 8.dp
-            Box(Modifier.fillMaxSize().padding(horizontal = side, vertical = 4.dp)) {
-                WearWebView(
-                    state,
-                    Modifier
-                        .onRotaryScrollEvent {
-                            webView?.scrollBy(0, it.verticalScrollPixels.toInt())
-                            true
-                        }
-                        .focusRequester(focus)
-                        .focusable(),
-                )
-            }
-        }
-    }
-}
-
-private const val WEBUI_HOME_PAGE = "https://mui.kernelsu.org/index.html"
-
-/** The module WebView, loading the module's home page once it has been laid out. */
-@Composable
-private fun WearWebView(state: WebUIState, modifier: Modifier = Modifier) {
+private fun WearModuleWebView(state: WebUIState, onBack: () -> Unit) {
     val webView = state.webView ?: return
-    AndroidView(modifier = modifier.fillMaxSize(), factory = {
-        webView.apply {
-            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            if (!state.isUrlLoaded) {
-                addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
-                    override fun onLayoutChange(
-                        v: View,
-                        left: Int,
-                        top: Int,
-                        right: Int,
-                        bottom: Int,
-                        oldLeft: Int,
-                        oldTop: Int,
-                        oldRight: Int,
-                        oldBottom: Int,
-                    ) {
-                        if (v.width > 0 && v.height > 0 && !state.isUrlLoaded) {
-                            (v as WebView).loadUrl(WEBUI_HOME_PAGE)
-                            state.isUrlLoaded = true
-                            v.removeOnLayoutChangeListener(this)
-                        }
-                    }
-                })
+    DisposableEffect(webView) {
+        val listener = View.OnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
+            if (view.width > 0 && view.height > 0 && !state.isUrlLoaded) {
+                webView.loadUrl("https://mui.kernelsu.org/index.html")
+                state.isUrlLoaded = true
             }
         }
-    })
+        webView.addOnLayoutChangeListener(listener)
+        onDispose { webView.removeOnLayoutChangeListener(listener) }
+    }
+    WearWebView(webView, onBack)
     HandleWearWebUIEvent(state)
     HandleWebViewLifecycle(state)
     HandleConfigurationChanges(state)
