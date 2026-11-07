@@ -65,6 +65,7 @@ import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.EdgeButton
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.ListHeaderDefaults
 import androidx.wear.compose.material3.LocalContentColor
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
@@ -172,8 +173,10 @@ fun WearList(
     LaunchedEffect(listState.isScrollInProgress, listState.canScrollBackward) {
         if (listState.isScrollInProgress && listState.canScrollBackward) showRefreshGap = false
     }
+    val titleBottomPadding = if (timeMode == "title") 0.dp else ListHeaderDefaults.ContentPadding.calculateBottomPadding()
     val refreshOffset by animateDpAsState(
-        targetValue = if (showRefreshGap) 64.dp else 0.dp,
+        // Reuse the space already below the title text instead of adding it a second time.
+        targetValue = if (showRefreshGap) (WearLoadingIndicatorSize + WearRefreshSpacing * 2 - titleBottomPadding - itemSpacing).coerceAtLeast(0.dp) else 0.dp,
         animationSpec = if (reduceMotion) snap() else tween(180),
         label = "wear-refresh-content-offset",
     )
@@ -392,17 +395,27 @@ fun WearList(
                     if (isRefreshing) {
                         val measuredBottom = if (timeMode == "title") timeTitleBottom?.value else headerBottom.value
                         val measuredTop = with(density) {
-                            measuredBottom?.let { (it - viewportTop).toDp() }
+                            measuredBottom?.let {
+                                // The list title and viewport share the menu's page scale. Convert
+                                // their root-space distance back to the page's layout coordinates.
+                                // The scaffold's time title is outside that scaled page.
+                                val scale = if (timeMode == "title") 1f else pageScale
+                                ((it - viewportTop) / scale).toDp()
+                            }
                         }?.coerceAtLeast(contentPadding.calculateTopPadding())
                         var indicatorTop by remember(timeMode, configuration, density, timeTitleBottom, viewportHeight) {
                             mutableStateOf<Dp?>(null)
                         }
-                        // Capture the first valid title position for this refresh. Scrolling or
-                        // scaffold fading must not pull the indicator along with the title.
-                        SideEffect { if (indicatorTop == null && measuredTop != null) indicatorTop = measuredTop }
+                        // Let the title's initial layout settle, including a display-mode change.
+                        // Once scrolling dismisses the gap, retain the last stationary position.
+                        SideEffect {
+                            if (measuredTop != null && (indicatorTop == null || (showRefreshGap && !listState.isScrollInProgress))) {
+                                indicatorTop = measuredTop
+                            }
+                        }
                         val top = indicatorTop ?: measuredTop ?: contentPadding.calculateTopPadding()
                         WearLoadingIndicator(
-                            Modifier.align(Alignment.TopCenter).padding(top = top + 8.dp)
+                            Modifier.align(Alignment.TopCenter).padding(top = top + WearRefreshSpacing)
                                 .semantics { contentDescription = loadingDescription },
                             contained = true,
                         )
@@ -503,6 +516,9 @@ internal const val WearPanelMaxDim = 1f
 
 /** A bound on the page overshoot, so a long pull cannot shrink it far out of shape. */
 private const val WearPageRecessLimit = 1.2f
+
+/** Equal space above and below the refresh indicator. */
+private val WearRefreshSpacing = 8.dp
 
 /** The gap between list items, the TransformingLazyColumn default. */
 val WearItemSpacing = 4.dp

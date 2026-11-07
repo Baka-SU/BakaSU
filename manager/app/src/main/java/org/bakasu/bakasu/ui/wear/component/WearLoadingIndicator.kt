@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.MaterialTheme
 import org.bakasu.bakasu.R
 
+internal val WearLoadingIndicatorSize = 48.dp
+
 /** Blocks content interaction while a foreground link task is being prepared. */
 @Composable
 fun WearLoadingOverlay() {
@@ -43,12 +45,12 @@ fun WearLoadingIndicator(modifier: Modifier = Modifier, color: Color = MaterialT
         // As with the phone's pull refresh, an opaque circular surface separates the animation
         // from content that has already loaded underneath it.
         Box(
-            modifier.size(48.dp).shadow(6.dp, CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f), CircleShape).padding(6.dp),
+            modifier.size(WearLoadingIndicatorSize).shadow(6.dp, CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f), CircleShape).padding(6.dp),
             contentAlignment = Alignment.Center,
         ) {
             LoadingIndicator(color = color)
         }
     } else {
-        LoadingIndicator(modifier = modifier.size(48.dp), color = color)
+        LoadingIndicator(modifier = modifier.size(WearLoadingIndicatorSize), color = color)
     }
 }

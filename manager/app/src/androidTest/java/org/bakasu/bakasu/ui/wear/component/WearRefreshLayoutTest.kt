@@ -12,7 +12,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -31,6 +34,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
@@ -57,6 +61,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         val resources = compose.activity.resources
         var refreshing by mutableStateOf(false)
         var titleInTime by mutableStateOf(false)
+        var spacing by mutableStateOf(4.dp)
         lateinit var state: TransformingLazyColumnState
         compose.setContent {
             val configuration = Configuration(LocalConfiguration.current).apply {
@@ -74,7 +79,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
                     Box(Modifier.requiredSize(192.dp)) {
                         AppScaffold(timeText = {}) {
                             state = rememberTransformingLazyColumnState()
-                            WearList(isRefreshing = refreshing, listState = state) { spec ->
+                            WearList(isRefreshing = refreshing, listState = state, itemSpacing = spacing) { spec ->
                                 item { WearPageHeader(spec, stringResource(R.string.umount_path_manager)) }
                                 items(20) { WearChip(spec, stringResource(R.string.readme), modifier = Modifier.testTag("row-$it")) }
                             }
@@ -92,13 +97,21 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         val title = compose.onNodeWithText(resources.getString(R.string.umount_path_manager)).assertIsDisplayed().getUnclippedBoundsInRoot()
         assertEquals("The title stays in place during refresh", titleBefore.top.value, title.top.value, 1f)
         val row = compose.onNodeWithTag("row-0").getUnclippedBoundsInRoot()
-        assertTrue("Indicator must follow the whole title", indicator.top - title.bottom >= 7.dp)
-        assertTrue("Indicator must leave space before the first row: title=$title indicator=$indicator row=$row", row.top - indicator.bottom >= 7.dp)
+        assertEquals("Indicator must leave 8dp below the title text", 8f, (indicator.top - title.bottom).value, 1f)
+        assertEquals("Indicator must leave the same 8dp gap before the first row", 8f, (row.top - indicator.bottom).value, 1f)
         assertTrue("The first bar row must settle below the title during refresh: before=$firstRowBefore after=$row title=$title indicator=$indicator", row.top - firstRowBefore.top >= 48.dp)
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "refresh-spacing-$round-$fontScale.png").outputStream().use {
             bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
         }
+        compose.runOnIdle { refreshing = false }
+        compose.waitForIdle()
+        compose.runOnIdle { spacing = 2.dp }
+        compose.waitForIdle()
+        compose.runOnIdle { refreshing = true }
+        val compactIndicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
+        val compactRow = compose.onNodeWithTag("row-0").getUnclippedBoundsInRoot()
+        assertEquals("Compact item spacing must also leave an 8dp gap", 8f, (compactRow.top - compactIndicator.bottom).value, 1f)
         compose.runOnIdle { titleInTime = true }
         compose.onNodeWithText(resources.getString(R.string.umount_path_manager)).assertDoesNotExist()
         compose.onNodeWithContentDescription(loading).assertIsDisplayed()
@@ -166,7 +179,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         val indicatorAfter = compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).getUnclippedBoundsInRoot()
         assertEquals(indicatorBefore.top.value, indicatorAfter.top.value, 1f)
         assertEquals(titleBefore.top.value, titleNode.getUnclippedBoundsInRoot().top.value, 1f)
-        assertEquals(64f, (action.getUnclippedBoundsInRoot().top - actionBefore.top).value, 1f)
+        assertEquals(48f, (action.getUnclippedBoundsInRoot().top - actionBefore.top).value, 1f)
         assertEquals(actionBefore.left.value, action.getUnclippedBoundsInRoot().left.value, 1f)
         assertTrue("The bars must move down over multiple frames", original < entering && entering < settled)
         compose.runOnIdle { refreshing = false }
@@ -181,7 +194,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         val reducedBaseline = firstRowTop()
         compose.runOnIdle { refreshing = true }
         compose.mainClock.advanceTimeBy(32)
-        assertEquals("Reduced motion must apply the full gap immediately: backward=${listState.canScrollBackward}, padding=${listState.layoutInfo.beforeContentPadding}, first=${listState.layoutInfo.visibleItems.firstOrNull()?.let { it.index to it.offset }}, anchor=${listState.anchorItemIndex}:${listState.anchorItemScrollOffset}", (reducedBaseline + 64.dp).value, firstRowTop().value, 1f)
+        assertEquals("Reduced motion must apply the full gap immediately: backward=${listState.canScrollBackward}, padding=${listState.layoutInfo.beforeContentPadding}, first=${listState.layoutInfo.visibleItems.firstOrNull()?.let { it.index to it.offset }}, anchor=${listState.anchorItemIndex}:${listState.anchorItemScrollOffset}", (reducedBaseline + 48.dp).value, firstRowTop().value, 1f)
         compose.runOnIdle {
             refreshing = false
             reduceMotion = false
@@ -264,7 +277,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
             compose.runOnIdle { mode = newMode }
             val title = compose.onNodeWithText(compose.activity.getString(titleId)).assertIsDisplayed().getUnclippedBoundsInRoot()
             val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
-            assertTrue(indicator.top >= title.bottom + 7.dp)
+            assertTrue("The $newMode title must stay above refresh: title=$title indicator=$indicator", indicator.top >= title.bottom + 7.dp)
         }
         compose.runOnIdle { mode = "title" }
         checkTimeTitle()
@@ -282,6 +295,110 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "refresh-time-title-$round-$fontScale.png").outputStream().use {
             bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
         }
+    }
+
+    @Test
+    fun refreshIndicatorDoesNotFollowScrollingContent() {
+        var refreshing by mutableStateOf(false)
+        compose.setContent {
+            val configuration = Configuration(LocalConfiguration.current).apply {
+                screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
+                    if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
+            }
+            CompositionLocalProvider(
+                LocalConfiguration provides configuration,
+                LocalDensity provides Density(LocalDensity.current.density, fontScale),
+            ) {
+                MaterialTheme {
+                    AppScaffold(timeText = {}) {
+                        WearList(isRefreshing = refreshing) { spec ->
+                            item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
+                            items(20) { WearChip(spec, stringResource(R.string.readme)) }
+                        }
+                    }
+                }
+            }
+        }
+        val loading = compose.activity.getString(R.string.wear_loading)
+        compose.runOnIdle { refreshing = true }
+        val before = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
+        compose.onNode(hasScrollToIndexAction()).performTouchInput {
+            swipe(Offset(centerX, height * 0.7f), Offset(centerX, height * 0.6f), 500)
+        }
+        val after = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
+        assertEquals("Refresh feedback must stay where it appeared", before.top.value, after.top.value, 1f)
+    }
+
+    @Test
+    fun refreshRowsStayPaintedWithoutAnotherScroll() {
+        var refreshing by mutableStateOf(false)
+        var menuOpen by mutableStateOf(false)
+        compose.setContent {
+            val configuration = Configuration(LocalConfiguration.current).apply {
+                screenWidthDp = 192
+                screenHeightDp = 192
+                screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
+                    if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
+            }
+            CompositionLocalProvider(
+                LocalConfiguration provides configuration,
+                LocalDensity provides Density(LocalDensity.current.density, fontScale),
+            ) {
+                MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(surfaceContainer = Color.Red)) {
+                    Box(Modifier.requiredSize(192.dp)) {
+                        AppScaffold(timeText = {}) {
+                            WearOperationsHost(
+                                menuKey = "refresh",
+                                menuOpen = menuOpen,
+                                menuActive = menuOpen,
+                                menuContent = { onClosing ->
+                                    WearList(onClosePanel = { menuOpen = false }, onPanelClosing = onClosing, closePanelRequested = refreshing) { spec ->
+                                        item { WearChip(spec, stringResource(R.string.wear_refresh)) }
+                                    }
+                                },
+                            ) {
+                                WearList(isRefreshing = refreshing, onBack = {}, hasOperationsPanel = true, onOpenPanel = { menuOpen = true }) { spec ->
+                                    item { WearPageHeader(spec, stringResource(R.string.umount_path_manager)) }
+                                    item { WearChip(spec, stringResource(R.string.readme), modifier = Modifier.testTag("painted-row")) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        val loading = compose.activity.getString(R.string.wear_loading)
+        fun assertRowsPainted(stage: String) {
+            val bitmap = compose.onRoot().captureToImage()
+            val pixels = bitmap.toPixelMap()
+            var count = 0
+            for (y in 0 until pixels.height) {
+                for (x in 0 until pixels.width) {
+                    val color = pixels[x, y]
+                    if (color.red > 0.5f && color.green < 0.1f && color.blue < 0.1f) count++
+                }
+            }
+            File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "refresh-paint-$stage-$round-$fontScale.png").outputStream().use {
+                bitmap.asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+            }
+            assertTrue("The visible rows must be painted during $stage (red pixels: $count)", count > 100)
+        }
+        assertRowsPainted("idle")
+        compose.runOnIdle { menuOpen = true }
+        compose.waitForIdle()
+        compose.mainClock.autoAdvance = false
+        compose.runOnIdle { refreshing = true }
+        compose.mainClock.advanceTimeBy(400)
+        assertRowsPainted("refresh")
+        val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
+        val row = compose.onNodeWithTag("painted-row").getUnclippedBoundsInRoot()
+        assertEquals("Closing the menu must not capture the shrunken page's title position", 8f, (row.top - indicator.bottom).value, 1f)
+        compose.runOnIdle { refreshing = false }
+        compose.mainClock.advanceTimeBy(80)
+        assertRowsPainted("exit")
+        compose.mainClock.advanceTimeBy(300)
+        assertRowsPainted("completion")
+        compose.mainClock.autoAdvance = true
     }
 
     companion object {

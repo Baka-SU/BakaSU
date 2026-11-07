@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
@@ -23,7 +24,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
@@ -186,10 +186,20 @@ class WearTemplatePageTest(private val round: Boolean) {
         compose.onNodeWithText("Saved").assertIsSelected()
         compose.runOnIdle { refreshing.value = true }
         compose.onNodeWithText("Saved").assertExists().assertIsSelected()
-        // Refresh opens space below the title; scroll the row clear of the edge button before tapping.
-        compose.onNode(hasScrollToIndexAction()).performTouchInput { swipeUp() }
+        // Move clear of the edge button and release without a fling before testing the row click.
+        compose.onNode(hasScrollToIndexAction()).performTouchInput {
+            down(Offset(centerX, height * 0.75f))
+            moveTo(Offset(centerX, height * 0.25f), delayMillis = 300)
+            advanceEventTime(200)
+            up()
+        }
         compose.onNodeWithText("Saved").assertIsDisplayed().performClick()
-        assertEquals(template, chosen)
+        // Drain the dispatched click and finish the request before the rule disposes the activity.
+        val selected = compose.runOnIdle {
+            refreshing.value = false
+            chosen
+        }
+        assertEquals(template, selected)
     }
 
     @Test

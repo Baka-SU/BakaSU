@@ -80,7 +80,7 @@ fun WearPageHeader(
             val side = maxOf(14.dp, (LocalConfiguration.current.screenWidthDp * 0.073f).dp)
             val defaults = ListHeaderDefaults.ContentPadding
             ListHeader(
-                modifier = Modifier.fillMaxWidth().then(position),
+                modifier = Modifier.fillMaxWidth(),
                 transformation = transformation,
                 contentPadding = PaddingValues(
                     start = side,
@@ -89,7 +89,7 @@ fun WearPageHeader(
                     bottom = defaults.calculateBottomPadding(),
                 ),
             ) {
-                Text(title, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(title, modifier = position, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }
