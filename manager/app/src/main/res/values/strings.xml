@@ -713,7 +713,7 @@
     <string name="wear_profile_mode">Profile mode</string>
     <string name="wear_same_uid_apps">Apps sharing this UID</string>
     <string name="wear_app_operations_summary">Launch · Force stop</string>
-    <string name="wear_template_delete_message">Delete the template “%1$s”? App Profile can no longer use it.</string>
+    <string name="wear_template_delete_message">Delete %1$s? You will no longer be able to select this template.</string>
     <string name="wear_uninstall_module">Uninstall module</string>
     <string name="wear_uninstall_message">The module is removed after a reboot.</string>
     <string name="wear_metamodule_uninstall_message">This affects all modules: features the metamodule provides, such as mounting, will stop working.</string>

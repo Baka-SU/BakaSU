@@ -747,7 +747,7 @@
     <string name="wear_profile_mode">配置模式</string>
     <string name="wear_same_uid_apps">相同 UID 的应用组</string>
     <string name="wear_app_operations_summary">启动 · 强制停止</string>
-    <string name="wear_template_delete_message">删除模版“%1$s”？删除后 App Profile 将无法再使用它。</string>
+    <string name="wear_template_delete_message">删除 %1$s？删除后将无法再次选择此模板。</string>
     <string name="wear_uninstall_module">卸载模块</string>
     <string name="wear_uninstall_message">模块将在重启后移除。</string>
     <string name="wear_metamodule_uninstall_message">这会影响所有模块，元模块提供的功能（如挂载）将不再工作。</string>
