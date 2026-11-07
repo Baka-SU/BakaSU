@@ -51,7 +51,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -91,6 +90,7 @@ import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
+import org.bakasu.bakasu.ui.component.CenteredRefreshIndicator
 import org.bakasu.bakasu.ui.component.ConfirmDialogHandle
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.DialogHandle
@@ -298,12 +298,10 @@ fun ModuleRepoScreen() {
                     viewModel.dispatch(ModuleRepoUiAction.Refresh)
                 },
                 indicator = {
-                    PullToRefreshDefaults.LoadingIndicator(
+                    CenteredRefreshIndicator(
                         state = pullRefreshState,
                         isRefreshing = uiState.isRefreshing,
-                        modifier = Modifier
-                            .padding(top = innerPadding.calculateTopPadding())
-                            .align(Alignment.TopCenter),
+                        contentPadding = innerPadding,
                     )
                 },
             ) {
