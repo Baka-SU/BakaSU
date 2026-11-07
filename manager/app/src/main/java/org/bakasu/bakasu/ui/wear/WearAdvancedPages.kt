@@ -284,8 +284,7 @@ internal fun WearUmountPage(state: UmountManagerUiState, onBack: () -> Unit, onO
                 primary = WearIconAction(Icons.Rounded.Delete, stringResource(R.string.delete), {
                     selected = entry
                     remove.show()
-                }),
-                revealOnLongPress = true,
+                }, destructive = true),
             ) {
                 WearActionButton(null, entry.path, {}, secondaryText = entry.flags.toUmountFlagName())
             }

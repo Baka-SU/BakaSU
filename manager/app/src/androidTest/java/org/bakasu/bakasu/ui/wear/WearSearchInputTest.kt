@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.ui.wear
 
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsNotFocused
@@ -31,7 +30,7 @@ class WearSearchInputTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun holdingThenSwipingHistoryRevealsDeleteWithoutChangingTheDraft() {
+    fun holdingHistoryRevealsDeleteWithoutChangingTheDraft() {
         val scope = "test-delete-${System.nanoTime()}"
         GlobalContext.get().get<SetStringPreferenceUseCase>()("wear_search_history:$scope", "[\"old query\"]")
         val submitted = mutableListOf<String>()
@@ -46,7 +45,6 @@ class WearSearchInputTest {
         compose.onNodeWithText("old query").performTouchInput {
             down(center)
             advanceEventTime(500)
-            moveTo(Offset(center.x - 80, center.y))
             up()
         }
         compose.onNodeWithText("old query").assertExists()

@@ -89,7 +89,7 @@ internal fun WearTemplatePage(
 ) {
     val listState = rememberTransformingLazyColumnState()
     val shownTemplates = if (searchResults) state.searchResults else state.templateList
-    // A saved template is deleted only after confirmation; the swipe only asks for it.
+    // A saved template is deleted only after confirmation; the revealed action only asks for it.
     var pendingDelete by remember { mutableStateOf<ProfileTemplate?>(null) }
     val deleteDialog = rememberWearConfirmDialog(
         stringResource(R.string.app_profile_template_delete),

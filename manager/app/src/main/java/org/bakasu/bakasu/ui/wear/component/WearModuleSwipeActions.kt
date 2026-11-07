@@ -51,8 +51,7 @@ import kotlinx.coroutines.launch
 private const val RevealHoldMillis = 400L
 
 /**
- * Module actions open only by holding the row for 0.4 s and then swiping right to left.
- * [revealOnLongPress] lets path rows reveal immediately after the hold.
+ * Row actions open after a 0.4 s hold, without executing an action.
  * Any other touch keeps its ordinary meaning (tap, list scroll, pager swipe).
  */
 @Composable
@@ -61,7 +60,6 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
     scrolling: Boolean,
     primary: WearIconAction,
     secondary: WearIconAction? = null,
-    revealOnLongPress: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val state = rememberRevealState()
@@ -103,7 +101,10 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
                 enabled = primary.enabled,
                 modifier = Modifier.fillMaxWidth().height(actionHeight),
                 shapes = actionShapes,
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = if (primary.destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    contentColor = if (primary.destructive) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary,
+                ),
             ) { Icon(primary.icon, contentDescription = primary.label, modifier = Modifier.requiredSize(iconSize)) }
         },
         secondaryAction = secondary?.let { action ->
@@ -113,7 +114,10 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
                     enabled = action.enabled,
                     modifier = Modifier.fillMaxWidth().height(actionHeight),
                     shapes = actionShapes,
-                    colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer),
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = if (action.destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = if (action.destructive) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
                 ) { Icon(action.icon, contentDescription = action.label, modifier = Modifier.requiredSize(iconSize)) }
             }
         },
@@ -125,7 +129,7 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
             with(transformationSpec) { applyContainerTransformation(scrollProgress) }
             compositingStrategy = CompositingStrategy.ModulateAlpha
             clip = false
-        }.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding).pointerInput(state, revealOnLongPress) {
+        }.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding).pointerInput(state) {
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 val slop = viewConfiguration.touchSlop
@@ -148,39 +152,28 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
                     return@awaitEachGesture
                 }
                 // Lifting or moving before the hold completes leaves the touch to the row, list and pager.
-                var position = down.position
                 val interrupted = withTimeoutOrNull(RevealHoldMillis) {
                     while (true) {
                         val change = awaitPointerEvent(PointerEventPass.Initial).changes
                             .firstOrNull { it.id == down.id }
                         if (change == null || !change.pressed || (change.position - down.position).getDistance() > slop) break
-                        position = change.position
                     }
                     true
                 }
                 if (interrupted != null) return@awaitEachGesture
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 // After the hold, this gesture belongs to the row: it never clicks, scrolls or pages.
-                var revealed = revealOnLongPress
-                if (revealOnLongPress) scope.launch { state.animateTo(RevealValue.RightRevealing) }
+                scope.launch { state.animateTo(RevealValue.RightRevealing) }
                 do {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
-                    val change = event.changes.firstOrNull { it.id == down.id }
-                    if (change != null && !revealed) {
-                        val delta = change.position - position
-                        if (delta.x < -slop / 2 && abs(delta.x) > abs(delta.y)) {
-                            revealed = true
-                            scope.launch { state.animateTo(RevealValue.RightRevealing) }
-                        }
-                    }
                     event.changes.forEach { it.consume() }
                 } while (event.changes.any { it.pressed })
             }
         }.semantics {
             customActions = listOfNotNull(primary, secondary).map { action ->
                 CustomAccessibilityAction(action.label) {
-                    run(action)
-                    true
+                    if (action.enabled) run(action)
+                    action.enabled
                 }
             }
         },

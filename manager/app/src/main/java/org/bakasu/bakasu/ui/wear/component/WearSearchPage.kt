@@ -112,7 +112,7 @@ fun WearSearchPage(
                     WearModuleSwipeActions(
                         spec,
                         scrolling = listState.isScrollInProgress,
-                        primary = WearIconAction(Icons.Rounded.Delete, stringResource(R.string.delete), { viewModel.remove(previous) }),
+                        primary = WearIconAction(Icons.Rounded.Delete, stringResource(R.string.delete), { viewModel.remove(previous) }, destructive = true),
                     ) {
                         WearActionButton(Icons.Rounded.History, previous, { submit(previous) }, colors = ButtonDefaults.filledTonalButtonColors())
                     }

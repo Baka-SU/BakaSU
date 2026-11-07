@@ -26,7 +26,7 @@ import androidx.wear.compose.material3.lazy.transformedHeight
  * One icon action of a [WearIconButtonGroup]; [label] is its accessibility description. A [primary]
  * action uses the filled button, so the main action of a group stands out.
  */
-data class WearIconAction(val icon: ImageVector, val label: String, val onClick: () -> Unit, val enabled: Boolean, val primary: Boolean = false) {
+data class WearIconAction(val icon: ImageVector, val label: String, val onClick: () -> Unit, val enabled: Boolean = true, val primary: Boolean = false, val destructive: Boolean = false) {
     constructor(icon: ImageVector, label: String, onClick: () -> Unit) : this(icon, label, onClick, true)
 }
 

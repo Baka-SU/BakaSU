@@ -11,14 +11,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
@@ -157,15 +157,9 @@ class WearTemplatePageTest(private val round: Boolean) {
         compose.onNodeWithText("Legacy").performClick()
         assertTrue(readOnly)
         val delete = resources.getString(R.string.app_profile_template_delete)
-        val node = compose.onNode(
-            SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions) and
-                SemanticsMatcher("Template delete action") { node ->
-                    node.config[SemanticsActions.CustomActions].any { it.label == delete }
-                },
-            useUnmergedTree = true,
-        ).fetchSemanticsNode()
-        val action = node.config[SemanticsActions.CustomActions].single { it.label == delete }
-        compose.runOnIdle { action.action() }
+        compose.onNodeWithText("Legacy").performTouchInput { longClick(durationMillis = 450) }
+        assertEquals(false, deleted)
+        compose.onNodeWithContentDescription(delete).assertIsDisplayed().performClick()
         compose.waitForIdle()
         compose.onNodeWithText(resources.getString(R.string.wear_template_delete_message, "Legacy")).assertExists()
         assertEquals(false, deleted)
