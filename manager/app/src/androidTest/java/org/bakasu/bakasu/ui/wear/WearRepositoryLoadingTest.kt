@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -116,6 +117,10 @@ class WearRepositoryLoadingTest {
         compose.runOnIdle { refreshing.value = true }
         compose.onNodeWithText(label).assertExists()
         compose.onNodeWithContentDescription(context.getString(R.string.wear_loading)).assertIsDisplayed()
+        val titleBounds = compose.onNodeWithText(label).getUnclippedBoundsInRoot()
+        val indicatorBounds = compose.onNodeWithContentDescription(context.getString(R.string.wear_loading)).getUnclippedBoundsInRoot()
+        assertTrue("Refresh must follow the measured title", indicatorBounds.top >= titleBounds.bottom)
+        assertTrue("Refresh must precede the first row", indicatorBounds.bottom <= compose.onNodeWithText(context.getString(R.string.readme)).getUnclippedBoundsInRoot().top)
         saveScreen("repository-refresh")
         compose.runOnIdle { refreshing.value = false }
         compose.onNodeWithContentDescription(context.getString(R.string.wear_loading)).assertDoesNotExist()

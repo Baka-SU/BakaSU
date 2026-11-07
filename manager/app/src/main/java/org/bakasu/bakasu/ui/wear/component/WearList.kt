@@ -22,7 +22,9 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -36,7 +38,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -88,6 +92,9 @@ val LocalWearPanelHosted = compositionLocalOf { false }
  */
 val LocalWearPanelPull = compositionLocalOf { mutableFloatStateOf(0f) }
 
+internal val LocalWearListRefreshing = compositionLocalOf { false }
+internal val LocalWearRefreshHeaderBottom = compositionLocalOf<MutableState<Float?>?> { null }
+
 /**
  * A Wear screen whose crown and vertical touch gestures scroll only its own content.
  *
@@ -124,6 +131,8 @@ fun WearList(
     content: TransformingLazyColumnScope.(TransformationSpec) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val headerBottom = remember { mutableStateOf<Float?>(null) }
+    var viewportTop by remember { mutableFloatStateOf(0f) }
     // Round screens scale and fade items at the edges; square screens (including the screen shape
     // setting) keep items at full size, as nothing is cut off there.
     val transformationSpec = if (LocalConfiguration.current.isScreenRound) {
@@ -286,65 +295,72 @@ fun WearList(
                 WearLoadingIndicator(Modifier.semantics { contentDescription = loadingDescription })
             }
         } else {
-            Column(Modifier.fillMaxSize()) {
-                if (fixedHeader != null) {
-                    Box(
-                        Modifier.padding(
-                            start = contentPadding.calculateStartPadding(layoutDirection),
-                            end = contentPadding.calculateEndPadding(layoutDirection),
-                            top = contentPadding.calculateTopPadding(),
-                            bottom = itemSpacing,
-                        ),
-                    ) {
-                        fixedHeader()
-                    }
-                }
-                Box(Modifier.weight(1f).then(if (fixedHeader != null) Modifier.clipToBounds() else Modifier)) {
-                    TransformingLazyColumn(
-                        modifier = Modifier.fillMaxSize().graphicsLayer {
-                            translationY = if (panelHosted && onClosePanel != null) {
-                                0f
-                            } else if (!hasOperationsPanel || pullProgress.floatValue < 0f) {
-                                animatedOffset
-                            } else {
-                                0f
+            CompositionLocalProvider(LocalWearListRefreshing provides isRefreshing, LocalWearRefreshHeaderBottom provides headerBottom) {
+                Box(Modifier.fillMaxSize().onGloballyPositioned { viewportTop = it.positionInRoot().y }) {
+                    Column(Modifier.fillMaxSize()) {
+                        if (fixedHeader != null) {
+                            Box(
+                                Modifier.padding(
+                                    start = contentPadding.calculateStartPadding(layoutDirection),
+                                    end = contentPadding.calculateEndPadding(layoutDirection),
+                                    top = contentPadding.calculateTopPadding(),
+                                    bottom = itemSpacing,
+                                ),
+                            ) {
+                                fixedHeader()
                             }
-                        },
-                        state = listState,
-                        contentPadding = if (fixedHeader == null) {
-                            contentPadding
-                        } else {
-                            PaddingValues(
-                                start = contentPadding.calculateStartPadding(layoutDirection),
-                                end = contentPadding.calculateEndPadding(layoutDirection),
-                                bottom = contentPadding.calculateBottomPadding(),
-                            )
-                        },
-                        verticalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.Top),
-                        flingBehavior = if (snap) {
-                            TransformingLazyColumnDefaults.snapFlingBehavior(listState)
-                        } else {
-                            ScrollableDefaults.flingBehavior()
-                        },
-                        rotaryScrollableBehavior = if (snap) {
-                            RotaryScrollableDefaults.snapBehavior(listState)
-                        } else {
-                            RotaryScrollableDefaults.behavior(listState)
-                        },
-                    ) {
-                        content(transformationSpec)
-                    }
-                    // Pulling down at the top shows the panel indicator in the room the list makes for it.
-                    if ((onOpenPanel != null && !hasOperationsPanel) || (onClosePanel != null && closePanelOnPullDown)) {
-                        WearPullIndicator(
-                            pullProgress.floatValue,
-                            closing = onClosePanel != null,
-                            Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
-                        )
+                        }
+                        Box(Modifier.weight(1f).then(if (fixedHeader != null) Modifier.clipToBounds() else Modifier)) {
+                            TransformingLazyColumn(
+                                modifier = Modifier.fillMaxSize().graphicsLayer {
+                                    translationY = if (panelHosted && onClosePanel != null) {
+                                        0f
+                                    } else if (!hasOperationsPanel || pullProgress.floatValue < 0f) {
+                                        animatedOffset
+                                    } else {
+                                        0f
+                                    }
+                                },
+                                state = listState,
+                                contentPadding = if (fixedHeader == null) {
+                                    contentPadding
+                                } else {
+                                    PaddingValues(
+                                        start = contentPadding.calculateStartPadding(layoutDirection),
+                                        end = contentPadding.calculateEndPadding(layoutDirection),
+                                        bottom = contentPadding.calculateBottomPadding(),
+                                    )
+                                },
+                                verticalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.Top),
+                                flingBehavior = if (snap) {
+                                    TransformingLazyColumnDefaults.snapFlingBehavior(listState)
+                                } else {
+                                    ScrollableDefaults.flingBehavior()
+                                },
+                                rotaryScrollableBehavior = if (snap) {
+                                    RotaryScrollableDefaults.snapBehavior(listState)
+                                } else {
+                                    RotaryScrollableDefaults.behavior(listState)
+                                },
+                            ) {
+                                content(transformationSpec)
+                            }
+                            // Pulling down at the top shows the panel indicator in the room the list makes for it.
+                            if ((onOpenPanel != null && !hasOperationsPanel) || (onClosePanel != null && closePanelOnPullDown)) {
+                                WearPullIndicator(
+                                    pullProgress.floatValue,
+                                    closing = onClosePanel != null,
+                                    Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
+                                )
+                            }
+                        }
                     }
                     if (isRefreshing) {
+                        val top = with(LocalDensity.current) {
+                            headerBottom.value?.let { (it - viewportTop).toDp() } ?: contentPadding.calculateTopPadding()
+                        }.coerceAtLeast(contentPadding.calculateTopPadding())
                         WearLoadingIndicator(
-                            Modifier.align(Alignment.TopCenter).padding(top = if (fixedHeader == null) contentPadding.calculateTopPadding() else 0.dp)
+                            Modifier.align(Alignment.TopCenter).padding(top = top)
                                 .semantics { contentDescription = loadingDescription },
                             contained = true,
                         )

@@ -5,16 +5,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,8 +52,12 @@ fun TransformingLazyColumnItemScope.WearPageHeader(
 ) {
     WearPageHeader(
         title,
-        modifier = Modifier.transformedHeight(this, transformationSpec)
-            .minimumVerticalContentPadding(ListHeaderDefaults.minimumTopListContentPadding),
+        modifier = if (LocalWearTimeOptions.current.mode == "title") {
+            Modifier
+        } else {
+            Modifier.transformedHeight(this, transformationSpec)
+                .minimumVerticalContentPadding(ListHeaderDefaults.minimumTopListContentPadding)
+        },
         transformation = SurfaceTransformation(transformationSpec),
     )
 }
@@ -60,26 +69,34 @@ fun WearPageHeader(
     modifier: Modifier = Modifier,
     transformation: SurfaceTransformation? = null,
 ) {
-    if (LocalWearTimeOptions.current.mode == "title") return
-    val side = maxOf(14.dp, (LocalConfiguration.current.screenWidthDp * 0.073f).dp)
-    val defaults = ListHeaderDefaults.ContentPadding
-    ListHeader(
-        modifier = modifier.fillMaxWidth(),
-        transformation = transformation,
-        contentPadding = PaddingValues(
-            start = side,
-            end = side,
-            top = defaults.calculateTopPadding(),
-            bottom = defaults.calculateBottomPadding(),
-        ),
-    ) {
-        // Titles keep the ListHeader title style, as the Wear typography guidance assigns titles to way-finding.
-        Text(
-            title,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+    val refreshing = LocalWearListRefreshing.current
+    val headerBottom = LocalWearRefreshHeaderBottom.current
+    DisposableEffect(headerBottom) {
+        onDispose { headerBottom?.value = null }
+    }
+    val position = Modifier.onGloballyPositioned { headerBottom?.value = it.boundsInRoot().bottom }
+    Column(modifier.fillMaxWidth()) {
+        if (LocalWearTimeOptions.current.mode == "title") {
+            // TimeText owns the title; the refresh slot starts before the first row.
+            Box(Modifier.fillMaxWidth().then(position))
+        } else {
+            val side = maxOf(14.dp, (LocalConfiguration.current.screenWidthDp * 0.073f).dp)
+            val defaults = ListHeaderDefaults.ContentPadding
+            ListHeader(
+                modifier = Modifier.fillMaxWidth().then(position),
+                transformation = transformation,
+                contentPadding = PaddingValues(
+                    start = side,
+                    end = side,
+                    top = defaults.calculateTopPadding(),
+                    bottom = defaults.calculateBottomPadding(),
+                ),
+            ) {
+                Text(title, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        // Reserve space after the measured title while the clear, unscaled indicator overlays it.
+        if (refreshing) Spacer(Modifier.height(56.dp))
     }
 }
 
