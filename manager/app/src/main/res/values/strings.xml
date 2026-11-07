@@ -917,7 +917,7 @@
     <string name="wear_downloads">Downloads</string>
     <string name="wear_downloads_empty">No module downloads</string>
     <string name="wear_bridge">Watch link</string>
-    <string name="wear_bridge_summary">Receive module WebUI, link and template requests from your watch</string>
+    <string name="wear_bridge_summary">Receive module WebUI and link requests from your watch</string>
     <string name="wear_bridge_disconnect">Remove connection</string>
     <string name="wear_bridge_permission">Connection permissions</string>
     <string name="wear_bridge_unsupported">This device does not support the required Bluetooth connection.</string>
@@ -940,7 +940,7 @@
     <string name="wear_bridge_allow_access_message">The watch can then open its module WebUI in this phone\'s Manager, read its module files and run module commands on the watch.</string>
     <string name="wear_bridge_waiting">Waiting for the watch</string>
     <string name="wear_bridge_access_off">Access not allowed</string>
-    <string name="wear_bridge_phone_help">Enable the receiver and grant nearby device access. Bluetooth-paired watches can then request WebUI, links and template downloads. Each request needs your approval unless you choose to remember the watch.</string>
+    <string name="wear_bridge_phone_help">Enable the receiver and grant nearby device access. Bluetooth-paired watches can then request WebUI and links. Each request needs your approval unless you choose to remember the watch.</string>
     <string name="wear_bridge_disconnect_message">Remove the saved phone and watch connection?</string>
     <string name="wear_display_interaction">Screen behavior &amp; haptics</string>
     <string name="wear_phone_connection_failed">Unable to connect to phone</string>
@@ -957,11 +957,9 @@
     <string name="wear_bridge_request_from">Device: %1$s</string>
     <string name="wear_bridge_request_webui">Open this module WebUI? Its files and commands will be handled by the watch.</string>
     <string name="wear_bridge_request_link">Open this link in the phone browser?</string>
-    <string name="wear_bridge_request_templates">Use this phone to download the official profile templates?</string>
     <string name="wear_bridge_background_restore">System background reconnection (optional)</string>
     <string name="wear_bridge_connecting">Connecting to phone</string>
     <string name="wear_bridge_confirming">Confirm on your phone</string>
-    <string name="wear_bridge_completed">Templates received</string>
     <string name="wear_bridge_permission_short">Bluetooth permission denied</string>
     <string name="wear_bridge_bluetooth_short">Turn on Bluetooth</string>
     <string name="wear_bridge_pair_short">No paired phone</string>

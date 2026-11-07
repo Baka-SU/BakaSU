@@ -417,12 +417,12 @@ class CompanionBridgeRepository(
                             writeUTF("ready")
                             flush()
                         }
-                        val bytes = handshake(connection.socket, if (action == BridgeAction.TEMPLATES) 60 else 30) {
+                        val bytes = handshake(connection.socket, 30) {
                             val (type, payload) = with(WearWebUiProtocol) { connection.input.readFrame() }
                             if (type != WearWebUiProtocol.FRAME_OK) throw BridgeException(BridgeFailure.CONNECTION)
                             payload
                         }
-                        mutableTransfer.value = BridgeTransfer(if (action == BridgeAction.TEMPLATES) BridgeStage.COMPLETED else BridgeStage.OPENED)
+                        mutableTransfer.value = BridgeTransfer(BridgeStage.OPENED)
                         bytes
                     }
                     return@withLock result

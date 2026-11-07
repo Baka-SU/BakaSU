@@ -891,7 +891,7 @@
     <string name="wear_downloads">下载管理器</string>
     <string name="wear_downloads_empty">暂无模块下载任务</string>
     <string name="wear_bridge">手表链接</string>
-    <string name="wear_bridge_summary">接收手表的模块 WebUI、网页链接及模板下载请求</string>
+    <string name="wear_bridge_summary">接收手表的模块 WebUI 和网页链接请求</string>
     <string name="wear_bridge_disconnect">移除连接</string>
     <string name="wear_bridge_permission">连接权限</string>
     <string name="wear_bridge_unsupported">此设备不支持所需的蓝牙连接。</string>
@@ -914,7 +914,7 @@
     <string name="wear_bridge_allow_access_message">授权后，手表可以在本机 Manager 中打开其模块 WebUI、读取模块文件，并在手表上执行模块命令。</string>
     <string name="wear_bridge_waiting">等待手表连接</string>
     <string name="wear_bridge_access_off">尚未允许访问</string>
-    <string name="wear_bridge_phone_help">启用接收服务并授予附近设备权限后，系统已配对的手表即可请求打开 WebUI、网页或下载模板。每次请求均需确认，除非你选择记住该手表。</string>
+    <string name="wear_bridge_phone_help">启用接收服务并授予附近设备权限后，系统已配对的手表即可请求打开 WebUI 或网页。每次请求均需确认，除非你选择记住该手表。</string>
     <string name="wear_bridge_disconnect_message">是否移除已保存的手机与手表连接？</string>
     <string name="wear_display_interaction">屏幕行为与触觉反馈</string>
     <string name="wear_phone_connection_failed">无法连接手机</string>
@@ -931,11 +931,9 @@
     <string name="wear_bridge_request_from">设备：%1$s</string>
     <string name="wear_bridge_request_webui">打开此模块 WebUI？文件读取与命令执行仍由手表处理。</string>
     <string name="wear_bridge_request_link">在手机浏览器打开此链接？</string>
-    <string name="wear_bridge_request_templates">使用此手机下载官方应用配置模板？</string>
     <string name="wear_bridge_background_restore">系统后台恢复（可选）</string>
     <string name="wear_bridge_connecting">正在连接手机</string>
     <string name="wear_bridge_confirming">等待手机确认</string>
-    <string name="wear_bridge_completed">模板已接收</string>
     <string name="wear_bridge_permission_short">蓝牙权限被拒绝</string>
     <string name="wear_bridge_bluetooth_short">请开启蓝牙</string>
     <string name="wear_bridge_pair_short">尚未配对手机</string>

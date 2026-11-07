@@ -19,9 +19,9 @@ class BridgeException(val reason: BridgeFailure, cause: Throwable? = null) : Exc
 data class BridgePeer(val address: String, val name: String)
 data class BridgeState(val peer: BridgePeer? = null, val enabled: Boolean = false, val connected: Boolean = false, val remembered: Boolean = false)
 
-enum class BridgeAction { WEB_UI, LINK, TEMPLATES }
+enum class BridgeAction { WEB_UI, LINK }
 
-enum class BridgeStage { CONNECTING, WAITING, OPENED, COMPLETED, FAILED }
+enum class BridgeStage { CONNECTING, WAITING, OPENED, FAILED }
 
 data class BridgeTransfer(val stage: BridgeStage, val failure: BridgeFailure? = null)
 

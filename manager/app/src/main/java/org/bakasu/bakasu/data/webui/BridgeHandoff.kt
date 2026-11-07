@@ -56,7 +56,6 @@ internal object BridgeHandoff {
     fun valid(action: BridgeAction, value: String): Boolean = when (action) {
         BridgeAction.LINK -> runCatching { URI(value).let { it.scheme in setOf("http", "https") && !it.host.isNullOrBlank() } }.getOrDefault(false)
         BridgeAction.WEB_UI -> value.isNotBlank() && '/' !in value && '\\' !in value && value != "." && value != ".."
-        BridgeAction.TEMPLATES -> value.isEmpty()
     }
 
     /** Bind the existing app proof to the exact action shown in the phone's confirmation. */

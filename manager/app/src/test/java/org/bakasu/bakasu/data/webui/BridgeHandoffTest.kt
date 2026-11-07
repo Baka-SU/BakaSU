@@ -64,24 +64,23 @@ class BridgeHandoffTest {
 
     @Test
     fun declinedConsentNeverBecomesApproval() = runBlocking {
-        val pending = PendingBridgeRequest(BridgeRequest("request", BridgePeer("phone", "Phone"), BridgeAction.TEMPLATES, "", "", true))
+        val pending = PendingBridgeRequest(BridgeRequest("request", BridgePeer("phone", "Phone"), BridgeAction.LINK, "https://kernelsu.org", "", true))
         pending.approval.complete(null)
         assertFalse(pending.approval.complete(true))
         assertNull(pending.approval.await())
     }
 
     @Test
-    fun requestOnlyAllowsWebLinksModuleIdsAndFixedTemplateSource() {
+    fun requestOnlyAllowsWebLinksAndModuleIds() {
         assertTrue(BridgeHandoff.valid(BridgeAction.LINK, "https://example.org/path?q=1"))
         assertTrue(BridgeHandoff.valid(BridgeAction.WEB_UI, "test_module"))
-        assertTrue(BridgeHandoff.valid(BridgeAction.TEMPLATES, ""))
         listOf("file:///data/adb", "intent://example", "https:", "javascript:alert(1)").forEach {
             assertFalse(BridgeHandoff.valid(BridgeAction.LINK, it))
         }
         listOf("", "../module", "..", "module/other").forEach {
             assertFalse(BridgeHandoff.valid(BridgeAction.WEB_UI, it))
         }
-        assertFalse(BridgeHandoff.valid(BridgeAction.TEMPLATES, "https://example.org"))
+        assertTrue(runCatching { BridgeAction.valueOf("TEMPLATES") }.isFailure)
     }
 
     @Test

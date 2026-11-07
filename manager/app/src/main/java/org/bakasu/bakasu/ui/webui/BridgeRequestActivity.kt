@@ -68,15 +68,16 @@ class BridgeRequestActivity : ComponentActivity() {
                         text = {
                             Column(Modifier.verticalScroll(rememberScrollState())) {
                                 Text(stringResource(R.string.wear_bridge_request_from, current?.peer?.name.orEmpty()))
-                                Text(
-                                    stringResource(
-                                        when (current?.action) {
-                                            BridgeAction.WEB_UI -> R.string.wear_bridge_request_webui
-                                            BridgeAction.LINK -> R.string.wear_bridge_request_link
-                                            else -> R.string.wear_bridge_request_templates
-                                        },
-                                    ),
-                                )
+                                current?.action?.let { action ->
+                                    Text(
+                                        stringResource(
+                                            when (action) {
+                                                BridgeAction.WEB_UI -> R.string.wear_bridge_request_webui
+                                                BridgeAction.LINK -> R.string.wear_bridge_request_link
+                                            },
+                                        ),
+                                    )
+                                }
                                 Text(if (current?.action == BridgeAction.LINK) current.value else current?.title.orEmpty())
                                 SettingsSwitchWidget(
                                     title = stringResource(R.string.wear_bridge_remember),
@@ -120,8 +121,6 @@ class BridgeRequestActivity : ComponentActivity() {
                                     )
 
                                     BridgeAction.LINK -> startActivity(Intent(Intent.ACTION_VIEW, ready.value.toUri()).addCategory(Intent.CATEGORY_BROWSABLE))
-
-                                    BridgeAction.TEMPLATES -> Unit
                                 }
                             }.isSuccess
                             viewModel.completed(id, opened)

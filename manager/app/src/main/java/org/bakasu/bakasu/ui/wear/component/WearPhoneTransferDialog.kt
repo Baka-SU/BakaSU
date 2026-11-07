@@ -3,7 +3,6 @@ package org.bakasu.bakasu.ui.wear.component
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BluetoothDisabled
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Lock
@@ -40,8 +39,6 @@ fun WearPhoneTransferDialog(transfer: BridgeTransfer?, onCancel: () -> Unit, onD
 
         BridgeStage.WAITING -> stringResource(R.string.wear_bridge_confirming)
 
-        BridgeStage.COMPLETED -> stringResource(R.string.wear_bridge_completed)
-
         BridgeStage.FAILED -> stringResource(
             when (state.failure) {
                 BridgeFailure.PERMISSION -> R.string.wear_bridge_permission_short
@@ -76,7 +73,6 @@ fun WearPhoneTransferDialog(transfer: BridgeTransfer?, onCancel: () -> Unit, onD
             else -> Icon(
                 when {
                     state?.stage == BridgeStage.WAITING -> Icons.Rounded.PhoneAndroid
-                    state?.stage == BridgeStage.COMPLETED -> Icons.Rounded.Check
                     state?.failure == BridgeFailure.PERMISSION -> Icons.Rounded.Lock
                     state?.failure == BridgeFailure.REJECTED -> Icons.Rounded.Close
                     state?.failure == BridgeFailure.BLUETOOTH_DISABLED -> Icons.Rounded.BluetoothDisabled

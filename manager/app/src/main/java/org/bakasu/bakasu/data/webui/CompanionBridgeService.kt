@@ -32,7 +32,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.packageinfo.AppIconDataSource
 import org.bakasu.bakasu.data.packageinfo.InstalledPackageRepository
-import org.bakasu.bakasu.data.profile.ProfileTemplateRepository
 import org.bakasu.bakasu.domain.model.BridgeAction
 import org.bakasu.bakasu.domain.model.BridgeException
 import org.bakasu.bakasu.domain.model.BridgeFailure
@@ -62,7 +61,6 @@ class CompanionBridgeService : Service() {
     private val packageRepository: InstalledPackageRepository by inject()
     private val icons: AppIconDataSource by inject()
     private val refreshModules: RefreshInstalledModulesUseCase by inject()
-    private val templates: ProfileTemplateRepository by inject()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val sockets = ConcurrentHashMap.newKeySet<BluetoothSocket>()
     private var server: BluetoothServerSocket? = null
@@ -213,11 +211,6 @@ class CompanionBridgeService : Service() {
                 }
                 // The watch creates the WebUI session only now, after approval, then starts listening.
                 check(connection.input.readUTF() == "ready")
-            }
-            if (details.action == BridgeAction.TEMPLATES) {
-                val bytes = templates.onlineBodiesForPhone()
-                with(WearWebUiProtocol) { connection.output.writeFrame(if (bytes == null) FRAME_ERROR else FRAME_OK, bytes ?: byteArrayOf()) }
-                return
             }
             val opened = if (details.action == BridgeAction.WEB_UI) {
                 val ready = CompletableDeferred<Boolean>()

@@ -1,7 +1,5 @@
 package org.bakasu.bakasu.data.profile
 
-import android.app.Application
-import android.content.pm.PackageManager
 import java.text.Collator
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
@@ -18,8 +16,6 @@ import org.bakasu.bakasu.Natives.Profile.RootProfileFlag
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.data.shell.KsuCliRepository
-import org.bakasu.bakasu.data.webui.CompanionBridgeRepository
-import org.bakasu.bakasu.domain.model.BridgeAction
 import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.domain.model.ProfileTemplateException
 import org.bakasu.bakasu.domain.model.ProfileTemplateFailure
@@ -29,14 +25,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class ProfileTemplateRepository(
-    private val application: Application,
     private val networkStatusRepository: NetworkStatusRepository,
     private val networkRequestRepository: NetworkRequestRepository,
     private val ksuCliRepository: KsuCliRepository,
-    private val bridge: CompanionBridgeRepository,
 ) {
     companion object {
-        private const val TAG = "ProfileTemplate"
         private const val TEMPLATE_INDEX_URL = "https://kernelsu.org/templates/index.json"
         private const val TEMPLATE_URL = "https://kernelsu.org/templates/%s"
     }
@@ -75,11 +68,6 @@ class ProfileTemplateRepository(
         }
     }
 
-    /** Serves the fixed official template source after the phone has approved the request. */
-    internal suspend fun onlineBodiesForPhone(): ByteArray? = withContext(Dispatchers.IO) {
-        fetchRemoteBodies()?.let { JSONObject(it).toString().toByteArray() }?.takeIf { it.size <= 1_048_576 }
-    }
-
     /** The official templates by ID, skipping those that fail to download; null without the index. */
     private suspend fun fetchRemoteBodies(): Map<String, String>? {
         val ids = networkRequestRepository.fetch(TEMPLATE_INDEX_URL)
@@ -91,22 +79,11 @@ class ProfileTemplateRepository(
         }.toMap()
     }
 
-    private suspend fun fetchBodiesFromPhone(): Map<String, String>? {
-        if (!application.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) return null
-        val bytes = bridge.handoff(BridgeAction.TEMPLATES)
-        require(bytes.size <= 1_048_576)
-        val bodies = JSONObject(bytes.decodeToString())
-        return bodies.keys().asSequence().associateWith(bodies::getString)
-    }
-
-    /**
-     * The official templates for browsing. Nothing is stored; [addOnline] adds a chosen one. Without
-     * a usable direct route, a failed download is retried through the paired phone.
-     */
+    /** Browses the official source on this device; only [addOnline] stores a chosen template. */
     suspend fun fetchOnline(): Result<List<ProfileTemplate>> = withContext(Dispatchers.IO) {
         val online = networkStatusRepository.isAvailable()
         val bodies = try {
-            fetchRemoteBodies() ?: fetchBodiesFromPhone()
+            fetchRemoteBodies()
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -214,12 +191,9 @@ class ProfileTemplateRepository(
                 )
     }
 
-    /**
-     * Without a usable network, as on a watch behind its phone's Bluetooth proxy, the templates are
-     * fetched by the paired phone's Manager instead.
-     */
+    /** Preserves the phone UI's explicit synchronization using this device's network. */
     private suspend fun fetchRemoteTemplates(): Boolean = runCatching {
-        val bodies = fetchRemoteBodies() ?: fetchBodiesFromPhone()
+        val bodies = fetchRemoteBodies()
             ?: return false
         var fetchedAny = bodies.isEmpty()
         bodies.forEach { (id, body) ->
