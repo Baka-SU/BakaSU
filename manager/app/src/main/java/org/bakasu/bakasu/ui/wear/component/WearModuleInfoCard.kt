@@ -23,7 +23,7 @@ fun TransformingLazyColumnItemScope.WearModuleInfoCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
+        modifier = Modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, spec)
             .minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)
             .wearCompactRow(compact),
         transformation = SurfaceTransformation(spec),

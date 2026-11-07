@@ -57,6 +57,7 @@ import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
+import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
 
 /**
  * @author Hanhan_awa
@@ -151,7 +152,7 @@ internal fun WearLogsPage(
                 TitleCard(
                     onClick = { onEntry(entry) },
                     title = { Text(sulogEntryTitle(entry), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp).transformedHeight(this, spec),
+                    modifier = Modifier.wearRefreshOffset().fillMaxWidth().padding(vertical = 2.dp).transformedHeight(this, spec),
                     transformation = SurfaceTransformation(spec),
                     // The clock time fits the time slot; the full date stays in the content.
                     time = entry.timestampText?.substringAfter(' ')?.let { { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } },

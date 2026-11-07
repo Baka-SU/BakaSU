@@ -42,6 +42,7 @@ import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.wearGroupGap
+import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
 
 /**
  * @author Hanhan_awa
@@ -111,7 +112,7 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
         if (isManager) add(R.string.wear_badge_manager)
     }
     Button(
-        modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
+        modifier = Modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, spec)
             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
         transformation = SurfaceTransformation(spec),
         onClick = { onAppClick(group.uid, group.primaryPackageName) },

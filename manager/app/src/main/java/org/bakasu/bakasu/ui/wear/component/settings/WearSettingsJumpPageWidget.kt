@@ -19,6 +19,7 @@ import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
+import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
 
 /**
  * A settings entry that opens another page: a neutral filled tonal button with an optional leading
@@ -43,7 +44,7 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
         enabled = enabled,
         // Inside a swipe-to-reveal row the row owns the list transformation and edge padding.
         modifier = if (transformed) {
-            Modifier.fillMaxWidth().transformedHeight(this, spec)
+            Modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, spec)
                 .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)
         } else {
             Modifier.fillMaxWidth()

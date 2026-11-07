@@ -60,7 +60,7 @@ fun TransformingLazyColumnItemScope.WearInfoCard(
         transformation.createContainerPainter(background, shape, border)
     }
     Column(
-        modifier = Modifier
+        modifier = Modifier.wearRefreshOffset()
             .graphicsLayer { with(transformation) { applyContainerTransformation() } }
             .then(modifier.transformedHeight(this, transformationSpec))
             .fillMaxWidth()

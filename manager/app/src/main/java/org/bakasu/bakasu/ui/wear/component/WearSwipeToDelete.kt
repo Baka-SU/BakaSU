@@ -69,7 +69,7 @@ fun TransformingLazyColumnItemScope.WearSwipeToDelete(
         onSwipePrimaryAction = ::requestDelete,
         // Wear 1.7.1's SwipeToReveal takes no transformation, so the row applies it as the module
         // swipe rows do, without an offscreen buffer that would clip the revealed action.
-        modifier = Modifier.transformedHeight(this, transformationSpec).graphicsLayer {
+        modifier = Modifier.wearRefreshOffset().transformedHeight(this, transformationSpec).graphicsLayer {
             with(transformationSpec) { applyContainerTransformation(scrollProgress) }
             compositingStrategy = CompositingStrategy.ModulateAlpha
             clip = false

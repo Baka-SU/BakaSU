@@ -64,7 +64,7 @@ fun TransformingLazyColumnItemScope.WearChip(
     if (onClick != null) {
         Button(
             onClick = onClick,
-            modifier = modifier.fillMaxWidth().transformedHeight(this, transformationSpec)
+            modifier = modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, transformationSpec)
                 .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
             transformation = SurfaceTransformation(transformationSpec),
             colors = when (emphasis) {

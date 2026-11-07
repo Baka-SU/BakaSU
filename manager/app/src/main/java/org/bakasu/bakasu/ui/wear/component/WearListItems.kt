@@ -5,9 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -69,7 +67,6 @@ fun WearPageHeader(
     modifier: Modifier = Modifier,
     transformation: SurfaceTransformation? = null,
 ) {
-    val refreshing = LocalWearListRefreshing.current
     val headerBottom = LocalWearRefreshHeaderBottom.current
     DisposableEffect(headerBottom) {
         onDispose { headerBottom?.value = null }
@@ -95,8 +92,6 @@ fun WearPageHeader(
                 Text(title, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
-        // Reserve space after the measured title while the clear, unscaled indicator overlays it.
-        if (refreshing) Spacer(Modifier.height(56.dp))
     }
 }
 
@@ -106,7 +101,7 @@ fun TransformingLazyColumnItemScope.WearSectionHeader(
     title: String,
 ) {
     ListSubHeader(
-        modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
+        modifier = Modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, transformationSpec),
         transformation = SurfaceTransformation(transformationSpec),
     ) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -144,7 +139,7 @@ fun TransformingLazyColumnItemScope.WearActionButton(
 ) {
     WearActionButton(
         icon, label, onClick,
-        modifier = Modifier.transformedHeight(this, transformationSpec)
+        modifier = Modifier.wearRefreshOffset().transformedHeight(this, transformationSpec)
             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
         enabled = enabled,
         secondaryText = secondaryText,
@@ -241,7 +236,7 @@ fun TransformingLazyColumnItemScope.WearScaledItem(
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(
-        modifier = Modifier.graphicsLayer {
+        modifier = Modifier.wearRefreshOffset().graphicsLayer {
             with(transformationSpec) { applyContainerTransformation(scrollProgress) }
         }.then(modifier.transformedHeight(this, transformationSpec)).graphicsLayer {
             with(transformationSpec) { applyContentTransformation(scrollProgress) }

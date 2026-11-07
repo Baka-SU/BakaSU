@@ -22,6 +22,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
@@ -189,7 +191,10 @@ class WearTemplatePageTest(private val round: Boolean) {
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
         compose.onNodeWithText("Saved").assertIsSelected()
         compose.runOnIdle { refreshing.value = true }
-        compose.onNodeWithText("Saved").assertExists().assertIsSelected().performClick()
+        compose.onNodeWithText("Saved").assertExists().assertIsSelected()
+        // Refresh opens space below the title; scroll the row clear of the edge button before tapping.
+        compose.onNode(hasScrollToIndexAction()).performTouchInput { swipeUp() }
+        compose.onNodeWithText("Saved").assertIsDisplayed().performClick()
         assertEquals(template, chosen)
     }
 

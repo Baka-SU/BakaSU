@@ -17,6 +17,7 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
 
 @Composable
 fun WearChoicePage(
@@ -50,7 +51,7 @@ fun WearChoicePage(
             RadioButton(
                 selected = value == selected,
                 onSelect = { onChoose(value) },
-                modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
+                modifier = Modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, spec)
                     .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
                 enabled = enabled,
                 transformation = SurfaceTransformation(spec),

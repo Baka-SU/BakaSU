@@ -121,7 +121,7 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
         onSwipePrimaryAction = {},
         // Match the Wear 1.7 SwipeToReveal list sample: keep the row transformation, but avoid
         // an offscreen buffer that clips translated content to the original row's bounds.
-        modifier = Modifier.transformedHeight(this, transformationSpec).graphicsLayer {
+        modifier = Modifier.wearRefreshOffset().transformedHeight(this, transformationSpec).graphicsLayer {
             with(transformationSpec) { applyContainerTransformation(scrollProgress) }
             compositingStrategy = CompositingStrategy.ModulateAlpha
             clip = false

@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear.component
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberOverscrollEffect
@@ -49,6 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.LocalScreenIsActive
@@ -92,7 +95,15 @@ val LocalWearPanelHosted = compositionLocalOf { false }
  */
 val LocalWearPanelPull = compositionLocalOf { mutableFloatStateOf(0f) }
 
-internal val LocalWearListRefreshing = compositionLocalOf { false }
+internal val LocalWearRefreshOffset = compositionLocalOf { 0.dp }
+
+/** Move the row layout, including its hit target, while keeping the title and scroll anchor still. */
+@Composable
+internal fun Modifier.wearRefreshOffset(): Modifier {
+    val offset = LocalWearRefreshOffset.current
+    return this.offset { IntOffset(0, offset.roundToPx()) }
+}
+
 internal val LocalWearRefreshHeaderBottom = compositionLocalOf<MutableState<Float?>?> { null }
 
 /**
@@ -143,6 +154,19 @@ fun WearList(
     val pullOffset = remember { mutableFloatStateOf(0f) }
     val pullProgress = remember { mutableFloatStateOf(0f) }
     val reduceMotion = LocalReduceMotion.current
+    // Open space beneath the title at the list start. A user's scroll dismisses it for this
+    // request, so removing bottom padding cannot immediately reopen it and move the hit target.
+    var showRefreshGap by remember(isRefreshing, isLoading, listState) {
+        mutableStateOf(isRefreshing && !isLoading && !listState.canScrollBackward)
+    }
+    LaunchedEffect(listState.isScrollInProgress, listState.canScrollBackward) {
+        if (listState.isScrollInProgress && listState.canScrollBackward) showRefreshGap = false
+    }
+    val refreshOffset by animateDpAsState(
+        targetValue = if (showRefreshGap) 64.dp else 0.dp,
+        animationSpec = if (reduceMotion) snap() else tween(180),
+        label = "wear-refresh-content-offset",
+    )
     val screenActive = LocalScreenIsActive.current
     // The page yields gestures and reveal updates while the shared menu is active.
     val panelHosted = LocalWearPanelHosted.current
@@ -288,14 +312,14 @@ fun WearList(
             end = scaffoldPadding.calculateEndPadding(layoutDirection),
             top = maxOf(scaffoldPadding.calculateTopPadding(), timeSpace) + topContentPadding,
             // Keep the final menu button inside the straight moving edge, including on round screens.
-            bottom = maxOf(scaffoldPadding.calculateBottomPadding(), if (onClosePanel != null) 24.dp else 0.dp),
+            bottom = maxOf(scaffoldPadding.calculateBottomPadding(), if (onClosePanel != null) 24.dp else 0.dp) + refreshOffset,
         )
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 WearLoadingIndicator(Modifier.semantics { contentDescription = loadingDescription })
             }
         } else {
-            CompositionLocalProvider(LocalWearListRefreshing provides isRefreshing, LocalWearRefreshHeaderBottom provides headerBottom) {
+            CompositionLocalProvider(LocalWearRefreshOffset provides refreshOffset, LocalWearRefreshHeaderBottom provides headerBottom) {
                 Box(Modifier.fillMaxSize().onGloballyPositioned { viewportTop = it.positionInRoot().y }) {
                     Column(Modifier.fillMaxSize()) {
                         if (fixedHeader != null) {
@@ -360,7 +384,7 @@ fun WearList(
                             headerBottom.value?.let { (it - viewportTop).toDp() } ?: contentPadding.calculateTopPadding()
                         }.coerceAtLeast(contentPadding.calculateTopPadding())
                         WearLoadingIndicator(
-                            Modifier.align(Alignment.TopCenter).padding(top = top)
+                            Modifier.align(Alignment.TopCenter).padding(top = top + 8.dp)
                                 .semantics { contentDescription = loadingDescription },
                             contained = true,
                         )

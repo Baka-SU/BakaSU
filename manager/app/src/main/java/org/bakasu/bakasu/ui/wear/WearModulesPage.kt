@@ -39,6 +39,7 @@ import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleSwipeActions
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
 
 /**
  * @author Hanhan_awa
@@ -129,7 +130,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             modifier = Modifier.fillMaxWidth()
                 .then(
                     if (actions.isEmpty()) {
-                        Modifier.transformedHeight(this, spec)
+                        Modifier.wearRefreshOffset().transformedHeight(this, spec)
                             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)
                     } else {
                         Modifier
