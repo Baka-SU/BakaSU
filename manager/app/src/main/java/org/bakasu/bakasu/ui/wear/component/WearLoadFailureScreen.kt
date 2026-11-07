@@ -14,31 +14,41 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.lazy.TransformationSpec
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.RepositoryError
 import org.bakasu.bakasu.domain.model.RepositoryFailure
 
 /** Persistent failure content, matching the warning, title and reason in the Wear demo. */
 @Composable
-internal fun WearLoadFailureScreen(reason: String, onBack: () -> Unit, onRetry: () -> Unit) {
-    WearList(onBack = onBack, onRefresh = onRetry) { spec ->
-        item {
-            WearScaledItem(spec) {
-                Column(
-                    Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Icon(Icons.Rounded.Warning, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.error)
-                    Text(stringResource(R.string.wear_load_failed), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
-                    Text(reason, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                }
-            }
+internal fun WearLoadFailureScreen(reason: String, onBack: () -> Unit, onRetry: () -> Unit, retryInEdgeButton: Boolean = false) {
+    WearList(
+        onBack = onBack,
+        onRefresh = onRetry,
+        onConfirm = if (retryInEdgeButton) onRetry else null,
+        confirmLabel = if (retryInEdgeButton) stringResource(R.string.network_retry) else null,
+    ) { spec ->
+        item { WearLoadFailureContent(spec, reason) }
+        if (!retryInEdgeButton) item { WearActionButton(spec, Icons.Rounded.Refresh, stringResource(R.string.network_retry), onRetry) }
+    }
+}
+
+@Composable
+internal fun TransformingLazyColumnItemScope.WearLoadFailureContent(spec: TransformationSpec, reason: String) {
+    WearScaledItem(spec) {
+        Column(
+            Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(Icons.Rounded.Warning, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.error)
+            Text(stringResource(R.string.wear_load_failed), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+            Text(reason, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
-        item { WearActionButton(spec, Icons.Rounded.Refresh, stringResource(R.string.network_retry), onRetry) }
     }
 }
 

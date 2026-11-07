@@ -16,16 +16,23 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
@@ -52,6 +59,8 @@ import org.bakasu.bakasu.data.module.registry.KernelSuRegistryRepository
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.domain.model.ModuleCatalogResult
+import org.bakasu.bakasu.domain.model.RepositoryError
+import org.bakasu.bakasu.domain.model.RepositoryFailure
 import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.usecase.GetCatalogModuleUseCase
 import org.bakasu.bakasu.domain.usecase.GetModuleReadmeUseCase
@@ -78,6 +87,48 @@ import org.koin.core.context.GlobalContext
 class WearRepositoryLoadingTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun repositoryFailuresShareWarningContentAndOnlyRetryAtTheEdge() {
+        val detail = mutableStateOf(false)
+        val source = RepositorySource("https://example.invalid/", "Repository")
+        val state = ModuleRepoUiState(
+            repositoryUrl = source.url,
+            sources = listOf(source),
+            failures = mapOf(source.url to RepositoryFailure(RepositoryError.OFFLINE)),
+        )
+        var retries = 0
+        var backs = 0
+        val retry = compose.activity.getString(R.string.network_retry)
+        val reason = compose.activity.getString(R.string.wear_no_internet)
+        compose.setContent {
+            MaterialTheme {
+                AppScaffold(timeText = {}) {
+                    if (detail.value) {
+                        WearLoadFailureScreen(reason, { backs++ }, { retries++ }, retryInEdgeButton = true)
+                    } else {
+                        WearModuleRepoPage(state, { retries++ }, { backs++ }, {}, hasOperationsPanel = true, onOpen = {})
+                    }
+                }
+            }
+        }
+        for (isDetail in listOf(false, true)) {
+            compose.runOnIdle { detail.value = isDetail }
+            compose.onNodeWithText(compose.activity.getString(R.string.wear_load_failed)).assertExists()
+            compose.onNodeWithText(reason).assertExists()
+            compose.onAllNodesWithText(retry).assertCountEquals(1)
+            compose.onNodeWithText(retry).assert(!hasAnyAncestor(hasScrollToIndexAction()))
+            compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(reason))
+            compose.onNode(hasScrollToIndexAction()).performTouchInput { swipeUp() }
+            saveScreen(if (isDetail) "repository-detail-failure-edge" else "repository-list-failure-edge")
+            compose.onNodeWithText(retry).assertIsDisplayed().performClick()
+            compose.runOnIdle { assertEquals(if (isDetail) 2 else 1, retries) }
+        }
+        compose.runOnIdle {
+            assertEquals(2, retries)
+            assertEquals(0, backs)
+        }
+    }
 
     @Test
     fun emptyManualRefreshKeepsTheTitleAndClearsWhenFinished() {
@@ -177,7 +228,7 @@ class WearRepositoryLoadingTest {
             compose.onNodeWithText(context.getString(R.string.wear_load_failed)).assertExists()
             val retry = context.getString(R.string.network_retry)
             compose.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.ScrollToIndex)).performScrollToNode(hasText(retry))
-            compose.onNodeWithText(retry).performClick()
+            compose.onNodeWithText(retry).assertIsDisplayed().performClick()
         }
         compose.runOnIdle { assertEquals(2, retries) }
     }

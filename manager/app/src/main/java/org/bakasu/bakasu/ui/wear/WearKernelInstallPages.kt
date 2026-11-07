@@ -83,7 +83,7 @@ internal fun WearInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit, on
         if (active && !installState.loading && installState.error == null && !environment.rootAvailable) onPatchWithoutRoot()
     }
     if (!installState.loading && installState.error != null) {
-        WearLoadFailureScreen(installState.error.ifBlank { stringResource(R.string.wear_load_failed) }, onBack) { viewModel.dispatch(InstallUiAction.Refresh) }
+        WearLoadFailureScreen(installState.error.ifBlank { stringResource(R.string.wear_load_failed) }, onBack, onRetry = { viewModel.dispatch(InstallUiAction.Refresh) })
         return
     }
     WearList(isLoading = installState.loading || !environment.rootAvailable, onBack = onBack, snap = true) { spec ->
@@ -173,7 +173,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
     )
 
     if (!installState.loading && installState.error != null) {
-        WearLoadFailureScreen(installState.error.ifBlank { stringResource(R.string.wear_load_failed) }, onBack) { viewModel.dispatch(InstallUiAction.Refresh) }
+        WearLoadFailureScreen(installState.error.ifBlank { stringResource(R.string.wear_load_failed) }, onBack, onRetry = { viewModel.dispatch(InstallUiAction.Refresh) })
         return
     }
     when (choosing) {
@@ -345,7 +345,7 @@ internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit,
     }
     val ready = !installState.loading && installState.error == null && environment.rootAvailable && zipUri != null && (!environment.isAbDevice || slot != null)
     if (!installState.loading && installState.error != null) {
-        WearLoadFailureScreen(installState.error.ifBlank { stringResource(R.string.wear_load_failed) }, onBack) { viewModel.dispatch(InstallUiAction.Refresh) }
+        WearLoadFailureScreen(installState.error.ifBlank { stringResource(R.string.wear_load_failed) }, onBack, onRetry = { viewModel.dispatch(InstallUiAction.Refresh) })
         return
     }
     WearList(

@@ -76,6 +76,7 @@ import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearLoadFailureContent
 import org.bakasu.bakasu.ui.wear.component.WearLoadFailureScreen
 import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -130,12 +131,7 @@ internal fun WearModuleRepoPage(
         item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
         if (failed) {
             item {
-                WearEmptyState(spec, Icons.Rounded.Error, stringResource(R.string.wear_load_failed))
-            }
-            item {
-                WearInfoCard(spec) {
-                    Text(wearRepositoryFailureText(state.failures[state.repositoryUrl]), textAlign = TextAlign.Center)
-                }
+                WearLoadFailureContent(spec, wearRepositoryFailureText(state.failures[state.repositoryUrl]))
             }
         } else if (state.modules.isEmpty() && !state.isRefreshing) {
             item {
@@ -229,6 +225,7 @@ internal fun WearOnlineModulePage(
             if (state.error == ModuleCatalogFailure.NotFound) stringResource(R.string.repo_module_unavailable) else wearRepositoryFailureText(state.repositoryFailure),
             onBack,
             { viewModel.dispatch(ModuleDetailUiAction.Retry) },
+            retryInEdgeButton = true,
         )
         return
     }
@@ -335,6 +332,7 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String
             if (state.error == ModuleCatalogFailure.NotFound) stringResource(R.string.repo_module_unavailable) else wearRepositoryFailureText(if (detailFailed) state.repositoryFailure else readme?.failure),
             onBack,
             { if (detailFailed) viewModel.dispatch(ModuleDetailUiAction.Retry) else viewModel.loadReadme(retry = true) },
+            retryInEdgeButton = true,
         )
         return
     }
