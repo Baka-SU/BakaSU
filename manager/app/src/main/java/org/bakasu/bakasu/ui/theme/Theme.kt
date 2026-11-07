@@ -622,6 +622,8 @@ fun Modifier.blurEffect(
     var coordinates by remember {
         mutableStateOf<LayoutCoordinates?>(null)
     }
+    // 表面自身伸缩/位移时同样要让 backdrop 效果块重新录制，理由见 PanelLayoutBounds。
+    val panelBounds = remember { PanelLayoutBounds() }
 
     return LocalBlurState.current?.let { backdrop ->
         // 0.8f like haze, for material design without custom background enable
@@ -638,6 +640,7 @@ fun Modifier.blurEffect(
             Modifier
                 .onGloballyPositioned { newCoordinates ->
                     coordinates = newCoordinates.takeIf { it.isAttached }
+                    panelBounds.update(newCoordinates)
                 }
                 .drawBackdrop(
                     backdrop = backdrop,
@@ -645,6 +648,7 @@ fun Modifier.blurEffect(
                     effects = {
                         renderState.blurFrameTick
                         stretchOverscrollState?.version
+                        panelBounds.bounds
 
                         textureBlurEffect(
                             blurRadiusX = 25f,
@@ -693,6 +697,7 @@ private fun Modifier.renderBackgroundFallback(
     var coordinates by remember {
         mutableStateOf<LayoutCoordinates?>(null)
     }
+    val panelBounds = remember { PanelLayoutBounds() }
 
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainer
     val dimColor = backgroundColor.copy(alpha = themeConfig.backgroundDim)
@@ -713,10 +718,12 @@ private fun Modifier.renderBackgroundFallback(
     return this
         .onGloballyPositioned { newCoordinates ->
             coordinates = newCoordinates.takeIf { it.isAttached }
+            panelBounds.update(newCoordinates)
         }
         .drawWithContent {
             renderState.blurFrameTick
             stretchOverscrollState?.version
+            panelBounds.bounds
 
             val boundsInBackground = coordinates?.boundsInBackgroundNow(backgroundAnchor)
                 ?: coordinates?.localBoundsInWindowNow()
@@ -850,6 +857,30 @@ private fun Rect.mapToBitmapBounds(
     )
 }
 
+/**
+ * 透明面板自身在窗口中的位置与尺寸。
+ *
+ * `onGloballyPositioned` 每次布局回调拿到的都是同一个 [LayoutCoordinates] 实例，把它存进
+ * `mutableStateOf` 时按相等性比较不会产生变化通知，于是只依赖该坐标的绘制块不会因面板移动/
+ * 伸缩而重新录制，模糊贴图会停留在动画开始前的采样位置上。
+ *
+ * 因此这里保存真正变化的几何边界，让读取它的绘制块在面板边界改变的那一帧失效并重新录制。
+ * 只在绘制中读取、在布局回调中写入，不会反过来触发新的布局。
+ */
+private class PanelLayoutBounds {
+    var bounds: Rect? by mutableStateOf<Rect?>(null)
+        private set
+
+    fun update(coordinates: LayoutCoordinates?) {
+        val attached = coordinates?.takeIf { it.isAttached } ?: return
+        if (attached.size.width <= 0 || attached.size.height <= 0) return
+
+        // 用四角换算出的窗口矩形而不是尺寸，缩放类变换（左上角不动）也能反映出来。
+        val newBounds = attached.localBoundsInWindowNow() ?: return
+        if (bounds != newBounds) bounds = newBounds
+    }
+}
+
 @Composable
 fun Modifier.renderBackgroundBlur(
     tintColor: Color? = null,
@@ -864,6 +895,10 @@ fun Modifier.renderBackgroundBlur(
     var coordinates by remember {
         mutableStateOf<LayoutCoordinates?>(null)
     }
+
+    // 面板自身的几何变化（展开/折叠、行增减导致的伸缩与位移）也要触发重绘，否则模糊贴图
+    // 会沿用动画开始时的采样坐标，表现为背景错位。
+    val panelBounds = remember { PanelLayoutBounds() }
 
     val tintColor = (tintColor ?: MaterialTheme.colorScheme.surfaceBright).copy(
         alpha = cardConfig.cardAlpha,
@@ -881,10 +916,12 @@ fun Modifier.renderBackgroundBlur(
     return this
         .onGloballyPositioned { newCoordinates ->
             coordinates = newCoordinates.takeIf { it.isAttached }
+            panelBounds.update(newCoordinates)
         }
         .drawWithContent {
             renderState.blurFrameTick
             stretchOverscrollState?.version
+            panelBounds.bounds
 
             val currentBitmap = renderState.blurImageBitmap
             val currentBoundsInBackground = coordinates?.boundsInBackgroundNow(backgroundBlurAnchor)
