@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui.wear
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -21,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.itemsIndexed
 import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.CompactButton
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
@@ -99,14 +102,28 @@ internal fun WearLogsPage(
             "forced" -> item { WearStatusItem(spec, Icons.Rounded.Warning, stringResource(R.string.feature_status_forced_summary)) }
 
             "supported" if !state.isSulogEnabled -> item {
-                WearActionButton(
+                WearInfoCard(
                     spec,
-                    Icons.Rounded.Article,
-                    stringResource(R.string.sulog_disabled_title),
-                    onEnable,
-                    secondaryText = stringResource(R.string.sulog_enable_action),
-                    enabled = !state.isLoading && !state.isRefreshing && !state.isEnabling,
-                )
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            stringResource(R.string.wear_sulog_disabled_title),
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        CompactButton(
+                            onClick = onEnable,
+                            label = { Text(stringResource(R.string.sulog_enable_action)) },
+                            enabled = !state.isLoading && !state.isRefreshing && !state.isEnabling,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError,
+                            ),
+                        )
+                    }
+                }
             }
         }
         if (onEditSearch != null) {

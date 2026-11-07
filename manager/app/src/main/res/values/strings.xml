@@ -38,6 +38,7 @@
     <string name="sulog_disabled_title">SU log is not enabled</string>
     <string name="sulog_unsupported_title">SU log is unsupported</string>
     <string name="sulog_enable_action">Enable</string>
+    <string name="wear_sulog_disabled_title">SULog is disabled</string>
     <string name="sulog_filter_title">Filter by type</string>
     <string name="sulog_clean_title">Clean log</string>
     <string name="sulog_filter_root_execve">Root execve</string>

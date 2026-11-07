@@ -37,6 +37,7 @@
     <string name="sulog_disabled_title">超级用户访问日志已禁用</string>
     <string name="sulog_unsupported_title">内核不支持超级用户访问日志</string>
     <string name="sulog_enable_action">启用</string>
+    <string name="wear_sulog_disabled_title">SULog未启用</string>
     <string name="sulog_filter_title">按类型筛选</string>
     <string name="sulog_clean_title">清除日志</string>
     <string name="sulog_filter_root_execve">执行 Root 进程</string>
