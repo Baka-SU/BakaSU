@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import androidx.wear.compose.material3.ButtonDefaults
@@ -13,7 +14,7 @@ import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
-import org.bakasu.bakasu.ui.wear.component.WearInfoCard
+import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 
@@ -27,11 +28,23 @@ fun WearChoicePage(
     icon: ((String) -> ImageVector)? = null,
     isLoading: Boolean = false,
     onRefresh: (() -> Unit)? = null,
+    isRefreshing: Boolean = false,
+    onOpenPanel: (() -> Unit)? = null,
+    hasOperationsPanel: Boolean = false,
     labelMaxLines: Int = 3,
     extraContent: TransformingLazyColumnScope.(TransformationSpec) -> Unit = {},
     onChoose: (String) -> Unit,
 ) {
-    WearList(onBack = onBack, snap = true, isLoading = isLoading, onRefresh = onRefresh) { spec ->
+    WearList(
+        onBack = onBack,
+        snap = true,
+        isLoading = isLoading,
+        onRefresh = onRefresh,
+        isRefreshing = isRefreshing,
+        onOpenPanel = onOpenPanel,
+        hasOperationsPanel = hasOperationsPanel,
+        panelLabel = stringResource(R.string.wear_operations),
+    ) { spec ->
         item { WearPageHeader(spec, title) }
         LazySegmentedColumn(choices, { it.first }) { (value, label) ->
             RadioButton(

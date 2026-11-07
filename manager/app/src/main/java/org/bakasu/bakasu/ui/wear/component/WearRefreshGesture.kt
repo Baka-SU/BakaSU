@@ -33,8 +33,8 @@ internal val WearPullThreshold = 48.dp
 
 /**
  * Pulls past the list boundaries. At the top, pulling down (or turning the crown up) opens the page's
- * panel, or closes it when [closePanelOnPullDown] is set. At the end, pulling up refreshes the main
- * list or closes a panel that uses upward dismissal. Turning the crown down past the end still
+ * panel, or closes it when [closePanelOnPullDown] is set. At the end, pulling up only
+ * closes a panel that uses upward dismissal. Turning the crown down past the end still
  * closes either kind of panel. Releasing past
  * the 48dp threshold commits; ordinary scrolling and shorter pulls do nothing.
  *
@@ -49,7 +49,6 @@ internal fun Modifier.wearRefreshGesture(
     displacement: MutableFloatState,
     pullProgress: MutableFloatState,
     enabled: Boolean,
-    onRefresh: (() -> Unit)?,
     onOpenPanel: (() -> Unit)? = null,
     onClosePanel: (() -> Unit)? = null,
     closePanelOnPullDown: Boolean = false,
@@ -59,18 +58,17 @@ internal fun Modifier.wearRefreshGesture(
     onPullEnd: () -> Unit = {},
 ): Modifier {
     // Lists without any boundary action keep their gestures untouched.
-    if (onRefresh == null && onOpenPanel == null && onClosePanel == null) return this
+    if (onOpenPanel == null && onClosePanel == null) return this
     val active by rememberUpdatedState(enabled)
     val panel by rememberUpdatedState(onOpenPanel)
     val closePanel by rememberUpdatedState(onClosePanel)
     val downAction by rememberUpdatedState(if (closePanelOnPullDown) onClosePanel else onOpenPanel)
-    val upAction by rememberUpdatedState(if (closePanelOnPullDown) onRefresh else onClosePanel ?: onRefresh)
+    val upAction by rememberUpdatedState(if (closePanelOnPullDown) null else onClosePanel)
     val heldPanelPull by rememberUpdatedState(currentPanelPull)
     val pullStart by rememberUpdatedState(onPullStart)
     val pullEnd by rememberUpdatedState(onPullEnd)
     val haptic = LocalHapticFeedback.current
     val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
-    val refreshLabel = stringResource(R.string.wear_refresh)
     val backLabel = stringResource(R.string.back)
     // The crown turned past the boundary: three times the touch threshold of extra rotation, with a
     // pause of the crown resetting it.
@@ -186,14 +184,6 @@ internal fun Modifier.wearRefreshGesture(
     }.semantics {
         if (enabled) {
             customActions = buildList {
-                if (onRefresh != null) {
-                    add(
-                        CustomAccessibilityAction(refreshLabel) {
-                            onRefresh()
-                            true
-                        },
-                    )
-                }
                 if (onOpenPanel != null && panelLabel != null) {
                     add(
                         CustomAccessibilityAction(panelLabel) {

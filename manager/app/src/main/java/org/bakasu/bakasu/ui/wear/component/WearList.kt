@@ -101,7 +101,8 @@ fun WearList(
     isLoading: Boolean = false,
     isRefreshing: Boolean = false,
     isBusy: Boolean = false,
-    onRefresh: (() -> Unit)? = null,
+    // Kept source-compatible for callers migrating to operations menus.
+    @Suppress("UNUSED_PARAMETER") onRefresh: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
     onConfirm: (() -> Unit)? = null,
     confirmLabel: String? = null,
@@ -112,6 +113,7 @@ fun WearList(
     onClosePanel: (() -> Unit)? = null,
     closePanelOnPullDown: Boolean = false,
     onPanelClosing: (() -> Unit)? = null,
+    closePanelRequested: Boolean = false,
     panelLabel: String? = null,
     snap: Boolean = false,
     itemSpacing: Dp = WearItemSpacing,
@@ -147,6 +149,12 @@ fun WearList(
         label = "wear-panel-close",
         finishedListener = { if (closingPanel && it == 1f && screenActive) onClosePanel?.invoke() },
     )
+    LaunchedEffect(closePanelRequested, screenActive) {
+        if (closePanelRequested && screenActive && onClosePanel != null) {
+            onPanelClosing?.invoke()
+            closingPanel = true
+        }
+    }
     val panelDismissals = LocalWearPanelDismissals.current
     var lastDismissal by remember { mutableIntStateOf(panelDismissals) }
     val panelWasDismissed = lastDismissal != panelDismissals
@@ -224,8 +232,7 @@ fun WearList(
         listState,
         pullOffset,
         pullProgress,
-        enabled = screenActive && (!panelHosted || onClosePanel != null) && !isLoading && !isRefreshing && !isBusy,
-        onRefresh = onRefresh,
+        enabled = screenActive && (!panelHosted || onClosePanel != null) && !isBusy,
         closePanelOnPullDown = closePanelOnPullDown,
         onOpenPanel = onOpenPanel?.let { open ->
             {
@@ -386,18 +393,8 @@ fun WearList(
                             overscrollEffect = rememberOverscrollEffect(),
                         ),
                     ) {
-                        // The gesture starts at the end of the list. After release, the refresh
-                        // animation appears over the content on its own circular surface.
                         if (onClosePanel != null && pullProgress.floatValue < 0f) {
                             WearPullIndicator(-pullProgress.floatValue, closing = true)
-                        } else if (pullProgress.floatValue < 0f) {
-                            CircularProgressIndicator(
-                                progress = { (-pullProgress.floatValue).coerceIn(0f, 1f) },
-                                modifier = Modifier.size(24.dp),
-                                colors = ProgressIndicatorDefaults.colors(indicatorColor = LocalContentColor.current),
-                                // The pull ring keeps the thin stroke of the spinner that follows it.
-                                strokeWidth = CircularProgressIndicatorDefaults.IndeterminateStrokeWidth,
-                            )
                         } else if (onConfirm != null && confirmLabel != null) {
                             Text(confirmLabel)
                         } else {

@@ -10,11 +10,16 @@ import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -60,7 +65,10 @@ internal fun WearOperationsPanel(
     onReboot: (String) -> Unit,
     moduleRepoLoading: Boolean = false,
     onClosing: () -> Unit = {},
+    onRefresh: (() -> Unit)? = null,
+    isRefreshing: Boolean = false,
 ) {
+    var refreshRequested by remember { mutableStateOf(false) }
     val rebootMethods = wearRebootMethods()
     val moduleRepoLabel = stringResource(R.string.module_repo)
     val actions = when (page) {
@@ -110,10 +118,25 @@ internal fun WearOperationsPanel(
             WearIconAction(Icons.Rounded.Cloud, stringResource(R.string.repo_manage), { onOpen(WearRoute.RepositorySources) }),
         )
     }
+    val menuActions = actions + listOfNotNull(
+        onRefresh?.let { refresh ->
+            WearIconAction(
+                Icons.Rounded.Refresh,
+                stringResource(R.string.wear_refresh),
+                {
+                    if (!refreshRequested && !isRefreshing) {
+                        refreshRequested = true
+                        refresh()
+                    }
+                },
+                enabled = !isRefreshing && !refreshRequested,
+            )
+        },
+    )
     // Start the reveal at the end on its first layout, before the preview is shown.
-    val listState = rememberTransformingLazyColumnState(initialAnchorItemIndex = actions.lastIndex.coerceAtLeast(0))
-    WearList(onClosePanel = onBack, onPanelClosing = onClosing, snap = false, listState = listState) { spec ->
-        LazySegmentedColumn(actions, { it.label }) { action ->
+    val listState = rememberTransformingLazyColumnState(initialAnchorItemIndex = menuActions.lastIndex.coerceAtLeast(0))
+    WearList(onClosePanel = onBack, onPanelClosing = onClosing, closePanelRequested = refreshRequested, snap = false, listState = listState) { spec ->
+        LazySegmentedColumn(menuActions, { it.label }) { action ->
             WearSettingsJumpPageWidget(
                 spec,
                 action.label,

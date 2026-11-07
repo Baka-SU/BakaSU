@@ -145,6 +145,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val superuser by superUserViewModel.uiState.collectAsStateWithLifecycle()
     val modules by moduleViewModel.uiState.collectAsStateWithLifecycle()
     val logs by sulogViewModel.uiState.collectAsStateWithLifecycle()
+    val catalog by moduleRepoViewModel.state.collectAsStateWithLifecycle()
     val dynamicManager by dynamicManagerViewModel.uiState.collectAsStateWithLifecycle()
     val settings by settingsViewModel.uiState.collectAsStateWithLifecycle()
 
@@ -468,7 +469,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 WearModuleRepoPage(
                                     moduleRepoViewModel,
                                     ::back,
-                                    { open(WearRoute.ModuleRepoSearch) },
+                                    { open(WearRoute.Operations(WearOperationsPage.Repository)) },
+                                    hasOperationsPanel = true,
                                 ) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
                             }
                             entry<WearRoute.OnlineModule> { route ->
@@ -654,6 +656,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     },
                                     onEntry = { open(WearRoute.LogEntry(it.key)) },
                                     onEditSearch = logSearchInput,
+                                    onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.Logs)) },
+                                    hasOperationsPanel = true,
                                     error = logError,
                                 )
                             }
@@ -807,9 +811,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     else -> null
                                 }
 
-                                WearRoute.Logs -> WearOperationsPage.Logs
+                                WearRoute.Logs, WearRoute.LogSearchResults -> WearOperationsPage.Logs
 
-                                WearRoute.ModuleRepo -> WearOperationsPage.Repository
+                                WearRoute.ModuleRepo, WearRoute.ModuleRepoSearchResults -> WearOperationsPage.Repository
 
                                 else -> null
                             }
@@ -828,6 +832,32 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                 if (destination == WearRoute.ModuleRepo) openModuleRepo() else open(destination)
                                             },
                                             moduleRepoLoading = moduleRepoEntry.isLoading,
+                                            onRefresh = if (operationsPage == WearOperationsPage.Home) null else {
+                                                { when (operationsPage) {
+                                                    WearOperationsPage.Home -> Unit
+
+                                                    WearOperationsPage.SuperUser -> superUserViewModel.dispatch(SuperUserUiAction.Refresh)
+
+                                                    WearOperationsPage.Modules -> {
+                                                        moduleError = null
+                                                        moduleViewModel.dispatch(ModuleUiAction.Refresh(manual = true))
+                                                    }
+
+                                                    WearOperationsPage.Logs -> {
+                                                        logError = null
+                                                        sulogViewModel.dispatch(SulogUiAction.Refresh)
+                                                    }
+
+                                                    WearOperationsPage.Repository -> moduleRepoViewModel.refresh()
+                                                } }
+                                            },
+                                            isRefreshing = when (operationsPage) {
+                                                WearOperationsPage.Home -> home.isRefreshing
+                                                WearOperationsPage.SuperUser -> superuser.isRefreshing
+                                                WearOperationsPage.Modules -> modules.isRefreshing
+                                                WearOperationsPage.Logs -> logs.isLoading || logs.isRefreshing || logs.isEnabling
+                                                WearOperationsPage.Repository -> catalog.isRefreshing
+                                            },
                                             onSearch = {
                                                 when (operationsPage) {
                                                     WearOperationsPage.SuperUser -> appSearchInput()

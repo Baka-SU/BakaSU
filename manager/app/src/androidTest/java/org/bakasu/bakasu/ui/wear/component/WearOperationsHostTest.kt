@@ -97,6 +97,14 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
     }
 
     @Test
+    fun pullingPastThePageEndDoesNotRefreshOrOpenTheMenu() {
+        showHost()
+        compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(hasTestTag("page")), useUnmergedTree = true).performScrollToIndex(7)
+        compose.onNodeWithTag("page").performTouchInput { swipeUp() }
+        compose.runOnIdle { assertFalse(menuOpen) }
+    }
+
+    @Test
     fun ordinaryCrownScrollingStaysOnThePage() {
         showHost()
         rotateCrown(64f)

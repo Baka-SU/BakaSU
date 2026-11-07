@@ -82,8 +82,7 @@ internal fun WearLogsPage(
 ) {
     val failures = listOfNotNull(error, state.errorMessage).filter { it.isNotBlank() }.distinct()
     WearErrorDialog(failures.takeIf { it.isNotEmpty() && !state.isLoading && !state.isRefreshing }?.joinToString("\n"))
-    // As on the phone: the log refreshes by the pull gesture, whose progress shows in the edge
-    // button, and the first load shows only the loading indicator.
+    // The operations menu refreshes the existing list; first load shows only the loading indicator.
     WearList(
         isLoading = state.isLoading,
         isRefreshing = (state.isRefreshing || state.isEnabling) && !state.isLoading,

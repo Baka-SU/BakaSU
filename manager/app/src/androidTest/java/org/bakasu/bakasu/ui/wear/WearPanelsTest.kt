@@ -22,6 +22,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
@@ -50,6 +51,8 @@ class WearPanelsTest(private val round: Boolean, private val page: WearOperation
 
     private var menuOpen by mutableStateOf(false)
     private var filterOpen by mutableStateOf(false)
+    private var refreshes = 0
+    private var refreshing by mutableStateOf(false)
     private lateinit var pull: MutableFloatState
 
     @Test
@@ -97,6 +100,20 @@ class WearPanelsTest(private val round: Boolean, private val page: WearOperation
         }
         compose.runOnIdle { assertFalse("An upward pull at the bottom must close the operations panel", menuOpen) }
         compose.onNodeWithTag("menu", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun refreshIsLastAndClosesTheMenuAfterDispatchingOnce() {
+        showPanels()
+        previewMenu()
+        compose.runOnIdle { menuOpen = true }
+        val refresh = compose.activity.getString(R.string.wear_refresh)
+        compose.onNodeWithText(refresh).performClick()
+        compose.runOnIdle {
+            assertEquals(1, refreshes)
+            assertFalse(menuOpen)
+            assertFalse(filterOpen)
+        }
     }
 
     @Test
@@ -156,6 +173,11 @@ class WearPanelsTest(private val round: Boolean, private val page: WearOperation
                                                     susfsAvailable = true,
                                                     onReboot = {},
                                                     onClosing = onClosing,
+                                                    onRefresh = {
+                                                        refreshes++
+                                                        refreshing = true
+                                                    },
+                                                    isRefreshing = refreshing,
                                                 )
                                             }
                                         },
