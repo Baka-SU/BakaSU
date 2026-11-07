@@ -81,6 +81,7 @@ internal fun WearDynamicManagerPage(
     val clear = rememberWearConfirmDialog(
         stringResource(R.string.dynamic_manager_clear_confirm_title),
         stringResource(R.string.dynamic_manager_clear_confirm_message),
+        destructive = true,
         onConfirm = onClear,
     )
     WearList(isLoading = state.isLoading || state.isSubmitting, onBack = onBack) { spec ->
