@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui.wear
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -20,7 +21,6 @@ import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -28,12 +28,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
@@ -56,6 +59,7 @@ import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearLoadFailureScreen
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
@@ -205,22 +209,16 @@ private fun rememberWearOfflineDialog(onDismissed: () -> Unit = {}) = rememberCu
  */
 @Composable
 internal fun WearOnlineTemplatePage(
+    viewModel: OnlineTemplateViewModel,
+    onOpenTemplate: (String) -> Unit,
     onBack: () -> Unit,
     onOpenPanel: () -> Unit,
     menuOpen: Boolean,
     menuActive: Boolean,
     onClosePanel: () -> Unit,
 ) {
-    val viewModel = koinViewModel<OnlineTemplateViewModel>()
-    DisposableEffect(viewModel) { onDispose { viewModel.cancelLoad() } }
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
-    var result by remember { mutableStateOf<WearResult?>(null) }
     val failure = state.loadFailure
-    WearResultDialog(result) { result = null }
-    val added = stringResource(R.string.wear_template_added)
-    val alreadyAdded = stringResource(R.string.wear_template_already_added)
-    val failed = stringResource(R.string.operation_failed)
     val offlineDialog = rememberWearOfflineDialog()
     // Closing feedback keeps the page available for another explicit refresh.
     val failureDialog = rememberCustomDialog { dismiss ->
@@ -254,40 +252,6 @@ internal fun WearOnlineTemplatePage(
             failureDialog.show()
         }
     }
-    LaunchedEffect(viewModel) {
-        viewModel.events.collect { event ->
-            when (event) {
-                OnlineTemplateUiEvent.Added -> result = WearResult(added, success = true)
-
-                is OnlineTemplateUiEvent.AddFailed -> result = WearResult(
-                    if (event.reason == ProfileTemplateFailure.Conflict) alreadyAdded else failed,
-                    success = false,
-                )
-            }
-        }
-    }
-    val selected = state.templates.firstOrNull { it.id == selectedId }
-    if (selected != null) {
-        WearSubPage({ selectedId = null }) {
-            WearList(onBack = { selectedId = null }) { spec ->
-                item { WearPageHeader(spec, selected.name.ifBlank { selected.id }) }
-                TEMPLATE_FIELDS.filter { selected.field(it).isNotEmpty() }.forEach { field ->
-                    item { WearInfoCard(spec) { WearDetailField(templateFieldIcon(field), stringResource(field), selected.field(field)) } }
-                }
-                item {
-                    val isAdded = selected.id in state.addedIds
-                    WearActionButton(
-                        spec,
-                        if (isAdded) Icons.Rounded.CheckCircle else Icons.Rounded.Add,
-                        stringResource(if (isAdded) R.string.wear_template_added else R.string.wear_template_add),
-                        { viewModel.dispatch(OnlineTemplateUiAction.Add(selected)) },
-                        enabled = !isAdded && !state.adding,
-                    )
-                }
-            }
-        }
-        return
-    }
     WearOperationsHost(
         menuKey = WearOperationsPage.OnlineTemplates,
         menuOpen = menuOpen,
@@ -320,9 +284,70 @@ internal fun WearOnlineTemplatePage(
                 WearSettingsJumpPageWidget(
                     spec,
                     template.name.ifBlank { template.id },
-                    { selectedId = template.id },
+                    { onOpenTemplate(template.id) },
                     icon = if (template.id in state.addedIds) Icons.Rounded.CheckCircle else Icons.Rounded.Description,
                     description = template.description.ifBlank { null },
+                )
+            }
+        }
+    }
+}
+
+/** One collector remains active across the online list/detail transition. */
+@Composable
+internal fun WearOnlineTemplateFeedback(viewModel: OnlineTemplateViewModel) {
+    var result by remember { mutableStateOf<WearResult?>(null) }
+    WearResultDialog(result) { result = null }
+    val added = stringResource(R.string.wear_template_added)
+    val alreadyAdded = stringResource(R.string.wear_template_already_added)
+    val failed = stringResource(R.string.operation_failed)
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                OnlineTemplateUiEvent.Added -> result = WearResult(added, success = true)
+
+                is OnlineTemplateUiEvent.AddFailed -> result = WearResult(
+                    if (event.reason == ProfileTemplateFailure.Conflict) alreadyAdded else failed,
+                    success = false,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun WearOnlineTemplateDetail(viewModel: OnlineTemplateViewModel, id: String, onBack: () -> Unit) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val selected = state.templates.firstOrNull { it.id == id }
+    if (!state.loading && selected == null) {
+        WearLoadFailureScreen(
+            stringResource(if (state.loadFailure == ProfileTemplateFailure.Offline) R.string.wear_no_internet else R.string.wear_template_online_invalid),
+            onBack,
+            { viewModel.dispatch(OnlineTemplateUiAction.Load) },
+            retryInEdgeButton = true,
+        )
+        return
+    }
+    WearList(isLoading = selected == null, onBack = onBack) { spec ->
+        if (selected != null) {
+            item { WearPageHeader(spec, selected.name.ifBlank { selected.id }) }
+            TEMPLATE_FIELDS.filter { selected.field(it).isNotEmpty() }.forEach { field ->
+                item {
+                    WearInfoCard(spec) {
+                        WearDetailField(stringResource(field), selected.field(field)) {
+                            Icon(templateFieldIcon(field), contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                        }
+                    }
+                }
+            }
+            item {
+                val isAdded = selected.id in state.addedIds
+                WearActionButton(
+                    spec,
+                    if (isAdded) Icons.Rounded.CheckCircle else Icons.Rounded.Add,
+                    stringResource(if (isAdded) R.string.wear_template_added else R.string.wear_template_add),
+                    { viewModel.dispatch(OnlineTemplateUiAction.Add(selected)) },
+                    enabled = !isAdded && !state.adding,
                 )
             }
         }

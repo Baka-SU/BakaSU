@@ -8,6 +8,19 @@ import org.junit.Test
 
 class WearTemplateNavigationTest {
     @Test
+    fun cloudDetailsUseAnIndependentEntryAndKeepTheirParentUntilReturning() {
+        val navigator = WearNavigator(NavBackStack<NavKey>(WearRoute.Main, WearRoute.OnlineTemplates), {}, {}, {})
+        val detail = WearRoute.OnlineTemplateDetail("cloud")
+        navigator.open(detail)
+        assertEquals(listOf(WearRoute.Main, WearRoute.OnlineTemplates, detail), navigator.backStack)
+        navigator.back()
+        assertEquals(WearRoute.OnlineTemplates, navigator.top)
+        navigator.open(detail)
+        navigator.closeUnavailable(fullFeatured = false, susfs = false, rootAvailable = false)
+        assertEquals(listOf(WearRoute.Main), navigator.backStack)
+    }
+
+    @Test
     fun reSearchFromMenuUpdatesExistingResultsAndDetailsKeepQuery() {
         var query = ""
         val navigator = WearNavigator(

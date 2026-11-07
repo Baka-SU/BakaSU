@@ -158,6 +158,7 @@ class WearPageTransitionsTest(private val destination: WearRoute, private val ro
             WearRoute.AppProfileCustom(10000, "test.app"),
             WearRoute.Module("test.module"),
             WearRoute.ModuleRepo,
+            WearRoute.OnlineTemplateDetail("test.template"),
             WearRoute.Settings(WearSettingsCategory.General),
             WearRoute.HomeVersionInfo,
         ).flatMap { destination -> listOf(true, false).map { round -> arrayOf(destination, round) } }

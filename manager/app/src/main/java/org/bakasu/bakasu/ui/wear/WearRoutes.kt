@@ -201,6 +201,11 @@ sealed interface WearRoute : NavKey {
     data object OnlineTemplates : WearRoute, NeedsRoot
 
     @Serializable
+    data class OnlineTemplateDetail(val id: String) :
+        WearRoute,
+        NeedsRoot
+
+    @Serializable
     data class TemplateEditor(val id: String, val readOnly: Boolean, val creation: Boolean) :
         WearRoute,
         NeedsRoot

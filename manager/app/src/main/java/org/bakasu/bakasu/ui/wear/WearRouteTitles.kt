@@ -83,7 +83,7 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     WearRoute.TemplateSearch, WearRoute.TemplateSearchResults -> R.string.wear_template_search
 
-    WearRoute.OnlineTemplates -> R.string.wear_template_online
+    WearRoute.OnlineTemplates, is WearRoute.OnlineTemplateDetail -> R.string.wear_template_online
 
     WearRoute.SuSFS -> R.string.susfs_config_title
 

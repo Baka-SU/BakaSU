@@ -38,6 +38,9 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.ViewModelStoreProvider
+import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreProvider
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavEntryDecorator
@@ -79,6 +82,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
+import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
@@ -383,6 +387,10 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     if (home.isInitialDataLoaded) {
         WearIntentDispatcher(intentChannel, navigator, installer)
     }
+    val viewModelStores = rememberViewModelStoreProvider()
+    if (WearRoute.OnlineTemplates in navigator.backStack) {
+        WearOnlineTemplateFeedback(onlineTemplateViewModel(viewModelStores))
+    }
     AppScaffold(
         timeText = { WearTimeText(stringResource((navigator.top ?: WearRoute.Main).titleResource(mainTitle))) },
         containerColor = Color.Transparent,
@@ -400,7 +408,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                     sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy(isUserSwipeEnabled = Build.VERSION.SDK_INT >= 36 || settings.enableSwipeDismiss)),
                     entryDecorators = listOf(
                         rememberSaveableStateHolderNavEntryDecorator(),
-                        rememberViewModelStoreNavEntryDecorator(),
+                        rememberViewModelStoreNavEntryDecorator(viewModelStores),
                         PageBaseDecorator,
                     ),
                     entryProvider = withPageTransitions(
@@ -749,15 +757,20 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     searchResults = true,
                                 )
                             }
-                            entry<WearRoute.OnlineTemplates> {
+                            entry<WearRoute.OnlineTemplates>(clazzContentKey = { OnlineTemplatesContentKey }) {
                                 val menu = navigator.operationsFor(WearRoute.OnlineTemplates)
                                 WearOnlineTemplatePage(
+                                    viewModel = onlineTemplateViewModel(viewModelStores),
+                                    onOpenTemplate = { open(WearRoute.OnlineTemplateDetail(it)) },
                                     onBack = ::back,
                                     onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.OnlineTemplates)) },
                                     menuOpen = menu != null,
                                     menuActive = menu != null && navigator.top == menu,
                                     onClosePanel = { if (menu != null && navigator.top == menu) back() },
                                 )
+                            }
+                            entry<WearRoute.OnlineTemplateDetail> { route ->
+                                WearOnlineTemplateDetail(onlineTemplateViewModel(viewModelStores), route.id, ::back)
                             }
                             entry<WearRoute.TemplateEditor> { route ->
                                 WearTemplateEditor(route.id, route.readOnly, route.creation, ::back)
@@ -1212,3 +1225,11 @@ private fun WearRoute.BootFlash.toOperation() = FlashOperation.Boot(
     enableAdb = enableAdb,
     forceBackup = forceBackup,
 )
+
+internal const val OnlineTemplatesContentKey = "wear-online-templates"
+
+@Composable
+internal fun onlineTemplateViewModel(provider: ViewModelStoreProvider): OnlineTemplateViewModel {
+    val owner = rememberViewModelStoreOwner(key = OnlineTemplatesContentKey, provider = provider)
+    return koinViewModel(viewModelStoreOwner = owner)
+}
