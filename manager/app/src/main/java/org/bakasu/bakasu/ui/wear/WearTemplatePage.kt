@@ -224,21 +224,17 @@ internal fun WearOnlineTemplatePage(onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var result by remember { mutableStateOf<WearResult?>(null) }
-    var failure by remember { mutableStateOf<ProfileTemplateFailure?>(null) }
+    val failure = state.loadFailure
     WearResultDialog(result) { result = null }
     val added = stringResource(R.string.wear_template_added)
     val alreadyAdded = stringResource(R.string.wear_template_already_added)
     val failed = stringResource(R.string.operation_failed)
-    val offlineDialog = rememberWearOfflineDialog(onBack)
-    // A request or parsing failure leaves nothing to browse, so it asks to retry or leave.
+    val offlineDialog = rememberWearOfflineDialog()
+    // Closing feedback keeps the page available for another explicit refresh.
     val failureDialog = rememberCustomDialog { dismiss ->
-        val leave = {
-            dismiss()
-            onBack()
-        }
         AlertDialog(
             visible = true,
-            onDismissRequest = leave,
+            onDismissRequest = dismiss,
             icon = { WearDialogIcon(Icons.Rounded.Info) },
             title = { Text(stringResource(R.string.wear_repo_connect_failed)) },
             text = {
@@ -256,17 +252,15 @@ internal fun WearOnlineTemplatePage(onBack: () -> Unit) {
                     },
                 )
             },
-            dismissButton = { AlertDialogDefaults.DismissButton(onClick = leave) },
+            dismissButton = { AlertDialogDefaults.DismissButton(onClick = dismiss) },
         )
+    }
+    LaunchedEffect(failure) {
+        if (failure == ProfileTemplateFailure.Offline) offlineDialog.show() else if (failure != null) failureDialog.show()
     }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                is OnlineTemplateUiEvent.LoadFailed -> {
-                    failure = event.reason
-                    if (event.reason == ProfileTemplateFailure.Offline) offlineDialog.show() else failureDialog.show()
-                }
-
                 OnlineTemplateUiEvent.Added -> result = WearResult(added, success = true)
 
                 is OnlineTemplateUiEvent.AddFailed -> result = WearResult(
@@ -298,9 +292,11 @@ internal fun WearOnlineTemplatePage(onBack: () -> Unit) {
         }
         return
     }
-    WearList(isLoading = state.loading, onBack = onBack, onRefresh = { viewModel.dispatch(OnlineTemplateUiAction.Load) }) { spec ->
+    WearList(isLoading = state.isLoading, isRefreshing = state.isRefreshing, onBack = onBack, onRefresh = { viewModel.dispatch(OnlineTemplateUiAction.Load) }) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_template_online)) }
-        if (state.templates.isEmpty()) {
+        if (failure != null) {
+            item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_template_online_failed), tone = WearStatusTone.ERROR) }
+        } else if (state.hasLoaded && !state.loading && state.templates.isEmpty()) {
             item { WearStatusItem(spec, Icons.Rounded.Cloud, stringResource(R.string.wear_template_online_empty)) }
         }
         LazySegmentedColumn(state.templates, { it.id }) { template ->

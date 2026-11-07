@@ -68,15 +68,17 @@ class ProfileTemplateRepository(
         }
     }
 
-    /** The official templates by ID, skipping those that fail to download; null without the index. */
+    /** Partial downloads remain browsable; a nonempty index with no downloaded bodies is a failure. */
     private suspend fun fetchRemoteBodies(): Map<String, String>? {
-        val ids = networkRequestRepository.fetch(TEMPLATE_INDEX_URL)
-            .mapCatching { JSONArray(it) }
-            .getOrElse { return null }
-        return (0 until ids.length()).mapNotNull { index ->
+        val indexBody = networkRequestRepository.fetch(TEMPLATE_INDEX_URL).getOrNull() ?: return null
+        val ids = runCatching { JSONArray(indexBody) }.getOrElse {
+            throw ProfileTemplateException(ProfileTemplateFailure.Invalid)
+        }
+        val bodies = (0 until ids.length()).mapNotNull { index ->
             val id = ids.optString(index)
             networkRequestRepository.fetch(TEMPLATE_URL.format(id)).getOrNull()?.let { id to it }
         }.toMap()
+        return bodies.takeUnless { ids.length() > 0 && it.isEmpty() }
     }
 
     /** Browses the official source on this device; only [addOnline] stores a chosen template. */

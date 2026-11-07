@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.bakasu.bakasu.domain.model.BridgeException
 import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.domain.model.ProfileTemplateException
 import org.bakasu.bakasu.domain.model.ProfileTemplateFailure
@@ -25,10 +24,15 @@ import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplatesUseCase
 data class OnlineTemplateUiState(
     val templates: List<ProfileTemplate> = emptyList(),
     val loading: Boolean = true,
+    val hasLoaded: Boolean = false,
+    val loadFailure: ProfileTemplateFailure? = null,
     /** IDs of the local templates, which App Profile can select. */
     val addedIds: Set<String> = emptySet(),
     val adding: Boolean = false,
-)
+) {
+    val isLoading: Boolean get() = loading && !hasLoaded
+    val isRefreshing: Boolean get() = loading && hasLoaded
+}
 
 sealed interface OnlineTemplateUiAction {
     data object Load : OnlineTemplateUiAction
@@ -36,7 +40,6 @@ sealed interface OnlineTemplateUiAction {
 }
 
 sealed interface OnlineTemplateUiEvent {
-    data class LoadFailed(val reason: ProfileTemplateFailure) : OnlineTemplateUiEvent
     data object Added : OnlineTemplateUiEvent
     data class AddFailed(val reason: ProfileTemplateFailure) : OnlineTemplateUiEvent
 }
@@ -74,16 +77,15 @@ class OnlineTemplateViewModel(
     }
 
     private fun load() {
-        loadJob?.cancel()
-        online.update { it.copy(loading = true) }
+        if (loadJob?.isActive == true) return
+        online.update { it.copy(loading = true, loadFailure = null) }
         loadJob = viewModelScope.launch {
             try {
                 fetchOnlineTemplates().fold(
-                    onSuccess = { templates -> online.update { it.copy(templates = templates, loading = false) } },
+                    onSuccess = { templates -> online.update { it.copy(templates = templates, loading = false, hasLoaded = true, loadFailure = null) } },
                     onFailure = { error ->
-                        online.update { it.copy(loading = false) }
                         if (error is CancellationException) throw error
-                        if (error !is BridgeException) mutableEvents.emit(OnlineTemplateUiEvent.LoadFailed(error.toFailure()))
+                        online.update { it.copy(loading = false, loadFailure = error.toFailure()) }
                     },
                 )
             } finally {
