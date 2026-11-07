@@ -14,6 +14,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
@@ -42,7 +43,7 @@ internal fun WearAppSearchResults(
         searchHeader(spec, title, state.search, onEdit)
         when {
             !error.isNullOrBlank() -> item { WearStatusItem(spec, Icons.Rounded.Error, error, tone = WearStatusTone.ERROR) }
-            state.appGroupList.isEmpty() -> item { WearStatusItem(spec, Icons.Rounded.SearchOff, stringResource(R.string.no_apps_found)) }
+            state.appGroupList.isEmpty() -> item { WearEmptyState(spec, Icons.Rounded.SearchOff, stringResource(R.string.no_apps_found)) }
         }
         items(state.appGroupList, key = { "${it.uid}:${it.primaryPackageName}" }) { group ->
             WearAppItem(spec, group, onAppClick, group.uid in state.managerUids)
@@ -64,7 +65,7 @@ internal fun WearModuleSearchResults(
         searchHeader(spec, title, state.search, onEdit)
         when {
             !error.isNullOrBlank() -> item { WearStatusItem(spec, Icons.Rounded.Error, error, tone = WearStatusTone.ERROR) }
-            state.moduleList.isEmpty() -> item { WearStatusItem(spec, Icons.Rounded.SearchOff, stringResource(R.string.search_no_any_match)) }
+            state.moduleList.isEmpty() -> item { WearEmptyState(spec, Icons.Rounded.SearchOff, stringResource(R.string.search_no_any_match)) }
         }
         items(state.moduleList, key = { it.id }) { module -> WearModuleItem(spec, module, onModuleClick) }
     }
