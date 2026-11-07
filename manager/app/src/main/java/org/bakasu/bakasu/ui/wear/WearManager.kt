@@ -832,7 +832,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                             entry<WearRoute.About> {
                                 WearAboutDetail(
                                     onBack = ::back,
-                                    onOpenLink = linkViewModel::open,
+                                    onOpenLink = linkViewModel::openAboutLink,
                                     onLicenses = { open(WearRoute.Licenses) },
                                 )
                             }
@@ -843,10 +843,15 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 WearLicenseDetailPage(route.index, ::back, linkViewModel::open)
                             }
                             entry<WearRoute.Browser> { route ->
-                                WearBrowserPage(route.url, ::back) {
-                                    back()
-                                    linkViewModel.webViewFailed(route.url)
-                                }
+                                WearBrowserPage(
+                                    route.url,
+                                    onBack = ::back,
+                                    onOpened = { linkViewModel.webViewOpened(route.url) },
+                                    onUnavailable = {
+                                        back()
+                                        linkViewModel.webViewFailed(route.url)
+                                    },
+                                )
                             }
                         },
                         pageContent = page@{ key, content ->

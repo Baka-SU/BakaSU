@@ -33,12 +33,11 @@ sealed interface WearLinkEvent {
 /** A local link failure, presented separately from the shared phone transfer state. */
 sealed interface WearLinkResult {
     /** A null [reason] is an unexpected failure; [onPhone] marks a module WebUI the phone could not open. */
-    data class Failed(val reason: WearLinkFailure?, val onPhone: Boolean = false, val bridgeFailure: BridgeFailure? = null) : WearLinkResult
+    data class Failed(val reason: WearLinkFailure?, val onPhone: Boolean = false, val bridgeFailure: BridgeFailure? = null, val automaticLink: Boolean = false) : WearLinkResult
 }
 
 /**
- * Opens links and module WebUI where the saved link mode says: the watch, the phone, or the watch
- * with the phone as fallback. Callers only name what to open.
+ * About links try the phone first. Other links and module WebUI retain the saved opening mode.
  */
 class WearLinkViewModel(
     private val repository: WearLinkRepository,
@@ -53,6 +52,8 @@ class WearLinkViewModel(
     private val mutableResult = MutableStateFlow<WearLinkResult?>(null)
     val result = mutableResult.asStateFlow()
     private var task: Job? = null
+    private data class WebViewRequest(val url: String, val mode: String, val phoneFirst: Boolean)
+    private var webViewRequest: WebViewRequest? = null
     val transfer = observeBridge.transfer
     val permissionRequest = observeBridge.permissionRequest
     fun answerPermission(id: String, granted: Boolean) = configureBridge.answerPermission(id, granted)
@@ -61,15 +62,36 @@ class WearLinkViewModel(
     private val mode get() = getPreference.wear(WearPreference.Link)
 
     fun open(url: String) = open(url, mode)
+    fun openAboutLink(url: String) = open(url, "auto", phoneFirst = true)
 
-    /** The watch WebView could not load [url]; in automatic mode the phone takes it instead. */
+    /** Continue the original attempt, even if the module preference changed while it was loading. */
     fun webViewFailed(url: String) {
-        if (mode == "auto") open(url, "phone") else fail(WearLinkFailure.WEBVIEW_UNAVAILABLE)
+        val request = webViewRequest?.takeIf { it.url == url } ?: return
+        if (task?.isActive == true) {
+            task?.invokeOnCompletion { error ->
+                if (error == null) viewModelScope.launch { webViewFailed(url) }
+            }
+            return
+        }
+        webViewRequest = null
+        when {
+            request.phoneFirst -> run(automaticLink = true) { repository.openBrowser(url) }
+            request.mode == "auto" -> open(url, "phone")
+            else -> fail(WearLinkFailure.WEBVIEW_UNAVAILABLE)
+        }
     }
 
-    private fun open(url: String, mode: String) = run {
-        when (repository.resolve(url, mode)) {
-            WearLinkTarget.WEBVIEW -> mutableEvents.emit(WearLinkEvent.WebView(url))
+    fun webViewOpened(url: String) {
+        if (webViewRequest?.url == url) webViewRequest = null
+    }
+
+    private fun open(url: String, mode: String, phoneFirst: Boolean = false) = run(automaticLink = phoneFirst) {
+        webViewRequest = null
+        when (if (phoneFirst) repository.resolveAboutLink(url) else repository.resolve(url, mode)) {
+            WearLinkTarget.WEBVIEW -> {
+                webViewRequest = WebViewRequest(url, mode, phoneFirst)
+                mutableEvents.emit(WearLinkEvent.WebView(url))
+            }
 
             // The repository has already started the browser.
             WearLinkTarget.BROWSER -> Unit
@@ -104,23 +126,28 @@ class WearLinkViewModel(
     }
 
     fun cancel() {
+        webViewRequest = null
         task?.cancel()
         configureBridge.cancelTransfer()
     }
 
     /** One opening at a time, shown as loading until it ends; a failure becomes the result. */
-    private fun run(onPhone: Boolean = false, block: suspend () -> Unit) {
+    private fun run(onPhone: Boolean = false, automaticLink: Boolean = false, block: suspend () -> Unit) {
         if (task?.isActive == true) return
         task = viewModelScope.launch {
             mutableLoading.value = true
+            mutableResult.value = null
             try {
                 block()
             } catch (error: CancellationException) {
                 throw error
             } catch (error: BridgeException) {
-                // The shared phone dialog presents the bridge outcome, including template requests.
+                // Automatic links own their final outcome; explicit phone operations keep the shared dialog.
+                if (automaticLink && error.reason !in setOf(BridgeFailure.PERMISSION, BridgeFailure.REJECTED)) {
+                    mutableResult.value = WearLinkResult.Failed(null, bridgeFailure = error.reason, automaticLink = true)
+                }
             } catch (error: Exception) {
-                mutableResult.value = WearLinkResult.Failed((error as? WearLinkException)?.reason, onPhone, (error as? BridgeException)?.reason)
+                mutableResult.value = WearLinkResult.Failed((error as? WearLinkException)?.reason, onPhone, automaticLink = automaticLink)
             } finally {
                 mutableLoading.value = false
             }

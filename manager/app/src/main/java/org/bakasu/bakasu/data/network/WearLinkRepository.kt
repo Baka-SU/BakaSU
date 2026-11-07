@@ -7,8 +7,11 @@ import android.net.Uri
 import androidx.webkit.WebViewCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.bakasu.bakasu.data.webui.BridgeHandoff
 import org.bakasu.bakasu.data.webui.CompanionBridgeRepository
 import org.bakasu.bakasu.domain.model.BridgeAction
+import org.bakasu.bakasu.domain.model.BridgeException
+import org.bakasu.bakasu.domain.model.BridgeFailure
 
 enum class WearLinkTarget { WEBVIEW, BROWSER, PHONE }
 
@@ -16,11 +19,41 @@ enum class WearLinkTarget { WEBVIEW, BROWSER, PHONE }
 enum class WearLinkFailure { UNSUPPORTED_URL, WEBVIEW_UNAVAILABLE, BROWSER_FAILED, PHONE_UNAVAILABLE, PHONE_APP_MISSING, PHONE_FAILED }
 class WearLinkException(val reason: WearLinkFailure, cause: Throwable? = null) : Exception(reason.name, cause)
 
-/**
- * Links open on the watch or are sent to the phone. On the watch they go to the default browser
- * when one can handle the link, otherwise to the app's WebView, which some watches ship without.
- */
+/** Only a definite technical failure allows another device or handler to open the same link. */
+internal suspend fun resolvePhoneFirstLink(openPhone: suspend () -> Unit, openLocal: () -> WearLinkTarget): WearLinkTarget {
+    try {
+        openPhone()
+        return WearLinkTarget.PHONE
+    } catch (error: BridgeException) {
+        if (error.reason in setOf(BridgeFailure.PERMISSION, BridgeFailure.REJECTED, BridgeFailure.RESULT_UNKNOWN)) throw error
+    }
+    return openLocal()
+}
+
+/** Opens web links on the watch or phone, with a separate phone-first policy for About links. */
 class WearLinkRepository(private val application: Application, private val bridge: CompanionBridgeRepository) {
+    /** About links are ordinary web pages and do not use the module WebUI preference. */
+    suspend fun resolveAboutLink(url: String): WearLinkTarget = withContext(Dispatchers.IO) {
+        if (!BridgeHandoff.valid(BridgeAction.LINK, url)) throw WearLinkException(WearLinkFailure.UNSUPPORTED_URL)
+        resolvePhoneFirstLink(
+            openPhone = { bridge.handoff(BridgeAction.LINK, url, reportFailure = false) },
+            openLocal = { if (hasWebView()) WearLinkTarget.WEBVIEW else openBrowser(url) },
+        )
+    }
+
+    /** Continues after the automatic attempt's WebView failed, without repeating the phone handoff. */
+    fun openBrowser(url: String): WearLinkTarget {
+        if (!BridgeHandoff.valid(BridgeAction.LINK, url)) throw WearLinkException(WearLinkFailure.UNSUPPORTED_URL)
+        val uri = Uri.parse(url)
+        if (!hasBrowser(uri)) throw WearLinkException(WearLinkFailure.BROWSER_FAILED)
+        try {
+            application.startActivity(Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (error: Exception) {
+            throw WearLinkException(WearLinkFailure.BROWSER_FAILED, error)
+        }
+        return WearLinkTarget.BROWSER
+    }
+
     // Both the system feature and an installed provider are required; builds that remove WebView
     // drop the feature, and a provider package alone does not prove WebView can be created.
     fun hasWebView(): Boolean = application.packageManager.hasSystemFeature(PackageManager.FEATURE_WEBVIEW) &&

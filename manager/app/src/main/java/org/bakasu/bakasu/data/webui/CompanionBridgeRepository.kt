@@ -348,7 +348,7 @@ class CompanionBridgeRepository(
     internal fun savedSecret(address: String): String? = preferences.getString(SECRET)?.takeIf { state.value.peer?.address.equals(address, true) }
 
     /** Permission, consent and credentials are completed before the requested action is started. */
-    suspend fun handoff(action: BridgeAction, value: String = "", title: String = ""): ByteArray = transferMutex.withLock {
+    suspend fun handoff(action: BridgeAction, value: String = "", title: String = "", reportFailure: Boolean = true): ByteArray = transferMutex.withLock {
         outgoingJob = currentCoroutineContext().job
         var token: String? = null
         try {
@@ -459,7 +459,7 @@ class CompanionBridgeRepository(
                 WearWebUiSession.end(it, onlyUnclaimed = failure == BridgeFailure.RESULT_UNKNOWN)
                 if (!WearWebUiSession.isActive) stopServer()
             }
-            mutableTransfer.value = BridgeTransfer(BridgeStage.FAILED, failure)
+            mutableTransfer.value = if (reportFailure) BridgeTransfer(BridgeStage.FAILED, failure) else null
             throw BridgeException(failure, error)
         } finally {
             outgoingJob = null
