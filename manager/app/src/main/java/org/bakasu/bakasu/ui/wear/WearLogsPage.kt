@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui.wear
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.itemsIndexed
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CompactButton
+import androidx.wear.compose.material3.CompactButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
@@ -109,6 +111,7 @@ internal fun WearLogsPage(
                 WearInfoCard(
                     spec,
                     containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = (ButtonDefaults.Height - CompactButtonDefaults.Height) / 2),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
