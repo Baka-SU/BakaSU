@@ -184,13 +184,6 @@ class ModuleRepoViewModel(
         }
     }
 
-    /** The entry menu waits for a successful server response before navigating. */
-    suspend fun refreshAndGetFailure(force: Boolean = true): RepositoryFailure? {
-        val url = activeRepository() ?: return null
-        refreshCatalog(url, force)
-        return observeSources.failures.value[url]
-    }
-
     fun dispatch(action: ModuleRepoUiAction) {
         when (action) {
             ModuleRepoUiAction.Refresh -> refresh()

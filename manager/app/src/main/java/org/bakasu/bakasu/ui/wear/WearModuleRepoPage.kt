@@ -38,7 +38,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.AlertDialog
@@ -66,6 +65,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
+import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.formatFileSize
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
@@ -99,38 +99,47 @@ internal fun WearModuleRepoPage(
     onOpen: (CatalogModule) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val scope = rememberCoroutineScope()
-    fun retry() {
-        viewModel.refresh()
-    }
-    LifecycleResumeEffect(viewModel, state.repositoryUrl) {
-        val request = scope.launch { viewModel.refreshAndGetFailure() }
-        onPauseOrDispose { request.cancel() }
-    }
-    if (!state.isRefreshing && state.content == CatalogContent.FAILED) {
-        WearLoadFailureScreen(wearRepositoryFailureText(state.failures[state.repositoryUrl]), onBack, ::retry)
-        return
-    }
+    WearModuleRepoPage(state, { viewModel.refresh(fromPull = true) }, onBack, onOpenPanel, hasOperationsPanel, onOpen)
+}
+
+@Composable
+internal fun WearModuleRepoPage(
+    state: ModuleRepoUiState,
+    onRefresh: () -> Unit,
+    onBack: () -> Unit,
+    onOpenPanel: () -> Unit,
+    hasOperationsPanel: Boolean = false,
+    onOpen: (CatalogModule) -> Unit,
+) {
+    val failed = !state.isRefreshing && state.content == CatalogContent.FAILED
     WearList(
-        isLoading = state.isRefreshing && state.modules.isEmpty(),
+        isLoading = state.isRefreshing && state.modules.isEmpty() && !state.isPullRefreshing,
         isRefreshing = state.isRefreshing,
-        onRefresh = ::retry,
+        onRefresh = onRefresh,
         onBack = onBack,
+        onConfirm = if (failed) onRefresh else null,
+        confirmLabel = if (failed) stringResource(R.string.network_retry) else null,
+        backToTop = !failed,
         onOpenPanel = onOpenPanel,
         hasOperationsPanel = hasOperationsPanel,
         panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
-        if (state.modules.isEmpty() && !state.isRefreshing) {
+        if (failed) {
             item {
-                WearEmptyState(
-                    spec,
-                    Icons.Rounded.Cloud,
-                    stringResource(R.string.wear_catalog_empty),
-                )
+                WearEmptyState(spec, Icons.Rounded.Error, stringResource(R.string.wear_load_failed))
+            }
+            item {
+                WearInfoCard(spec) {
+                    Text(wearRepositoryFailureText(state.failures[state.repositoryUrl]), textAlign = TextAlign.Center)
+                }
+            }
+        } else if (state.modules.isEmpty() && !state.isRefreshing) {
+            item {
+                WearEmptyState(spec, Icons.Rounded.Cloud, stringResource(state.content.resId ?: R.string.wear_catalog_empty))
             }
         }
-        LazySegmentedColumn(state.modules, { it.catalogId }) { module ->
+        LazySegmentedColumn(if (failed) emptyList() else state.modules, { it.catalogId }) { module ->
             WearSettingsJumpPageWidget(
                 spec,
                 module.moduleName,
@@ -159,10 +168,6 @@ private fun catalogModuleViewModel(moduleId: String, repositoryUrl: String): Mod
         key = "wear-catalog-$repositoryUrl#$moduleId",
         parameters = { parametersOf(moduleId, repositoryUrl) },
     )
-    LifecycleResumeEffect(viewModel) {
-        viewModel.refresh()
-        onPauseOrDispose { }
-    }
     return viewModel
 }
 

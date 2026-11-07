@@ -63,7 +63,6 @@ internal fun WearOperationsPanel(
     fullFeatured: Boolean,
     susfsAvailable: Boolean,
     onReboot: (String) -> Unit,
-    moduleRepoLoading: Boolean = false,
     onClosing: () -> Unit = {},
     onRefresh: (() -> Unit)? = null,
     isRefreshing: Boolean = false,
@@ -101,7 +100,6 @@ internal fun WearOperationsPanel(
                 Icons.Rounded.Cloud,
                 moduleRepoLabel,
                 { onOpen(WearRoute.ModuleRepo) },
-                enabled = !moduleRepoLoading,
             ),
             WearIconAction(Icons.Rounded.Sort, stringResource(R.string.wear_sort), { onOpen(WearRoute.ModuleSort) }),
         )
@@ -143,7 +141,6 @@ internal fun WearOperationsPanel(
                 action.onClick,
                 icon = action.icon,
                 enabled = action.enabled,
-                isLoading = page == WearOperationsPage.Modules && action.label == moduleRepoLabel && moduleRepoLoading,
             )
         }
     }
