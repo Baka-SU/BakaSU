@@ -40,6 +40,7 @@ import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
+import kotlinx.coroutines.flow.SharedFlow
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.AppControlAction
 import org.bakasu.bakasu.domain.model.AppProfile
@@ -50,6 +51,7 @@ import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiAction
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiEvent
+import org.bakasu.bakasu.ui.viewmodel.AppProfileUiState
 import org.bakasu.bakasu.ui.viewmodel.AppProfileViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
@@ -245,38 +247,55 @@ internal fun WearAppProfileModeRoute(
         parameters = { parametersOf(uid, packageName) },
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    WearAppProfileModeRoute(uid, packageName, appLabel, onBack, onOpen, state, viewModel.events, viewModel::dispatch)
+}
+
+@Composable
+internal fun WearAppProfileModeRoute(
+    uid: Int,
+    packageName: String,
+    appLabel: String,
+    onBack: () -> Unit,
+    onOpen: (WearRoute) -> Unit,
+    state: AppProfileUiState,
+    events: SharedFlow<AppProfileUiEvent>,
+    onAction: (AppProfileUiAction) -> Unit,
+) {
     var error by remember { mutableStateOf<String?>(null) }
     var hasResumed by rememberSaveable { mutableStateOf(false) }
-    var openCustomAfterSave by remember { mutableStateOf(false) }
+    var destinationAfterSave by remember { mutableStateOf<WearRoute?>(null) }
     val failed = stringResource(R.string.failed_to_update_app_profile, appLabel)
     val failedSepolicy = stringResource(R.string.failed_to_update_sepolicy, appLabel)
 
-    LaunchedEffect(viewModel) {
-        viewModel.events.collect { event ->
+    fun navigate(destination: WearRoute) {
+        if (destination is WearRoute.App) onBack() else onOpen(destination)
+    }
+
+    LaunchedEffect(events) {
+        events.collect { event ->
             when (event) {
                 is AppProfileUiEvent.Error -> {
-                    openCustomAfterSave = false
+                    destinationAfterSave = null
                     error = failed
                 }
 
                 AppProfileUiEvent.SepolicyUpdateFailed -> {
-                    openCustomAfterSave = false
+                    destinationAfterSave = null
                     error = failedSepolicy
                 }
 
                 AppProfileUiEvent.Saved -> {
                     error = null
-                    if (openCustomAfterSave) {
-                        openCustomAfterSave = false
-                        onOpen(WearRoute.AppProfileCustom(uid, packageName))
-                    }
+                    val destination = destinationAfterSave
+                    destinationAfterSave = null
+                    if (destination != null) navigate(destination)
                 }
             }
         }
     }
-    ActivityResumeEffect(viewModel) {
+    ActivityResumeEffect(events) {
         if (hasResumed) {
-            viewModel.dispatch(AppProfileUiAction.Load)
+            onAction(AppProfileUiAction.Load)
         } else {
             hasResumed = true
         }
@@ -293,7 +312,14 @@ internal fun WearAppProfileModeRoute(
         WearAppProfileModePage(
             profile = profile,
             onBack = onBack,
-            onChooseProfile = { viewModel.dispatch(AppProfileUiAction.Save(it)) },
+            onChooseProfile = {
+                if (!profile.allowSu && it == profile) {
+                    onBack()
+                } else {
+                    destinationAfterSave = if (profile.allowSu) null else WearRoute.App(uid, packageName)
+                    onAction(AppProfileUiAction.Save(it))
+                }
+            },
             onChooseTemplate = { onOpen(WearRoute.AppProfileTemplateChoice(uid, packageName)) },
             onChooseCustom = {
                 val customProfile = if (profile.allowSu) {
@@ -301,11 +327,12 @@ internal fun WearAppProfileModeRoute(
                 } else {
                     profile.copy(nonRootUseDefault = false)
                 }
+                val destination = if (profile.allowSu) WearRoute.AppProfileCustom(uid, packageName) else WearRoute.App(uid, packageName)
                 if (customProfile == profile) {
-                    onOpen(WearRoute.AppProfileCustom(uid, packageName))
+                    navigate(destination)
                 } else {
-                    openCustomAfterSave = true
-                    viewModel.dispatch(AppProfileUiAction.Save(customProfile))
+                    destinationAfterSave = destination
+                    onAction(AppProfileUiAction.Save(customProfile))
                 }
             },
         )
@@ -387,22 +414,39 @@ internal fun WearAppProfileCustomRoute(
     onBack: () -> Unit,
     onOpen: (WearRoute) -> Unit,
     templates: org.bakasu.bakasu.ui.viewmodel.TemplateUiState,
+    onNonRootProfile: () -> Unit,
 ) {
     val viewModel = koinViewModel<AppProfileViewModel>(
         key = "wear-app-profile-custom-$uid-$packageName",
         parameters = { parametersOf(uid, packageName) },
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    WearAppProfileCustomRoute(uid, packageName, appLabel, onBack, onOpen, templates, onNonRootProfile, state, viewModel.events, viewModel::dispatch)
+}
+
+@Composable
+internal fun WearAppProfileCustomRoute(
+    uid: Int,
+    packageName: String,
+    appLabel: String,
+    onBack: () -> Unit,
+    onOpen: (WearRoute) -> Unit,
+    templates: org.bakasu.bakasu.ui.viewmodel.TemplateUiState,
+    onNonRootProfile: () -> Unit,
+    state: AppProfileUiState,
+    events: SharedFlow<AppProfileUiEvent>,
+    onAction: (AppProfileUiAction) -> Unit,
+) {
     var hasResumed by rememberSaveable { mutableStateOf(false) }
-    ActivityResumeEffect(viewModel) {
-        if (hasResumed) viewModel.dispatch(AppProfileUiAction.Load) else hasResumed = true
+    ActivityResumeEffect(events) {
+        if (hasResumed) onAction(AppProfileUiAction.Load) else hasResumed = true
     }
     var error by remember { mutableStateOf<String?>(null) }
     val failed = stringResource(R.string.failed_to_update_app_profile, appLabel)
     val failedSepolicy = stringResource(R.string.failed_to_update_sepolicy, appLabel)
 
-    LaunchedEffect(viewModel) {
-        viewModel.events.collect { event ->
+    LaunchedEffect(events) {
+        events.collect { event ->
             error = when (event) {
                 is AppProfileUiEvent.Error -> failed
                 AppProfileUiEvent.SepolicyUpdateFailed -> failedSepolicy
@@ -413,13 +457,16 @@ internal fun WearAppProfileCustomRoute(
     WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
 
     val profile = state.profile
-    if (profile != null) {
+    // A restored stack can still contain the old non-root editor. Its control now lives in details.
+    LaunchedEffect(profile?.allowSu) {
+        if (profile != null && !profile.allowSu) onNonRootProfile()
+    }
+    if (profile?.allowSu == true) {
         WearAppProfileConfig(
             profile,
-            state.defaultUmountModules,
             state.sepolicyValid,
-            { viewModel.dispatch(AppProfileUiAction.ValidateSepolicy(it)) },
-            { viewModel.dispatch(AppProfileUiAction.Save(it)) },
+            { onAction(AppProfileUiAction.ValidateSepolicy(it)) },
+            { onAction(AppProfileUiAction.Save(it)) },
             onManageTemplates = { onOpen(WearRoute.Templates) },
             onViewTemplate = { onOpen(WearRoute.TemplateEditor(it, readOnly = true, creation = false)) },
             onBack = onBack,
@@ -455,6 +502,19 @@ internal fun WearAppDetail(
         parameters = { parametersOf(group.uid, group.primaryPackageName) },
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    WearAppDetail(group, isManager, onBack, onOpen, state, viewModel.events, viewModel::dispatch)
+}
+
+@Composable
+internal fun WearAppDetail(
+    group: InstalledAppGroup,
+    isManager: Boolean,
+    onBack: () -> Unit,
+    onOpen: (WearRoute) -> Unit,
+    state: AppProfileUiState,
+    events: SharedFlow<AppProfileUiEvent>,
+    onAction: (AppProfileUiAction) -> Unit,
+) {
     var error by remember { mutableStateOf<String?>(null) }
     var hasResumed by rememberSaveable { mutableStateOf(false) }
     val failed = stringResource(R.string.failed_to_update_app_profile, group.mainApp.label)
@@ -464,11 +524,11 @@ internal fun WearAppDetail(
         if (profile.allowSu && group.uid < 2000 && group.uid != 1000) {
             error = suNotAllowed
         } else {
-            viewModel.dispatch(AppProfileUiAction.Save(profile))
+            onAction(AppProfileUiAction.Save(profile))
         }
     }
-    LaunchedEffect(viewModel) {
-        viewModel.events.collect { event ->
+    LaunchedEffect(events) {
+        events.collect { event ->
             error = when (event) {
                 is AppProfileUiEvent.Error -> failed
                 AppProfileUiEvent.SepolicyUpdateFailed -> failedSepolicy
@@ -476,9 +536,9 @@ internal fun WearAppDetail(
             }
         }
     }
-    ActivityResumeEffect(viewModel) {
+    ActivityResumeEffect(events) {
         if (hasResumed) {
-            viewModel.dispatch(AppProfileUiAction.Load)
+            onAction(AppProfileUiAction.Load)
         } else {
             hasResumed = true
         }

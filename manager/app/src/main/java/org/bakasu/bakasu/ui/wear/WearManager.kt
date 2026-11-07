@@ -560,8 +560,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     superuser.appGroupList.firstOrNull {
                                         it.uid == route.uid && it.primaryPackageName == route.packageName
                                     }?.mainApp?.label ?: route.packageName,
-                                    onBack = ::back,
                                     // A save may finish after Back has already started closing this page.
+                                    onBack = { if (navigator.top == route) back() },
                                     onOpen = { destination -> if (navigator.top == route) open(destination) },
                                 )
                             }
@@ -584,6 +584,12 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     onBack = ::back,
                                     templates = templates,
                                     onOpen = ::open,
+                                    onNonRootProfile = {
+                                        if (navigator.top == route) {
+                                            back()
+                                            if (navigator.top == WearRoute.AppProfileMode(route.uid, route.packageName)) back()
+                                        }
+                                    },
                                 )
                             }
                             entry<WearRoute.AppFilter> {

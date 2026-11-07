@@ -30,11 +30,10 @@ import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
  * @date 2026/10/1.
  */
 
-/** Wear presentation of the shared Manager profile modes and fields. */
+/** Wear editor for root profile modes and fields; non-root options live in app details. */
 @Composable
 fun WearAppProfileConfig(
     profile: AppProfile,
-    defaultUmountModules: Boolean,
     sepolicyValid: Boolean,
     onValidateSepolicy: (String) -> Unit,
     onProfileChange: (AppProfile) -> Unit,
@@ -60,13 +59,8 @@ fun WearAppProfileConfig(
     var rulesInput by rememberSaveable { mutableStateOf(false) }
     val failed = stringResource(R.string.operation_failed)
     WearResultDialog(if (inputError) WearResult(failed, success = false) else null) { inputError = false }
-    val mode = if (profile.allowSu) {
-        rootMode
-    } else {
-        if (profile.nonRootUseDefault) R.string.profile_default else R.string.profile_custom
-    }
+    val mode = rootMode
     val modeChoices = listOf(R.string.profile_default, R.string.profile_template, R.string.profile_custom)
-        .filter { profile.allowSu || it != R.string.profile_template }
         .map { it.toString() to stringResource(it) }
     val namespaceChoices = listOf(
         R.string.profile_namespace_inherited,
@@ -86,14 +80,10 @@ fun WearAppProfileConfig(
             when (shownPage) {
                 R.string.profile -> WearChoicePage(stringResource(R.string.profile), modeChoices, mode.toString(), back) { value ->
                     val selected = value.toInt()
-                    if (profile.allowSu) {
-                        choosingTemplateMode = selected == R.string.profile_template
-                        // Template mode is persisted only after a template has been selected.
-                        if (selected != R.string.profile_template) {
-                            onProfileChange(profile.copy(rootUseDefault = selected == R.string.profile_default, rootTemplate = null))
-                        }
-                    } else {
-                        onProfileChange(profile.copy(nonRootUseDefault = selected == R.string.profile_default))
+                    choosingTemplateMode = selected == R.string.profile_template
+                    // Template mode is persisted only after a template has been selected.
+                    if (selected != R.string.profile_template) {
+                        onProfileChange(profile.copy(rootUseDefault = selected == R.string.profile_default, rootTemplate = null))
                     }
                     back()
                 }
@@ -203,18 +193,7 @@ fun WearAppProfileConfig(
     } else {
         WearList(onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.profile)) }
-            if (!profile.allowSu) {
-                item {
-                    WearSettingsSwitchWidget(
-                        spec,
-                        stringResource(R.string.profile_umount_modules),
-                        if (profile.nonRootUseDefault) defaultUmountModules else profile.umountModules,
-                        { onProfileChange(profile.copy(umountModules = it, nonRootUseDefault = false)) },
-                        enabled = !profile.nonRootUseDefault,
-                        secondaryLabel = stringResource(R.string.profile_umount_modules_summary),
-                    )
-                }
-            } else if (mode == R.string.profile_template) {
+            if (mode == R.string.profile_template) {
                 item {
                     WearSettingsJumpPageWidget(
                         spec,

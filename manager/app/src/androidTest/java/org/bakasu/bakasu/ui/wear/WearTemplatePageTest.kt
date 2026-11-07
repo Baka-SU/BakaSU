@@ -205,7 +205,6 @@ class WearTemplatePageTest(private val round: Boolean) {
         show {
             WearAppProfileConfig(
                 profile = AppProfile("app", allowSu = true, rootUseDefault = false, rootTemplate = "saved"),
-                defaultUmountModules = true,
                 sepolicyValid = true,
                 onValidateSepolicy = {},
                 onProfileChange = { saves++ },
