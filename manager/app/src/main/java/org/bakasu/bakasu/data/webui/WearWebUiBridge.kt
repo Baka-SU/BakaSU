@@ -7,6 +7,7 @@ import java.io.DataOutputStream
 import java.io.File
 import java.io.InputStream
 import java.util.UUID
+import java.util.concurrent.Semaphore
 import kotlin.concurrent.thread
 import org.bakasu.bakasu.domain.model.WebUiCommandResult
 import org.bakasu.bakasu.domain.model.WebUiProcess
@@ -122,18 +123,23 @@ class RemoteWebUiBackend private constructor(
     val moduleId: String,
     val moduleName: String,
 ) : WebUiBackend {
+    // RFCOMM uses one channel for this service. WebView requests assets concurrently, so keep
+    // ownership until the current response (including a streamed file) has been consumed.
+    private val requests = Semaphore(1, true)
 
     private fun <T> call(op: String, arg: String, extra: Int = 0, timeout: Boolean = true, onConnection: ((BridgeConnection) -> Unit)? = null, read: (DataInputStream) -> T): T {
-        val connection = transport.connect(peerAddress, WearWebUiProtocol.RPC_PATH)
+        requests.acquire()
         try {
-            onConnection?.invoke(connection)
-            val output = connection.output
-            val request = JSONObject().put("token", token).put("op", op).put("arg", arg).put("extra", extra)
-            with(WearWebUiProtocol) { output.writeFrame(FRAME_OK, request.toString().toByteArray()) }
-            val input = connection.input
-            return if (timeout) CompanionBridgeRepository.handshake(connection.socket) { read(input) } else read(input)
+            transport.connect(peerAddress, WearWebUiProtocol.RPC_PATH).use { connection ->
+                onConnection?.invoke(connection)
+                val output = connection.output
+                val request = JSONObject().put("token", token).put("op", op).put("arg", arg).put("extra", extra)
+                with(WearWebUiProtocol) { output.writeFrame(FRAME_OK, request.toString().toByteArray()) }
+                val input = connection.input
+                return if (timeout) CompanionBridgeRepository.handshake(connection.socket) { read(input) } else read(input)
+            }
         } finally {
-            connection.close()
+            requests.release()
         }
     }
 
@@ -194,8 +200,11 @@ class RemoteWebUiBackend private constructor(
     override fun listModules(): String = runCatching { single("modules", "")?.decodeToString() }.getOrNull() ?: "[]"
 
     override fun openFile(path: String): InputStream? = runCatching {
-        val connection = transport.connect(peerAddress, WearWebUiProtocol.RPC_PATH)
+        requests.acquire()
+        var connection: BridgeConnection? = null
+        var streaming = false
         try {
+            connection = transport.connect(peerAddress, WearWebUiProtocol.RPC_PATH)
             val output = connection.output
             val request = JSONObject().put("token", token).put("op", "file").put("arg", path).put("extra", 0)
             with(WearWebUiProtocol) { output.writeFrame(FRAME_OK, request.toString().toByteArray()) }
@@ -205,22 +214,29 @@ class RemoteWebUiBackend private constructor(
             }
             when {
                 type != WearWebUiProtocol.FRAME_CHUNK -> {
-                    connection.close()
                     null
                 }
 
                 payload.isEmpty() -> {
-                    connection.close()
+                    connection.output.apply {
+                        writeBoolean(true)
+                        flush()
+                    }
                     ByteArray(0).inputStream()
                 }
 
-                else -> RemoteFileInputStream(connection, input, payload)
+                else -> RemoteFileInputStream(connection, input, payload, requests::release).also { streaming = true }
             }
-        } catch (e: Exception) {
-            connection.close()
-            throw e
+        } finally {
+            if (!streaming) {
+                try {
+                    connection?.close()
+                } finally {
+                    requests.release()
+                }
+            }
         }
-    }.getOrNull()
+    }.onFailure { Log.w("RemoteWebUi", "Module file transfer failed: $path", it) }.getOrNull()
 
     override fun listPackages(type: String): String = runCatching { single("packages", type)?.decodeToString() }.getOrNull() ?: "[]"
 
@@ -255,6 +271,7 @@ private class RemoteFileInputStream(
     private val connection: BridgeConnection,
     private val input: DataInputStream,
     initial: ByteArray,
+    private val onClosed: () -> Unit,
 ) : InputStream() {
     private var chunk = initial
     private var offset = 0
@@ -279,11 +296,25 @@ private class RemoteFileInputStream(
     private fun ensure(): Boolean {
         while (offset >= chunk.size) {
             if (closed) return false
-            val (type, payload) = CompanionBridgeRepository.handshake(connection.socket) {
-                with(WearWebUiProtocol) { input.readFrame() }
+            val (type, payload) = try {
+                CompanionBridgeRepository.handshake(connection.socket) {
+                    with(WearWebUiProtocol) { input.readFrame() }
+                }
+            } catch (error: Exception) {
+                close()
+                throw error
             }
             if (type != WearWebUiProtocol.FRAME_CHUNK || payload.isEmpty()) {
-                close()
+                try {
+                    if (type == WearWebUiProtocol.FRAME_CHUNK) {
+                        connection.output.apply {
+                            writeBoolean(true)
+                            flush()
+                        }
+                    }
+                } finally {
+                    close()
+                }
                 return false
             }
             chunk = payload
@@ -292,10 +323,11 @@ private class RemoteFileInputStream(
         return true
     }
 
-    override fun close() {
+    @Synchronized override fun close() {
         if (closed) return
         closed = true
         runCatching { connection.close() }
+        onClosed()
     }
 }
 
@@ -374,6 +406,9 @@ internal suspend fun serveWebUiCall(
                             }
                         }
                         output.writeFrame(FRAME_CHUNK, ByteArray(0))
+                        // Closing RFCOMM can discard queued bytes. Keep the socket alive until
+                        // the phone has consumed the last chunk, including large JavaScript files.
+                        CompanionBridgeRepository.handshake(connection.socket) { check(input.readBoolean()) }
                     }
                 }
 

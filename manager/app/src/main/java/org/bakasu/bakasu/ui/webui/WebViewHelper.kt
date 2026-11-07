@@ -14,6 +14,7 @@ import android.webkit.JsResult
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -113,6 +114,7 @@ internal fun createWebView(
     restrictToModule: Boolean = false,
     colorsCssProvider: () -> String,
     recoverFromRenderCrash: Boolean = false,
+    onPageLoaded: (() -> Unit)? = null,
 ) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         @Suppress("DEPRECATION")
@@ -160,6 +162,19 @@ internal fun createWebView(
 
         override fun onPageFinished(view: WebView, url: String?) {
             webUIState.pageLoaded = true
+            if (webUIState.uiEvent !is WebUIEvent.Error) onPageLoaded?.invoke()
+        }
+
+        override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+            if (restrictToModule && request.isForMainFrame) {
+                webUIState.uiEvent = WebUIEvent.Error(activity.getString(R.string.wear_webui_load_failed))
+            }
+        }
+
+        override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse) {
+            if (restrictToModule && request.isForMainFrame) {
+                webUIState.uiEvent = WebUIEvent.Error(activity.getString(R.string.wear_webui_load_failed))
+            }
         }
 
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {

@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui.webui
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -40,6 +41,7 @@ import org.koin.compose.koinInject
  */
 class RemoteWebUIActivity : ComponentActivity() {
     private var backend: RemoteWebUiBackend? = null
+    private var pageLoaded = false
 
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,20 +84,24 @@ class RemoteWebUIActivity : ComponentActivity() {
                             settingsRepository,
                             restrictToModule = true,
                             colorsCssProvider = { currentColorsCss.value },
+                            onPageLoaded = {
+                                pageLoaded = true
+                                BridgeActivityLaunch.ready(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
+                            },
                         )
-                    }.isSuccess
+                    }.onFailure { Log.w("RemoteWebUi", "WebView creation failed", it) }.isSuccess
                     if (!created) {
                         remote.close()
                         BridgeActivityLaunch.failed(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
                         webUIState.uiEvent = WebUIEvent.Error(claimFailed)
                         return@LaunchedEffect
                     }
-                    BridgeActivityLaunch.ready(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
                 }
                 DisposableEffect(Unit) { onDispose { webUIState.dispose() } }
 
                 when (val event = webUIState.uiEvent) {
                     is WebUIEvent.Error -> LaunchedEffect(event) {
+                        BridgeActivityLaunch.failed(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
                         Toast.makeText(this@RemoteWebUIActivity, event.message, Toast.LENGTH_SHORT).show()
                         finish()
                     }
@@ -124,11 +130,12 @@ class RemoteWebUIActivity : ComponentActivity() {
         super.onNewIntent(intent)
         if (intent.getStringExtra(BridgeActivityLaunch.REQUEST) == this.intent.getStringExtra(BridgeActivityLaunch.REQUEST)) {
             // A late notification brings the already claimed page forward without claiming twice.
-            if (backend != null) BridgeActivityLaunch.ready(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
+            if (pageLoaded) BridgeActivityLaunch.ready(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
             return
         }
         backend?.close()
         backend = null
+        pageLoaded = false
         setIntent(intent)
         recreate()
     }

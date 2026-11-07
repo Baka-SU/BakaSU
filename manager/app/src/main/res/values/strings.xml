@@ -811,6 +811,7 @@
     <string name="wear_module_data">Module resources</string>
     <string name="wear_authors_source">Authors and source</string>
     <string name="wear_catalog_empty">No matching modules</string>
+    <string name="wear_webui_load_failed">Could not load the watch module page. Check the phone connection and the module WebUI files.</string>
     <string name="wear_catalog_summary">%1$s · %2$s</string>
     <string name="wear_labeled_value">%1$s: %2$s</string>
     <string name="wear_version_code">Version code</string>

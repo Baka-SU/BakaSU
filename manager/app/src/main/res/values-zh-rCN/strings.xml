@@ -783,6 +783,7 @@
     <string name="wear_module_data">模块资料</string>
     <string name="wear_authors_source">作者与源码</string>
     <string name="wear_catalog_empty">暂无匹配的模块</string>
+    <string name="wear_webui_load_failed">无法加载手表模块页面，请检查手机连接和模块 WebUI 文件。</string>
     <string name="wear_catalog_summary">%1$s · %2$s</string>
     <string name="wear_labeled_value">%1$s: %2$s</string>
     <string name="wear_version_code">版本代码</string>
