@@ -9,12 +9,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -25,6 +28,7 @@ import androidx.compose.ui.test.swipeUp
 import androidx.lifecycle.Lifecycle
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
+import kotlin.math.abs
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.RepositoryError
 import org.bakasu.bakasu.domain.model.RepositoryFailure
@@ -32,6 +36,7 @@ import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiState
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -71,6 +76,11 @@ class WearRepositoryEntryTest {
         compose.onNode(hasScrollToIndexAction()).performTouchInput { swipeUp() }
         compose.onNodeWithText(resources.getString(R.string.network_retry)).assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals(2, requests) }
+        val loading = resources.getString(R.string.wear_loading)
+        compose.onAllNodesWithContentDescription(loading).assertCountEquals(1)
+        val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
+        val viewport = compose.onNodeWithTag("repository").getUnclippedBoundsInRoot()
+        assertTrue(abs((indicator.top.value + indicator.bottom.value - viewport.top.value - viewport.bottom.value) / 2) < 1f)
         compose.runOnIdle {
             state = state.copy(isRefreshing = false)
             navigator.open(WearRoute.Operations(WearOperationsPage.Repository))
@@ -105,7 +115,7 @@ class WearRepositoryEntryTest {
 
     private fun refresh() {
         requests++
-        state = state.copy(isRefreshing = true)
+        state = state.copy(isRefreshing = true, isPullRefreshing = requests > 1)
     }
 
     private fun openRepository() {

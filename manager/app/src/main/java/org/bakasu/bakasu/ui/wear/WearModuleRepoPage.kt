@@ -112,9 +112,10 @@ internal fun WearModuleRepoPage(
     onOpen: (CatalogModule) -> Unit,
 ) {
     val failed = !state.isRefreshing && state.content == CatalogContent.FAILED
+    val loadingWithoutContent = state.isRefreshing && state.modules.isEmpty()
     WearList(
-        isLoading = state.isRefreshing && state.modules.isEmpty() && !state.isPullRefreshing,
-        isRefreshing = state.isRefreshing,
+        isLoading = loadingWithoutContent,
+        isRefreshing = state.isRefreshing && !loadingWithoutContent,
         onRefresh = onRefresh,
         onBack = onBack,
         onConfirm = if (failed) onRefresh else null,

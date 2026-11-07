@@ -61,6 +61,7 @@ import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
+import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiState
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLoadFailureScreen
@@ -77,6 +78,26 @@ import org.koin.core.context.GlobalContext
 class WearRepositoryLoadingTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun emptyManualRefreshUsesTheScreenCenterAndClearsWhenFinished() {
+        val state = mutableStateOf(ModuleRepoUiState(isRefreshing = true, isPullRefreshing = true))
+        compose.setContent {
+            MaterialTheme {
+                AppScaffold {
+                    WearModuleRepoPage(state.value, {}, {}, {}) {}
+                }
+            }
+        }
+        val loading = compose.activity.getString(R.string.wear_loading)
+        val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
+        val viewport = compose.onRoot().getUnclippedBoundsInRoot()
+        assertEquals((viewport.left.value + viewport.right.value) / 2, (indicator.left.value + indicator.right.value) / 2, 1f)
+        assertEquals((viewport.top.value + viewport.bottom.value) / 2, (indicator.top.value + indicator.bottom.value) / 2, 1f)
+        compose.runOnIdle { state.value = state.value.copy(isRefreshing = false, isPullRefreshing = false) }
+        compose.onNodeWithContentDescription(loading).assertDoesNotExist()
+        compose.onNodeWithText(compose.activity.getString(R.string.repo_source_empty)).assertExists()
+    }
 
     @Test
     fun failureScreenShowsTheReasonAndSupportsRetry() {
