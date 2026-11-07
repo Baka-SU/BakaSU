@@ -756,8 +756,8 @@
     <string name="wear_template_online_empty">暂无线上范本</string>
     <string name="wear_template_online_failed">无法加载线上范本</string>
     <string name="wear_template_online_invalid">无法解析线上范本</string>
-    <string name="wear_template_add">加入 App Profile</string>
-    <string name="wear_template_added">已加入 App Profile</string>
+    <string name="wear_template_add">导入</string>
+    <string name="wear_template_added">已导入</string>
     <string name="wear_template_already_added">已存在相同 ID 的本地模版</string>
     <string name="wear_settings_selinux_hide_summary">阻止应用检测</string>
     <string name="wear_palette_tonal_spot">色调点缀</string>
@@ -949,4 +949,5 @@
     <string name="wear_template_search">搜索模板</string>
     <string name="wear_template_empty">暂无模板</string>
     <string name="wear_template_no_matches">未找到匹配的模板</string>
+    <string name="wear_template_created">模板创建成功</string>
 </resources>

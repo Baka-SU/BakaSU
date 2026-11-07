@@ -5,8 +5,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
@@ -45,6 +43,7 @@ import org.bakasu.bakasu.domain.model.ProfileTemplateFailure
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiAction
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiEvent
+import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiState
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateEditorUiAction
 import org.bakasu.bakasu.ui.viewmodel.TemplateEditorUiEvent
@@ -204,7 +203,7 @@ private fun rememberWearOfflineDialog(onDismissed: () -> Unit = {}) = rememberCu
 }
 
 /**
- * Online templates for browsing. Loading or viewing them stores nothing; only Add stores the chosen
+ * Online templates for browsing. Loading or viewing them stores nothing; only Import stores the chosen
  * template as a local one, which App Profile can then select.
  */
 @Composable
@@ -285,7 +284,7 @@ internal fun WearOnlineTemplatePage(
                     spec,
                     template.name.ifBlank { template.id },
                     { onOpenTemplate(template.id) },
-                    icon = if (template.id in state.addedIds) Icons.Rounded.CheckCircle else Icons.Rounded.Description,
+                    icon = Icons.Rounded.Description,
                     description = template.description.ifBlank { null },
                 )
             }
@@ -296,21 +295,18 @@ internal fun WearOnlineTemplatePage(
 /** One collector remains active across the online list/detail transition. */
 @Composable
 internal fun WearOnlineTemplateFeedback(viewModel: OnlineTemplateViewModel) {
-    var result by remember { mutableStateOf<WearResult?>(null) }
-    WearResultDialog(result) { result = null }
-    val added = stringResource(R.string.wear_template_added)
+    val toast = LocalWearToast.current
+    val added = stringResource(R.string.app_profile_template_import_success)
     val alreadyAdded = stringResource(R.string.wear_template_already_added)
     val failed = stringResource(R.string.operation_failed)
-    LaunchedEffect(viewModel) {
+    LaunchedEffect(viewModel, toast, added, alreadyAdded, failed) {
         viewModel.events.collect { event ->
-            when (event) {
-                OnlineTemplateUiEvent.Added -> result = WearResult(added, success = true)
-
-                is OnlineTemplateUiEvent.AddFailed -> result = WearResult(
-                    if (event.reason == ProfileTemplateFailure.Conflict) alreadyAdded else failed,
-                    success = false,
-                )
-            }
+            toast.show(
+                when (event) {
+                    OnlineTemplateUiEvent.Added -> added
+                    is OnlineTemplateUiEvent.AddFailed -> if (event.reason == ProfileTemplateFailure.Conflict) alreadyAdded else failed
+                },
+            )
         }
     }
 }
@@ -318,17 +314,41 @@ internal fun WearOnlineTemplateFeedback(viewModel: OnlineTemplateViewModel) {
 @Composable
 internal fun WearOnlineTemplateDetail(viewModel: OnlineTemplateViewModel, id: String, onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    WearOnlineTemplateDetail(state, id, onBack, { viewModel.dispatch(OnlineTemplateUiAction.Add(it)) }, { viewModel.dispatch(OnlineTemplateUiAction.Load) })
+}
+
+@Composable
+internal fun WearOnlineTemplateDetail(
+    state: OnlineTemplateUiState,
+    id: String,
+    onBack: () -> Unit,
+    onImport: (ProfileTemplate) -> Unit,
+    onRetry: () -> Unit,
+) {
     val selected = state.templates.firstOrNull { it.id == id }
     if (!state.loading && selected == null) {
         WearLoadFailureScreen(
-            stringResource(if (state.loadFailure == ProfileTemplateFailure.Offline) R.string.wear_no_internet else R.string.wear_template_online_invalid),
+            stringResource(
+                when (state.loadFailure) {
+                    ProfileTemplateFailure.Offline -> R.string.wear_no_internet
+                    ProfileTemplateFailure.Invalid, null -> R.string.wear_template_online_invalid
+                    else -> R.string.wear_template_online_failed
+                },
+            ),
             onBack,
-            { viewModel.dispatch(OnlineTemplateUiAction.Load) },
+            onRetry,
             retryInEdgeButton = true,
         )
         return
     }
-    WearList(isLoading = selected == null, onBack = onBack) { spec ->
+    val isAdded = selected?.id in state.addedIds
+    WearList(
+        isLoading = selected == null,
+        onBack = onBack,
+        onConfirm = selected?.let { { onImport(it) } },
+        confirmLabel = stringResource(if (isAdded) R.string.wear_template_added else R.string.wear_template_add),
+        confirmEnabled = !isAdded && !state.adding,
+    ) { spec ->
         if (selected != null) {
             item { WearPageHeader(spec, selected.name.ifBlank { selected.id }) }
             TEMPLATE_FIELDS.filter { selected.field(it).isNotEmpty() }.forEach { field ->
@@ -340,16 +360,6 @@ internal fun WearOnlineTemplateDetail(viewModel: OnlineTemplateViewModel, id: St
                     }
                 }
             }
-            item {
-                val isAdded = selected.id in state.addedIds
-                WearActionButton(
-                    spec,
-                    if (isAdded) Icons.Rounded.CheckCircle else Icons.Rounded.Add,
-                    stringResource(if (isAdded) R.string.wear_template_added else R.string.wear_template_add),
-                    { viewModel.dispatch(OnlineTemplateUiAction.Add(selected)) },
-                    enabled = !isAdded && !state.adding,
-                )
-            }
         }
     }
 }
@@ -358,14 +368,22 @@ internal fun WearOnlineTemplateDetail(viewModel: OnlineTemplateViewModel, id: St
 internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean, onBack: () -> Unit) {
     val viewModel = koinViewModel<TemplateEditorViewModel>(parameters = { parametersOf(id, readOnly, creation) })
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val toast = LocalWearToast.current
+    val created = stringResource(R.string.wear_template_created)
     val failed = stringResource(R.string.app_profile_template_save_failed)
     var result by remember { mutableStateOf<WearResult?>(null) }
     WearResultDialog(result) { result = null }
-    LaunchedEffect(viewModel) {
+    LaunchedEffect(viewModel, toast, created, failed) {
         viewModel.events.collect { event ->
             when (event) {
-                TemplateEditorUiEvent.Deleted, TemplateEditorUiEvent.Saved -> onBack()
-                is TemplateEditorUiEvent.Error -> result = WearResult(failed, success = false)
+                TemplateEditorUiEvent.Deleted -> onBack()
+
+                TemplateEditorUiEvent.Saved -> {
+                    if (creation) toast.show(created)
+                    onBack()
+                }
+
+                is TemplateEditorUiEvent.Error -> if (creation) toast.show(failed) else result = WearResult(failed, success = false)
             }
         }
     }
@@ -387,13 +405,18 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
                 }
             } else {
                 WearTextInputPage(stringResource(shownInput), template.field(shownInput), multiline = shownInput == R.string.profile_selinux_rules) { text ->
-                    runCatching { template.withField(shownInput, text) }.fold(onSuccess = { viewModel.dispatch(TemplateEditorUiAction.Update(it)) }, onFailure = { result = WearResult(failed, success = false) })
+                    runCatching { template.withField(shownInput, text) }.fold(onSuccess = { viewModel.dispatch(TemplateEditorUiAction.Update(it)) }, onFailure = { if (creation) toast.show(failed) else result = WearResult(failed, success = false) })
                     input = 0
                 }
             }
         }
     } else {
-        WearList(isLoading = state.loading, onBack = onBack) { spec ->
+        WearList(
+            isLoading = state.loading,
+            onBack = onBack,
+            onConfirm = if (creation && !readOnly && state.loadFailure == null) ({ viewModel.dispatch(TemplateEditorUiAction.Save) }) else null,
+            confirmLabel = stringResource(R.string.app_profile_template_save),
+        ) { spec ->
             item { WearPageHeader(spec, stringResource(if (readOnly) R.string.app_profile_template_view else R.string.app_profile_template_edit)) }
             if (state.loadFailure != null) item { WearStatusItem(spec, Icons.Rounded.Error, failed, tone = WearStatusTone.ERROR) }
             if (state.loadFailure == null) {
@@ -407,7 +430,7 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
                         description = template.field(field).ifEmpty { null },
                     )
                 }
-                if (!readOnly) {
+                if (!readOnly && !creation) {
                     item { WearActionButton(spec, Icons.Rounded.Save, stringResource(R.string.app_profile_template_save), { viewModel.dispatch(TemplateEditorUiAction.Save) }) }
                 }
                 if (!creation && !state.loading) item { WearActionButton(spec, Icons.Rounded.Delete, stringResource(R.string.app_profile_template_delete), delete::show) }

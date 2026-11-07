@@ -722,8 +722,8 @@
     <string name="wear_template_online_empty">No online templates</string>
     <string name="wear_template_online_failed">Couldn\'t load the online templates</string>
     <string name="wear_template_online_invalid">The online templates couldn\'t be read</string>
-    <string name="wear_template_add">Add to App Profile</string>
-    <string name="wear_template_added">Added to App Profile</string>
+    <string name="wear_template_add">Import</string>
+    <string name="wear_template_added">Imported</string>
     <string name="wear_template_already_added">A local template with this ID already exists</string>
     <string name="wear_settings_selinux_hide_summary">Block app detection</string>
     <string name="wear_mode_builtin">Built-in</string>
@@ -975,4 +975,5 @@
     <string name="wear_template_search">Search templates</string>
     <string name="wear_template_empty">No templates</string>
     <string name="wear_template_no_matches">No matching templates</string>
+    <string name="wear_template_created">Template created</string>
 </resources>
