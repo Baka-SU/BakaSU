@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
@@ -27,9 +28,29 @@ fun WearDetailField(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
+    largeIcon: Boolean = false,
 ) {
-    Row(modifier = modifier, verticalAlignment = Alignment.Top) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+    WearDetailField(
+        label,
+        value,
+        modifier,
+        iconAlignment = if (largeIcon) Alignment.CenterVertically else Alignment.Top,
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.ExtraLargeIconSize else 18.dp))
+    }
+}
+
+/** A custom icon, such as an app icon, beside the complete title and value. */
+@Composable
+fun WearDetailField(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    iconAlignment: Alignment.Vertical = Alignment.CenterVertically,
+    icon: @Composable () -> Unit,
+) {
+    Row(modifier = modifier, verticalAlignment = iconAlignment) {
+        icon()
         Spacer(Modifier.width(6.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(label, style = MaterialTheme.typography.titleSmall)

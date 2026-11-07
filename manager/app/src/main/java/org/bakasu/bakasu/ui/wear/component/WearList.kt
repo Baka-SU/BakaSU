@@ -118,6 +118,7 @@ fun WearList(
     topContentPadding: Dp = 0.dp,
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     fixedHeader: (@Composable () -> Unit)? = null,
+    timeText: (@Composable () -> Unit)? = null,
     content: TransformingLazyColumnScope.(TransformationSpec) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -360,6 +361,7 @@ fun WearList(
             ScreenScaffold(
                 scrollState = listState,
                 modifier = pageModifier,
+                timeText = timeText,
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
                 edgeButton = {
                     EdgeButton(
@@ -429,6 +431,7 @@ fun WearList(
             ScreenScaffold(
                 scrollState = listState,
                 modifier = pageModifier,
+                timeText = timeText,
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
             ) { listContent(it) }
         }
