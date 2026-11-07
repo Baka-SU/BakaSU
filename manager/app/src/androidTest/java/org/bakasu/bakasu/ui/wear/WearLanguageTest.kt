@@ -1,7 +1,9 @@
 package org.bakasu.bakasu.ui.wear
 
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.bakasu.bakasu.data.settings.LocaleHelper
 import org.bakasu.bakasu.domain.model.PlatformSetting
 import org.bakasu.bakasu.domain.usecase.UpdatePlatformSettingUseCase
@@ -21,6 +23,10 @@ class WearLanguageTest {
             for ((tag, expected) in listOf("zh_CN" to "zh-CN", "pt_BR" to "pt-BR", "en" to "en")) {
                 assertEquals(expected, update(PlatformSetting.Locale(tag)).getOrThrow().currentLocaleTag)
                 assertEquals(expected, helper.getCurrentAppLocale(context)?.toLanguageTag())
+                // Android 13+ dispatches the resource configuration after setting applicationLocales.
+                withTimeout(5000) {
+                    while (helper.applyLanguage(context).resources.configuration.locales[0].toLanguageTag() != expected) delay(25)
+                }
                 assertEquals(expected, helper.applyLanguage(context).resources.configuration.locales[0].toLanguageTag())
             }
             assertNull(update(PlatformSetting.Locale("system")).getOrThrow().currentLocaleTag)

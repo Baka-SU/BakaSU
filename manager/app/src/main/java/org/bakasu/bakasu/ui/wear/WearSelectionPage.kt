@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.os.Build
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Circle
@@ -12,8 +13,20 @@ import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Square
 import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.core.app.LocaleManagerCompat
+import androidx.core.os.LocaleListCompat
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.RadioButton
+import androidx.wear.compose.material3.SurfaceTransformation
+import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.lazy.transformedHeight
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import java.util.Locale
@@ -24,6 +37,10 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.WearPreference
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
+import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
+import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearChoicePage
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 
@@ -101,22 +118,10 @@ internal fun WearSelectionPage(
         ) { preferenceViewModel.set(WearPreference.Link, it) }
 
         WearSelection.Language -> {
-            val tags = listOf(
-                "en", "ar", "az", "bn", "bs", "da", "de", "es", "et", "fa", "fil", "fr", "gl", "hi", "hr", "hu",
-                "id", "it", "he", "ja", "kn", "ko", "lt", "lv", "mr", "ms", "nl", "pl", "pt", "pt-BR", "ro", "ru", "sl", "sr",
-                "te", "th", "tk", "tr", "uk", "vi", "zh-CN", "zh-HK", "zh-TW",
-            )
-            val choices = listOf("system" to stringResource(R.string.language_system_default)) + tags.map {
-                val locale = Locale.forLanguageTag(it)
-                locale.settingTag() to locale.getDisplayName(locale)
-            }.sortedBy { it.second }
-            WearChoicePage(
-                stringResource(R.string.settings_language),
-                choices,
-                state.currentAppLocale?.settingTag() ?: "system",
-                onBack,
-                icon = { selectionIcon(selection, it) },
-            ) {
+            // Observe configuration changes, but read system preferences independently of the app locale.
+            LocalConfiguration.current
+            val system = LocaleManagerCompat.getSystemLocales(LocalContext.current)
+            WearLanguagePage(state.currentAppLocale, (0 until system.size()).mapNotNull { system[it] }, onBack) {
                 onAction(SettingsUiAction.SetLanguage(it))
             }
         }
@@ -129,6 +134,50 @@ internal fun WearSelectionPage(
             enabled = state.suStatus == "supported",
             icon = { selectionIcon(selection, it) },
         ) { onAction(SettingsUiAction.SetSuCompatMode(it.toInt())) }
+    }
+}
+
+internal val wearLanguageLocales = listOf(
+    "en", "ar", "az", "bn", "bs", "da", "de", "es", "et", "fa", "fil", "fr", "gl", "hi", "hr", "hu",
+    "id", "it", "he", "ja", "kn", "ko", "lt", "lv", "mr", "ms", "nl", "pl", "pt", "pt-BR", "ro", "ru", "sl", "sr",
+    "te", "th", "tk", "tr", "uk", "vi", "zh-CN", "zh-HK", "zh-TW",
+).map(Locale::forLanguageTag)
+
+/** Prefer exact regions, then supported locales with the same language and script. */
+internal fun recommendedWearLanguages(system: List<Locale>): List<Locale> = system.mapNotNull { preferred ->
+    wearLanguageLocales.firstOrNull { it == preferred }
+        ?: wearLanguageLocales.firstOrNull { it.language == preferred.language && it.country == preferred.country && LocaleListCompat.matchesLanguageAndScript(it, preferred) }
+        ?: wearLanguageLocales.firstOrNull { it.country.isEmpty() && LocaleListCompat.matchesLanguageAndScript(it, preferred) }
+        ?: wearLanguageLocales.firstOrNull { LocaleListCompat.matchesLanguageAndScript(it, preferred) }
+}.distinct()
+
+@Composable
+internal fun WearLanguagePage(selected: Locale?, system: List<Locale>, onBack: () -> Unit, onChoose: (String) -> Unit) {
+    val recommended = recommendedWearLanguages(system)
+    fun Locale.choice() = settingTag() to getDisplayName(this)
+    val groups = listOf(
+        stringResource(R.string.wear_recommended_languages) to (listOf("system" to stringResource(R.string.language_system_default)) + recommended.map { it.choice() }),
+        stringResource(R.string.wear_other_languages) to (wearLanguageLocales - recommended.toSet()).map { it.choice() }.sortedBy { it.second },
+    )
+    val selectedTag = selected?.let { recommendedWearLanguages(listOf(it)).firstOrNull() ?: it }?.settingTag() ?: "system"
+    WearList(onBack = onBack, snap = true) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.settings_language)) }
+        groups.forEach { (heading, choices) ->
+            if (choices.isNotEmpty()) {
+                item { WearSectionHeader(spec, heading) }
+                LazySegmentedColumn(choices, { it.first }) { (value, label) ->
+                    RadioButton(
+                        selected = value == selectedTag,
+                        onSelect = { onChoose(value) },
+                        modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
+                            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
+                        transformation = SurfaceTransformation(spec),
+                        icon = { Icon(Icons.Rounded.Translate, contentDescription = null) },
+                        label = { Text(label, maxLines = 3, overflow = TextOverflow.Ellipsis) },
+                    )
+                }
+            }
+        }
     }
 }
 
