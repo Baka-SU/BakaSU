@@ -89,6 +89,8 @@ import org.bakasu.bakasu.ui.viewmodel.SulogViewModel
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
+import org.bakasu.bakasu.ui.viewmodel.UmountManagerScreenViewModel
+import org.bakasu.bakasu.ui.viewmodel.UmountManagerUiAction
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
@@ -128,6 +130,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val moduleViewModel = koinViewModel<ModuleViewModel>()
     // Shared by the repository list and its search page, which are separate routes.
     val moduleRepoViewModel = koinViewModel<ModuleRepoViewModel>()
+    val umountViewModel = koinViewModel<UmountManagerScreenViewModel>()
+    val umount by umountViewModel.state.collectAsStateWithLifecycle()
     val sulogViewModel = koinViewModel<SulogViewModel>()
     val dynamicManagerViewModel = koinViewModel<DynamicManagerViewModel>()
     val settingsViewModel = koinViewModel<SettingsViewModel>()
@@ -206,6 +210,10 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     }
     fun back() = navigator.back()
     WearModuleRepoEntry(WearRoute.ModuleRepo in navigator.backStack, catalog.repositoryUrl) { moduleRepoViewModel.refresh() }
+    val umountOpen = WearRoute.Umount in navigator.backStack
+    LaunchedEffect(umountOpen) {
+        if (umountOpen) umountViewModel.dispatch(UmountManagerUiAction.Refresh())
+    }
     val operationsOnTop = navigator.top is WearRoute.Operations
     val appSearchInput = { open(WearRoute.AppSearch) }
     val moduleSearchInput = { open(WearRoute.ModuleSearch) }
@@ -728,9 +736,19 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     back()
                                 }
                             }
-                            entry<WearRoute.AddUmount> { WearAddUmountPage(::back) }
+                            entry<WearRoute.AddUmount> { WearAddUmountPage(::back, umountViewModel) }
                             entry<WearRoute.Umount> {
-                                WearUmountPage(::back) { open(WearRoute.AddUmount) }
+                                WearUmountPage(umountViewModel, ::back, { open(WearRoute.Operations(WearOperationsPage.Umount)) })
+                            }
+                            entry<WearRoute.UmountSearch> {
+                                val query = navigator.backStack.filterIsInstance<WearRoute.UmountSearchResults>().lastOrNull()?.query.orEmpty()
+                                WearSearchPage(stringResource(R.string.wear_search_umount_paths), "umount", query, ::back) { input ->
+                                    back()
+                                    if (input.isNotBlank()) open(WearRoute.UmountSearchResults(input.trim()))
+                                }
+                            }
+                            entry<WearRoute.UmountSearchResults> { route ->
+                                WearUmountPage(umountViewModel, ::back, { open(WearRoute.Operations(WearOperationsPage.Umount)) }, route.query)
                             }
                             entry<WearRoute.Uninstall> {
                                 WearUninstallPage(::back) { restore -> open(WearRoute.UninstallFlash(restore)) }
@@ -800,6 +818,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                                 WearRoute.Logs, WearRoute.LogSearchResults -> WearOperationsPage.Logs
 
+                                WearRoute.Umount, is WearRoute.UmountSearchResults -> WearOperationsPage.Umount
+
                                 WearRoute.ModuleRepo, WearRoute.ModuleRepoSearchResults -> WearOperationsPage.Repository
 
                                 else -> null
@@ -836,6 +856,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                         }
 
                                                         WearOperationsPage.Repository -> moduleRepoViewModel.refresh(fromPull = true)
+
+                                                        WearOperationsPage.Umount -> umountViewModel.dispatch(UmountManagerUiAction.Refresh())
                                                     }
                                                 }
                                             },
@@ -845,6 +867,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                 WearOperationsPage.Modules -> modules.isRefreshing
                                                 WearOperationsPage.Logs -> logs.isLoading || logs.isRefreshing || logs.isEnabling
                                                 WearOperationsPage.Repository -> catalog.isRefreshing
+                                                WearOperationsPage.Umount -> umount.isLoading || umount.isRefreshing
                                             },
                                             onSearch = {
                                                 when (operationsPage) {
@@ -853,6 +876,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                     WearOperationsPage.Logs -> logSearchInput()
                                                     WearOperationsPage.Home -> Unit
                                                     WearOperationsPage.Repository -> open(WearRoute.ModuleRepoSearch)
+                                                    WearOperationsPage.Umount -> open(WearRoute.UmountSearch)
                                                 }
                                             },
                                             onInstall = installer::pickFile,

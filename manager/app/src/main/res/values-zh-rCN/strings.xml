@@ -943,4 +943,5 @@
     <string name="wear_web_tools">网页控制</string>
     <string name="wear_web_scale">网页大小：%1$d%%</string>
     <string name="wear_web_reset">重置网页位置与大小</string>
+    <string name="wear_search_umount_paths">搜索卸载路径</string>
 </resources>

@@ -52,6 +52,7 @@ private const val RevealHoldMillis = 400L
 
 /**
  * Module actions open only by holding the row for 0.4 s and then swiping right to left.
+ * [revealOnLongPress] lets path rows reveal immediately after the hold.
  * Any other touch keeps its ordinary meaning (tap, list scroll, pager swipe).
  */
 @Composable
@@ -60,6 +61,7 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
     scrolling: Boolean,
     primary: WearIconAction,
     secondary: WearIconAction? = null,
+    revealOnLongPress: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val state = rememberRevealState()
@@ -123,7 +125,7 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
             with(transformationSpec) { applyContainerTransformation(scrollProgress) }
             compositingStrategy = CompositingStrategy.ModulateAlpha
             clip = false
-        }.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding).pointerInput(state) {
+        }.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding).pointerInput(state, revealOnLongPress) {
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 val slop = viewConfiguration.touchSlop
@@ -159,7 +161,8 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
                 if (interrupted != null) return@awaitEachGesture
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 // After the hold, this gesture belongs to the row: it never clicks, scrolls or pages.
-                var revealed = false
+                var revealed = revealOnLongPress
+                if (revealOnLongPress) scope.launch { state.animateTo(RevealValue.RightRevealing) }
                 do {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
                     val change = event.changes.firstOrNull { it.id == down.id }

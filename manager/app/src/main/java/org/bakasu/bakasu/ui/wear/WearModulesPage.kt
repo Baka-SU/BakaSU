@@ -193,6 +193,6 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
     if (actions.isEmpty()) {
         button()
     } else {
-        WearModuleSwipeActions(spec, scrolling, actions.first(), actions.getOrNull(1), button)
+        WearModuleSwipeActions(spec, scrolling, actions.first(), actions.getOrNull(1), content = button)
     }
 }

@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 enum class WearSettingsCategory { General, Security, Advanced, Display }
 
 @Serializable
-enum class WearOperationsPage { Home, SuperUser, Modules, Logs, Repository }
+enum class WearOperationsPage { Home, SuperUser, Modules, Logs, Repository, Umount }
 
 /** The settings that are chosen from a single list of options. */
 @Serializable
@@ -225,6 +225,14 @@ sealed interface WearRoute : NavKey {
 
     @Serializable
     data object AddUmount : WearRoute, NeedsRoot
+
+    @Serializable
+    data object UmountSearch : WearRoute, NeedsRoot
+
+    @Serializable
+    data class UmountSearchResults(val query: String) :
+        WearRoute,
+        NeedsRoot
 
     @Serializable
     data object Uninstall : WearRoute, NeedsRoot

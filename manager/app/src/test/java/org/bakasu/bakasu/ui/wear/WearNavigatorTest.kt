@@ -69,6 +69,7 @@ class WearNavigatorTest {
             WearOperationsPage.SuperUser to listOf(WearRoute.Logs, WearRoute.AllowlistBackup, WearRoute.AppFilter),
             WearOperationsPage.Modules to listOf(WearRoute.ModuleRepo, WearRoute.ModuleSort),
             WearOperationsPage.Logs to listOf(WearRoute.LogOptions),
+            WearOperationsPage.Umount to listOf(WearRoute.AddUmount, WearRoute.UmountSearch),
             WearOperationsPage.Repository to listOf(WearRoute.ModuleRepoSort, WearRoute.Downloads, WearRoute.RepositorySources),
         )
         actions.forEach { (page, routes) ->

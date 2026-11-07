@@ -97,6 +97,8 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     WearRoute.Umount -> R.string.umount_path_manager
 
+    WearRoute.UmountSearch, is WearRoute.UmountSearchResults -> R.string.wear_search_umount_paths
+
     WearRoute.AddUmount -> R.string.add_umount_path
 
     WearRoute.Uninstall, is WearRoute.UninstallFlash -> R.string.settings_uninstall

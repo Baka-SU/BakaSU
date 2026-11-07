@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -30,7 +31,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.lazy.items
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
@@ -47,10 +50,14 @@ import org.bakasu.bakasu.ui.viewmodel.DynamicManagerUiState
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerScreenViewModel
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerUiAction
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerUiEvent
+import org.bakasu.bakasu.ui.viewmodel.UmountManagerUiState
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
+import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearInfoRow
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
+import org.bakasu.bakasu.ui.wear.component.WearModuleSwipeActions
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
@@ -234,44 +241,59 @@ internal fun WearDynamicManagerAppsPage(
 private enum class UmountInput { Path, Flags }
 
 @Composable
-internal fun WearUmountPage(onBack: () -> Unit, onAdd: () -> Unit) {
-    val viewModel = koinViewModel<UmountManagerScreenViewModel>()
+internal fun WearUmountPage(viewModel: UmountManagerScreenViewModel, onBack: () -> Unit, onOpenPanel: () -> Unit, query: String = "") {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var result by remember { mutableStateOf<WearResult?>(null) }
+    val active by rememberUpdatedState(LocalScreenIsActive.current)
     WearResultDialog(result) { result = null }
-    var selected by remember { mutableStateOf<UmountPath?>(null) }
-    val remove = rememberWearConfirmDialog(stringResource(R.string.delete), stringResource(R.string.confirm_delete), destructive = true) {
-        selected?.let { viewModel.dispatch(UmountManagerUiAction.Remove(it)) }
-        selected = null
-    }
     LaunchedEffect(viewModel) {
-        viewModel.dispatch(UmountManagerUiAction.Refresh())
         viewModel.events.collect {
-            if (it is UmountManagerUiEvent.Message && !it.added) result = WearResult(it.message, success = it.success)
+            if (it is UmountManagerUiEvent.Message && !it.added && active) result = WearResult(it.message, success = it.success)
         }
     }
+    WearUmountPage(state, onBack, onOpenPanel, query) { viewModel.dispatch(UmountManagerUiAction.Remove(it)) }
+}
+
+@Composable
+internal fun WearUmountPage(state: UmountManagerUiState, onBack: () -> Unit, onOpenPanel: () -> Unit, query: String = "", onRemove: (UmountPath) -> Unit) {
+    var selected by remember { mutableStateOf<UmountPath?>(null) }
+    val remove = rememberWearConfirmDialog(stringResource(R.string.delete), stringResource(R.string.confirm_delete), destructive = true) {
+        selected?.let(onRemove)
+        selected = null
+    }
+    val paths = state.umountPaths.filter { it.path.contains(query) }
+    val listState = rememberTransformingLazyColumnState()
     WearList(
         isLoading = state.isLoading,
+        isRefreshing = state.isRefreshing,
         onBack = onBack,
-        fixedHeader = {
-            Column {
-                WearPageHeader(stringResource(R.string.umount_path_manager))
-                WearActionButton(Icons.Rounded.Add, stringResource(R.string.add_umount_path), onAdd)
-            }
-        },
+        onOpenPanel = onOpenPanel,
+        hasOperationsPanel = true,
+        panelLabel = stringResource(R.string.wear_operations),
+        listState = listState,
     ) { spec ->
-        items(state.umountPaths, key = { it.path }) { entry ->
-            WearActionButton(spec, Icons.Rounded.Delete, entry.path, {
-                selected = entry
-                remove.show()
-            }, secondaryText = entry.flags.toUmountFlagName())
+        item { WearPageHeader(spec, stringResource(if (query.isEmpty()) R.string.umount_path_manager else R.string.wear_search_umount_paths)) }
+        if (paths.isEmpty()) {
+            item { WearEmptyState(spec, Icons.Rounded.Folder, stringResource(if (state.umountPaths.isEmpty()) R.string.no_any_umount_path else R.string.search_no_any_match)) }
+        }
+        items(paths, key = { it.path }) { entry ->
+            WearModuleSwipeActions(
+                spec,
+                scrolling = listState.isScrollInProgress,
+                primary = WearIconAction(Icons.Rounded.Delete, stringResource(R.string.delete), {
+                    selected = entry
+                    remove.show()
+                }),
+                revealOnLongPress = true,
+            ) {
+                WearActionButton(null, entry.path, {}, secondaryText = entry.flags.toUmountFlagName())
+            }
         }
     }
 }
 
 @Composable
-internal fun WearAddUmountPage(onBack: () -> Unit) {
-    val viewModel = koinViewModel<UmountManagerScreenViewModel>()
+internal fun WearAddUmountPage(onBack: () -> Unit, viewModel: UmountManagerScreenViewModel = koinViewModel()) {
     var result by remember { mutableStateOf<WearResult?>(null) }
     WearResultDialog(result) { result = null }
     val failed = stringResource(R.string.operation_failed)
@@ -300,7 +322,15 @@ internal fun WearAddUmountPage(onBack: () -> Unit) {
         }
         return
     }
-    WearList(onBack = onBack, isBusy = submitting) { spec ->
+    WearList(onBack = onBack, isBusy = submitting, confirmLabel = stringResource(R.string.add), confirmEnabled = !submitting, onConfirm = {
+        val parsed = flags.toIntOrNull()
+        if (!path.startsWith('/') || parsed == null) {
+            result = WearResult(failed, success = false)
+        } else {
+            submitting = true
+            viewModel.dispatch(UmountManagerUiAction.Add(path, parsed))
+        }
+    }) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.add_umount_path)) }
         SegmentedColumn(UmountInput.entries, { it }) { field ->
             WearSettingsJumpPageWidget(
@@ -311,17 +341,6 @@ internal fun WearAddUmountPage(onBack: () -> Unit) {
                 description = if (field == UmountInput.Path) path.ifEmpty { null } else flags,
                 enabled = !submitting,
             )
-        }
-        item {
-            WearActionButton(spec, Icons.Rounded.Add, stringResource(R.string.add), {
-                val parsed = flags.toIntOrNull()
-                if (!path.startsWith('/') || parsed == null) {
-                    result = WearResult(failed, success = false)
-                } else {
-                    submitting = true
-                    viewModel.dispatch(UmountManagerUiAction.Add(path, parsed))
-                }
-            }, enabled = !submitting)
         }
         item {
             Text(

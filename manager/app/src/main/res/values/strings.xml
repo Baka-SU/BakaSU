@@ -969,4 +969,5 @@
     <string name="wear_web_tools">Page controls</string>
     <string name="wear_web_scale">Page size: %1$d%%</string>
     <string name="wear_web_reset">Reset page position and size</string>
+    <string name="wear_search_umount_paths">Search unmount paths</string>
 </resources>

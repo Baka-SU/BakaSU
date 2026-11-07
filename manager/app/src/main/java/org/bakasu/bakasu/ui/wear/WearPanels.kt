@@ -109,6 +109,11 @@ internal fun WearOperationsPanel(
             WearIconAction(Icons.Rounded.FilterList, stringResource(R.string.sulog_filter_title), { onOpen(WearRoute.LogOptions) }),
         )
 
+        WearOperationsPage.Umount -> listOf(
+            WearIconAction(Icons.Rounded.Add, stringResource(R.string.add_umount_path), { onOpen(WearRoute.AddUmount) }),
+            WearIconAction(Icons.Rounded.Search, stringResource(R.string.wear_search_umount_paths), onSearch),
+        )
+
         WearOperationsPage.Repository -> listOf(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.search_modules), onSearch),
             WearIconAction(Icons.Rounded.Sort, stringResource(R.string.wear_sort), { onOpen(WearRoute.ModuleRepoSort) }),
