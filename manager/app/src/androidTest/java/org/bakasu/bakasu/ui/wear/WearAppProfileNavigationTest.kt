@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
@@ -34,6 +35,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.AppProfile
 import org.bakasu.bakasu.domain.model.InstalledApp
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
+import org.bakasu.bakasu.domain.model.WEBVIEW_ZYGOTE_UID
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiAction
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiEvent
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiState
@@ -53,7 +55,8 @@ class WearAppProfileNavigationTest(private val round: Boolean, private val defau
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val app = InstalledApp("test.app", "Test application", 10000)
-    private val group = InstalledAppGroup(app.uid, app.packageName, listOf(app))
+    private var group = InstalledAppGroup(app.uid, app.packageName, listOf(app))
+    private var isManager = false
     private val appRoute = WearRoute.App(app.uid, app.packageName)
     private val modeRoute = WearRoute.AppProfileMode(app.uid, app.packageName)
     private val customRoute = WearRoute.AppProfileCustom(app.uid, app.packageName)
@@ -179,6 +182,65 @@ class WearAppProfileNavigationTest(private val round: Boolean, private val defau
         assertEquals(WearRoute.AppProfileTemplateChoice(app.uid, app.packageName), navigator.top)
     }
 
+    @Test
+    fun defaultHidesUmountAndSwitchingBackFromCustomHidesItAgain() {
+        show()
+        assertUmountHidden()
+        openMode()
+        choose(R.string.profile_custom, 2)
+        completeModeSave()
+        assertUmount(!defaultUmount)
+        openMode()
+        choose(R.string.profile_default, 1)
+        completeModeSave()
+        assertEquals(appRoute, navigator.top)
+        assertUmountHidden()
+        assertEquals(!defaultUmount, stored.umountModules)
+    }
+
+    @Test
+    fun rootProfilesDoNotShowNonRootUmountControl() {
+        stored = stored.copy(allowSu = true)
+        show()
+        assertUmountHidden()
+        compose.runOnIdle {
+            stored = stored.copy(rootUseDefault = false)
+            detail.dispatch(AppProfileUiAction.Load)
+        }
+        assertUmountHidden()
+    }
+
+    @Test
+    fun managerProfileControlsRemainDisabled() {
+        stored = stored.copy(nonRootUseDefault = false)
+        isManager = true
+        show()
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(2)
+        compose.onNodeWithText(text(R.string.superuser)).assertIsNotEnabled()
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
+        compose.onNodeWithText(text(R.string.wear_profile_mode)).assertIsNotEnabled()
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(4)
+        compose.onNodeWithText(text(R.string.profile_umount_modules)).assertIsNotEnabled()
+        assertEquals(0, saves)
+    }
+
+    @Test
+    fun webViewZygoteKeepsSuDisabledButCanEditCustomUmount() {
+        val webView = app.copy(uid = WEBVIEW_ZYGOTE_UID, special = true)
+        group = InstalledAppGroup(webView.uid, webView.packageName, listOf(webView))
+        stored = stored.copy(currentUid = webView.uid, nonRootUseDefault = false)
+        show()
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(2)
+        compose.onNodeWithText(text(R.string.superuser)).assertIsOff().assertIsNotEnabled()
+        assertUmount(!defaultUmount)
+    }
+
+    private fun assertUmountHidden() {
+        // Compose the position where the old default-mode switch used to appear.
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(4)
+        compose.onNodeWithText(text(R.string.profile_umount_modules)).assertDoesNotExist()
+    }
+
     private fun openMode() {
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
         compose.onNodeWithText(text(R.string.wear_profile_mode)).performClick()
@@ -229,7 +291,7 @@ class WearAppProfileNavigationTest(private val round: Boolean, private val defau
                                         entry<WearRoute.Main> { Box {} }
                                         entry<WearRoute.App> {
                                             val state by detail.state.collectAsStateWithLifecycle()
-                                            WearAppDetail(group, false, navigator::back, navigator::open, state, detail.events) { action ->
+                                            WearAppDetail(group, isManager, navigator::back, navigator::open, state, detail.events) { action ->
                                                 if (action == AppProfileUiAction.Load) detailLoads++
                                                 detail.dispatch(action, saveImmediately = true)
                                             }

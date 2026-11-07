@@ -602,14 +602,14 @@ internal fun WearAppDetail(
                     ),
                 )
             }
-            if (!profile.allowSu) {
+            if (!profile.allowSu && !profile.nonRootUseDefault) {
                 item {
                     WearSettingsSwitchWidget(
                         spec,
                         stringResource(R.string.profile_umount_modules),
-                        if (profile.nonRootUseDefault) state.defaultUmountModules else profile.umountModules,
+                        profile.umountModules,
                         { save(profile.copy(umountModules = it, nonRootUseDefault = false)) },
-                        enabled = !isManager && !profile.nonRootUseDefault,
+                        enabled = !isManager,
                         secondaryLabel = stringResource(R.string.profile_umount_modules_summary),
                         icon = Icons.Rounded.Extension,
                     )
