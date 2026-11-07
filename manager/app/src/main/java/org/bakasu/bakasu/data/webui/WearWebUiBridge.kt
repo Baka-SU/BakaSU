@@ -105,8 +105,9 @@ object WearWebUiSession {
 
     /** Ends the session of [token]; a phone may only end the session it claimed. */
     @Synchronized
-    fun end(token: String, peerAddress: String? = null) {
+    fun end(token: String, peerAddress: String? = null, onlyUnclaimed: Boolean = false) {
         val session = current ?: return
+        if (onlyUnclaimed && session.claimed) return
         if (session.token == token && (peerAddress == null || session.phonePeer.equals(peerAddress, true))) current = null
     }
 }

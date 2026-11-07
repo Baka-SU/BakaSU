@@ -9,6 +9,8 @@ enum class BridgeFailure(@param:StringRes val resId: Int) {
     BLUETOOTH_DISABLED(R.string.wear_bridge_bluetooth_disabled),
     SETUP_REQUIRED(R.string.wear_bridge_setup_required),
     CONNECTION(R.string.wear_bridge_connect_failed),
+    OPEN_FAILED(R.string.wear_link_open_failed),
+    RESULT_UNKNOWN(R.string.wear_phone_result_unknown),
     ASSOCIATION(R.string.wear_bridge_association_unsupported),
     NOTIFICATIONS(R.string.wear_bridge_notification_required),
     NOT_PAIRED(R.string.wear_bridge_not_paired),

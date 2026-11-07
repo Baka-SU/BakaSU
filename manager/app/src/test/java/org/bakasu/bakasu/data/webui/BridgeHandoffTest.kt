@@ -1,9 +1,13 @@
 package org.bakasu.bakasu.data.webui
 
+import java.io.IOException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.bakasu.bakasu.domain.model.BridgeAction
+import org.bakasu.bakasu.domain.model.BridgeException
+import org.bakasu.bakasu.domain.model.BridgeFailure
 import org.bakasu.bakasu.domain.model.BridgePeer
 import org.bakasu.bakasu.domain.model.BridgeRequest
 import org.junit.Assert.assertEquals
@@ -13,6 +17,75 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BridgeHandoffTest {
+    @Test
+    fun finalAcknowledgementDistinguishesConfirmedFailureAndLegacyUnknownResults() {
+        assertTrue(BridgeHandoff.exchange({}, { WearWebUiProtocol.FRAME_OK to byteArrayOf() }).isEmpty())
+        for ((payload, expected) in listOf(
+            BridgeHandoff.OPEN_FAILED to BridgeFailure.OPEN_FAILED,
+            BridgeHandoff.REJECTED to BridgeFailure.REJECTED,
+            "" to BridgeFailure.RESULT_UNKNOWN,
+        )) {
+            val error = runCatching { BridgeHandoff.exchange({}, { WearWebUiProtocol.FRAME_ERROR to payload.toByteArray() }) }.exceptionOrNull()
+            assertEquals(expected, (error as BridgeException).reason)
+        }
+    }
+
+    @Test
+    fun lostAcknowledgementAndFailedReadyWriteDoNotClaimThePhoneFailedToOpen() {
+        var launches = 0
+        val lostReply = runCatching {
+            BridgeHandoff.exchange({ launches++ }, { throw IOException("Lost reply") })
+        }.exceptionOrNull()
+        assertEquals(1, launches)
+        assertEquals(BridgeFailure.RESULT_UNKNOWN, (lostReply as BridgeException).reason)
+        val failedWrite = runCatching {
+            BridgeHandoff.exchange({ throw IOException("Ready write failed") }, { error("Must not read") })
+        }.exceptionOrNull()
+        assertEquals(BridgeFailure.RESULT_UNKNOWN, (failedWrite as BridgeException).reason)
+    }
+
+    @Test
+    fun cancellationDoesNotBecomeAnUnknownResult() {
+        val cancelled = CancellationException("Cancelled")
+        assertEquals(cancelled, runCatching { BridgeHandoff.exchange({}, { throw cancelled }) }.exceptionOrNull())
+    }
+
+    @Test
+    fun expiredAndRepeatedPhoneRequestsCannotLaunchAgain() = runBlocking {
+        fun request() = PendingBridgeRequest(BridgeRequest("request", BridgePeer("phone", "Phone"), BridgeAction.LINK, "https://example.org", "", true))
+        var launches = 0
+        val expired = request()
+        expired.expire()
+        expired.launch {
+            launches++
+            true
+        }
+        assertFalse(expired.opened.await())
+        assertEquals(0, launches)
+        val opened = request()
+        opened.launch {
+            launches++
+            true
+        }
+        opened.expire()
+        opened.launch {
+            launches++
+            true
+        }
+        assertTrue(opened.opened.await())
+        assertEquals(1, launches)
+        val rejected = request()
+        rejected.approval.complete(true)
+        rejected.reject()
+        rejected.launch {
+            launches++
+            true
+        }
+        assertTrue(rejected.rejected)
+        assertFalse(rejected.opened.await())
+        assertEquals(1, launches)
+    }
+
     @Test
     fun permissionGrantResumesPendingOperationOnce() = runBlocking {
         val permission = BridgePermissionRequest()

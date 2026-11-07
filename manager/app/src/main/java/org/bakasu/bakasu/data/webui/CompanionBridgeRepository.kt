@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import java.io.Closeable
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.io.IOException
 import java.lang.ref.WeakReference
 import java.util.Locale
 import java.util.UUID
@@ -65,6 +66,8 @@ internal class BridgeConnection(val socket: BluetoothSocket, private val onClose
         closed = true
         try {
             socket.close()
+        } catch (error: IOException) {
+            Log.w("CompanionBridge", "Connection close failed", error)
         } finally {
             onClosed(this)
         }
@@ -305,12 +308,20 @@ class CompanionBridgeRepository(
 
     @Synchronized
     fun approveRequest(id: String, remember: Boolean?) {
-        pendingRequest?.takeIf { it.request.id == id }?.approval?.complete(remember)
+        pendingRequest?.takeIf { it.request.id == id }?.let {
+            if (remember == null) it.reject() else it.approval.complete(remember)
+        }
     }
 
     @Synchronized
     fun completeRequest(id: String, opened: Boolean) {
         pendingRequest?.takeIf { it.request.id == id }?.opened?.complete(opened)
+    }
+
+    @Synchronized
+    fun launchRequest(id: String, open: (BridgeRequest) -> Boolean) {
+        val request = mutableRequest.value?.takeIf { it.id == id && it.readyToOpen } ?: return
+        pendingRequest?.takeIf { it.request.id == id }?.launch { open(request) }
     }
 
     @Synchronized
@@ -321,6 +332,7 @@ class CompanionBridgeRepository(
     @Synchronized
     internal fun endRequest(id: String) {
         if (pendingRequest?.request?.id != id) return
+        pendingRequest?.expire()
         pendingRequest?.approval?.cancel()
         pendingRequest?.opened?.cancel()
         pendingRequest = null
@@ -413,15 +425,15 @@ class CompanionBridgeRepository(
                             startServer()
                             awaitServer()
                         }
-                        connection.output.apply {
-                            writeUTF("ready")
-                            flush()
-                        }
-                        val bytes = handshake(connection.socket, 30) {
-                            val (type, payload) = with(WearWebUiProtocol) { connection.input.readFrame() }
-                            if (type != WearWebUiProtocol.FRAME_OK) throw BridgeException(BridgeFailure.CONNECTION)
-                            payload
-                        }
+                        val bytes = BridgeHandoff.exchange(
+                            sendReady = {
+                                connection.output.apply {
+                                    writeUTF("ready")
+                                    flush()
+                                }
+                            },
+                            readResult = { handshake(connection.socket, 30) { with(WearWebUiProtocol) { connection.input.readFrame() } } },
+                        )
                         mutableTransfer.value = BridgeTransfer(BridgeStage.OPENED)
                         bytes
                     }
@@ -441,11 +453,12 @@ class CompanionBridgeRepository(
             }
             throw error
         } catch (error: Exception) {
-            token?.let {
-                WearWebUiSession.end(it)
-                stopServer()
-            }
             val failure = (error as? BridgeException)?.reason ?: BridgeFailure.CONNECTION
+            token?.let {
+                // A claimed page may already be running when its final acknowledgement is lost.
+                WearWebUiSession.end(it, onlyUnclaimed = failure == BridgeFailure.RESULT_UNKNOWN)
+                if (!WearWebUiSession.isActive) stopServer()
+            }
             mutableTransfer.value = BridgeTransfer(BridgeStage.FAILED, failure)
             throw BridgeException(failure, error)
         } finally {

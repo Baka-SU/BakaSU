@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.BridgeException
 import org.bakasu.bakasu.domain.model.BridgeFailure
+import org.bakasu.bakasu.domain.model.BridgeRequest
 import org.bakasu.bakasu.domain.usecase.ConfigureCompanionBridgeUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCompanionBridgeUseCase
 
@@ -44,6 +45,7 @@ class CompanionBridgeViewModel(
     fun approve(id: String, remember: Boolean?) = configure.approve(id, remember)
     fun presented(id: String) = configure.presented(id)
     fun completed(id: String, opened: Boolean) = configure.completed(id, opened)
+    fun launch(id: String, open: (BridgeRequest) -> Boolean) = configure.launch(id, open)
     fun unassociate(address: String) = run { configure.unassociate(address) }
     fun disconnect() = run { configure.disconnect() }
 

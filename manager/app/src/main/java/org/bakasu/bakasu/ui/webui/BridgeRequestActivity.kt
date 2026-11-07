@@ -108,23 +108,25 @@ class BridgeRequestActivity : ComponentActivity() {
                     if (current.requiresConfirmation && !approved) dialog.show() else dialog.hide()
                 }
                 LaunchedEffect(current?.readyToOpen) {
-                    val ready = current?.takeIf { it.readyToOpen } ?: return@LaunchedEffect
+                    if (current?.readyToOpen != true) return@LaunchedEffect
                     lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                         if (!launched) {
                             launched = true
-                            val opened = runCatching {
-                                when (ready.action) {
-                                    BridgeAction.WEB_UI -> startActivity(
-                                        Intent(this@BridgeRequestActivity, RemoteWebUIActivity::class.java)
-                                            .putExtra(BridgeActivityLaunch.PEER, ready.peer.address)
-                                            .putExtra(BridgeActivityLaunch.REQUEST, id),
-                                    )
+                            viewModel.launch(id) { ready ->
+                                val opened = runCatching {
+                                    when (ready.action) {
+                                        BridgeAction.WEB_UI -> startActivity(
+                                            Intent(this@BridgeRequestActivity, RemoteWebUIActivity::class.java)
+                                                .putExtra(BridgeActivityLaunch.PEER, ready.peer.address)
+                                                .putExtra(BridgeActivityLaunch.REQUEST, id),
+                                        )
 
-                                    BridgeAction.LINK -> startActivity(Intent(Intent.ACTION_VIEW, ready.value.toUri()).addCategory(Intent.CATEGORY_BROWSABLE))
-                                }
-                            }.isSuccess
-                            viewModel.completed(id, opened)
-                            if (!opened) BridgeActivityLaunch.failed(id)
+                                        BridgeAction.LINK -> startActivity(Intent(Intent.ACTION_VIEW, ready.value.toUri()).addCategory(Intent.CATEGORY_BROWSABLE))
+                                    }
+                                }.isSuccess
+                                if (!opened) BridgeActivityLaunch.failed(id)
+                                opened
+                            }
                             finish()
                         }
                     }

@@ -2,6 +2,7 @@ package org.bakasu.bakasu.domain.usecase
 
 import org.bakasu.bakasu.data.webui.CompanionBridgeRepository
 import org.bakasu.bakasu.domain.model.BridgePeer
+import org.bakasu.bakasu.domain.model.BridgeRequest
 
 class ObserveCompanionBridgeUseCase(private val repository: CompanionBridgeRepository) {
     operator fun invoke() = repository.state
@@ -27,6 +28,7 @@ class ConfigureCompanionBridgeUseCase(private val repository: CompanionBridgeRep
     fun approve(id: String, remember: Boolean?) = repository.approveRequest(id, remember)
     fun presented(id: String) = repository.presentRequest(id)
     fun completed(id: String, opened: Boolean) = repository.completeRequest(id, opened)
+    fun launch(id: String, open: (BridgeRequest) -> Boolean) = repository.launchRequest(id, open)
     fun answerPermission(id: String, granted: Boolean) = repository.answerPermission(id, granted)
     fun cancelTransfer() = repository.cancelTransfer()
     fun dismissTransfer() = repository.dismissTransfer()

@@ -41,7 +41,7 @@ import org.koin.compose.koinInject
  */
 class RemoteWebUIActivity : ComponentActivity() {
     private var backend: RemoteWebUiBackend? = null
-    private var pageLoaded = false
+    private var pageInitialized = false
 
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,10 +84,6 @@ class RemoteWebUIActivity : ComponentActivity() {
                             settingsRepository,
                             restrictToModule = true,
                             colorsCssProvider = { currentColorsCss.value },
-                            onPageLoaded = {
-                                pageLoaded = true
-                                BridgeActivityLaunch.ready(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
-                            },
                         )
                     }.onFailure { Log.w("RemoteWebUi", "WebView creation failed", it) }.isSuccess
                     if (!created) {
@@ -96,6 +92,8 @@ class RemoteWebUIActivity : ComponentActivity() {
                         webUIState.uiEvent = WebUIEvent.Error(claimFailed)
                         return@LaunchedEffect
                     }
+                    pageInitialized = true
+                    BridgeActivityLaunch.ready(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
                 }
                 DisposableEffect(Unit) { onDispose { webUIState.dispose() } }
 
@@ -130,12 +128,12 @@ class RemoteWebUIActivity : ComponentActivity() {
         super.onNewIntent(intent)
         if (intent.getStringExtra(BridgeActivityLaunch.REQUEST) == this.intent.getStringExtra(BridgeActivityLaunch.REQUEST)) {
             // A late notification brings the already claimed page forward without claiming twice.
-            if (pageLoaded) BridgeActivityLaunch.ready(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
+            if (pageInitialized) BridgeActivityLaunch.ready(intent.getStringExtra(BridgeActivityLaunch.REQUEST))
             return
         }
         backend?.close()
         backend = null
-        pageLoaded = false
+        pageInitialized = false
         setIntent(intent)
         recreate()
     }

@@ -217,15 +217,31 @@ class CompanionBridgeService : Service() {
                 BridgeActivityLaunch.pending[details.id] = ready
                 try {
                     repository.readyRequest(details.id)
-                    withTimeoutOrNull(25_000) { ready.await() } == true
+                    withTimeoutOrNull(25_000) { ready.await() }
                 } finally {
                     BridgeActivityLaunch.pending.remove(details.id)
                 }
             } else {
                 repository.readyRequest(details.id)
-                withTimeoutOrNull(25_000) { pending.opened.await() } == true
+                withTimeoutOrNull(25_000) { pending.opened.await() }
             }
-            with(WearWebUiProtocol) { connection.output.writeFrame(if (opened) FRAME_OK else FRAME_ERROR, byteArrayOf()) }
+            pending.expire()
+            val launched = pending.opened.await()
+            val result = opened ?: when {
+                details.action == BridgeAction.LINK -> launched
+                !launched -> false
+                else -> null
+            }
+            with(WearWebUiProtocol) {
+                connection.output.writeFrame(
+                    if (result == true) FRAME_OK else FRAME_ERROR,
+                    when {
+                        pending.rejected -> BridgeHandoff.REJECTED.toByteArray()
+                        result == false -> BridgeHandoff.OPEN_FAILED.toByteArray()
+                        else -> byteArrayOf()
+                    },
+                )
+            }
         } catch (error: BridgeException) {
             connection.output.apply {
                 writeUTF(if (error.reason == BridgeFailure.NOTIFICATIONS) "notifications-required" else "failed")

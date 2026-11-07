@@ -20,7 +20,7 @@ class RemoteWebUiRenderingTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun phoneLoadsWatchModuleWithoutLocalModuleFilesAndOnlyThenAcknowledges() {
+    fun phoneLoadsWatchModuleWithoutLocalModuleFiles() {
         val backend = TestBackend()
         val state = moduleState()
         var loaded = 0
@@ -40,7 +40,7 @@ class RemoteWebUiRenderingTest {
     }
 
     @Test
-    fun missingWatchHomepageReportsFailureWithoutAcknowledgingSuccess() {
+    fun missingWatchHomepageReportsPageFailureWithoutCallingOnLoaded() {
         val state = moduleState()
         var loaded = 0
         try {

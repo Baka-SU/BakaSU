@@ -46,6 +46,8 @@ fun WearPhoneTransferDialog(transfer: BridgeTransfer?, onCancel: () -> Unit, onD
                 BridgeFailure.NOT_PAIRED -> R.string.wear_bridge_pair_short
                 BridgeFailure.REJECTED -> R.string.wear_bridge_rejected
                 BridgeFailure.NOTIFICATIONS -> R.string.wear_bridge_notification_short
+                BridgeFailure.OPEN_FAILED -> R.string.wear_link_open_failed
+                BridgeFailure.RESULT_UNKNOWN -> R.string.wear_phone_result_unknown
                 else -> R.string.wear_phone_connection_failed
             },
         )
