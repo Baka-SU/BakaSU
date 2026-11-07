@@ -20,7 +20,6 @@ import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -29,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.net.toUri
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.material3.ButtonDefaults
@@ -67,20 +65,11 @@ import org.koin.compose.viewmodel.koinViewModel
 /** The phone's LKM install methods: patch a selected image, patch the current slot, or the inactive slot after OTA. */
 private enum class LkmMethod { SELECT_FILE, DIRECT, INACTIVE_SLOT }
 
-/** Each destination refreshes its own environment when it becomes active, preserving its draft. */
+/** Render the shared model's real loading state; leaving a page never forces an environment query. */
 @Composable
-private fun rememberInstallState(viewModel: InstallViewModel): InstallUiState {
+internal fun rememberInstallState(viewModel: InstallViewModel): InstallUiState {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val active = LocalScreenIsActive.current
-    var expectedRefresh by remember(viewModel) { mutableIntStateOf(viewModel.state.value.refreshVersion + 1) }
-    LifecycleResumeEffect(viewModel, active) {
-        if (active) {
-            expectedRefresh = viewModel.state.value.refreshVersion + 1
-            viewModel.dispatch(InstallUiAction.Refresh)
-        }
-        onPauseOrDispose { expectedRefresh = viewModel.state.value.refreshVersion + 1 }
-    }
-    return state.copy(loading = state.loading || state.refreshVersion < expectedRefresh)
+    return state
 }
 
 /** The phone Install screen's two tabs become two entries: LKM patching and AnyKernel3 flashing. */

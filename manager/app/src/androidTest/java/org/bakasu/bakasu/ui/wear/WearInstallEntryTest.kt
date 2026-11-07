@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.wear
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,12 +14,18 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.lifecycle.Lifecycle
+import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import kotlinx.coroutines.runBlocking
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.usecase.GetInstallEnvironmentUseCase
+import org.bakasu.bakasu.ui.viewmodel.InstallUiAction
+import org.bakasu.bakasu.ui.viewmodel.InstallUiState
+import org.bakasu.bakasu.ui.viewmodel.InstallViewModel
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assume.assumeFalse
 import org.junit.Rule
 import org.junit.Test
@@ -27,6 +34,36 @@ import org.koin.core.context.GlobalContext
 class WearInstallEntryTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun pausingOrCancellingBackKeepsCachedEnvironmentAndDoesNotRefresh() {
+        lateinit var model: InstallViewModel
+        lateinit var visible: InstallUiState
+        var active by mutableStateOf(true)
+        compose.runOnIdle { model = GlobalContext.get().get() }
+        compose.setContent {
+            CompositionLocalProvider(LocalScreenIsActive provides active) {
+                visible = rememberInstallState(model)
+            }
+        }
+        compose.waitUntil(15000) { !model.state.value.loading }
+        val initial = compose.runOnIdle { visible }
+        compose.runOnIdle { active = false }
+        compose.runOnIdle {
+            assertFalse(visible.loading)
+            assertEquals(initial.refreshVersion, model.state.value.refreshVersion)
+            active = true
+        }
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.runOnIdle {
+            assertFalse(visible.loading)
+            assertEquals(initial.refreshVersion, visible.refreshVersion)
+            model.dispatch(InstallUiAction.Refresh)
+        }
+        compose.waitUntil(15000) { !model.state.value.loading && model.state.value.refreshVersion > initial.refreshVersion }
+        compose.runOnIdle { assertEquals(initial.refreshVersion + 1, visible.refreshVersion) }
+    }
 
     @Test
     fun unrootedEntryReplacesTheChooserAndBackExitsInstallation() {
