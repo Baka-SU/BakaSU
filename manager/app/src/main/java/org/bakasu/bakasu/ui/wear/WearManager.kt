@@ -83,6 +83,7 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
+import org.bakasu.bakasu.ui.viewmodel.SulogLoading
 import org.bakasu.bakasu.ui.viewmodel.SulogUiAction
 import org.bakasu.bakasu.ui.viewmodel.SulogUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SulogViewModel
@@ -207,16 +208,22 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     fun open(route: WearRoute) {
         if (navigator.top != route) {
             when (route) {
-                WearRoute.Logs -> sulogViewModel.dispatch(SulogUiAction.RefreshLatest)
+                WearRoute.Logs -> {
+                    logError = null
+                    sulogViewModel.dispatch(SulogUiAction.LoadPage)
+                }
+
                 WearRoute.DynamicManagerApps -> dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Search(""))
+
                 WearRoute.Templates, is WearRoute.AppProfileTemplateChoice -> templateViewModel.dispatch(TemplateUiAction.Refresh())
+
                 else -> Unit
             }
         }
         navigator.open(route)
     }
     fun back() = navigator.back()
-    WearModuleRepoEntry(WearRoute.ModuleRepo in navigator.backStack, catalog.repositoryUrl) { moduleRepoViewModel.refresh() }
+    val repositoryPageLoading = rememberWearRepositoryLoading(WearRoute.ModuleRepo in navigator.backStack, catalog.repositoryUrl) { moduleRepoViewModel.refresh() }
     val umountOpen = WearRoute.Umount in navigator.backStack
     LaunchedEffect(umountOpen) {
         if (umountOpen) umountViewModel.dispatch(UmountManagerUiAction.Refresh())
@@ -459,6 +466,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     ::back,
                                     { open(WearRoute.Operations(WearOperationsPage.Repository)) },
                                     hasOperationsPanel = true,
+                                    isPageLoading = repositoryPageLoading,
                                 ) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
                             }
                             entry<WearRoute.ModuleRepoSearch> {
@@ -473,6 +481,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     ::back,
                                     { open(WearRoute.Operations(WearOperationsPage.Repository)) },
                                     hasOperationsPanel = true,
+                                    isPageLoading = repositoryPageLoading,
                                 ) { open(WearRoute.OnlineModule(it.moduleId, it.repositoryUrl)) }
                             }
                             entry<WearRoute.OnlineModule> { route ->
@@ -619,6 +628,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                             entry<WearRoute.Logs> {
                                 WearLogsPage(
                                     state = logs,
+                                    loading = sulogViewModel.loading.collectAsStateWithLifecycle().value,
                                     onBack = ::back,
                                     onEnable = {
                                         logError = null
@@ -637,10 +647,17 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                             entry<WearRoute.LogOptions> {
                                 WearLogOptionsPage(
                                     state = logs,
+                                    loading = sulogViewModel.loading.collectAsStateWithLifecycle().value,
                                     onBack = ::back,
-                                    onSelectFile = { sulogViewModel.dispatch(SulogUiAction.SelectFile(it)) },
+                                    onSelectFile = {
+                                        logError = null
+                                        sulogViewModel.dispatch(SulogUiAction.SelectFile(it))
+                                    },
                                     onToggleFilter = { sulogViewModel.dispatch(SulogUiAction.ToggleFilter(it)) },
-                                    onClean = { sulogViewModel.dispatch(SulogUiAction.CleanFile) },
+                                    onClean = {
+                                        logError = null
+                                        sulogViewModel.dispatch(SulogUiAction.CleanFile)
+                                    },
                                 )
                             }
                             entry<WearRoute.LogEntry> { route ->
@@ -656,6 +673,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                             entry<WearRoute.LogSearchResults> {
                                 WearLogsPage(
                                     state = logs,
+                                    loading = sulogViewModel.loading.collectAsStateWithLifecycle().value,
                                     onBack = ::back,
                                     onEnable = {
                                         logError = null
@@ -929,8 +947,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                 WearOperationsPage.Home -> home.isRefreshing
                                                 WearOperationsPage.SuperUser -> superuser.isRefreshing
                                                 WearOperationsPage.Modules -> modules.isRefreshing
-                                                WearOperationsPage.Logs -> logs.isLoading || logs.isRefreshing || logs.isEnabling
-                                                WearOperationsPage.Repository -> catalog.isRefreshing
+                                                WearOperationsPage.Logs -> sulogViewModel.loading.collectAsStateWithLifecycle().value != SulogLoading.NONE || logs.isLoading || logs.isRefreshing || logs.isEnabling
+                                                WearOperationsPage.Repository -> repositoryPageLoading || catalog.isRefreshing
                                                 WearOperationsPage.Umount -> umount.isLoading || umount.isRefreshing
                                             },
                                             onSearch = {

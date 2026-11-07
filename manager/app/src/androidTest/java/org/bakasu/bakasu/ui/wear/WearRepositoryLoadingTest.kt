@@ -80,7 +80,7 @@ class WearRepositoryLoadingTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun emptyManualRefreshUsesTheScreenCenterAndClearsWhenFinished() {
+    fun emptyManualRefreshKeepsTheTitleAndClearsWhenFinished() {
         val state = mutableStateOf(ModuleRepoUiState(isRefreshing = true, isPullRefreshing = true))
         compose.setContent {
             MaterialTheme {
@@ -91,9 +91,8 @@ class WearRepositoryLoadingTest {
         }
         val loading = compose.activity.getString(R.string.wear_loading)
         val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
-        val viewport = compose.onRoot().getUnclippedBoundsInRoot()
-        assertEquals((viewport.left.value + viewport.right.value) / 2, (indicator.left.value + indicator.right.value) / 2, 1f)
-        assertEquals((viewport.top.value + viewport.bottom.value) / 2, (indicator.top.value + indicator.bottom.value) / 2, 1f)
+        val title = compose.onNodeWithText(compose.activity.getString(R.string.module_repo)).getUnclippedBoundsInRoot()
+        assertTrue(indicator.top >= title.bottom)
         compose.runOnIdle { state.value = state.value.copy(isRefreshing = false, isPullRefreshing = false) }
         compose.onNodeWithContentDescription(loading).assertDoesNotExist()
         compose.onNodeWithText(compose.activity.getString(R.string.repo_source_empty)).assertExists()

@@ -172,15 +172,13 @@ class ModuleRepoViewModel(
         sortStarsFirst.value = enabled
     }
 
-    fun refresh(force: Boolean = true, fromPull: Boolean = false) {
-        viewModelScope.launch {
-            if (fromPull && pullRefreshing.value) return@launch
-            if (fromPull) pullRefreshing.value = true
-            try {
-                activeRepository()?.let { refreshCatalog(it, force) }
-            } finally {
-                if (fromPull) pullRefreshing.value = false
-            }
+    fun refresh(force: Boolean = true, fromPull: Boolean = false) = viewModelScope.launch {
+        if (fromPull && pullRefreshing.value) return@launch
+        if (fromPull) pullRefreshing.value = true
+        try {
+            activeRepository()?.let { refreshCatalog(it, force) }
+        } finally {
+            if (fromPull) pullRefreshing.value = false
         }
     }
 

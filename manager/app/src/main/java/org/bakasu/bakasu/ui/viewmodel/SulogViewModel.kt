@@ -2,13 +2,17 @@ package org.bakasu.bakasu.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -56,8 +60,16 @@ data class SulogFileSelector(
 
 typealias SulogUiState = SulogScreenState
 
+enum class SulogLoading {
+    NONE,
+    PAGE,
+    REFRESH,
+    OPERATION,
+}
+
 sealed interface SulogUiAction {
     data object LoadInitialData : SulogUiAction
+    data object LoadPage : SulogUiAction
     data object Refresh : SulogUiAction
     data object RefreshLatest : SulogUiAction
     data object Enable : SulogUiAction
@@ -91,6 +103,11 @@ class SulogViewModel(
     )
     private var refreshJob: Job? = null
     private var enableJob: Job? = null
+    private var loadingJob: Job? = null
+    private val mutableLoading = MutableStateFlow(SulogLoading.NONE)
+
+    // Wear observes the request directly so a new page never starts with cached refresh flags.
+    val loading: StateFlow<SulogLoading> = mutableLoading.asStateFlow()
     private val mutableEvents = MutableSharedFlow<SulogUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<SulogUiEvent> = mutableEvents.asSharedFlow()
 
@@ -123,7 +140,9 @@ class SulogViewModel(
 
     fun dispatch(action: SulogUiAction) {
         when (action) {
-            SulogUiAction.LoadInitialData -> if (sourceState.value.isLoading && refreshJob?.isActive != true) refresh(null)
+            SulogUiAction.LoadInitialData -> if (sourceState.value.isLoading && refreshJob?.isActive != true) refresh(null, SulogLoading.PAGE)
+
+            SulogUiAction.LoadPage -> refresh(null, SulogLoading.PAGE)
 
             SulogUiAction.Refresh -> refresh(state.value.selectedFilePath)
 
@@ -132,11 +151,12 @@ class SulogViewModel(
             SulogUiAction.Enable -> enable()
 
             SulogUiAction.CleanFile -> state.value.selectedFilePath?.let { path ->
-                viewModelScope.launch {
+                load(SulogLoading.OPERATION) {
                     val result = cleanSulog(path)
+                    currentCoroutineContext().ensureActive()
                     result.exceptionOrNull()?.let {
                         mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))
-                    } ?: refresh(path)
+                    } ?: refresh(path, SulogLoading.OPERATION)
                 }
             }
 
@@ -149,21 +169,22 @@ class SulogViewModel(
                 setStringSetPreference(PREF_SULOG_FILTERS, filters.value.map { it.name }.toSet())
             }
 
-            is SulogUiAction.SelectFile -> refresh(action.path)
+            is SulogUiAction.SelectFile -> refresh(action.path, SulogLoading.OPERATION)
         }
     }
 
     private fun enable() {
         if (enableJob?.isActive == true) return
-        enableJob = viewModelScope.launch {
+        enableJob = load(SulogLoading.OPERATION) {
             enabling.value = true
             try {
                 val result = setSulogEnabled(true)
+                currentCoroutineContext().ensureActive()
                 result.exceptionOrNull()?.let {
                     mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))
                 } ?: run {
                     mutableEvents.emit(SulogUiEvent.Enabled)
-                    refresh(state.value.selectedFilePath)
+                    refresh(state.value.selectedFilePath, SulogLoading.OPERATION)
                     refreshJob?.join()
                 }
             } finally {
@@ -172,13 +193,28 @@ class SulogViewModel(
         }
     }
 
-    private fun refresh(preferredFilePath: String?) {
+    private fun refresh(preferredFilePath: String?, kind: SulogLoading = SulogLoading.REFRESH) {
         refreshJob?.cancel()
-        refreshJob = viewModelScope.launch {
-            refreshSulog(preferredFilePath).exceptionOrNull()?.let {
-                mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))
-            }
+        refreshJob = load(kind) { read(preferredFilePath) }
+    }
+
+    private suspend fun read(preferredFilePath: String?) {
+        val result = refreshSulog(preferredFilePath)
+        currentCoroutineContext().ensureActive()
+        result.exceptionOrNull()?.let {
+            mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))
         }
+    }
+
+    private fun load(kind: SulogLoading, block: suspend () -> Unit): Job {
+        mutableLoading.value = kind
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) { block() }
+        loadingJob = job
+        job.invokeOnCompletion {
+            if (loadingJob === job) mutableLoading.value = SulogLoading.NONE
+        }
+        job.start()
+        return job
     }
 
     private companion object {

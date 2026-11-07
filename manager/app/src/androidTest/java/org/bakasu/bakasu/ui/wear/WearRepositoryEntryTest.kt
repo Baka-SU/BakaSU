@@ -12,8 +12,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -28,8 +30,10 @@ import androidx.compose.ui.test.swipeUp
 import androidx.lifecycle.Lifecycle
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
-import kotlin.math.abs
+import kotlinx.coroutines.CompletableJob
+import kotlinx.coroutines.Job
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.RepositoryError
 import org.bakasu.bakasu.domain.model.RepositoryFailure
 import org.bakasu.bakasu.domain.model.RepositorySource
@@ -46,6 +50,8 @@ class WearRepositoryEntryTest {
     private lateinit var resources: Resources
     private lateinit var navigator: WearNavigator
     private var requests = 0
+    private var request: CompletableJob? = null
+    private var publishRequestState = true
     private var state by mutableStateOf(ModuleRepoUiState(repositoryUrl = RepositorySource.KERNEL_SU_URL, sources = listOf(RepositorySource(RepositorySource.KERNEL_SU_URL, "KernelSU"))))
 
     @Test
@@ -67,7 +73,8 @@ class WearRepositoryEntryTest {
         showRepository()
         openRepository()
         compose.runOnIdle {
-            state = state.copy(isRefreshing = false, failures = mapOf(RepositorySource.KERNEL_SU_URL to RepositoryFailure(RepositoryError.NETWORK, httpStatus = 502)))
+            finish()
+            state = state.copy(failures = mapOf(RepositorySource.KERNEL_SU_URL to RepositoryFailure(RepositoryError.NETWORK, httpStatus = 502)))
         }
         compose.onNode(isDialog()).assertDoesNotExist()
         compose.onNodeWithText(resources.getString(R.string.wear_load_failed)).assertExists()
@@ -79,10 +86,10 @@ class WearRepositoryEntryTest {
         val loading = resources.getString(R.string.wear_loading)
         compose.onAllNodesWithContentDescription(loading).assertCountEquals(1)
         val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
-        val viewport = compose.onNodeWithTag("repository").getUnclippedBoundsInRoot()
-        assertTrue(abs((indicator.top.value + indicator.bottom.value - viewport.top.value - viewport.bottom.value) / 2) < 1f)
+        val title = compose.onNodeWithText(resources.getString(R.string.module_repo)).getUnclippedBoundsInRoot()
+        assertTrue(indicator.top >= title.bottom)
         compose.runOnIdle {
-            state = state.copy(isRefreshing = false)
+            finish()
             navigator.open(WearRoute.Operations(WearOperationsPage.Repository))
         }
         compose.onNodeWithText(resources.getString(R.string.repo_manage)).performClick()
@@ -93,7 +100,7 @@ class WearRepositoryEntryTest {
     fun resumeAndChildPagesDoNotReloadButNewVisitsAndSourceChangesDo() {
         showRepository()
         openRepository()
-        compose.runOnIdle { state = state.copy(isRefreshing = false) }
+        compose.runOnIdle { finish() }
         compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
         compose.runOnIdle {
@@ -113,9 +120,100 @@ class WearRepositoryEntryTest {
         compose.runOnIdle { assertEquals(3, requests) }
     }
 
-    private fun refresh() {
+    @Test
+    fun cachedEntriesAreHiddenOnEveryVisitBeforeTheRepositoryPublishesLoading() {
+        showRepository()
+        openRepository()
+        compose.runOnIdle {
+            finish()
+            state = state.copy(modules = listOf(cachedModule()))
+        }
+        compose.onNodeWithText("Cached module").assertExists()
+        repeat(2) {
+            compose.runOnIdle { navigator.back() }
+            compose.runOnIdle {
+                publishRequestState = false
+                navigator.open(WearRoute.ModuleRepo)
+            }
+            compose.onNodeWithText("Cached module").assertDoesNotExist()
+            compose.onNodeWithText(resources.getString(R.string.module_repo)).assertDoesNotExist()
+            assertCenteredLoading()
+            compose.runOnIdle { finish() }
+            compose.onNodeWithText("Cached module").assertExists()
+        }
+        compose.runOnIdle { assertEquals(3, requests) }
+    }
+
+    @Test
+    fun closingTheRefreshMenuAndReturningFromChildrenKeepsTheManualRequest() {
+        showRepository()
+        openRepository()
+        compose.runOnIdle {
+            finish()
+            state = state.copy(modules = listOf(cachedModule()))
+            navigator.open(WearRoute.Operations(WearOperationsPage.Repository))
+        }
+        val refresh = hasText(resources.getString(R.string.wear_refresh)) and hasClickAction()
+        compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(hasTestTag("menu")), useUnmergedTree = true).performScrollToNode(hasText(resources.getString(R.string.wear_refresh)))
+        compose.onNode(refresh).performClick()
+        compose.waitUntil { navigator.top == WearRoute.ModuleRepo }
+        compose.onNodeWithText("Cached module").assertExists()
+        val title = compose.onNodeWithText(resources.getString(R.string.module_repo)).getUnclippedBoundsInRoot()
+        val indicator = compose.onNodeWithContentDescription(resources.getString(R.string.wear_loading)).getUnclippedBoundsInRoot()
+        assertTrue(indicator.top >= title.bottom)
+        compose.runOnIdle { navigator.open(WearRoute.ModuleRepoSearchResults) }
+        compose.runOnIdle { navigator.back() }
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.runOnIdle {
+            assertEquals(2, requests)
+            assertTrue(state.isPullRefreshing)
+        }
+        compose.onNodeWithText("Cached module").assertExists()
+    }
+
+    @Test
+    fun cancellationAndSourceChangesDoNotFinishTheNextVisitAndMissingSourcesDoNotLoad() {
+        showRepository()
+        openRepository()
+        val old = compose.runOnIdle { checkNotNull(request) }
+        compose.runOnIdle { navigator.back() }
+        compose.runOnIdle { navigator.open(WearRoute.ModuleRepo) }
+        compose.runOnIdle { old.complete() }
+        assertCenteredLoading()
+        compose.runOnIdle {
+            finish()
+            state = state.copy(modules = listOf(cachedModule()), repositoryUrl = "https://example.com/other")
+        }
+        assertCenteredLoading()
+        compose.runOnIdle {
+            request?.cancel()
+            state = state.copy(isRefreshing = false)
+        }
+        compose.onNodeWithContentDescription(resources.getString(R.string.wear_loading)).assertDoesNotExist()
+        compose.runOnIdle { state = ModuleRepoUiState() }
+        compose.onNodeWithText(resources.getString(R.string.repo_source_empty)).assertExists()
+        compose.onNodeWithContentDescription(resources.getString(R.string.wear_loading)).assertDoesNotExist()
+        compose.runOnIdle { assertEquals(3, requests) }
+    }
+
+    private fun assertCenteredLoading() {
+        val indicator = compose.onNodeWithContentDescription(resources.getString(R.string.wear_loading)).getUnclippedBoundsInRoot()
+        val viewport = compose.onNodeWithTag("repository").getUnclippedBoundsInRoot()
+        assertEquals((viewport.top.value + viewport.bottom.value) / 2, (indicator.top.value + indicator.bottom.value) / 2, 1f)
+    }
+
+    private fun cachedModule() = CatalogModule("cached", "Cached module", "Author", emptyList(), "", false, 0, "", "", "", "", 0, null, "", emptyList(), RepositorySource.KERNEL_SU_URL)
+
+    private fun finish() {
+        state = state.copy(isRefreshing = false, isPullRefreshing = false)
+        request?.complete()
+    }
+
+    private fun refresh(manual: Boolean = false): Job {
         requests++
-        state = state.copy(isRefreshing = true, isPullRefreshing = requests > 1)
+        if (publishRequestState) state = state.copy(isRefreshing = true, isPullRefreshing = manual)
+        return Job().also { request = it }
     }
 
     private fun openRepository() {
@@ -128,7 +226,7 @@ class WearRepositoryEntryTest {
         resources = compose.activity.resources
         compose.setContent {
             navigator = rememberWearNavigator({}, {}, {})
-            WearModuleRepoEntry(WearRoute.ModuleRepo in navigator.backStack, state.repositoryUrl, ::refresh)
+            val pageLoading = rememberWearRepositoryLoading(WearRoute.ModuleRepo in navigator.backStack, state.repositoryUrl) { refresh() }
             MaterialTheme {
                 AppScaffold(timeText = {}) {
                     if (WearRoute.ModuleRepo in navigator.backStack) {
@@ -138,11 +236,13 @@ class WearRepositoryEntryTest {
                             menuOpen = menu != null,
                             menuActive = navigator.top == menu,
                             menuContent = { closing ->
-                                WearOperationsPanel(WearOperationsPage.Repository, navigator::back, navigator::open, {}, {}, true, true, false, {}, onClosing = closing, onRefresh = ::refresh, isRefreshing = state.isRefreshing)
+                                Box(Modifier.fillMaxSize().testTag("menu")) {
+                                    WearOperationsPanel(WearOperationsPage.Repository, navigator::back, navigator::open, {}, {}, true, true, false, {}, onClosing = closing, onRefresh = { refresh(true) }, isRefreshing = pageLoading || state.isRefreshing)
+                                }
                             },
                         ) {
                             Box(Modifier.fillMaxSize().testTag("repository")) {
-                                WearModuleRepoPage(state, ::refresh, navigator::back, { navigator.open(WearRoute.Operations(WearOperationsPage.Repository)) }, true) {}
+                                WearModuleRepoPage(state, { refresh(true) }, navigator::back, { navigator.open(WearRoute.Operations(WearOperationsPage.Repository)) }, true, pageLoading) {}
                             }
                         }
                     } else {

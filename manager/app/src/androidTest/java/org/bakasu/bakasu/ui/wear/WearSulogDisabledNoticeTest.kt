@@ -12,9 +12,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -34,7 +34,7 @@ class WearSulogDisabledNoticeTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun onlyTheTrailingButtonEnablesSulogAndItIsDisabledWhileEnabling() {
+    fun onlyTheTrailingButtonEnablesSulogAndEnablingShowsPageLoading() {
         val state = mutableStateOf(SulogUiState(isLoading = false, sulogStatus = "supported"))
         val configuration = Configuration(compose.activity.resources.configuration).apply {
             setLocale(Locale.SIMPLIFIED_CHINESE)
@@ -65,7 +65,9 @@ class WearSulogDisabledNoticeTest {
             assertEquals(1, enables)
             state.value = state.value.copy(isEnabling = true)
         }
-        compose.onNodeWithText(enable).assertIsNotEnabled()
+        compose.onNodeWithText(enable).assertDoesNotExist()
+        compose.onNodeWithText(context.getString(R.string.sulog)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(context.getString(R.string.wear_loading)).assertIsDisplayed()
         compose.runOnIdle { state.value = state.value.copy(isSulogEnabled = true, isEnabling = false) }
         compose.onNodeWithText(title).assertDoesNotExist()
         compose.onNodeWithText(enable).assertDoesNotExist()

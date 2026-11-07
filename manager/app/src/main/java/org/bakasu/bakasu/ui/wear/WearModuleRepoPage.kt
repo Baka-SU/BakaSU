@@ -96,10 +96,11 @@ internal fun WearModuleRepoPage(
     onBack: () -> Unit,
     onOpenPanel: () -> Unit,
     hasOperationsPanel: Boolean = false,
+    isPageLoading: Boolean = false,
     onOpen: (CatalogModule) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    WearModuleRepoPage(state, { viewModel.refresh(fromPull = true) }, onBack, onOpenPanel, hasOperationsPanel, onOpen)
+    WearModuleRepoPage(state, { viewModel.refresh(fromPull = true) }, onBack, onOpenPanel, hasOperationsPanel, isPageLoading, onOpen)
 }
 
 @Composable
@@ -109,13 +110,14 @@ internal fun WearModuleRepoPage(
     onBack: () -> Unit,
     onOpenPanel: () -> Unit,
     hasOperationsPanel: Boolean = false,
+    isPageLoading: Boolean = false,
     onOpen: (CatalogModule) -> Unit,
 ) {
-    val failed = !state.isRefreshing && state.content == CatalogContent.FAILED
-    val loadingWithoutContent = state.isRefreshing && state.modules.isEmpty()
+    val loading = isPageLoading || (state.isRefreshing && !state.isPullRefreshing)
+    val failed = !loading && !state.isRefreshing && state.content == CatalogContent.FAILED
     WearList(
-        isLoading = loadingWithoutContent,
-        isRefreshing = state.isRefreshing && !loadingWithoutContent,
+        isLoading = loading,
+        isRefreshing = state.isRefreshing && state.isPullRefreshing && !loading,
         onRefresh = onRefresh,
         onBack = onBack,
         onConfirm = if (failed) onRefresh else null,

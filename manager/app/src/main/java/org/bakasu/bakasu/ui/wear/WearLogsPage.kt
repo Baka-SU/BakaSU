@@ -40,6 +40,7 @@ import org.bakasu.bakasu.ui.screen.sulogEntryStatus
 import org.bakasu.bakasu.ui.screen.sulogEntrySummaryTags
 import org.bakasu.bakasu.ui.screen.sulogEntryTitle
 import org.bakasu.bakasu.ui.screen.sulogFilterLabel
+import org.bakasu.bakasu.ui.viewmodel.SulogLoading
 import org.bakasu.bakasu.ui.viewmodel.SulogUiState
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearBadge
@@ -80,13 +81,16 @@ internal fun WearLogsPage(
     error: String? = null,
     hasOperationsPanel: Boolean = false,
     onEditSearch: (() -> Unit)? = null,
+    loading: SulogLoading = SulogLoading.NONE,
 ) {
+    val pageLoading = state.isLoading || state.isEnabling || loading == SulogLoading.PAGE || loading == SulogLoading.OPERATION
+    val refreshing = loading == SulogLoading.REFRESH && !pageLoading
     val failures = listOfNotNull(error, state.errorMessage).filter { it.isNotBlank() }.distinct()
-    WearErrorDialog(failures.takeIf { it.isNotEmpty() && !state.isLoading && !state.isRefreshing }?.joinToString("\n"))
-    // The operations menu refreshes the existing list; first load shows only the loading indicator.
+    WearErrorDialog(failures.takeIf { it.isNotEmpty() && !pageLoading && !refreshing }?.joinToString("\n"))
+    // Every visit and log operation loads the page; only an explicit refresh keeps the list.
     WearList(
-        isLoading = state.isLoading,
-        isRefreshing = (state.isRefreshing || state.isEnabling) && !state.isLoading,
+        isLoading = pageLoading,
+        isRefreshing = refreshing,
         onRefresh = onRefresh,
         onBack = onBack,
         onOpenPanel = onOpenPanel,
@@ -213,6 +217,7 @@ internal fun WearLogOptionsPage(
     onSelectFile: (String) -> Unit,
     onToggleFilter: (SulogEventFilter) -> Unit,
     onClean: () -> Unit,
+    loading: SulogLoading = SulogLoading.NONE,
 ) {
     val cleanDialog = rememberWearConfirmDialog(
         stringResource(R.string.sulog_clean_title),
@@ -221,7 +226,7 @@ internal fun WearLogOptionsPage(
         onConfirm = onClean,
     )
     val selectedPath = state.selectedFilePath ?: state.files.firstOrNull()?.path
-    WearList(onBack = onBack) { spec ->
+    WearList(isLoading = loading == SulogLoading.OPERATION || loading == SulogLoading.PAGE, onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.sulog_filter_title)) }
         SegmentedColumn(SulogEventFilter.entries, { "filter-$it" }) { filter ->
             WearSettingsSwitchWidget(
