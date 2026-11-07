@@ -1,6 +1,5 @@
 package org.bakasu.bakasu.ui.wear
 
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -197,15 +196,13 @@ internal fun WearModuleInstallConfirmDialog(installer: WearModuleInstaller) {
         if (version.isNotBlank()) item { WearDialogField(stringResource(R.string.module_version), version) }
         module?.author?.ifBlank { null }?.let { author -> item { WearDialogField(stringResource(R.string.module_author), author) } }
         if (fileName.isNotBlank()) item { WearDialogField(stringResource(R.string.wear_file_name), fileName) }
-        item { WearDialogField(stringResource(R.string.wear_install_target), Build.MODEL) }
         // The description is its own group: 4dp more above it gives the dialog's 8dp group spacing.
         module?.description?.ifBlank { null }?.let { description ->
             item {
-                Text(
+                WearDialogField(
+                    stringResource(R.string.wear_module_description),
                     description,
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
                 )
             }
         }
@@ -217,8 +214,8 @@ internal fun WearModuleInstallConfirmDialog(installer: WearModuleInstaller) {
  * and are centered, like the dialog's own title and text slots.
  */
 @Composable
-private fun WearDialogField(label: String, value: String) {
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+private fun WearDialogField(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             label,
             modifier = Modifier.fillMaxWidth(),

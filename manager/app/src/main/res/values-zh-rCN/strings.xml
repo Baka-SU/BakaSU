@@ -774,6 +774,7 @@
     <string name="wear_module_information">模块信息</string>
     <string name="wear_module_operations">模块操作</string>
     <string name="wear_description">描述</string>
+    <string name="wear_module_description">模块介绍</string>
     <string name="wear_meta_badge">META</string>
     <string name="wear_authorization">授权配置</string>
     <string name="wear_app_operations">应用操作</string>
