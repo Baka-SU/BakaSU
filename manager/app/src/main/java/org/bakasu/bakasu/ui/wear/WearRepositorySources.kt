@@ -9,7 +9,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
@@ -26,9 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.RepositoryApiType
 import org.bakasu.bakasu.domain.model.RepositoryFailure
@@ -36,12 +32,12 @@ import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
-import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
+import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
@@ -99,25 +95,19 @@ internal fun WearRepositorySourcePage(url: String, selectedUrl: String?, onBack:
         }
         return
     }
-    WearList(onBack = onBack, isBusy = state.busy) { spec ->
-        item {
-            WearInfoCard(spec, shape = ButtonDefaults.shape, contentPadding = ButtonDefaults.ContentPadding) {
-                Text(source.displayName, style = MaterialTheme.typography.titleMedium)
-            }
-        }
-        item { WearModuleInfoCard(spec, compact = true) { WearDetailField(Icons.Rounded.Language, stringResource(R.string.repo_server_url), source.url) } }
-        item { WearModuleInfoCard(spec, compact = true) { WearDetailField(Icons.Rounded.Tune, stringResource(R.string.repo_api_type), stringResource(source.apiType.resId)) } }
+    WearList(
+        onBack = onBack,
+        isBusy = state.busy,
+        onConfirm = { onSelect(source.url) },
+        confirmLabel = stringResource(R.string.repo_select_repository),
+        confirmEnabled = !state.busy && selectedUrl != source.url,
+        timeText = { WearTimeText(source.displayName) },
+    ) { spec ->
+        item { WearPageHeader(spec, source.displayName) }
+        item { WearModuleInfoCard(spec, compact = true) { WearDetailField(Icons.Rounded.Language, stringResource(R.string.repo_server_url), source.url, largeIcon = true) } }
+        item { WearModuleInfoCard(spec, compact = true) { WearDetailField(Icons.Rounded.Tune, stringResource(R.string.repo_api_type), stringResource(source.apiType.resId), largeIcon = true) } }
         if (source.description.isNotBlank()) {
-            item { WearModuleInfoCard(spec, compact = true) { WearDetailField(Icons.Rounded.Description, stringResource(R.string.wear_description), source.description) } }
-        }
-        item {
-            WearActionButton(
-                spec,
-                Icons.Rounded.Check,
-                stringResource(R.string.repo_select_repository),
-                { onSelect(source.url) },
-                enabled = !state.busy && selectedUrl != source.url,
-            )
+            item { WearModuleInfoCard(spec, compact = true) { WearDetailField(Icons.Rounded.Description, stringResource(R.string.wear_description), source.description, largeIcon = true) } }
         }
         if (!source.isBuiltIn) {
             SegmentedColumn(listOf(R.string.repo_edit_name, R.string.repo_remove), { it }) { action ->
