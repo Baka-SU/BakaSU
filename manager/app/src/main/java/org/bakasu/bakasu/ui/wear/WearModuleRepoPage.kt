@@ -121,7 +121,7 @@ internal fun WearModuleRepoPage(
         panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
-        if (state.modules.isEmpty() && state.search.isBlank() && !state.isRefreshing) {
+        if (state.modules.isEmpty() && !state.isRefreshing) {
             item {
                 WearEmptyState(
                     spec,
