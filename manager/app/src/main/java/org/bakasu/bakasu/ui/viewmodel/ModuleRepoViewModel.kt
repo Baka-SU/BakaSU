@@ -47,9 +47,9 @@ data class ModuleRepoUiState(
     val failures: Map<String, RepositoryFailure> = emptyMap(),
 ) {
     val content: CatalogContent get() = when {
-        modules.isNotEmpty() -> CatalogContent.MODULES
-        isRefreshing -> CatalogContent.LOADING
+        isRefreshing && modules.isEmpty() -> CatalogContent.LOADING
         sources.any { it.url == repositoryUrl && it.url in failures } -> CatalogContent.FAILED
+        modules.isNotEmpty() -> CatalogContent.MODULES
         search.isNotBlank() -> CatalogContent.SEARCH_EMPTY
         else -> CatalogContent.SOURCE_EMPTY
     }

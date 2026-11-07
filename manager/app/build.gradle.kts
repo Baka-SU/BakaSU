@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.lsplugin.apksign)
     alias(libs.plugins.aboutLibraries)
     id("kotlin-parcelize")
+    id("cc.star0.wear.lib.cnwearoverlay")
 }
 
 val androidCompileSdkVersion = rootProject.extra["androidCompileSdkVersion"] as Int
@@ -134,6 +135,7 @@ android {
         versionCode = managerVersionCode
         versionName = managerVersionName
         applicationId = managerPackageName
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val isPrBuild = rootProject.extra["isPrBuild"] as Boolean
         buildConfigField("boolean", "IS_PR_BUILD", isPrBuild.toString())
@@ -194,6 +196,9 @@ aboutLibraries {
 }
 
 dependencies {
+    testImplementation(libs.junit4)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.runner)
     lintChecks(project(":lint-rules"))
     baselineProfile(project(":baselineprofile"))
 
@@ -219,9 +224,17 @@ dependencies {
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.wear.compose.foundation)
+    implementation(libs.androidx.wear.compose.material3)
+    implementation(libs.androidx.wear.compose.navigation3)
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
     implementation(libs.androidx.compose.runtime.tracing)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // Keep the debug APK aligned with Compose UI tests under AGP's tested-app constraints.
+    debugImplementation(libs.androidx.concurrent.futures.ktx)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -259,6 +272,7 @@ dependencies {
     implementation(libs.markdown)
     implementation(libs.markwon.tables)
     implementation(libs.androidx.webkit)
+    implementation(libs.androidx.wear.input)
 
     implementation(libs.lsposed.cxx)
 

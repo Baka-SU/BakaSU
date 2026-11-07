@@ -39,13 +39,10 @@ class ModuleRepository(
         withContext(Dispatchers.IO) {
             mutableInstalledModules.update { it.copy(refreshing = true) }
             runCatching {
-                val previous = mutableInstalledModules.value.modules
-                val previousVersionKeys = if (manual) {
-                    emptySet()
-                } else {
-                    previous.mapTo(mutableSetOf()) { it.id + it.versionCode }
+                val previous = mutableInstalledModules.value.modules.associateBy { it.id }
+                val modules = parseModules(ksuCliRepository.listModules()).map { module ->
+                    module.withCachedUpdate(previous[module.id].takeIf { checkUpdates })
                 }
-                val modules = parseModules(ksuCliRepository.listModules())
                 val requiresMount = coroutineScope {
                     modules.map { module ->
                         async(Dispatchers.IO) {
@@ -69,20 +66,7 @@ class ModuleRepository(
                     val withUpdates = coroutineScope {
                         modules.map { module ->
                             async(Dispatchers.IO) {
-                                val shouldCheck =
-                                    module.id + module.versionCode !in previousVersionKeys ||
-                                        module.updateJson.isEmpty() ||
-                                        module.remove || module.update || !module.enabled
-                                module.copy(
-                                    moduleUpdate = if (shouldCheck) {
-                                        checkUpdate(
-                                            module.updateJson,
-                                            module.versionCode,
-                                        ).getOrNull()
-                                    } else {
-                                        null
-                                    },
-                                )
+                                module.refreshUpdate(manual, ::checkUpdate)
                             }
                         }.awaitAll()
                     }
@@ -196,6 +180,22 @@ class ModuleRepository(
             else -> MetaModuleStatus.ACTIVE
         }
     }
+}
+
+/** Enabling or disabling a module does not change which release it can update to. */
+internal fun InstalledModule.withCachedUpdate(previous: InstalledModule?): InstalledModule = copy(
+    moduleUpdate = previous?.takeIf {
+        it.id == id && it.versionCode == versionCode && it.updateJson == updateJson
+    }?.moduleUpdate,
+)
+
+internal suspend fun InstalledModule.refreshUpdate(
+    manual: Boolean,
+    checkUpdate: suspend (String, Int) -> Result<ModuleUpdateMetadata?>,
+): InstalledModule {
+    if (updateJson.isBlank() || (!manual && moduleUpdate != null)) return this
+    // A failed request cannot invalidate an already known update; a successful empty result can.
+    return copy(moduleUpdate = checkUpdate(updateJson, versionCode).getOrElse { moduleUpdate })
 }
 
 private fun JSONObject.getBooleanCompat(key: String, default: Boolean = false): Boolean = if (!has(key)) {

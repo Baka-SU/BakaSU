@@ -19,7 +19,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bakasu.bakasu.data.module.RepositorySourceStore
-import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.data.network.documentResponse
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
@@ -35,7 +34,6 @@ import org.bakasu.bakasu.domain.model.RepositoryFailure
 class KernelSuRegistryRepository private constructor(
     private val application: Application,
     private val httpClient: OkHttpClient,
-    private val networkStatus: NetworkStatusRepository,
     private val sourceStore: RepositorySourceStore?,
     val baseUrl: String,
     private val repositories: ConcurrentHashMap<String, KernelSuRegistryRepository>,
@@ -43,9 +41,8 @@ class KernelSuRegistryRepository private constructor(
     constructor(
         application: Application,
         httpClient: OkHttpClient,
-        networkStatus: NetworkStatusRepository,
         sourceStore: RepositorySourceStore? = null,
-    ) : this(application, httpClient, networkStatus, sourceStore, RegistryUrls.DEFAULT_BASE_URL, ConcurrentHashMap()) {
+    ) : this(application, httpClient, sourceStore, RegistryUrls.DEFAULT_BASE_URL, ConcurrentHashMap()) {
         repositories[baseUrl] = this
     }
 
@@ -68,7 +65,7 @@ class KernelSuRegistryRepository private constructor(
         require(parsed != null && parsed.isHttps && parsed.username.isEmpty() && parsed.password.isEmpty()) { "Invalid registry URL" }
         val normalized = RegistryUrls.normalizeBaseUrl(parsed.newBuilder().query(null).fragment(null).build().toString())
         return repositories.computeIfAbsent(normalized) {
-            KernelSuRegistryRepository(application, httpClient, networkStatus, sourceStore, normalized, repositories)
+            KernelSuRegistryRepository(application, httpClient, sourceStore, normalized, repositories)
         }
     }
 
@@ -89,7 +86,6 @@ class KernelSuRegistryRepository private constructor(
 
     private fun fetch(url: String, owner: Job): String {
         owner.ensureActive()
-        if (!networkStatus.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)
         val request = Request.Builder().url(url).cacheControl(CacheControl.Builder().noCache().build()).build()
         var cancellation: DisposableHandle? = null
         try {
@@ -179,10 +175,10 @@ class KernelSuRegistryRepository private constructor(
         }
     }
 
-    suspend fun loadCatalog(): RegistryClient.CatalogLoad = withClient { client.loadCatalog() }
+    suspend fun loadCatalog(): RegistryClient.CatalogLoad = withClient { client.loadCatalog(allowCache = false) }
 
     suspend fun loadDetail(moduleId: String): RegistryClient.DetailLoad = withClient {
-        client.loadDetail(moduleId).also { rememberDetail(it.detail) }
+        client.loadDetail(moduleId, allowCache = false).also { rememberDetail(it.detail) }
     }
 
     fun currentCatalog(): RegistryCatalog? = publishedCatalog
@@ -229,12 +225,12 @@ class KernelSuRegistryRepository private constructor(
     }
 
     suspend fun readme(module: CatalogModule): ModuleReadme? = withClient {
-        val catalog = client.catalog()
+        val catalog = client.catalog(allowCache = false)
         if (catalog.find(module.moduleId) == null) throw ModuleNotInIndexException(module.moduleId)
         val detail = details[module.moduleId]?.takeIf { it.buildId == catalog.buildId }
-            ?: client.loadDetail(module.moduleId).detail.also { rememberDetail(it) }
+            ?: client.loadDetail(module.moduleId, allowCache = false).detail.also { rememberDetail(it) }
         if (module.registryMetadata?.buildId != detail.buildId) throw BuildMismatchException("README build changed")
-        client.loadReadme(detail)?.let { ModuleReadme(it.html, client.baseUrl, DocumentFormat.HTML, DocumentPolicy.SameOrigin(client.baseUrl)) }
+        client.loadReadme(detail, allowCache = false)?.let { ModuleReadme(it.html, client.baseUrl, DocumentFormat.HTML, DocumentPolicy.SameOrigin(client.baseUrl)) }
     }
 
     suspend fun resolveUpdate(moduleId: String, updateJsonUrl: String, zipUrl: String, versionCode: Int): ModuleUpdateVerification {

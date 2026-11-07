@@ -713,6 +713,7 @@ fun DonateCard(
     showIcon: Boolean,
 ) {
     val uriHandler = LocalUriHandler.current
+    val supportUrl = stringResource(R.string.home_support_url)
     SegmentedColumn(
         modifier = Modifier.fillMaxWidth(),
         title = stringResource(R.string.home_support_title),
@@ -725,7 +726,7 @@ fun DonateCard(
                 title = stringResource(R.string.home_support_title),
                 description = stringResource(R.string.home_support_content),
                 onClick = {
-                    uriHandler.openUri("https://patreon.com/weishu")
+                    uriHandler.openUri(supportUrl)
                 },
             )
         }

@@ -39,10 +39,10 @@ import org.json.JSONObject
 data class RepositoryFeed(val source: RepositorySource, val modules: List<CatalogModule>, val error: RepositoryFailure? = null, val registryBuildId: String? = null)
 
 class ModuleCatalogRepository(
-    private val networkStatusRepository: NetworkStatusRepository,
     private val networkRequestRepository: NetworkRequestRepository,
     private val sourceStore: RepositorySourceStore,
     private val registry: KernelSuRegistryRepository,
+    private val networkStatus: NetworkStatusRepository,
 ) {
     private data class SourceRequest(val source: RepositorySource, val generation: Long)
 
@@ -61,7 +61,7 @@ class ModuleCatalogRepository(
     val failures: StateFlow<Map<String, RepositoryFailure>> = mutableFailures.asStateFlow()
 
     fun isCurrent(module: CatalogModule): Boolean {
-        if (mutableSources.value.none { it.url == module.repositoryUrl }) return false
+        if (mutableSources.value.none { it.url == module.repositoryUrl } || module.repositoryUrl in mutableFailures.value) return false
         return if (module.registryMetadata != null) {
             val catalog = registry.forSource(module.repositoryUrl).currentCatalog() ?: return false
             module.detailLoaded && module.registryMetadata.buildId == catalog.buildId && catalog.find(module.moduleId) != null
@@ -80,10 +80,6 @@ class ModuleCatalogRepository(
                 publishModules()
                 return ModuleCatalogResult.Success(mutableModules.value)
             }
-            if (!networkStatusRepository.isAvailable() && sources.none { it.apiType == RepositoryApiType.KERNEL_SU }) {
-                mutableFailures.value = mutableFailures.value + sources.associate { it.url to RepositoryFailure(RepositoryError.OFFLINE) }
-                return ModuleCatalogResult.Failure(ModuleCatalogFailure.Offline)
-            }
             sources.map { it.url to refreshMutexes.getOrPut(it.url) { Mutex() } }
         }
         val results = coroutineScope {
@@ -99,12 +95,14 @@ class ModuleCatalogRepository(
                                 mutableRefreshingSources.value = mutableRefreshingSources.value + url
                                 SourceRequest(source, sourceGenerations[url] ?: 0)
                             }
-                            val result = attempt { loadSource(request.source) }
+                            val result = attempt { loadSource(request.source, forceNetwork = force) }
                             stateMutex.withLock commit@{
                                 val current = mutableSources.value.firstOrNull { it.url == url } ?: return@commit false
                                 if ((sourceGenerations[url] ?: 0) != request.generation) return@commit false
                                 val feed = result.getOrElse { error ->
-                                    mutableFailures.value = mutableFailures.value + (url to if (current.apiType == RepositoryApiType.KERNEL_SU) KernelSuRegistryRepository.failure(error) else RepositoryFailure.from(error))
+                                    cachedModules.remove(url)
+                                    mutableFailures.value = mutableFailures.value + (url to failure(error, current))
+                                    publishModules()
                                     return@commit false
                                 }
                                 if (feed.registryBuildId != null && feed.registryBuildId != registry.forSource(url).currentCatalog()?.buildId) return@commit false
@@ -195,8 +193,9 @@ class ModuleCatalogRepository(
                         publishModules()
                         return@withLock ModuleCatalogResult.Failure(ModuleCatalogFailure.NotFound)
                     }
-                    mutableFailures.value = mutableFailures.value + (url to KernelSuRegistryRepository.failure(error))
-                    return@withLock ModuleCatalogResult.Failure(ModuleCatalogFailure.Network(""))
+                    val failure = failure(error, source)
+                    mutableFailures.value = mutableFailures.value + (url to failure)
+                    return@withLock ModuleCatalogResult.Failure(if (failure.reason == RepositoryError.OFFLINE) ModuleCatalogFailure.Offline else ModuleCatalogFailure.Network(""))
                 }
                 if (registry.currentCatalog()?.buildId != load.catalog.buildId) {
                     return@withLock ModuleCatalogResult.Failure(ModuleCatalogFailure.Network(""))
@@ -210,7 +209,7 @@ class ModuleCatalogRepository(
                             ?: RegistryCatalogMapper.summary(item, load.catalog, source)
                     }
                 }
-                load.error?.let { mutableFailures.value = mutableFailures.value + (url to KernelSuRegistryRepository.failure(it)) }
+                mutableFailures.value = mutableFailures.value - url
                 publishModules()
                 ModuleCatalogResult.Success(find() ?: return@withLock ModuleCatalogResult.Failure(ModuleCatalogFailure.NotFound))
             }
@@ -228,7 +227,7 @@ class ModuleCatalogRepository(
         }
     }
 
-    suspend fun readme(module: CatalogModule, retry: Boolean = false): Result<ModuleReadme?> = attempt {
+    suspend fun readme(module: CatalogModule): Result<ModuleReadme?> = attempt {
         if (module.registryMetadata != null) return@attempt registry.forSource(module.repositoryUrl).readme(module)
         val policy = module.documentPolicy()
         val readmeUrl = module.readmeUrl.toHttpUrlOrNull()
@@ -245,7 +244,7 @@ class ModuleCatalogRepository(
         var documentFailure: IOException? = null
         if (directUrl.isNotBlank() && !githubProject) {
             try {
-                return@attempt fetchReadme(directUrl, policy, retry)
+                return@attempt fetchReadme(directUrl, policy)
             } catch (error: IOException) {
                 documentFailure = error
             }
@@ -276,7 +275,7 @@ class ModuleCatalogRepository(
         val response = networkRequestRepository.request(
             apiUrl,
             headers = mapOf("Accept" to "application/vnd.github+json"),
-            forceNetwork = retry,
+            forceNetwork = true,
             documentPolicy = policy,
         ).getOrElse { error ->
             if (error is HttpStatusException && error.statusCode == 404 && documentFailure == null) return@attempt null
@@ -292,11 +291,15 @@ class ModuleCatalogRepository(
             val format = if (json.optString("name").substringAfterLast('.').lowercase() in setOf("html", "htm")) DocumentFormat.HTML else DocumentFormat.MARKDOWN
             return@attempt ModuleReadme(content, url, format, policy)
         }
-        fetchReadme(url, policy, retry)
+        fetchReadme(url, policy)
+    }.recoverCatching { error ->
+        if (error is CancellationException) throw error
+        if (error is IOException && !networkStatus.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)
+        throw error
     }
 
-    private suspend fun fetchReadme(url: String, policy: DocumentPolicy, retry: Boolean): ModuleReadme {
-        val response = networkRequestRepository.request(url, forceNetwork = retry, documentPolicy = policy).getOrThrow()
+    private suspend fun fetchReadme(url: String, policy: DocumentPolicy): ModuleReadme {
+        val response = networkRequestRepository.request(url, forceNetwork = true, documentPolicy = policy).getOrThrow()
         return response.toDocument(policy)
     }
 
@@ -306,7 +309,6 @@ class ModuleCatalogRepository(
             mutableSources.value.firstOrNull { it.url == canonical }?.let { return@attempt it }
             sourceGenerations[canonical] ?: 0
         }
-        if (!networkStatusRepository.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)
         val source = RepositorySource(canonical, canonical, apiType = apiType)
         val feed = withContext(Dispatchers.IO) { loadSource(source) }
         stateMutex.withLock {
@@ -356,10 +358,9 @@ class ModuleCatalogRepository(
         }
     }
 
-    private suspend fun loadSource(source: RepositorySource): RepositoryFeed {
+    private suspend fun loadSource(source: RepositorySource, forceNetwork: Boolean = false): RepositoryFeed {
         if (source.apiType == RepositoryApiType.KERNEL_SU) return loadKernelSuSource(source)
-        if (!networkStatusRepository.isAvailable()) throw RepositoryException(RepositoryError.OFFLINE)
-        val body = networkRequestRepository.fetch("${source.url}json/modules.json").getOrThrow()
+        val body = networkRequestRepository.fetch("${source.url}json/modules.json", forceNetwork = forceNetwork).getOrThrow()
         val feed = MmrlRepositoryParser.parse(source.url, body)
         return feed.copy(
             source = feed.source.copy(
@@ -379,6 +380,12 @@ class ModuleCatalogRepository(
             RegistryCatalogMapper.summary(item, load.catalog.copy(fromCache = load.catalog.fromCache || load.error != null), source)
         }
         return RepositoryFeed(source.copy(moduleCount = modules.size), modules, load.error?.let(KernelSuRegistryRepository::failure), load.catalog.buildId)
+    }
+
+    private fun failure(error: Throwable, source: RepositorySource): RepositoryFailure = when {
+        error is IOException && !networkStatus.isAvailable() -> RepositoryFailure(RepositoryError.OFFLINE)
+        source.apiType == RepositoryApiType.KERNEL_SU -> KernelSuRegistryRepository.failure(error)
+        else -> RepositoryFailure.from(error)
     }
 
     private suspend fun <T> attempt(block: suspend () -> T): Result<T> = try {

@@ -22,7 +22,6 @@ data class NetworkResponse(
 }
 
 class NetworkRequestRepository(
-    private val networkStatusRepository: NetworkStatusRepository,
     private val httpClient: OkHttpClient,
 ) {
     suspend fun fetch(
@@ -47,10 +46,6 @@ class NetworkRequestRepository(
         maxResponseBytes: Long? = null,
         documentPolicy: DocumentPolicy? = null,
     ): Result<NetworkResponse> = withContext(Dispatchers.IO) {
-        if (!networkStatusRepository.isAvailable()) {
-            return@withContext Result.failure(IllegalStateException("offline"))
-        }
-
         runCatching {
             val request = Request.Builder()
                 .url(url)

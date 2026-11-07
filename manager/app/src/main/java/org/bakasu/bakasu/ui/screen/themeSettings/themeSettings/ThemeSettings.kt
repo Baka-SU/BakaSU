@@ -1107,11 +1107,14 @@ private fun DimSlider(
 
 @Composable
 private fun LanguageSetting(state: SettingsUiState, viewModel: SettingsViewModel) {
+    org.bakasu.bakasu.ui.util.ActivityResumeEffect(viewModel) {
+        viewModel.dispatch(SettingsUiAction.RefreshLanguage)
+    }
     val language = stringResource(id = R.string.settings_language)
     val languageSystemDefault = stringResource(R.string.language_system_default)
 
     // Compute display name based on current app locale
-    val currentLanguageDisplay = remember(state.currentAppLocale) {
+    val currentLanguageDisplay = remember(state.currentAppLocale, languageSystemDefault) {
         val locale = state.currentAppLocale
         if (locale != null) {
             locale.getDisplayName(locale)
@@ -1136,10 +1139,7 @@ private fun LanguageSetting(state: SettingsUiState, viewModel: SettingsViewModel
                 if (locale.country.isEmpty()) locale.language else "${locale.language}_${locale.country}"
             } ?: "system",
             onLanguageSelected = { localeTag ->
-                // Update local state immediately
                 viewModel.dispatch(SettingsUiAction.SetLanguage(localeTag))
-                // Apply locale change immediately for Android < 13
-                viewModel.dispatch(SettingsUiAction.RestartActivity)
             },
             onDismiss = {
                 viewModel.dispatch(SettingsUiAction.SetLanguageDialogVisible(false))

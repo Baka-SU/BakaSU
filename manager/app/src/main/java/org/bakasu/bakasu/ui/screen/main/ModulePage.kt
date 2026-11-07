@@ -122,6 +122,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.data.file.ModuleUtils
+import org.bakasu.bakasu.data.file.ZipFileInfo
+import org.bakasu.bakasu.data.file.ZipType
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
 import org.bakasu.bakasu.domain.model.DocumentFormat
 import org.bakasu.bakasu.domain.model.DocumentPolicy
@@ -140,9 +143,6 @@ import org.bakasu.bakasu.ui.component.InstallConfirmationDialog
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.WarningCard
-import org.bakasu.bakasu.ui.component.ZipFileDetector
-import org.bakasu.bakasu.ui.component.ZipFileInfo
-import org.bakasu.bakasu.ui.component.ZipType
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberLoadingDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
@@ -189,7 +189,7 @@ fun ModulePage(bottomPadding: Dp) {
     val isModuleUriAccessible = koinInject<IsModuleUriAccessibleUseCase>()
     val takeModuleUriPermission = koinInject<TakeModuleUriPermissionUseCase>()
     val extractModuleName = koinInject<ExtractModuleNameUseCase>()
-    val zipFileDetector = koinInject<ZipFileDetector>()
+    val zipFileDetector = koinInject<ModuleUtils>()
     val peekScript = koinInject<PeekOneshotScriptUseCase>()
     val navigator = LocalNavigator.current
     val context = LocalContext.current

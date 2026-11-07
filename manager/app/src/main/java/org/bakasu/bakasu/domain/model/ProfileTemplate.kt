@@ -25,6 +25,8 @@ sealed interface ProfileTemplateFailure {
     data object NotFound : ProfileTemplateFailure
     data object Invalid : ProfileTemplateFailure
     data object Conflict : ProfileTemplateFailure
+    data object Offline : ProfileTemplateFailure
+    data object RequestFailed : ProfileTemplateFailure
     data class Command(val message: String) : ProfileTemplateFailure
 }
 
