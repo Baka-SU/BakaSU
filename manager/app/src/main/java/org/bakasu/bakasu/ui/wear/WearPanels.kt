@@ -8,6 +8,8 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Refresh
@@ -66,6 +68,8 @@ internal fun WearOperationsPanel(
     onClosing: () -> Unit = {},
     onRefresh: (() -> Unit)? = null,
     isRefreshing: Boolean = false,
+    onImportTemplates: () -> Unit = {},
+    onExportTemplates: () -> Unit = {},
 ) {
     var refreshRequested by remember { mutableStateOf(false) }
     val rebootMethods = wearRebootMethods()
@@ -112,6 +116,13 @@ internal fun WearOperationsPanel(
         WearOperationsPage.Umount -> listOf(
             WearIconAction(Icons.Rounded.Add, stringResource(R.string.add_umount_path), { onOpen(WearRoute.AddUmount) }),
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.wear_search_umount_paths), onSearch),
+        )
+
+        WearOperationsPage.Templates -> listOf(
+            WearIconAction(Icons.Rounded.Add, stringResource(R.string.app_profile_template_create), { onOpen(WearRoute.TemplateEditor("", false, true)) }),
+            WearIconAction(Icons.Rounded.Cloud, stringResource(R.string.wear_template_view_online), { onOpen(WearRoute.OnlineTemplates) }),
+            WearIconAction(Icons.Rounded.ContentPaste, stringResource(R.string.app_profile_import_from_clipboard), onImportTemplates),
+            WearIconAction(Icons.Rounded.ContentCopy, stringResource(R.string.app_profile_export_to_clipboard), onExportTemplates),
         )
 
         WearOperationsPage.Repository -> listOf(

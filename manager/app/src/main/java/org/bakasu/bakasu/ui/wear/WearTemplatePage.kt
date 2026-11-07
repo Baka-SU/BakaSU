@@ -7,8 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Cloud
-import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Edit
@@ -77,18 +75,15 @@ import org.koin.core.parameter.parametersOf
  * @date 2026/10/1.
  */
 
-/** The phone template list: local and synchronized templates, import, export and synchronization. */
+/** Templates already saved on this device; menu actions share the same state owner. */
 @Composable
 internal fun WearTemplatePage(
+    state: org.bakasu.bakasu.ui.viewmodel.TemplateUiState,
     onBack: () -> Unit,
-    onOpenOnline: () -> Unit,
+    onOpenPanel: () -> Unit,
     onOpenTemplate: (id: String, readOnly: Boolean, creation: Boolean) -> Unit,
+    onDelete: (String) -> Unit,
 ) {
-    val viewModel = koinViewModel<TemplateViewModel>()
-    val toast = LocalWearToast.current
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val listState = rememberTransformingLazyColumnState()
     // A saved template is deleted only after confirmation; the swipe only asks for it.
     var pendingDelete by remember { mutableStateOf<ProfileTemplate?>(null) }
@@ -97,69 +92,18 @@ internal fun WearTemplatePage(
         pendingDelete?.let { stringResource(R.string.wear_template_delete_message, it.name.ifBlank { it.id }) }.orEmpty(),
         destructive = true,
     ) {
-        pendingDelete?.let { viewModel.dispatch(TemplateUiAction.Delete(it.id)) }
+        pendingDelete?.let { onDelete(it.id) }
         pendingDelete = null
     }
-    var result by remember { mutableStateOf<WearResult?>(null) }
-    WearResultDialog(result) { result = null }
-    val imported = stringResource(R.string.app_profile_template_import_success)
-    val emptyExport = stringResource(R.string.app_profile_template_export_empty)
-    val emptyClipboard = stringResource(R.string.app_profile_template_import_empty)
-    val exported = stringResource(R.string.app_profile_export_to_clipboard)
-    val failed = stringResource(R.string.operation_failed)
-    LaunchedEffect(viewModel) {
-        viewModel.dispatch(TemplateUiAction.Refresh())
-        viewModel.events.collect { event ->
-            when (event) {
-                TemplateUiEvent.ImportCompleted -> {
-                    toast.show(imported)
-                    viewModel.dispatch(TemplateUiAction.Refresh())
-                }
-
-                is TemplateUiEvent.Exported -> {
-                    clipboard.setPrimaryClip(ClipData.newPlainText(exported, event.json))
-                    toast.show(exported)
-                }
-
-                TemplateUiEvent.ExportEmpty -> {
-                    toast.show(emptyExport)
-                }
-
-                is TemplateUiEvent.Error -> {
-                    val message = event.message.ifBlank { failed }
-                    if (event.fromClipboard) toast.show(message) else result = WearResult(message, success = false)
-                }
-            }
-        }
-    }
-    WearList(isLoading = state.isRefreshing && state.templateList.isEmpty(), onBack = onBack, listState = listState) { spec ->
+    WearList(
+        isLoading = state.isRefreshing && state.templateList.isEmpty(),
+        onBack = onBack,
+        listState = listState,
+        onOpenPanel = onOpenPanel,
+        hasOperationsPanel = true,
+        panelLabel = stringResource(R.string.wear_operations),
+    ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.settings_profile_template)) }
-        item {
-            WearActionButton(
-                spec,
-                Icons.Rounded.Add,
-                stringResource(R.string.app_profile_template_create),
-                { onOpenTemplate("", false, true) },
-            )
-        }
-        item {
-            WearActionButton(spec, Icons.Rounded.Cloud, stringResource(R.string.wear_template_view_online), onOpenOnline)
-        }
-        item {
-            WearActionButton(spec, Icons.Rounded.ContentPaste, stringResource(R.string.app_profile_import_from_clipboard), {
-                val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
-                if (text.isNullOrBlank()) {
-                    toast.show(emptyClipboard)
-                } else {
-                    viewModel.dispatch(TemplateUiAction.Import(text))
-                }
-            })
-        }
-        item {
-            WearActionButton(spec, Icons.Rounded.ContentCopy, exported, {
-                viewModel.dispatch(TemplateUiAction.Export)
-            })
-        }
         // Items are keyed by the template ID, so a reveal stays with its template as the list changes.
         LazySegmentedColumn(state.templateList, { it.id }) { template ->
             val open = { onOpenTemplate(template.id, !template.local, false) }
@@ -183,6 +127,48 @@ internal fun WearTemplatePage(
                 )
             }
         }
+    }
+}
+
+/** One collector handles clipboard results for both the management list and its menu. */
+@Composable
+internal fun rememberWearTemplateImport(viewModel: TemplateViewModel): () -> Unit {
+    val toast = LocalWearToast.current
+    val context = LocalContext.current
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    var result by remember { mutableStateOf<WearResult?>(null) }
+    WearResultDialog(result) { result = null }
+    val imported = stringResource(R.string.app_profile_template_import_success)
+    val emptyExport = stringResource(R.string.app_profile_template_export_empty)
+    val emptyClipboard = stringResource(R.string.app_profile_template_import_empty)
+    val exported = stringResource(R.string.app_profile_export_to_clipboard)
+    val failed = stringResource(R.string.operation_failed)
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                TemplateUiEvent.ImportCompleted -> {
+                    toast.show(imported)
+                            }
+
+                is TemplateUiEvent.Exported -> {
+                    clipboard.setPrimaryClip(ClipData.newPlainText(exported, event.json))
+                    toast.show(exported)
+                }
+
+                TemplateUiEvent.ExportEmpty -> {
+                    toast.show(emptyExport)
+                }
+
+                is TemplateUiEvent.Error -> {
+                    val message = event.message.ifBlank { failed }
+                    if (event.fromClipboard) toast.show(message) else result = WearResult(message, success = false)
+                }
+            }
+        }
+    }
+    return {
+        val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+        if (text.isNullOrBlank()) toast.show(emptyClipboard) else viewModel.dispatch(TemplateUiAction.Import(text))
     }
 }
 
@@ -246,7 +232,11 @@ internal fun WearOnlineTemplatePage(onBack: () -> Unit) {
         )
     }
     LaunchedEffect(failure) {
-        if (failure == ProfileTemplateFailure.Offline) offlineDialog.show() else if (failure != null) failureDialog.show()
+        if (failure == ProfileTemplateFailure.Offline) {
+            offlineDialog.show()
+        } else if (failure != null) {
+            failureDialog.show()
+        }
     }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->

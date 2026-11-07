@@ -91,6 +91,8 @@ import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerScreenViewModel
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerUiAction
+import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
+import org.bakasu.bakasu.ui.viewmodel.TemplateUiAction
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
@@ -132,6 +134,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val moduleRepoViewModel = koinViewModel<ModuleRepoViewModel>()
     val umountViewModel = koinViewModel<UmountManagerScreenViewModel>()
     val umount by umountViewModel.state.collectAsStateWithLifecycle()
+    val templateViewModel = koinViewModel<TemplateViewModel>()
+    val templates by templateViewModel.uiState.collectAsStateWithLifecycle()
+    val importTemplates = rememberWearTemplateImport(templateViewModel)
     val sulogViewModel = koinViewModel<SulogViewModel>()
     val dynamicManagerViewModel = koinViewModel<DynamicManagerViewModel>()
     val settingsViewModel = koinViewModel<SettingsViewModel>()
@@ -692,9 +697,13 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 }
                             }
                             entry<WearRoute.Templates> {
-                                WearTemplatePage(::back, { open(WearRoute.OnlineTemplates) }) { id, readOnly, creation ->
-                                    open(WearRoute.TemplateEditor(id, readOnly, creation))
-                                }
+                                WearTemplatePage(
+                                    templates,
+                                    ::back,
+                                    { open(WearRoute.Operations(WearOperationsPage.Templates)) },
+                                    { id, readOnly, creation -> open(WearRoute.TemplateEditor(id, readOnly, creation)) },
+                                    { templateViewModel.dispatch(TemplateUiAction.Delete(it)) },
+                                )
                             }
                             entry<WearRoute.OnlineTemplates> { WearOnlineTemplatePage(::back) }
                             entry<WearRoute.TemplateEditor> { route ->
@@ -822,6 +831,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                                 WearRoute.ModuleRepo, WearRoute.ModuleRepoSearchResults -> WearOperationsPage.Repository
 
+                                WearRoute.Templates -> WearOperationsPage.Templates
+
                                 else -> null
                             }
                             // An animation callback may only close the menu that scheduled it.
@@ -836,12 +847,14 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                             page = operationsPage,
                                             onBack = closeMenu,
                                             onOpen = ::open,
+                                            onImportTemplates = importTemplates,
+                                            onExportTemplates = { templateViewModel.dispatch(TemplateUiAction.Export) },
                                             onRefresh = if (operationsPage == WearOperationsPage.Home) {
                                                 null
                                             } else {
                                                 {
                                                     when (operationsPage) {
-                                                        WearOperationsPage.Home -> Unit
+                                                        WearOperationsPage.Home, WearOperationsPage.Templates -> Unit
 
                                                         WearOperationsPage.SuperUser -> superUserViewModel.dispatch(SuperUserUiAction.Refresh)
 
@@ -862,6 +875,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                 }
                                             },
                                             isRefreshing = when (operationsPage) {
+                                                WearOperationsPage.Templates -> false
                                                 WearOperationsPage.Home -> home.isRefreshing
                                                 WearOperationsPage.SuperUser -> superuser.isRefreshing
                                                 WearOperationsPage.Modules -> modules.isRefreshing
@@ -874,7 +888,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                     WearOperationsPage.SuperUser -> appSearchInput()
                                                     WearOperationsPage.Modules -> moduleSearchInput()
                                                     WearOperationsPage.Logs -> logSearchInput()
-                                                    WearOperationsPage.Home -> Unit
+                                                    WearOperationsPage.Home, WearOperationsPage.Templates -> Unit
                                                     WearOperationsPage.Repository -> open(WearRoute.ModuleRepoSearch)
                                                     WearOperationsPage.Umount -> open(WearRoute.UmountSearch)
                                                 }
