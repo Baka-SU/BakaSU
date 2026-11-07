@@ -17,6 +17,7 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.ui.wear.component.wearCompactRow
+import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
 
 /**
  * @author Hanhan_awa
@@ -39,7 +40,7 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
     secondaryLabelMaxLines: Int = 2,
 ) {
     SwitchButton(
-        modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec)
+        modifier = Modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, transformationSpec)
             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)
             .wearCompactRow(compact),
         // A compact switch uses the button's 6dp vertical padding instead of its own 8dp.

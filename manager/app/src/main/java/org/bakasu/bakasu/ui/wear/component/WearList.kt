@@ -142,7 +142,11 @@ fun WearList(
     content: TransformingLazyColumnScope.(TransformationSpec) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val headerBottom = remember { mutableStateOf<Float?>(null) }
+    val timeMode = LocalWearTimeOptions.current.mode
+    val timeTitleBottom = LocalWearTimeTitleBottom.current
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val headerBottom = remember(timeMode, configuration, density) { mutableStateOf<Float?>(null) }
     var viewportTop by remember { mutableFloatStateOf(0f) }
     // Round screens scale and fade items at the edges; square screens (including the screen shape
     // setting) keep items at full size, as nothing is cut off there.
@@ -157,7 +161,13 @@ fun WearList(
     // Open space beneath the title at the list start. A user's scroll dismisses it for this
     // request, so removing bottom padding cannot immediately reopen it and move the hit target.
     var showRefreshGap by remember(isRefreshing, isLoading, listState) {
-        mutableStateOf(isRefreshing && !isLoading && !listState.canScrollBackward)
+        val first = listState.layoutInfo.visibleItems.firstOrNull()
+        // Round-screen transformations can leave the first item a few pixels above its padding
+        // after a layout change, even though no user scroll has left the title.
+        val atStart = !listState.canScrollBackward || first?.let {
+            it.index == 0 && it.offset >= listState.layoutInfo.beforeContentPadding - with(density) { 2.dp.roundToPx() }
+        } == true
+        mutableStateOf(isRefreshing && !isLoading && atStart)
     }
     LaunchedEffect(listState.isScrollInProgress, listState.canScrollBackward) {
         if (listState.isScrollInProgress && listState.canScrollBackward) showRefreshGap = false
@@ -380,9 +390,17 @@ fun WearList(
                         }
                     }
                     if (isRefreshing) {
-                        val top = with(LocalDensity.current) {
-                            headerBottom.value?.let { (it - viewportTop).toDp() } ?: contentPadding.calculateTopPadding()
-                        }.coerceAtLeast(contentPadding.calculateTopPadding())
+                        val measuredBottom = if (timeMode == "title") timeTitleBottom?.value else headerBottom.value
+                        val measuredTop = with(density) {
+                            measuredBottom?.let { (it - viewportTop).toDp() }
+                        }?.coerceAtLeast(contentPadding.calculateTopPadding())
+                        var indicatorTop by remember(timeMode, configuration, density, timeTitleBottom, viewportHeight) {
+                            mutableStateOf<Dp?>(null)
+                        }
+                        // Capture the first valid title position for this refresh. Scrolling or
+                        // scaffold fading must not pull the indicator along with the title.
+                        SideEffect { if (indicatorTop == null && measuredTop != null) indicatorTop = measuredTop }
+                        val top = indicatorTop ?: measuredTop ?: contentPadding.calculateTopPadding()
                         WearLoadingIndicator(
                             Modifier.align(Alignment.TopCenter).padding(top = top + 8.dp)
                                 .semantics { contentDescription = loadingDescription },
@@ -426,7 +444,7 @@ fun WearList(
                             }
                         },
                         // Dragging on the edge button keeps scrolling the list, as in the M3 list guidance.
-                        modifier = Modifier.scrollable(
+                        modifier = Modifier.offset { IntOffset(0, refreshOffset.roundToPx()) }.scrollable(
                             listState,
                             orientation = Orientation.Vertical,
                             reverseDirection = true,

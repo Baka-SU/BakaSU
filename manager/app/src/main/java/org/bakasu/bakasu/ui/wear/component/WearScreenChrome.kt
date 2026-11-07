@@ -24,13 +24,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -39,7 +49,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.CurvedAlignment
 import androidx.wear.compose.foundation.CurvedModifier
+import androidx.wear.compose.foundation.curvedBox
+import androidx.wear.compose.foundation.curvedComposable
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.PagerState
 import androidx.wear.compose.foundation.weight
@@ -58,6 +71,18 @@ import org.bakasu.bakasu.R
 data class WearTimeOptions(val mode: String = "time", val immersive: Boolean = false)
 val LocalWearTimeOptions = staticCompositionLocalOf { WearTimeOptions() }
 
+/** Shared by the scaffold's time title and the current page's refresh indicator. */
+internal val LocalWearTimeTitleBottom = compositionLocalOf<MutableState<Float?>?> { null }
+
+@Composable
+internal fun WearTimeTitleLayout(pageKey: Any?, content: @Composable () -> Unit) {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val mode = LocalWearTimeOptions.current.mode
+    val bottom = remember(pageKey, configuration, density, mode) { mutableStateOf<Float?>(null) }
+    CompositionLocalProvider(LocalWearTimeTitleBottom provides bottom, content = content)
+}
+
 /**
  * @author Hanhan_awa
  * @date 2026/10/1.
@@ -67,13 +92,28 @@ val LocalWearTimeOptions = staticCompositionLocalOf { WearTimeOptions() }
 @Composable
 fun WearTimeText(title: String = stringResource(R.string.home)) {
     val options = LocalWearTimeOptions.current
+    val titleBottom = LocalWearTimeTitleBottom.current
+    DisposableEffect(titleBottom, title, options.mode) {
+        onDispose { titleBottom?.value = null }
+    }
     if (options.mode == "hidden") return
     val background = if (options.immersive) Color.Transparent else TimeTextDefaults.backgroundColor()
     val curvedStyle = TimeTextDefaults.timeTextStyle()
     if (LocalConfiguration.current.isScreenRound) {
         TimeText(backgroundColor = background) { time ->
             if (options.mode == "title") {
-                curvedText(title, CurvedModifier.weight(1f), style = curvedStyle, overflow = TextOverflow.Ellipsis)
+                curvedBox(
+                    modifier = CurvedModifier.weight(1f),
+                    radialAlignment = CurvedAlignment.Radial.Inner,
+                    angularAlignment = CurvedAlignment.Angular.End,
+                ) {
+                    curvedText(title, style = curvedStyle, overflow = TextOverflow.Ellipsis)
+                    // A zero-size child at the measured arc's inner end marks its lowest point.
+                    // It takes no space; the text determines both the sweep and radial thickness.
+                    curvedComposable {
+                        Box(Modifier.size(0.dp).onGloballyPositioned { titleBottom?.value = it.positionInRoot().y })
+                    }
+                }
             } else {
                 timeTextCurvedText(time)
             }
@@ -86,7 +126,11 @@ fun WearTimeText(title: String = stringResource(R.string.home)) {
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.background(background, RoundedCornerShape(50))
                     .padding(horizontal = 6.dp).then(
-                        if (options.mode == "title") Modifier.semantics { heading() } else Modifier.clearAndSetSemantics {},
+                        if (options.mode == "title") {
+                            Modifier.onGloballyPositioned { titleBottom?.value = it.boundsInRoot().bottom }.semantics { heading() }
+                        } else {
+                            Modifier.clearAndSetSemantics {}
+                        },
                     ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

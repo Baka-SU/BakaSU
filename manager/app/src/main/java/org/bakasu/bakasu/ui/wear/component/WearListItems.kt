@@ -68,14 +68,14 @@ fun WearPageHeader(
     transformation: SurfaceTransformation? = null,
 ) {
     val headerBottom = LocalWearRefreshHeaderBottom.current
-    DisposableEffect(headerBottom) {
+    DisposableEffect(headerBottom, title, LocalWearTimeOptions.current.mode) {
         onDispose { headerBottom?.value = null }
     }
     val position = Modifier.onGloballyPositioned { headerBottom?.value = it.boundsInRoot().bottom }
     Column(modifier.fillMaxWidth()) {
         if (LocalWearTimeOptions.current.mode == "title") {
-            // TimeText owns the title; the refresh slot starts before the first row.
-            Box(Modifier.fillMaxWidth().then(position))
+            // TimeText owns the title and its measured refresh anchor.
+            Box(Modifier.fillMaxWidth())
         } else {
             val side = maxOf(14.dp, (LocalConfiguration.current.screenWidthDp * 0.073f).dp)
             val defaults = ListHeaderDefaults.ContentPadding

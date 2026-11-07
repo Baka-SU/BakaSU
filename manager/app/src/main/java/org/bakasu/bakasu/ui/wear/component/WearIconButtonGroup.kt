@@ -36,7 +36,7 @@ fun TransformingLazyColumnItemScope.WearIconButtonGroup(
     actions: List<WearIconAction>,
 ) {
     ButtonGroup(
-        modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec)
+        modifier = Modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, transformationSpec)
             .minimumVerticalContentPadding(ButtonGroupDefaults.minimumVerticalListContentPadding),
         transformation = SurfaceTransformation(transformationSpec),
     ) {
