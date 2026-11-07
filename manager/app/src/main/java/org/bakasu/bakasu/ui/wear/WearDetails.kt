@@ -51,8 +51,6 @@ import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiAction
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiEvent
 import org.bakasu.bakasu.ui.viewmodel.AppProfileViewModel
-import org.bakasu.bakasu.ui.viewmodel.TemplateUiAction
-import org.bakasu.bakasu.ui.viewmodel.TemplateUiEvent
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileConfig
@@ -312,27 +310,18 @@ internal fun WearAppProfileTemplateChoiceRoute(
     uid: Int,
     packageName: String,
     onBack: () -> Unit,
+    templateViewModel: TemplateViewModel,
+    onOpenPanel: () -> Unit,
 ) {
     val viewModel = koinViewModel<AppProfileViewModel>(
         key = "wear-app-profile-template-$uid-$packageName",
         parameters = { parametersOf(uid, packageName) },
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val templateViewModel = koinViewModel<TemplateViewModel>(
-        key = "wear-templates",
-        parameters = { parametersOf(true) },
-    )
     val templates by templateViewModel.uiState.collectAsStateWithLifecycle()
     var error by remember { mutableStateOf<String?>(null) }
     val failed = stringResource(R.string.operation_failed)
-    val templateLoadFailed = stringResource(R.string.wear_load_failed)
 
-    LaunchedEffect(templateViewModel) {
-        templateViewModel.dispatch(TemplateUiAction.Refresh())
-        templateViewModel.events.collect { event ->
-            if (event is TemplateUiEvent.Error) error = event.message.ifBlank { templateLoadFailed }
-        }
-    }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
@@ -361,7 +350,7 @@ internal fun WearAppProfileTemplateChoiceRoute(
             isLoading = templates.isLoading,
             loadFailed = templates.loadFailed,
             onBack = onBack,
-            onRefresh = { templateViewModel.dispatch(TemplateUiAction.Refresh()) },
+            onOpenPanel = onOpenPanel,
             onChoose = { template: ProfileTemplate ->
                 viewModel.dispatch(
                     AppProfileUiAction.Save(
@@ -390,12 +379,17 @@ internal fun WearAppProfileCustomRoute(
     appLabel: String,
     onBack: () -> Unit,
     onOpen: (WearRoute) -> Unit,
+    templates: org.bakasu.bakasu.ui.viewmodel.TemplateUiState,
 ) {
     val viewModel = koinViewModel<AppProfileViewModel>(
         key = "wear-app-profile-custom-$uid-$packageName",
         parameters = { parametersOf(uid, packageName) },
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var hasResumed by rememberSaveable { mutableStateOf(false) }
+    ActivityResumeEffect(viewModel) {
+        if (hasResumed) viewModel.dispatch(AppProfileUiAction.Load) else hasResumed = true
+    }
     var error by remember { mutableStateOf<String?>(null) }
     val failed = stringResource(R.string.failed_to_update_app_profile, appLabel)
     val failedSepolicy = stringResource(R.string.failed_to_update_sepolicy, appLabel)
@@ -422,6 +416,8 @@ internal fun WearAppProfileCustomRoute(
             onManageTemplates = { onOpen(WearRoute.Templates) },
             onViewTemplate = { onOpen(WearRoute.TemplateEditor(it, readOnly = true, creation = false)) },
             onBack = onBack,
+            templates = templates,
+            onChooseTemplate = { onOpen(WearRoute.AppProfileTemplateChoice(uid, packageName)) },
         )
     } else {
         WearList(isLoading = state.isLoading, onBack = onBack) { spec ->

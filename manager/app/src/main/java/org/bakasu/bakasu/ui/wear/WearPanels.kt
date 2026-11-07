@@ -118,6 +118,8 @@ internal fun WearOperationsPanel(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.wear_search_umount_paths), onSearch),
         )
 
+        WearOperationsPage.OnlineTemplates, WearOperationsPage.TemplateChoice -> emptyList()
+
         WearOperationsPage.Templates -> listOf(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.wear_template_search), onSearch),
             WearIconAction(Icons.Rounded.Add, stringResource(R.string.app_profile_template_create), { onOpen(WearRoute.TemplateEditor("", false, true)) }),

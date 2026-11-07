@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 enum class WearSettingsCategory { General, Security, Advanced, Display }
 
 @Serializable
-enum class WearOperationsPage { Home, SuperUser, Modules, Logs, Repository, Umount, Templates }
+enum class WearOperationsPage { Home, SuperUser, Modules, Logs, Repository, Umount, Templates, OnlineTemplates, TemplateChoice }
 
 /** The settings that are chosen from a single list of options. */
 @Serializable

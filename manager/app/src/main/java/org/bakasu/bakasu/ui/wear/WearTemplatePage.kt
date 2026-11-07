@@ -51,11 +51,12 @@ import org.bakasu.bakasu.ui.viewmodel.TemplateUiEvent
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
-import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
@@ -157,7 +158,7 @@ internal fun rememberWearTemplateImport(viewModel: TemplateViewModel): () -> Uni
             when (event) {
                 TemplateUiEvent.ImportCompleted -> {
                     toast.show(imported)
-                            }
+                }
 
                 is TemplateUiEvent.Exported -> {
                     clipboard.setPrimaryClip(ClipData.newPlainText(exported, event.json))
@@ -203,7 +204,13 @@ private fun rememberWearOfflineDialog(onDismissed: () -> Unit = {}) = rememberCu
  * template as a local one, which App Profile can then select.
  */
 @Composable
-internal fun WearOnlineTemplatePage(onBack: () -> Unit) {
+internal fun WearOnlineTemplatePage(
+    onBack: () -> Unit,
+    onOpenPanel: () -> Unit,
+    menuOpen: Boolean,
+    menuActive: Boolean,
+    onClosePanel: () -> Unit,
+) {
     val viewModel = koinViewModel<OnlineTemplateViewModel>()
     DisposableEffect(viewModel) { onDispose { viewModel.cancelLoad() } }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -281,21 +288,43 @@ internal fun WearOnlineTemplatePage(onBack: () -> Unit) {
         }
         return
     }
-    WearList(isLoading = state.isLoading, isRefreshing = state.isRefreshing, onBack = onBack, onRefresh = { viewModel.dispatch(OnlineTemplateUiAction.Load) }) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.wear_template_online)) }
-        if (failure != null) {
-            item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_template_online_failed), tone = WearStatusTone.ERROR) }
-        } else if (state.hasLoaded && !state.loading && state.templates.isEmpty()) {
-            item { WearEmptyState(spec, Icons.Rounded.Cloud, stringResource(R.string.wear_template_online_empty)) }
-        }
-        LazySegmentedColumn(state.templates, { it.id }) { template ->
-            WearSettingsJumpPageWidget(
-                spec,
-                template.name.ifBlank { template.id },
-                { selectedId = template.id },
-                icon = if (template.id in state.addedIds) Icons.Rounded.CheckCircle else Icons.Rounded.Description,
-                description = template.description.ifBlank { null },
+    WearOperationsHost(
+        menuKey = WearOperationsPage.OnlineTemplates,
+        menuOpen = menuOpen,
+        menuActive = menuActive,
+        menuContent = { onClosing ->
+            WearOperationsPanel(
+                page = WearOperationsPage.OnlineTemplates,
+                onBack = onClosePanel,
+                onOpen = {},
+                onSearch = {},
+                onInstall = {},
+                rootAvailable = false,
+                fullFeatured = false,
+                susfsAvailable = false,
+                onReboot = {},
+                onClosing = onClosing,
+                onRefresh = { viewModel.dispatch(OnlineTemplateUiAction.Load) },
+                isRefreshing = state.loading,
             )
+        },
+    ) {
+        WearList(isLoading = state.isLoading, isRefreshing = state.isRefreshing, onBack = onBack, onOpenPanel = onOpenPanel, hasOperationsPanel = true, panelLabel = stringResource(R.string.wear_operations)) { spec ->
+            item { WearPageHeader(spec, stringResource(R.string.wear_template_online)) }
+            if (failure != null) {
+                item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_template_online_failed), tone = WearStatusTone.ERROR) }
+            } else if (state.hasLoaded && !state.loading && state.templates.isEmpty()) {
+                item { WearEmptyState(spec, Icons.Rounded.Cloud, stringResource(R.string.wear_template_online_empty)) }
+            }
+            LazySegmentedColumn(state.templates, { it.id }) { template ->
+                WearSettingsJumpPageWidget(
+                    spec,
+                    template.name.ifBlank { template.id },
+                    { selectedId = template.id },
+                    icon = if (template.id in state.addedIds) Icons.Rounded.CheckCircle else Icons.Rounded.Description,
+                    description = template.description.ifBlank { null },
+                )
+            }
         }
     }
 }

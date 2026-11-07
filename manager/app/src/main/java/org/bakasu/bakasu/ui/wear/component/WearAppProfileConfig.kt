@@ -5,14 +5,12 @@ import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.Natives
 import org.bakasu.bakasu.R
@@ -21,16 +19,11 @@ import org.bakasu.bakasu.profile.Capabilities
 import org.bakasu.bakasu.profile.Groups
 import org.bakasu.bakasu.toRawFlags
 import org.bakasu.bakasu.toRootProfileFlags
-import org.bakasu.bakasu.ui.viewmodel.TemplateUiAction
-import org.bakasu.bakasu.ui.viewmodel.TemplateUiEvent
-import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearChoicePage
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
-import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
 
 /**
  * @author Hanhan_awa
@@ -48,23 +41,9 @@ fun WearAppProfileConfig(
     onManageTemplates: () -> Unit,
     onViewTemplate: (String) -> Unit,
     onBack: () -> Unit,
+    templates: org.bakasu.bakasu.ui.viewmodel.TemplateUiState,
+    onChooseTemplate: () -> Unit,
 ) {
-    val templateViewModel = koinViewModel<TemplateViewModel>(
-        key = "wear-templates",
-        parameters = { parametersOf(true) },
-    )
-    val templates by templateViewModel.uiState.collectAsStateWithLifecycle()
-    // All persisted templates are selectable, including the synchronized presets, as on the phone.
-    val availableTemplates = templates.templateList
-    val failedTemplateMessage = stringResource(R.string.wear_load_failed)
-    var templateError by remember { mutableStateOf<String?>(null) }
-    WearErrorDialog(templateError) { templateError = null }
-    LaunchedEffect(templateViewModel) {
-        templateViewModel.events.collect { event ->
-            if (event is TemplateUiEvent.Error) templateError = event.message.ifBlank { failedTemplateMessage }
-        }
-    }
-    LaunchedEffect(templateViewModel) { templateViewModel.dispatch(TemplateUiAction.Refresh()) }
     var page by rememberSaveable { mutableStateOf(0) }
     var choosingTemplateMode by rememberSaveable { mutableStateOf(false) }
     // Only the unsaved choice of template mode is local; saved modes follow the actual profile,
@@ -115,32 +94,6 @@ fun WearAppProfileConfig(
                         }
                     } else {
                         onProfileChange(profile.copy(nonRootUseDefault = selected == R.string.profile_default))
-                    }
-                    back()
-                }
-
-                R.string.profile_template -> WearChoicePage(
-                    stringResource(shownPage),
-                    availableTemplates.map { it.id to it.name.ifBlank { it.id } },
-                    profile.rootTemplate.orEmpty(),
-                    back,
-                    isLoading = templates.isRefreshing,
-                    onRefresh = {
-                        templateError = null
-                        templateViewModel.dispatch(TemplateUiAction.Refresh())
-                    },
-                    labelMaxLines = Int.MAX_VALUE,
-                ) { id ->
-                    availableTemplates.firstOrNull { it.id == id }?.let { template ->
-                        choosingTemplateMode = false
-                        onProfileChange(
-                            profile.copy(
-                                rootUseDefault = false, rootTemplate = id,
-                                uid = template.uid, gid = template.gid, groups = template.groups,
-                                capabilities = template.capabilities, context = template.context,
-                                rules = template.rules.joinToString("\n"), namespace = template.namespace,
-                            ),
-                        )
                     }
                     back()
                 }
@@ -266,7 +219,7 @@ fun WearAppProfileConfig(
                     WearSettingsJumpPageWidget(
                         spec,
                         stringResource(R.string.profile_template),
-                        { page = R.string.profile_template },
+                        onChooseTemplate,
                         description = templates.templateList.firstOrNull { it.id == profile.rootTemplate }?.name ?: profile.rootTemplate,
                     )
                 }

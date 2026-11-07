@@ -89,10 +89,10 @@ import org.bakasu.bakasu.ui.viewmodel.SulogViewModel
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
+import org.bakasu.bakasu.ui.viewmodel.TemplateUiAction
+import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerScreenViewModel
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerUiAction
-import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
-import org.bakasu.bakasu.ui.viewmodel.TemplateUiAction
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
@@ -209,6 +209,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
             when (route) {
                 WearRoute.Logs -> sulogViewModel.dispatch(SulogUiAction.RefreshLatest)
                 WearRoute.DynamicManagerApps -> dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Search(""))
+                WearRoute.Templates, is WearRoute.AppProfileTemplateChoice -> templateViewModel.dispatch(TemplateUiAction.Refresh())
                 else -> Unit
             }
         }
@@ -569,6 +570,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     route.uid,
                                     route.packageName,
                                     onBack = { if (navigator.top == route) back() },
+                                    templateViewModel = templateViewModel,
+                                    onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.TemplateChoice)) },
                                 )
                             }
                             entry<WearRoute.AppProfileCustom> { route ->
@@ -579,6 +582,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         it.uid == route.uid && it.primaryPackageName == route.packageName
                                     }?.mainApp?.label ?: route.packageName,
                                     onBack = ::back,
+                                    templates = templates,
                                     onOpen = ::open,
                                 )
                             }
@@ -721,7 +725,16 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     searchResults = true,
                                 )
                             }
-                            entry<WearRoute.OnlineTemplates> { WearOnlineTemplatePage(::back) }
+                            entry<WearRoute.OnlineTemplates> {
+                                val menu = navigator.operationsFor(WearRoute.OnlineTemplates)
+                                WearOnlineTemplatePage(
+                                    onBack = ::back,
+                                    onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.OnlineTemplates)) },
+                                    menuOpen = menu != null,
+                                    menuActive = menu != null && navigator.top == menu,
+                                    onClosePanel = { if (menu != null && navigator.top == menu) back() },
+                                )
+                            }
                             entry<WearRoute.TemplateEditor> { route ->
                                 WearTemplateEditor(route.id, route.readOnly, route.creation, ::back)
                             }
@@ -830,8 +843,13 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 }
                             }
                         },
-                        pageContent = { key, content ->
+                        pageContent = page@{ key, content ->
                             val route = key as WearRoute
+                            // The cloud entry owns its ViewModel and refresh menu, so opening a local menu never loads it.
+                            if (route == WearRoute.OnlineTemplates) {
+                                content()
+                                return@page
+                            }
                             val menu = navigator.operationsFor(route)
                             val operationsPage = menu?.page ?: when (route) {
                                 WearRoute.Main -> when (mainTitle) {
@@ -849,6 +867,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                                 WearRoute.Templates, WearRoute.TemplateSearchResults -> WearOperationsPage.Templates
 
+                                is WearRoute.AppProfileTemplateChoice -> WearOperationsPage.TemplateChoice
+
                                 else -> null
                             }
                             // An animation callback may only close the menu that scheduled it.
@@ -865,12 +885,12 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                             onOpen = ::open,
                                             onImportTemplates = importTemplates,
                                             onExportTemplates = { templateViewModel.dispatch(TemplateUiAction.Export) },
-                                            onRefresh = if (operationsPage == WearOperationsPage.Home) {
+                                            onRefresh = if (operationsPage in listOf(WearOperationsPage.Home, WearOperationsPage.Templates)) {
                                                 null
                                             } else {
                                                 {
                                                     when (operationsPage) {
-                                                        WearOperationsPage.Home, WearOperationsPage.Templates -> Unit
+                                                        WearOperationsPage.Home, WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates -> Unit
 
                                                         WearOperationsPage.SuperUser -> superUserViewModel.dispatch(SuperUserUiAction.Refresh)
 
@@ -887,11 +907,14 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                         WearOperationsPage.Repository -> moduleRepoViewModel.refresh(fromPull = true)
 
                                                         WearOperationsPage.Umount -> umountViewModel.dispatch(UmountManagerUiAction.Refresh())
+
+                                                        WearOperationsPage.TemplateChoice -> templateViewModel.dispatch(TemplateUiAction.Refresh())
                                                     }
                                                 }
                                             },
                                             isRefreshing = when (operationsPage) {
-                                                WearOperationsPage.Templates -> false
+                                                WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates -> false
+                                                WearOperationsPage.TemplateChoice -> templates.isLoading || templates.isRefreshing
                                                 WearOperationsPage.Home -> home.isRefreshing
                                                 WearOperationsPage.SuperUser -> superuser.isRefreshing
                                                 WearOperationsPage.Modules -> modules.isRefreshing
@@ -904,7 +927,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                     WearOperationsPage.SuperUser -> appSearchInput()
                                                     WearOperationsPage.Modules -> moduleSearchInput()
                                                     WearOperationsPage.Logs -> logSearchInput()
-                                                    WearOperationsPage.Home -> Unit
+                                                    WearOperationsPage.Home, WearOperationsPage.OnlineTemplates, WearOperationsPage.TemplateChoice -> Unit
                                                     WearOperationsPage.Templates -> open(WearRoute.TemplateSearch)
                                                     WearOperationsPage.Repository -> open(WearRoute.ModuleRepoSearch)
                                                     WearOperationsPage.Umount -> open(WearRoute.UmountSearch)

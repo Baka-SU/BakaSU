@@ -62,7 +62,7 @@ fun WearAppProfileTemplateChoicePage(
     isLoading: Boolean,
     loadFailed: Boolean,
     onBack: () -> Unit,
-    onRefresh: () -> Unit,
+    onOpenPanel: () -> Unit,
     onChoose: (ProfileTemplate) -> Unit,
 ) {
     WearChoicePage(
@@ -72,7 +72,8 @@ fun WearAppProfileTemplateChoicePage(
         onBack = onBack,
         isLoading = isLoading,
         isRefreshing = isRefreshing && !isLoading,
-        onRefresh = onRefresh,
+        onOpenPanel = onOpenPanel,
+        hasOperationsPanel = true,
         labelMaxLines = Int.MAX_VALUE,
         extraContent = { spec ->
             if (loadFailed) {
