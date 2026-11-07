@@ -192,6 +192,12 @@ sealed interface WearRoute : NavKey {
     data object Templates : WearRoute, NeedsRoot
 
     @Serializable
+    data object TemplateSearch : WearRoute, NeedsRoot
+
+    @Serializable
+    data object TemplateSearchResults : WearRoute, NeedsRoot
+
+    @Serializable
     data object OnlineTemplates : WearRoute, NeedsRoot
 
     @Serializable

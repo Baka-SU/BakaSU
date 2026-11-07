@@ -83,8 +83,10 @@ internal fun WearTemplatePage(
     onOpenPanel: () -> Unit,
     onOpenTemplate: (id: String, readOnly: Boolean, creation: Boolean) -> Unit,
     onDelete: (String) -> Unit,
+    searchResults: Boolean = false,
 ) {
     val listState = rememberTransformingLazyColumnState()
+    val shownTemplates = if (searchResults) state.searchResults else state.templateList
     // A saved template is deleted only after confirmation; the swipe only asks for it.
     var pendingDelete by remember { mutableStateOf<ProfileTemplate?>(null) }
     val deleteDialog = rememberWearConfirmDialog(
@@ -103,9 +105,9 @@ internal fun WearTemplatePage(
         hasOperationsPanel = true,
         panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.settings_profile_template)) }
+        item { WearPageHeader(spec, stringResource(if (searchResults) R.string.wear_template_search else R.string.settings_profile_template)) }
         // Items are keyed by the template ID, so a reveal stays with its template as the list changes.
-        LazySegmentedColumn(state.templateList, { it.id }) { template ->
+        LazySegmentedColumn(shownTemplates, { it.id }) { template ->
             val open = { onOpenTemplate(template.id, !template.local, false) }
             // Every saved template can be deleted; its source still controls editing.
             WearSwipeToDelete(
@@ -402,4 +404,12 @@ private fun ProfileTemplate.withField(field: Int, value: String): ProfileTemplat
         R.string.profile_selinux_rules -> copy(rules = value.lines().filter { it.isNotBlank() })
         else -> copy(flags = numbers().onEach { require(it in 0 until org.bakasu.bakasu.Natives.Profile.RootProfileFlag.entries.size) })
     }
+}
+
+/** Re-searching from the results menu updates its existing destination. */
+internal fun WearNavigator.submitTemplateSearch(query: String, search: (String) -> Unit) {
+    if (query.isNotBlank() && backStack.dropLast(2).lastOrNull() == WearRoute.TemplateSearchResults) {
+        back()
+    }
+    submitSearch(WearRoute.TemplateSearchResults, query, search)
 }

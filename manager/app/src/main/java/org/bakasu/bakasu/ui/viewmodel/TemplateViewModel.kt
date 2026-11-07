@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +22,8 @@ import org.bakasu.bakasu.domain.usecase.RefreshProfileTemplatesUseCase
 
 data class TemplateUiState(
     val templateList: List<ProfileTemplate> = emptyList(),
+    val search: String = "",
+    val searchResults: List<ProfileTemplate> = emptyList(),
     val profileTemplates: List<String> = emptyList(),
     val profileTemplateNames: List<String> = emptyList(),
     val isRefreshing: Boolean = false,
@@ -30,6 +33,7 @@ data class TemplateUiState(
 sealed interface TemplateUiAction {
     data class Refresh(val synchronize: Boolean = false) : TemplateUiAction
     data class Import(val json: String) : TemplateUiAction
+    data class Search(val query: String) : TemplateUiAction
     data object Export : TemplateUiAction
     data class Delete(val id: String) : TemplateUiAction
 }
@@ -53,13 +57,18 @@ class TemplateViewModel(
     private val mutableEvents = MutableSharedFlow<TemplateUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<TemplateUiEvent> = mutableEvents.asSharedFlow()
 
+    private val search = MutableStateFlow("")
+
     val state: StateFlow<TemplateUiState> = combine(
         observeTemplates(),
         observeRefreshing(),
         observeOffline(),
-    ) { templates, refreshing, offline ->
+        search,
+    ) { templates, refreshing, offline, query ->
         TemplateUiState(
             templateList = templates,
+            search = query,
+            searchResults = filterProfileTemplates(templates, query),
             profileTemplates = templates.map(ProfileTemplate::id),
             profileTemplateNames = templates.map { template ->
                 template.name.ifBlank { template.id }
@@ -81,6 +90,8 @@ class TemplateViewModel(
     }
     fun dispatch(action: TemplateUiAction) {
         when (action) {
+            is TemplateUiAction.Search -> search.value = action.query.trim()
+
             is TemplateUiAction.Refresh -> viewModelScope.launch { fetchTemplates(action.synchronize) }
 
             is TemplateUiAction.Import -> viewModelScope.launch {
@@ -102,6 +113,17 @@ class TemplateViewModel(
                     onFailure = { mutableEvents.emit(TemplateUiEvent.ExportEmpty) },
                 )
             }
+        }
+    }
+}
+
+internal fun filterProfileTemplates(templates: List<ProfileTemplate>, query: String): List<ProfileTemplate> {
+    val trimmed = query.trim()
+    return if (trimmed.isEmpty()) {
+        templates
+    } else {
+        templates.filter { template ->
+            listOf(template.name, template.id, template.description, template.author).any { it.contains(trimmed, ignoreCase = true) }
         }
     }
 }

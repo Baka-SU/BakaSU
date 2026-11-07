@@ -970,4 +970,5 @@
     <string name="wear_search_umount_paths">Search unmount paths</string>
     <string name="wear_recommended_languages">Recommended languages</string>
     <string name="wear_other_languages">Other languages</string>
+    <string name="wear_template_search">Search templates</string>
 </resources>

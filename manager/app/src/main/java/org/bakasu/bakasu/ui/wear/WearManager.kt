@@ -198,6 +198,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                 WearRoute.ModuleSearchResults -> moduleViewModel.dispatch(ModuleUiAction.Search(""))
                 WearRoute.ModuleRepo, WearRoute.ModuleRepoSearchResults -> moduleRepoViewModel.dispatch(ModuleRepoUiAction.Search(""))
                 WearRoute.LogSearchResults -> sulogViewModel.dispatch(SulogUiAction.Search(""))
+                WearRoute.TemplateSearchResults -> templateViewModel.dispatch(TemplateUiAction.Search(""))
                 else -> Unit
             }
         },
@@ -705,6 +706,21 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     { templateViewModel.dispatch(TemplateUiAction.Delete(it)) },
                                 )
                             }
+                            entry<WearRoute.TemplateSearch> {
+                                WearSearchPage(stringResource(R.string.wear_template_search), "profile-templates", templates.search, ::back) {
+                                    navigator.submitTemplateSearch(it) { query -> templateViewModel.dispatch(TemplateUiAction.Search(query)) }
+                                }
+                            }
+                            entry<WearRoute.TemplateSearchResults> {
+                                WearTemplatePage(
+                                    templates,
+                                    ::back,
+                                    { open(WearRoute.Operations(WearOperationsPage.Templates)) },
+                                    { id, readOnly, creation -> open(WearRoute.TemplateEditor(id, readOnly, creation)) },
+                                    { templateViewModel.dispatch(TemplateUiAction.Delete(it)) },
+                                    searchResults = true,
+                                )
+                            }
                             entry<WearRoute.OnlineTemplates> { WearOnlineTemplatePage(::back) }
                             entry<WearRoute.TemplateEditor> { route ->
                                 WearTemplateEditor(route.id, route.readOnly, route.creation, ::back)
@@ -831,7 +847,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                                 WearRoute.ModuleRepo, WearRoute.ModuleRepoSearchResults -> WearOperationsPage.Repository
 
-                                WearRoute.Templates -> WearOperationsPage.Templates
+                                WearRoute.Templates, WearRoute.TemplateSearchResults -> WearOperationsPage.Templates
 
                                 else -> null
                             }
@@ -888,7 +904,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                     WearOperationsPage.SuperUser -> appSearchInput()
                                                     WearOperationsPage.Modules -> moduleSearchInput()
                                                     WearOperationsPage.Logs -> logSearchInput()
-                                                    WearOperationsPage.Home, WearOperationsPage.Templates -> Unit
+                                                    WearOperationsPage.Home -> Unit
+                                                    WearOperationsPage.Templates -> open(WearRoute.TemplateSearch)
                                                     WearOperationsPage.Repository -> open(WearRoute.ModuleRepoSearch)
                                                     WearOperationsPage.Umount -> open(WearRoute.UmountSearch)
                                                 }
