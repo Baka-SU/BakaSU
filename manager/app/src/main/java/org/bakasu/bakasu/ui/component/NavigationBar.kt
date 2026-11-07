@@ -48,7 +48,6 @@ import org.bakasu.bakasu.ui.theme.BottomBarStyle
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
-import org.bakasu.bakasu.ui.util.LocalBlurState
 import org.bakasu.bakasu.ui.util.LocalHandlePageChange
 import org.bakasu.bakasu.ui.util.LocalPagerState
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
@@ -92,7 +91,7 @@ fun NavigationBar(
                 selectedIndex = pagerState.targetPage,
                 onSelected = { handlePageChange(it) },
                 tabsCount = destinations.size,
-                isBlurEnabled = LocalBlurState.current != null,
+                isBlurEnabled = false,
             ) { activateTab ->
                 destinations.forEachIndexed { index, destination ->
                     FloatingBottomBarItem(
@@ -136,18 +135,8 @@ fun NavigationBar(
             modifier = modifier
                 .windowInsetsPadding(
                     WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
-                )
-                .blurEffect(
-                    compensateHorizontalOverscroll = true,
-                    compensateVerticalOverscroll = true,
-                    useFixedSurfaceBoundsForOverscroll = true,
                 ),
-            containerColor =
-                if (themeConfig.isEnableBlur) {
-                    Color.Transparent
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha)
-                },
+            containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(cardConfig.cardAlpha),
             contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
             destinations.forEachIndexed { index, destination ->
