@@ -1,5 +1,7 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -87,9 +89,9 @@ internal fun WearModulesPage(
 
 /**
  * One module row: the row opens the module details. The whole container takes the active color
- * while the module is enabled, a medium-emphasis red while pending removal and the neutral tonal
- * surface otherwise. The title is the module name alone; the version, any pending removal and the
- * metamodule label follow in the quieter secondary line.
+ * while the module is enabled and applied, a medium-emphasis red while pending removal and the
+ * neutral tonal surface otherwise. Pending state has its own secondary line above the version and
+ * metamodule label, so a long version cannot hide it.
  */
 @Composable
 internal fun TransformingLazyColumnItemScope.WearModuleItem(
@@ -120,10 +122,11 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             }
         }
     }
-    val details = listOfNotNull(
-        module.version.ifBlank { null },
-        if (module.remove) stringResource(R.string.wear_pending_removal) else null,
-    ).joinToString(" · ")
+    val pendingState = when {
+        module.remove -> stringResource(R.string.wear_pending_removal)
+        module.update -> stringResource(R.string.reboot_to_apply)
+        else -> null
+    }
     val button: @Composable () -> Unit = {
         Button(
             onClick = { onModuleClick(module.id) },
@@ -152,29 +155,37 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                     iconColor = MaterialTheme.colorScheme.onErrorContainer,
                 )
 
-                module.enabled -> ButtonDefaults.filledVariantButtonColors()
+                module.enabled && !module.update -> ButtonDefaults.filledVariantButtonColors()
 
                 else -> ButtonDefaults.filledTonalButtonColors()
             },
             icon = { Icon(Icons.Rounded.Extension, contentDescription = null) },
-            // The metamodule label follows the version on its baseline; a long version is cut so the
-            // label always shows whole.
-            secondaryLabel = if (details.isNotBlank() || module.metamodule) {
+            secondaryLabel = if (pendingState != null || module.version.isNotBlank() || module.metamodule) {
                 {
-                    if (details.isNotBlank()) {
-                        Text(
-                            details,
-                            Modifier.weight(1f, fill = false).alignByBaseline(),
-                            color = LocalContentColor.current,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    if (module.metamodule) {
-                        WearBadge(
-                            stringResource(R.string.wear_meta_badge),
-                            Modifier.padding(start = if (details.isNotBlank()) 4.dp else 0.dp).alignByBaseline(),
-                        )
+                    Column {
+                        if (pendingState != null) {
+                            Text(pendingState, color = LocalContentColor.current)
+                        }
+                        if (module.version.isNotBlank() || module.metamodule) {
+                            // Keep META whole even when the version must be ellipsized.
+                            Row {
+                                if (module.version.isNotBlank()) {
+                                    Text(
+                                        module.version,
+                                        Modifier.weight(1f, fill = false).alignByBaseline(),
+                                        color = LocalContentColor.current,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                if (module.metamodule) {
+                                    WearBadge(
+                                        stringResource(R.string.wear_meta_badge),
+                                        Modifier.padding(start = if (module.version.isNotBlank()) 4.dp else 0.dp).alignByBaseline(),
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             } else {

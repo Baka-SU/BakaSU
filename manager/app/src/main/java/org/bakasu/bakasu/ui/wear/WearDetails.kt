@@ -157,7 +157,14 @@ internal fun WearModuleDetail(
                 { onEnabledChange(module.id, it) },
                 enabled = !module.remove && !module.update,
                 icon = Icons.Rounded.PowerSettingsNew,
-                secondaryLabel = stringResource(if (module.enabled) R.string.wear_enabled else R.string.wear_disabled),
+                secondaryLabel = stringResource(
+                    when {
+                        module.remove -> R.string.wear_pending_removal
+                        module.update -> R.string.reboot_to_apply
+                        module.enabled -> R.string.wear_enabled
+                        else -> R.string.wear_disabled
+                    },
+                ),
                 compact = true,
             )
         }
