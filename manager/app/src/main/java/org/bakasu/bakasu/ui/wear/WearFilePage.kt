@@ -56,6 +56,7 @@ import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
@@ -239,7 +240,7 @@ internal fun WearFilePage(
             }
             if (directory != null && directory.entries.isEmpty()) {
                 item {
-                    WearStatusItem(spec, Icons.Rounded.FolderOff, stringResource(R.string.wear_directory_empty))
+                    WearEmptyState(spec, Icons.Rounded.FolderOff, stringResource(R.string.wear_directory_empty))
                 }
             }
             items(directory?.entries.orEmpty(), key = { it.path }) { entry ->
