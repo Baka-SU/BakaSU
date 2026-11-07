@@ -583,7 +583,17 @@ internal fun WearAffectedAppsPage(group: InstalledAppGroup?, onBack: () -> Unit)
             item { WearStatusItem(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
         } else {
             group.apps.forEach { app ->
-                item { WearInfoCard(spec) { WearDetailField(Icons.Rounded.Apps, app.label, app.displayIdentifier) } }
+                item {
+                    WearInfoCard(spec) {
+                        WearDetailField(app.label, app.displayIdentifier) {
+                            PackageIcon(
+                                packageName = if (app.isWebViewZygote) "android" else app.packageName,
+                                contentDescription = null,
+                                modifier = Modifier.size(ButtonDefaults.ExtraLargeIconSize),
+                            )
+                        }
+                    }
+                }
             }
         }
     }
