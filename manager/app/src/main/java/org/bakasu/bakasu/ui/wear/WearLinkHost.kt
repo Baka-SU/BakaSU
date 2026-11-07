@@ -21,9 +21,12 @@ import org.bakasu.bakasu.domain.model.BridgeFailure
 import org.bakasu.bakasu.ui.viewmodel.WearLinkEvent
 import org.bakasu.bakasu.ui.viewmodel.WearLinkResult
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
+import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearLoadingOverlay
 import org.bakasu.bakasu.ui.wear.component.WearPhoneTransferDialog
+import org.bakasu.bakasu.ui.wear.component.WearResult
+import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 
 /** Opens local pages and hosts the shared permission and phone-transfer feedback. */
 @Composable
@@ -61,13 +64,27 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, showLoading: Boolean, on
     if (showLoading) WearLoadingOverlay()
     val failed = result as? WearLinkResult.Failed
     val failureText = stringResource(
-        when (failed?.reason) {
-            WearLinkFailure.WEBVIEW_UNAVAILABLE -> R.string.wear_link_open_failed
-            WearLinkFailure.BROWSER_FAILED -> R.string.wear_browser_open_failed
+        when {
+            failed?.bridgeFailure == BridgeFailure.RESULT_UNKNOWN -> R.string.wear_phone_result_unknown
+            failed?.automaticLink == true -> R.string.wear_link_open_failed
+            failed?.reason == WearLinkFailure.BROWSER_FAILED -> R.string.wear_browser_open_failed
             else -> R.string.wear_link_open_failed
         },
     )
-    WearErrorDialog(failureText.takeIf { failed != null }, viewModel::dismissResult)
+    val toast = LocalWearToast.current
+    LaunchedEffect(failed) {
+        if (failed?.automaticLink == true && failed.bridgeFailure == BridgeFailure.RESULT_UNKNOWN) {
+            toast.show(failureText)
+            viewModel.dismissResult()
+        }
+    }
+    WearResultDialog(
+        result = failed?.takeIf { it.automaticLink && it.bridgeFailure != BridgeFailure.RESULT_UNKNOWN }?.let {
+            WearResult(message = failureText, success = false, brief = true)
+        },
+        onDismiss = viewModel::dismissResult,
+    )
+    WearErrorDialog(failureText.takeIf { failed != null && !failed.automaticLink }, viewModel::dismissResult)
 }
 
 @Composable
