@@ -971,4 +971,6 @@
     <string name="wear_recommended_languages">Recommended languages</string>
     <string name="wear_other_languages">Other languages</string>
     <string name="wear_template_search">Search templates</string>
+    <string name="wear_template_empty">No templates</string>
+    <string name="wear_template_no_matches">No matching templates</string>
 </resources>

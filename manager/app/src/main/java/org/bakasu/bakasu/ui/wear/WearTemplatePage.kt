@@ -51,6 +51,7 @@ import org.bakasu.bakasu.ui.viewmodel.TemplateUiEvent
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
@@ -98,7 +99,8 @@ internal fun WearTemplatePage(
         pendingDelete = null
     }
     WearList(
-        isLoading = state.isRefreshing && state.templateList.isEmpty(),
+        isLoading = state.isLoading,
+        isRefreshing = state.isRefreshing && !state.isLoading,
         onBack = onBack,
         listState = listState,
         onOpenPanel = onOpenPanel,
@@ -106,6 +108,11 @@ internal fun WearTemplatePage(
         panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
         item { WearPageHeader(spec, stringResource(if (searchResults) R.string.wear_template_search else R.string.settings_profile_template)) }
+        if (state.loadFailed) {
+            item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_load_failed), tone = WearStatusTone.ERROR) }
+        } else if (!state.isLoading && shownTemplates.isEmpty()) {
+            item { WearEmptyState(spec, Icons.Rounded.Description, stringResource(if (searchResults) R.string.wear_template_no_matches else R.string.wear_template_empty)) }
+        }
         // Items are keyed by the template ID, so a reveal stays with its template as the list changes.
         LazySegmentedColumn(shownTemplates, { it.id }) { template ->
             val open = { onOpenTemplate(template.id, !template.local, false) }
@@ -279,7 +286,7 @@ internal fun WearOnlineTemplatePage(onBack: () -> Unit) {
         if (failure != null) {
             item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_template_online_failed), tone = WearStatusTone.ERROR) }
         } else if (state.hasLoaded && !state.loading && state.templates.isEmpty()) {
-            item { WearStatusItem(spec, Icons.Rounded.Cloud, stringResource(R.string.wear_template_online_empty)) }
+            item { WearEmptyState(spec, Icons.Rounded.Cloud, stringResource(R.string.wear_template_online_empty)) }
         }
         LazySegmentedColumn(state.templates, { it.id }) { template ->
             WearSettingsJumpPageWidget(

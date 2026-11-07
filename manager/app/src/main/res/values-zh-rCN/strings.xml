@@ -945,4 +945,6 @@
     <string name="wear_recommended_languages">推荐语言</string>
     <string name="wear_other_languages">其他语言</string>
     <string name="wear_template_search">搜索模板</string>
+    <string name="wear_template_empty">暂无模板</string>
+    <string name="wear_template_no_matches">未找到匹配的模板</string>
 </resources>

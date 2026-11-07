@@ -358,6 +358,8 @@ internal fun WearAppProfileTemplateChoiceRoute(
             profile = profile,
             templates = templates.templateList,
             isRefreshing = templates.isRefreshing,
+            isLoading = templates.isLoading,
+            loadFailed = templates.loadFailed,
             onBack = onBack,
             onRefresh = { templateViewModel.dispatch(TemplateUiAction.Refresh()) },
             onChoose = { template: ProfileTemplate ->

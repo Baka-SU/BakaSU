@@ -1,5 +1,8 @@
 package org.bakasu.bakasu.ui.wear.component
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Error
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import org.bakasu.bakasu.R
@@ -56,6 +59,8 @@ fun WearAppProfileTemplateChoicePage(
     profile: AppProfile,
     templates: List<ProfileTemplate>,
     isRefreshing: Boolean,
+    isLoading: Boolean,
+    loadFailed: Boolean,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     onChoose: (ProfileTemplate) -> Unit,
@@ -65,9 +70,17 @@ fun WearAppProfileTemplateChoicePage(
         choices = templates.map { it.id to it.name.ifBlank { it.id } },
         selected = profile.rootTemplate.orEmpty(),
         onBack = onBack,
-        isLoading = isRefreshing,
+        isLoading = isLoading,
+        isRefreshing = isRefreshing && !isLoading,
         onRefresh = onRefresh,
         labelMaxLines = Int.MAX_VALUE,
+        extraContent = { spec ->
+            if (loadFailed) {
+                item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_load_failed), tone = WearStatusTone.ERROR) }
+            } else if (!isLoading && templates.isEmpty()) {
+                item { WearEmptyState(spec, Icons.Rounded.Description, stringResource(R.string.wear_template_empty)) }
+            }
+        },
     ) { id ->
         templates.firstOrNull { it.id == id }?.let(onChoose)
     }

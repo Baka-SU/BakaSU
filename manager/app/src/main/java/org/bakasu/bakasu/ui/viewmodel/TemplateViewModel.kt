@@ -26,6 +26,8 @@ data class TemplateUiState(
     val searchResults: List<ProfileTemplate> = emptyList(),
     val profileTemplates: List<String> = emptyList(),
     val profileTemplateNames: List<String> = emptyList(),
+    val isLoading: Boolean = true,
+    val loadFailed: Boolean = false,
     val isRefreshing: Boolean = false,
     val isOffline: Boolean = false,
 )
@@ -58,13 +60,15 @@ class TemplateViewModel(
     val events: SharedFlow<TemplateUiEvent> = mutableEvents.asSharedFlow()
 
     private val search = MutableStateFlow("")
+    private val lastLoad = MutableStateFlow<Result<Unit>?>(null)
 
     val state: StateFlow<TemplateUiState> = combine(
         observeTemplates(),
         observeRefreshing(),
         observeOffline(),
         search,
-    ) { templates, refreshing, offline, query ->
+        lastLoad,
+    ) { templates, refreshing, offline, query, result ->
         TemplateUiState(
             templateList = templates,
             search = query,
@@ -73,6 +77,8 @@ class TemplateViewModel(
             profileTemplateNames = templates.map { template ->
                 template.name.ifBlank { template.id }
             },
+            isLoading = result == null,
+            loadFailed = result?.isFailure == true,
             isRefreshing = refreshing,
             isOffline = offline,
         )
@@ -84,7 +90,9 @@ class TemplateViewModel(
     }
 
     suspend fun fetchTemplates(sync: Boolean = false) {
-        refreshTemplates(sync).exceptionOrNull()?.let {
+        val result = refreshTemplates(sync)
+        lastLoad.value = result
+        result.exceptionOrNull()?.let {
             mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty()))
         }
     }
