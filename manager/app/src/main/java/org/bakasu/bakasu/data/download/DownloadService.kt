@@ -249,7 +249,7 @@ class DownloadService : Service() {
                 throw e
             } catch (e: Exception) {
                 ensureActive()
-                downloadRepository.markFailed(id, e.message ?: "Unknown error")
+                downloadRepository.markFailed(id, e.message ?: "Unknown error", failure = downloadFailure(e))
 
                 notificationManager.cancel(id)
                 notificationManager.notify(
@@ -281,7 +281,7 @@ class DownloadService : Service() {
                 activeCalls[id] = call
                 ensureActive()
                 val file = call.execute().use { response ->
-                    if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+                    if (!response.isSuccessful) throw DownloadHttpException(response.code)
                     val body = response.body ?: throw IOException("Empty body")
                     RegistryDownloadStore.download(
                         input = body.byteStream(),
@@ -303,7 +303,7 @@ class DownloadService : Service() {
             } catch (error: Exception) {
                 if (!isActive) throw CancellationException("Registry download cancelled", error)
                 val reason = (error as? DownloadVerificationException)?.reason?.let { DownloadVerificationFailure.valueOf(it.name) }
-                downloadRepository.markFailed(id, "Download failed", reason)
+                downloadRepository.markFailed(id, error.message.orEmpty(), reason, downloadFailure(error))
                 notificationManager.cancel(id)
                 notificationManager.notify(COMPLETION_NOTIFICATION_ID_BASE + id, buildFailureNotification(fileName, reason))
             } finally {
@@ -404,7 +404,7 @@ class DownloadService : Service() {
         try {
             currentCoroutineContext().ensureActive()
             call.execute().use { response ->
-                if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+                if (!response.isSuccessful) throw DownloadHttpException(response.code)
                 val body = response.body ?: throw IOException("Empty body")
                 val total = body.contentLength()
                 body.byteStream().use { source ->

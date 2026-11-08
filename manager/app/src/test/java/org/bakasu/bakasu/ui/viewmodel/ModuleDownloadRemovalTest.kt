@@ -15,6 +15,8 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import org.bakasu.bakasu.domain.model.DownloadFailure
+import org.bakasu.bakasu.domain.model.DownloadFailureReason
 import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
@@ -26,6 +28,7 @@ import org.bakasu.bakasu.domain.usecase.RemoveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
@@ -33,6 +36,33 @@ import org.junit.Test
 class ModuleDownloadRemovalTest {
     private val dispatcher = StandardTestDispatcher()
     private val store = ViewModelStore()
+
+    @Test
+    fun retryImmediatelyRestoresDownloadAndClearsThePreviousFailure() = runTest(dispatcher) {
+        val enqueue = mockk<EnqueueDownloadUseCase>()
+        val observe = mockk<ObserveDownloadUseCase>()
+        val asset = ModuleReleaseAsset("module.zip", "https://example.com/module.zip", null, null)
+        val failure = DownloadFailure(DownloadFailureReason.HTTP, 503)
+        val download = MutableStateFlow<DownloadState?>(DownloadState(1, asset.name, asset.downloadUrl, downloadedBytes = 40, totalBytes = 100, status = DownloadStatus.FAILED, failure = failure))
+        every { enqueue(any(), any(), any(), any()) } returns 1
+        every { observe(1) } returns download
+        val model = ModuleDownloadViewModel(enqueue, observe, mockk()).also { store.put("retry", it) }
+        model.start(asset)
+        runCurrent()
+        assertEquals(ModuleDownloadPhase.FAILED, model.state.value.phase)
+        assertEquals(failure, model.state.value.failure)
+        download.value = DownloadState(1, asset.name, asset.downloadUrl)
+        model.start(asset)
+        assertEquals(ModuleDownloadPhase.DOWNLOADING, model.state.value.phase)
+        assertEquals(0L, model.state.value.downloadedBytes)
+        assertEquals(100L, model.state.value.totalBytes)
+        assertNull(model.state.value.failure)
+        assertNull(model.state.value.resultUri)
+        runCurrent()
+        assertEquals(100L, model.state.value.totalBytes)
+        model.start(asset)
+        verify(exactly = 2) { enqueue(any(), any(), any(), any()) }
+    }
 
     @Before fun setup() {
         Dispatchers.setMain(dispatcher)

@@ -453,6 +453,11 @@
     <string name="download_complete_title">下载完成</string>
     <string name="download_complete_content">%s 下载成功</string>
     <string name="download_failed_title">下载失败</string>
+    <string name="wear_download_error_network">无法连接下载服务器，请检查网络。</string>
+    <string name="wear_download_error_timeout">下载请求超时。</string>
+    <string name="wear_download_error_http">服务器返回 HTTP %1$d。</string>
+    <string name="wear_download_error_storage">无法保存文件，请检查存储空间和访问权限。</string>
+    <string name="wear_download_error_unknown">无法完成下载，请重试。</string>
     <string name="download_failed_content">%s 下载失败</string>
     <string name="download_cancel">取消</string>
     <string name="download_install">安装</string>

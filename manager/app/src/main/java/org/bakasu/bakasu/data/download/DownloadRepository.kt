@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import org.bakasu.bakasu.data.module.registry.RegistryUrls
 import org.bakasu.bakasu.data.module.registry.canShareDownload
+import org.bakasu.bakasu.domain.model.DownloadFailure
 import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
@@ -162,10 +163,10 @@ class DownloadRepository(
         }
     }
 
-    fun markFailed(id: Int, error: String, verificationFailure: DownloadVerificationFailure? = null) {
+    fun markFailed(id: Int, error: String, verificationFailure: DownloadVerificationFailure? = null, failure: DownloadFailure? = null) {
         _downloads.update { map ->
             val state = map[id] ?: return@update map
-            map + (id to state.copy(status = DownloadStatus.FAILED, error = error, verificationFailure = verificationFailure))
+            map + (id to state.copy(status = DownloadStatus.FAILED, error = error, verificationFailure = verificationFailure, failure = failure))
         }
     }
 }

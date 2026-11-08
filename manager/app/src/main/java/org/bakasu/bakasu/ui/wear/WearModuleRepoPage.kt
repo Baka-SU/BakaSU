@@ -1,9 +1,12 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -31,7 +34,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,21 +50,23 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.CardDefaults
-import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.CompactButton
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.drawCircularProgressIndicator
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.model.DownloadFailureReason
 import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
 import org.bakasu.bakasu.domain.model.ModuleRelease
@@ -79,7 +92,6 @@ import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLoadFailureContent
 import org.bakasu.bakasu.ui.wear.component.WearLoadFailureScreen
-import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
@@ -467,102 +479,142 @@ private fun WearModuleIcon(size: Dp) {
 }
 
 /**
- * A module download as in the design: the progress runs around the screen edge, leaving the time at
- * the top, with the module, its state, the percentage and the downloaded size in the center. The
- * ring reads [fraction] when it draws, so it follows the transfer; without a known size it shows the loading animation.
- * A failure says why and offers to retry; swiping back leaves.
+ * Download identity stays in the same list items. Only the feedback below it changes, so failures
+ * and retries do not recenter the icon/name or replace them with a loading screen.
  */
 @Composable
-private fun WearModuleDownloadScreen(name: String, version: String, state: ModuleDownloadUiState, fraction: () -> Float, onRetry: () -> Unit) {
+internal fun WearModuleDownloadScreen(name: String, version: String, state: ModuleDownloadUiState, fraction: () -> Float, onRetry: () -> Unit) {
     val failed = state.phase == ModuleDownloadPhase.FAILED || state.phase == ModuleDownloadPhase.VERIFY_FAILED
     val sizeKnown = state.totalBytes > 0L
-    ScreenScaffold {
-        Box(Modifier.fillMaxSize()) {
-            val ringModifier = Modifier.fillMaxSize().padding(CircularProgressIndicatorDefaults.FullScreenPadding)
-            if (!failed) {
-                if (sizeKnown || state.phase == ModuleDownloadPhase.VERIFYING) {
-                    CircularProgressIndicator(progress = fraction, modifier = ringModifier, startAngle = 300f, endAngle = 240f)
+    val reduceMotion = LocalReduceMotion.current
+    val failedProgress = remember { Animatable(0f) }
+    LaunchedEffect(failed, reduceMotion) {
+        if (failed) {
+            failedProgress.snapTo(fraction())
+            failedProgress.animateTo(1f, if (reduceMotion) snap() else tween(200))
+        } else {
+            failedProgress.snapTo(0f)
+        }
+    }
+    val failureTitle = stringResource(R.string.download_failed_title)
+    Box(Modifier.fillMaxSize()) {
+        WearList(itemSpacing = 0.dp) { spec ->
+            item(key = "identity") {
+                WearScaledItem(spec) {
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(Modifier.testTag("module-download-icon")) { WearModuleIcon(48.dp) }
+                        Text(
+                            name,
+                            modifier = Modifier.padding(top = 8.dp),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (version.isNotBlank()) {
+                            Text(version, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
                 }
             }
-            Column(
-                Modifier.fillMaxSize().padding(horizontal = 28.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                if (!failed && !sizeKnown && state.phase != ModuleDownloadPhase.VERIFYING) WearLoadingIndicator() else WearModuleIcon(48.dp)
-                // The name is the focus; the state and its numbers follow in smaller, quieter styles.
-                Text(
-                    name,
-                    modifier = Modifier.padding(top = 8.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (version.isNotBlank()) {
-                    Text(
-                        version,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                when {
-                    failed -> {
-                        Text(
-                            stringResource(if (state.phase == ModuleDownloadPhase.VERIFY_FAILED) R.string.wear_download_verify_failed else R.string.download_failed_title),
-                            modifier = Modifier.padding(top = 2.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            textAlign = TextAlign.Center,
-                        )
-                        CompactButton(
-                            onClick = onRetry,
-                            modifier = Modifier.padding(top = 6.dp),
-                            icon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
-                            label = { Text(stringResource(R.string.network_retry)) },
-                        )
-                    }
-
-                    state.phase == ModuleDownloadPhase.VERIFYING -> Text(
-                        stringResource(R.string.wear_verifying_download),
-                        modifier = Modifier.padding(top = 2.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    else -> {
-                        Text(
-                            stringResource(R.string.wear_downloading),
-                            modifier = Modifier.padding(top = 2.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        // A percentage only exists when the server announced the size.
-                        state.fraction?.let { share ->
+            if (!failed) {
+                item(key = "progress") {
+                    WearScaledItem(spec) {
+                        Column(
+                            Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
                             Text(
-                                stringResource(R.string.wear_download_percent, (share * 100).toInt()),
+                                stringResource(if (state.phase == ModuleDownloadPhase.VERIFYING) R.string.wear_verifying_download else R.string.wear_downloading),
+                                modifier = Modifier.padding(top = 2.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                stringResource(R.string.wear_download_percent, ((state.fraction ?: 0f) * 100).toInt()),
+                                modifier = Modifier.graphicsLayer { alpha = if (state.fraction != null) 1f else 0f }
+                                    .then(if (state.fraction == null) Modifier.clearAndSetSemantics {} else Modifier),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
-                        Text(
-                            if (sizeKnown) {
-                                stringResource(R.string.wear_download_size, formatFileSize(state.downloadedBytes), formatFileSize(state.totalBytes))
-                            } else {
-                                formatFileSize(state.downloadedBytes)
-                            },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
+                    }
+                }
+            }
+            item(key = "feedback") {
+                WearScaledItem(spec) {
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        if (failed) {
+                            Text(failureTitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                            Text(
+                                moduleDownloadFailureText(state),
+                                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                maxLines = Int.MAX_VALUE,
+                                softWrap = true,
+                            )
+                        } else {
+                            Text(
+                                if (sizeKnown) stringResource(R.string.wear_download_size, formatFileSize(state.downloadedBytes), formatFileSize(state.totalBytes)) else formatFileSize(state.downloadedBytes),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
+            }
+            if (failed) {
+                item(key = "retry") {
+                    WearScaledItem(spec) {
+                        CompactButton(
+                            onClick = onRetry,
+                            modifier = Modifier.align(Alignment.Center).padding(vertical = 8.dp),
+                            icon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
+                            label = { Text(stringResource(R.string.network_retry)) },
                         )
                     }
                 }
             }
         }
+        val ringColors = ProgressIndicatorDefaults.colors(indicatorColor = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+        val ringStroke = CircularProgressIndicatorDefaults.largeStrokeWidth
+        // Use the M3 custom-animation API: its animated wrapper retains the first progress lambda
+        // and adds its own animation, which would hide this attempt's failure/retry transition.
+        Spacer(
+            Modifier.fillMaxSize().padding(CircularProgressIndicatorDefaults.FullScreenPadding)
+                .testTag("module-download-ring").semantics {
+                    if (failed) {
+                        contentDescription = failureTitle
+                    } else {
+                        progressBarRangeInfo = state.fraction?.let { ProgressBarRangeInfo(it, 0f..1f) } ?: ProgressBarRangeInfo.Indeterminate
+                    }
+                }.drawBehind {
+                    drawCircularProgressIndicator(
+                        progress = if (failed) failedProgress.value else fraction(),
+                        colors = ringColors,
+                        strokeWidth = ringStroke,
+                        startAngle = 300f,
+                        endAngle = 240f,
+                    )
+                },
+        )
+    }
+}
+
+@Composable
+private fun moduleDownloadFailureText(state: ModuleDownloadUiState): String {
+    val verification = state.verificationFailure
+    val failure = state.failure
+    return when {
+        verification != null -> stringResource(verification.resId)
+        state.phase == ModuleDownloadPhase.VERIFY_FAILED -> stringResource(R.string.wear_download_verify_failed)
+        failure?.reason == DownloadFailureReason.HTTP && failure.httpStatus != null -> stringResource(R.string.wear_download_error_http, failure.httpStatus)
+        failure != null && failure.reason != DownloadFailureReason.HTTP -> stringResource(failure.reason.resId)
+        else -> stringResource(R.string.wear_download_error_unknown)
     }
 }
 

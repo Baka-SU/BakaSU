@@ -5,6 +5,16 @@ import org.bakasu.bakasu.R
 
 enum class DownloadStatus { PENDING, DOWNLOADING, COMPLETED, FAILED }
 
+enum class DownloadFailureReason(@param:StringRes val resId: Int) {
+    NETWORK(R.string.wear_download_error_network),
+    TIMEOUT(R.string.wear_download_error_timeout),
+    HTTP(R.string.wear_download_error_http),
+    STORAGE(R.string.wear_download_error_storage),
+    UNKNOWN(R.string.wear_download_error_unknown),
+}
+
+data class DownloadFailure(val reason: DownloadFailureReason, val httpStatus: Int? = null)
+
 enum class DownloadVerificationFailure(@param:StringRes val resId: Int) {
     URL_NOT_ALLOWED(R.string.repo_download_url_blocked),
     SIZE_MISMATCH(R.string.repo_download_verify_failed),
@@ -27,4 +37,5 @@ data class DownloadState(
     val expected: ExpectedFile? = null,
     val verificationFailure: DownloadVerificationFailure? = null,
     val module: DownloadModuleInfo? = null,
+    val failure: DownloadFailure? = null,
 )

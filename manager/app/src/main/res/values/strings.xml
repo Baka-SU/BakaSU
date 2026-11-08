@@ -462,6 +462,11 @@
     <string name="download_complete_title">Download complete</string>
     <string name="download_complete_content">%s downloaded successfully</string>
     <string name="download_failed_title">Download failed</string>
+    <string name="wear_download_error_network">Unable to reach the server. Check your network.</string>
+    <string name="wear_download_error_timeout">The download timed out.</string>
+    <string name="wear_download_error_http">The server returned HTTP %1$d.</string>
+    <string name="wear_download_error_storage">Unable to save the file. Check storage space and access.</string>
+    <string name="wear_download_error_unknown">Unable to complete the download. Please retry.</string>
     <string name="download_failed_content">Failed to download %s</string>
     <string name="download_cancel">Cancel</string>
     <string name="download_install">Install</string>

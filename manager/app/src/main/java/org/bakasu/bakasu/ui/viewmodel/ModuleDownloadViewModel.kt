@@ -11,8 +11,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.bakasu.bakasu.domain.model.DownloadFailure
 import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.DownloadStatus
+import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
@@ -29,6 +31,8 @@ data class ModuleDownloadUiState(
     /** The size the server announced, or -1 when it is unknown. */
     val totalBytes: Long = -1L,
     val resultUri: String? = null,
+    val failure: DownloadFailure? = null,
+    val verificationFailure: DownloadVerificationFailure? = null,
 ) {
     /** The downloaded share from 0 to 1, or null when the size is unknown and no share can be given. */
     val fraction: Float?
@@ -52,14 +56,25 @@ class ModuleDownloadViewModel(
             mutableState.value = ModuleDownloadUiState(asset, ModuleDownloadPhase.VERIFY_FAILED)
             return
         }
-        mutableState.value = ModuleDownloadUiState(asset, ModuleDownloadPhase.DOWNLOADING)
+        val knownSize = asset.expected?.size ?: asset.size?.takeIf { it > 0L }
+            ?: mutableState.value.takeIf { it.asset == asset }?.totalBytes ?: -1L
+        mutableState.value = ModuleDownloadUiState(asset, ModuleDownloadPhase.DOWNLOADING, totalBytes = knownSize)
         job = viewModelScope.launch {
             val phase = try {
                 // The service keeps enforcing published integrity even after this page closes.
                 val id = enqueue(asset.downloadUrl, asset.name, asset.expected, module)
                 val result = observe(id)
                     .onEach { download ->
-                        if (download != null) mutableState.update { it.copy(downloadedBytes = download.downloadedBytes, totalBytes = download.totalBytes) }
+                        if (download != null) {
+                            mutableState.update {
+                                it.copy(
+                                    downloadedBytes = download.downloadedBytes,
+                                    totalBytes = if (download.status == DownloadStatus.PENDING && download.totalBytes <= 0L) it.totalBytes else download.totalBytes,
+                                    failure = download.failure,
+                                    verificationFailure = download.verificationFailure,
+                                )
+                            }
+                        }
                     }
                     .first { it == null || it.status == DownloadStatus.COMPLETED || it.status == DownloadStatus.FAILED }
                 val uri = result?.resultUri
@@ -83,6 +98,7 @@ class ModuleDownloadViewModel(
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
+                // A request/verification exception has no service-reported cause; show the generic failure.
                 ModuleDownloadPhase.FAILED
             }
             mutableState.update { it.copy(phase = phase) }
