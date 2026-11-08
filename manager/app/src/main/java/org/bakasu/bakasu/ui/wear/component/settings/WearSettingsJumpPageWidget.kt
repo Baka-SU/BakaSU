@@ -1,5 +1,7 @@
 package org.bakasu.bakasu.ui.wear.component.settings
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -9,6 +11,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.FilledTonalButton
@@ -17,6 +20,7 @@ import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
 
@@ -36,6 +40,7 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
     largeIcon: Boolean = false,
     descriptionMaxLines: Int = 1,
     isLoading: Boolean = false,
+    titleBadge: String? = null,
 ) {
     val loadingDescription = stringResource(R.string.wear_loading)
     val button: @Composable () -> Unit = {
@@ -56,7 +61,16 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
                 }
             },
             secondaryLabel = description?.let { text -> { Text(text, maxLines = descriptionMaxLines, overflow = TextOverflow.Ellipsis) } },
-        ) { Text(title, maxLines = if (description == null) 3 else 2, overflow = TextOverflow.Ellipsis) }
+        ) {
+            if (titleBadge == null) {
+                Text(title, maxLines = if (description == null) 3 else 2, overflow = TextOverflow.Ellipsis)
+            } else {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    WearBadge(titleBadge)
+                }
+            }
+        }
     }
     if (transformed) {
         WearRefreshItem(spec, Modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding), button)

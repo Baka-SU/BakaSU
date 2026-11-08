@@ -55,6 +55,30 @@ class WearRepositoryEntryTest {
     private var state by mutableStateOf(ModuleRepoUiState(repositoryUrl = RepositorySource.KERNEL_SU_URL, sources = listOf(RepositorySource(RepositorySource.KERNEL_SU_URL, "KernelSU"))))
 
     @Test
+    fun metaBadgeRemainsWholeAfterLongNamesAndDisappearsForOrdinaryModules() {
+        showRepository()
+        openRepository()
+        val module = cachedModule().copy(moduleName = "Long module name ".repeat(10), summary = "Summary", metamodule = true)
+        compose.runOnIdle {
+            finish()
+            state = state.copy(modules = listOf(module))
+        }
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(module.moduleName))
+        val badge = compose.onNodeWithText(resources.getString(R.string.module_meta_label), useUnmergedTree = true)
+        badge.assertIsDisplayed()
+        val nameBounds = compose.onNodeWithText(module.moduleName, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val badgeBounds = badge.getUnclippedBoundsInRoot()
+        val summaryBounds = compose.onNodeWithText(module.summary, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue(nameBounds.bottom <= badgeBounds.top)
+        assertTrue(badgeBounds.bottom <= summaryBounds.top)
+        compose.runOnIdle { state = state.copy(modules = listOf(module.copy(moduleName = "Meta"))) }
+        val shortName = compose.onNodeWithText("Meta", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertEquals(shortName.top.value, badge.getUnclippedBoundsInRoot().top.value, 1f)
+        compose.runOnIdle { state = state.copy(modules = listOf(module.copy(metamodule = false))) }
+        badge.assertDoesNotExist()
+    }
+
+    @Test
     fun slowRequestOpensThePageImmediatelyAndKeepsTheMenuAvailable() {
         showRepository()
         openRepository()
@@ -155,7 +179,8 @@ class WearRepositoryEntryTest {
         val refresh = hasText(resources.getString(R.string.wear_refresh)) and hasClickAction()
         compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(hasTestTag("menu")), useUnmergedTree = true).performScrollToNode(hasText(resources.getString(R.string.wear_refresh)))
         compose.onNode(refresh).performClick()
-        compose.waitUntil { navigator.top == WearRoute.ModuleRepo }
+        compose.runOnIdle { assertEquals("Refresh must be dispatched before the menu closes", 2, requests) }
+        compose.waitUntil(5_000) { navigator.top == WearRoute.ModuleRepo }
         compose.onNodeWithText("Cached module").assertExists()
         val title = compose.onNodeWithText(resources.getString(R.string.module_repo)).getUnclippedBoundsInRoot()
         val indicator = compose.onNodeWithContentDescription(resources.getString(R.string.wear_loading)).getUnclippedBoundsInRoot()

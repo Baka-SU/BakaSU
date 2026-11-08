@@ -179,6 +179,7 @@ internal fun WearModuleRepoPage(
                 { onOpen(module) },
                 icon = Icons.Rounded.Extension,
                 description = module.summary.ifBlank { module.moduleId },
+                titleBadge = if (module.metamodule) stringResource(R.string.module_meta_label) else null,
             )
         }
     }
