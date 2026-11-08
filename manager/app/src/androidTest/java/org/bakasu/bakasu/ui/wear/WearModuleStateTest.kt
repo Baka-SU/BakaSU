@@ -110,6 +110,16 @@ class WearModuleStateTest(private val round: Boolean) {
         compose.onNodeWithText(compose.activity.getString(R.string.reboot_to_apply), useUnmergedTree = true).assertDoesNotExist()
     }
 
+    @Test
+    fun removalIsAbsentFromTheSummaryButStillRestorable() {
+        show { Detail(module.copy(remove = true)) }
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
+        compose.onNodeWithText(compose.activity.getString(R.string.wear_pending_removal), useUnmergedTree = true).assertDoesNotExist()
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(5)
+        compose.onNodeWithText(compose.activity.getString(R.string.wear_enable_module)).assertIsNotEnabled()
+        compose.onNodeWithText(compose.activity.getString(R.string.wear_restore_module)).assertExists()
+    }
+
     @Composable
     private fun Detail(installed: InstalledModule) {
         WearModuleDetail(installed, null, {}, { _, _ -> }, { _, _ -> }, {}, {}, {})

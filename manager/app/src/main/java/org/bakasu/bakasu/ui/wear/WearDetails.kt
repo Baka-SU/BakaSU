@@ -132,9 +132,6 @@ internal fun WearModuleDetail(
                             if (module.metamodule) {
                                 WearBadge(stringResource(R.string.wear_meta_badge))
                             }
-                            if (module.remove) {
-                                WearBadge(stringResource(R.string.wear_pending_removal), containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.error)
-                            }
                         }
                     }
                 }
