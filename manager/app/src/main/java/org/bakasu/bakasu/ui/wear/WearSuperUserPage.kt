@@ -29,7 +29,6 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
-import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.ui.component.PackageIcon
@@ -41,8 +40,8 @@ import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
 import org.bakasu.bakasu.ui.wear.component.wearGroupGap
-import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
 
 /**
  * @author Hanhan_awa
@@ -111,50 +110,51 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
         }
         if (isManager) add(R.string.wear_badge_manager)
     }
-    Button(
-        modifier = Modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, spec)
-            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
-        transformation = SurfaceTransformation(spec),
-        onClick = { onAppClick(group.uid, group.primaryPackageName) },
-        colors = if (group.allowSu) ButtonDefaults.filledVariantButtonColors() else ButtonDefaults.filledTonalButtonColors(),
-        contentPadding = ButtonDefaults.ButtonWithLargeIconContentPadding,
-        icon = {
-            PackageIcon(
-                packageName = if (group.isWebViewZygote) "android" else group.mainApp.packageName,
-                contentDescription = null,
-                modifier = Modifier.size(ButtonDefaults.LargeIconSize),
-            )
-        },
-        secondaryLabel = {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                maxItemsInEachRow = 2,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                labels.forEach { label ->
-                    val colors = MaterialTheme.colorScheme
-                    val (container, content) = when (label) {
-                        R.string.wear_badge_root -> colors.primary to Color.Black
-                        R.string.wear_badge_default -> colors.primaryContainer to Color.White
-                        R.string.wear_badge_umount -> colors.secondaryContainer to colors.onSecondaryContainer
-                        R.string.wear_badge_custom -> colors.tertiaryContainer to colors.onTertiaryContainer
-                        else -> colors.errorContainer to colors.onErrorContainer
+    WearRefreshItem(spec, Modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)) {
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            transformation = SurfaceTransformation(spec),
+            onClick = { onAppClick(group.uid, group.primaryPackageName) },
+            colors = if (group.allowSu) ButtonDefaults.filledVariantButtonColors() else ButtonDefaults.filledTonalButtonColors(),
+            contentPadding = ButtonDefaults.ButtonWithLargeIconContentPadding,
+            icon = {
+                PackageIcon(
+                    packageName = if (group.isWebViewZygote) "android" else group.mainApp.packageName,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.LargeIconSize),
+                )
+            },
+            secondaryLabel = {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    maxItemsInEachRow = 2,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    labels.forEach { label ->
+                        val colors = MaterialTheme.colorScheme
+                        val (container, content) = when (label) {
+                            R.string.wear_badge_root -> colors.primary to Color.Black
+                            R.string.wear_badge_default -> colors.primaryContainer to Color.White
+                            R.string.wear_badge_umount -> colors.secondaryContainer to colors.onSecondaryContainer
+                            R.string.wear_badge_custom -> colors.tertiaryContainer to colors.onTertiaryContainer
+                            else -> colors.errorContainer to colors.onErrorContainer
+                        }
+                        WearBadge(
+                            stringResource(label),
+                            containerColor = container,
+                            contentColor = content,
+                        )
                     }
-                    WearBadge(
-                        stringResource(label),
-                        containerColor = container,
-                        contentColor = content,
-                    )
                 }
-            }
-        },
-    ) {
-        Text(
-            group.mainApp.label,
-            style = LocalTextStyle.current.merge(TextStyle(lineBreak = LineBreak.Heading)),
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-        )
+            },
+        ) {
+            Text(
+                group.mainApp.label,
+                style = LocalTextStyle.current.merge(TextStyle(lineBreak = LineBreak.Heading)),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }

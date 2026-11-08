@@ -30,7 +30,6 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
-import androidx.wear.compose.material3.lazy.transformedHeight
 
 /**
  * @author Hanhan_awa
@@ -62,36 +61,37 @@ fun TransformingLazyColumnItemScope.WearChip(
     val centered = icon == null && secondaryLabel == null
     val border = if (emphasis == WearChipEmphasis.OUTLINED) ButtonDefaults.outlinedButtonBorder(enabled = true) else null
     if (onClick != null) {
-        Button(
-            onClick = onClick,
-            modifier = modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, transformationSpec)
-                .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
-            transformation = SurfaceTransformation(transformationSpec),
-            colors = when (emphasis) {
-                WearChipEmphasis.HIGH -> ButtonDefaults.buttonColors()
+        WearRefreshItem(transformationSpec, modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)) {
+            Button(
+                onClick = onClick,
+                modifier = Modifier.fillMaxWidth(),
+                transformation = SurfaceTransformation(transformationSpec),
+                colors = when (emphasis) {
+                    WearChipEmphasis.HIGH -> ButtonDefaults.buttonColors()
 
-                WearChipEmphasis.MEDIUM -> ButtonDefaults.filledTonalButtonColors()
+                    WearChipEmphasis.MEDIUM -> ButtonDefaults.filledTonalButtonColors()
 
-                WearChipEmphasis.OUTLINED -> ButtonDefaults.outlinedButtonColors()
+                    WearChipEmphasis.OUTLINED -> ButtonDefaults.outlinedButtonColors()
 
-                WearChipEmphasis.LOW -> ButtonDefaults.childButtonColors()
+                    WearChipEmphasis.LOW -> ButtonDefaults.childButtonColors()
 
-                WearChipEmphasis.ERROR -> ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    iconColor = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            },
-            border = border,
-            icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize)) } },
-            // Keep the description to two lines; mode badges are measured separately in the headline.
-            // A [secondaryLabelStyle] from the theme typography lets a dense summary fit one line.
-            secondaryLabel = secondaryLabel?.let { text ->
-                { Text(text, style = secondaryLabelStyle ?: LocalTextStyle.current, maxLines = 2, overflow = TextOverflow.Ellipsis) }
-            },
-        ) {
-            WearChipHeadline(label, labelLines, centered, headlineBadges)
+                    WearChipEmphasis.ERROR -> ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        iconColor = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                },
+                border = border,
+                icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize)) } },
+                // Keep the description to two lines; mode badges are measured separately in the headline.
+                // A [secondaryLabelStyle] from the theme typography lets a dense summary fit one line.
+                secondaryLabel = secondaryLabel?.let { text ->
+                    { Text(text, style = secondaryLabelStyle ?: LocalTextStyle.current, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                },
+            ) {
+                WearChipHeadline(label, labelLines, centered, headlineBadges)
+            }
         }
         return
     }

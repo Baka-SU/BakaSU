@@ -30,7 +30,6 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
-import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
@@ -41,7 +40,7 @@ import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleSwipeActions
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
+import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
 
 /**
  * @author Hanhan_awa
@@ -130,15 +129,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
     val button: @Composable () -> Unit = {
         Button(
             onClick = { onModuleClick(module.id) },
-            modifier = Modifier.fillMaxWidth()
-                .then(
-                    if (actions.isEmpty()) {
-                        Modifier.wearRefreshOffset().transformedHeight(this, spec)
-                            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)
-                    } else {
-                        Modifier
-                    },
-                ),
+            modifier = Modifier.fillMaxWidth(),
             // A reveal row owns its transformation; a standalone row owns its own.
             transformation = if (actions.isEmpty()) SurfaceTransformation(spec) else null,
             colors = when {
@@ -203,7 +194,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
         }
     }
     if (actions.isEmpty()) {
-        button()
+        WearRefreshItem(spec, Modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding), button)
     } else {
         WearModuleSwipeActions(spec, scrolling, actions.first(), actions.getOrNull(1), content = button)
     }

@@ -100,12 +100,14 @@ fun TransformingLazyColumnItemScope.WearSectionHeader(
     transformationSpec: TransformationSpec,
     title: String,
 ) {
-    ListSubHeader(
-        modifier = Modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, transformationSpec),
-        transformation = SurfaceTransformation(transformationSpec),
-    ) {
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text(title, Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+    WearRefreshItem(transformationSpec) {
+        ListSubHeader(
+            modifier = Modifier.fillMaxWidth(),
+            transformation = SurfaceTransformation(transformationSpec),
+        ) {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(title, Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
         }
     }
 }
@@ -137,17 +139,17 @@ fun TransformingLazyColumnItemScope.WearActionButton(
     compact: Boolean = false,
     largeIcon: Boolean = false,
 ) {
-    WearActionButton(
-        icon, label, onClick,
-        modifier = Modifier.wearRefreshOffset().transformedHeight(this, transformationSpec)
-            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
-        enabled = enabled,
-        secondaryText = secondaryText,
-        colors = colors,
-        compact = compact,
-        largeIcon = largeIcon,
-        transformation = SurfaceTransformation(transformationSpec),
-    )
+    WearRefreshItem(transformationSpec, Modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)) {
+        WearActionButton(
+            icon, label, onClick,
+            enabled = enabled,
+            secondaryText = secondaryText,
+            colors = colors,
+            compact = compact,
+            largeIcon = largeIcon,
+            transformation = SurfaceTransformation(transformationSpec),
+        )
+    }
 }
 
 /** A Wear action outside a scrolling list, sharing the same appearance and sizing. */

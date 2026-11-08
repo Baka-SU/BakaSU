@@ -13,11 +13,10 @@ import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
-import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
+import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
 
 @Composable
 fun WearChoicePage(
@@ -48,16 +47,17 @@ fun WearChoicePage(
     ) { spec ->
         item { WearPageHeader(spec, title) }
         LazySegmentedColumn(choices, { it.first }) { (value, label) ->
-            RadioButton(
-                selected = value == selected,
-                onSelect = { onChoose(value) },
-                modifier = Modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, spec)
-                    .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
-                enabled = enabled,
-                transformation = SurfaceTransformation(spec),
-                icon = icon?.let { { Icon(it(value), contentDescription = null) } },
-                label = { Text(label, maxLines = labelMaxLines, overflow = TextOverflow.Ellipsis) },
-            )
+            WearRefreshItem(spec, Modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)) {
+                RadioButton(
+                    selected = value == selected,
+                    onSelect = { onChoose(value) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = enabled,
+                    transformation = SurfaceTransformation(spec),
+                    icon = icon?.let { { Icon(it(value), contentDescription = null) } },
+                    label = { Text(label, maxLines = labelMaxLines, overflow = TextOverflow.Ellipsis) },
+                )
+            }
         }
         extraContent(spec)
     }

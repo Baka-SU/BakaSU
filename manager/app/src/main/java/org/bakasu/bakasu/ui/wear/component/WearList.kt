@@ -98,7 +98,10 @@ val LocalWearPanelPull = compositionLocalOf { mutableFloatStateOf(0f) }
 
 internal val LocalWearRefreshOffset = compositionLocalOf { 0.dp }
 
-/** Move the row layout, including its hit target, while keeping the title and scroll anchor still. */
+/**
+ * Move the complete row, including its hit target, while keeping the title and scroll anchor still.
+ * Apply outside the surface: Material Card/Button prepend an offscreen layer to their modifier.
+ */
 @Composable
 internal fun Modifier.wearRefreshOffset(): Modifier {
     val offset = LocalWearRefreshOffset.current

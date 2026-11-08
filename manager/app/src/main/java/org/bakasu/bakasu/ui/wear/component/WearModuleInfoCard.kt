@@ -10,7 +10,6 @@ import androidx.wear.compose.material3.Card
 import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.lazy.TransformationSpec
-import androidx.wear.compose.material3.lazy.transformedHeight
 
 /**
  * Read-only module information, using the official Card's shape, padding and surface roles. A
@@ -22,12 +21,12 @@ fun TransformingLazyColumnItemScope.WearModuleInfoCard(
     compact: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Card(
-        modifier = Modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, spec)
-            .minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)
-            .wearCompactRow(compact),
-        transformation = SurfaceTransformation(spec),
-        contentPadding = if (compact) ButtonDefaults.ContentPadding else CardDefaults.ContentPadding,
-        content = content,
-    )
+    WearRefreshItem(spec, Modifier.minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)) {
+        Card(
+            modifier = Modifier.fillMaxWidth().wearCompactRow(compact),
+            transformation = SurfaceTransformation(spec),
+            contentPadding = if (compact) ButtonDefaults.ContentPadding else CardDefaults.ContentPadding,
+            content = content,
+        )
+    }
 }
