@@ -677,7 +677,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         onToggleFilter = { sulogViewModel.dispatch(SulogUiAction.ToggleFilter(it)) },
                                         onClean = {
                                             logError = null
-                                            sulogViewModel.dispatch(SulogUiAction.CleanFile)
+                                            sulogViewModel.dispatch(SulogUiAction.CleanPath(it))
                                         },
                                     )
                                 }
