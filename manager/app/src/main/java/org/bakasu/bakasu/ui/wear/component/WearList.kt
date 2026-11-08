@@ -150,6 +150,15 @@ fun WearList(
     val timeTitleBottom = LocalWearTimeTitleBottom.current
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
+    val rotaryBehavior = if (snap) {
+        RotaryScrollableDefaults.snapBehavior(listState)
+    } else {
+        val flingBehavior = ScrollableDefaults.flingBehavior()
+        val behavior = RotaryScrollableDefaults.behavior(listState, flingBehavior)
+        // In Wear Compose 1.7.1 the default factory creates a new scroll accumulator on every call.
+        // Keep it across recompositions so a stream of crown events can finish its scroll animation.
+        remember(listState, flingBehavior, density, configuration) { behavior }
+    }
     val headerBottom = remember(timeMode, configuration, density) { mutableStateOf<Float?>(null) }
     var viewportTop by remember { mutableFloatStateOf(0f) }
     // Round screens scale and fade items at the edges; square screens (including the screen shape
@@ -372,11 +381,7 @@ fun WearList(
                                 } else {
                                     ScrollableDefaults.flingBehavior()
                                 },
-                                rotaryScrollableBehavior = if (snap) {
-                                    RotaryScrollableDefaults.snapBehavior(listState)
-                                } else {
-                                    RotaryScrollableDefaults.behavior(listState)
-                                },
+                                rotaryScrollableBehavior = rotaryBehavior,
                             ) {
                                 content(transformationSpec)
                             }

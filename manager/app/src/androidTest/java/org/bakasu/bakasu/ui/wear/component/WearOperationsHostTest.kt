@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -25,13 +26,16 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeUp
@@ -57,6 +61,9 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private var menuOpen by mutableStateOf(false)
+    private var pageLoading by mutableStateOf(false)
+    private var pageHasEdgeButton = false
+    private var pageRevision by mutableIntStateOf(0)
     private lateinit var pageState: TransformingLazyColumnState
     private lateinit var menuState: TransformingLazyColumnState
     private lateinit var composeView: View
@@ -142,6 +149,55 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
             assertFalse(menuOpen)
         }
         compose.onNodeWithTag("menu").assertDoesNotExist()
+    }
+
+    @Test
+    fun crownStillScrollsWhenTheEdgeButtonHasFocus() {
+        pageHasEdgeButton = true
+        showHost()
+        compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(hasTestTag("page")), useUnmergedTree = true).performScrollToIndex(7)
+        compose.onNodeWithText(compose.activity.getString(R.string.confirm))
+            .performSemanticsAction(SemanticsActions.RequestFocus) { it() }
+        val before = compose.runOnIdle { pageState.layoutInfo.visibleItems.first().let { it.index to it.offset } }
+        rotateCrown(-64f)
+        val after = compose.runOnIdle { pageState.layoutInfo.visibleItems.first().let { it.index to it.offset } }
+        assertTrue("Crown scrolling must still reach the list from its edge button", before != after)
+    }
+
+    @Test
+    fun continuousCrownRotationKeepsItsDistanceAcrossRecompositions() {
+        showHost()
+        val initial = compose.runOnIdle { pageState.layoutInfo.visibleItems.first().offset }
+        compose.mainClock.autoAdvance = false
+        try {
+            repeat(30) {
+                compose.runOnUiThread {
+                    dispatchCrown(8f)
+                    pageRevision++
+                }
+                compose.mainClock.advanceTimeBy(16)
+            }
+            compose.mainClock.advanceTimeBy(1500)
+        } finally {
+            compose.mainClock.autoAdvance = true
+        }
+        compose.runOnIdle {
+            val first = pageState.layoutInfo.visibleItems.first()
+            val movedPastFirst = first.index > 0 || initial - first.offset > 80f * compose.activity.resources.displayMetrics.density
+            assertTrue("Thirty 8dp crown events must move more than a few pixels: first=$first", movedPastFirst)
+        }
+    }
+
+    @Test
+    fun crownFocusReturnsAfterPageLoading() {
+        showHost()
+        rotateCrown(64f)
+        compose.runOnIdle { pageLoading = true }
+        compose.runOnIdle { pageLoading = false }
+        val before = compose.runOnIdle { pageState.layoutInfo.visibleItems.first().let { it.index to it.offset } }
+        rotateCrown(64f)
+        val after = compose.runOnIdle { pageState.layoutInfo.visibleItems.first().let { it.index to it.offset } }
+        assertTrue("Loaded content must regain rotary scrolling", before != after)
     }
 
     @Test
@@ -294,7 +350,15 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
     private fun Page() {
         pageState = rememberTransformingLazyColumnState()
         Box(Modifier.fillMaxSize().testTag("page")) {
-            WearList(listState = pageState, hasOperationsPanel = true, onOpenPanel = { menuOpen = true }) { spec ->
+            WearList(
+                listState = pageState,
+                panelLabel = pageRevision.toString(),
+                isLoading = pageLoading,
+                hasOperationsPanel = true,
+                onOpenPanel = { menuOpen = true },
+                onConfirm = if (pageHasEdgeButton) ({}) else null,
+                confirmLabel = stringResource(R.string.confirm),
+            ) { spec ->
                 items(8) { WearChip(spec, stringResource(R.string.home)) }
             }
         }
@@ -303,7 +367,15 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
     private fun openWithCrown() {
         // Each step is below the 144dp crown threshold. A preview is composed between steps,
         // so this catches it taking focus before the page can finish accumulating the rotation.
-        repeat(3) { rotateCrown(-64f) }
+        compose.mainClock.autoAdvance = false
+        try {
+            repeat(3) {
+                compose.runOnUiThread { dispatchCrown(-64f) }
+                compose.mainClock.advanceTimeBy(32)
+            }
+        } finally {
+            compose.mainClock.autoAdvance = true
+        }
         compose.runOnIdle { assertTrue("Continuous crown input must finish opening the menu", menuOpen) }
     }
 
@@ -324,25 +396,27 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
     }
 
     private fun rotateCrown(distanceDp: Float) {
-        compose.runOnIdle {
-            val activity = compose.activity
-            val pixels = distanceDp * activity.resources.displayMetrics.density
-            val coordinates = MotionEvent.PointerCoords().apply {
-                setAxisValue(MotionEvent.AXIS_SCROLL, -pixels / ViewConfiguration.get(activity).scaledVerticalScrollFactor)
-            }
-            val properties = MotionEvent.PointerProperties().apply { id = 0 }
-            val now = SystemClock.uptimeMillis()
-            val event = MotionEvent.obtain(
-                now, now, MotionEvent.ACTION_SCROLL, 1, arrayOf(properties), arrayOf(coordinates),
-                0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_ROTARY_ENCODER, 0,
-            )
-            try {
-                activity.dispatchGenericMotionEvent(event)
-            } finally {
-                event.recycle()
-            }
-        }
+        compose.runOnIdle { dispatchCrown(distanceDp) }
         compose.waitForIdle()
+    }
+
+    private fun dispatchCrown(distanceDp: Float) {
+        val activity = compose.activity
+        val pixels = distanceDp * activity.resources.displayMetrics.density
+        val coordinates = MotionEvent.PointerCoords().apply {
+            setAxisValue(MotionEvent.AXIS_SCROLL, -pixels / ViewConfiguration.get(activity).scaledVerticalScrollFactor)
+        }
+        val properties = MotionEvent.PointerProperties().apply { id = 0 }
+        val now = SystemClock.uptimeMillis()
+        val event = MotionEvent.obtain(
+            now, now, MotionEvent.ACTION_SCROLL, 1, arrayOf(properties), arrayOf(coordinates),
+            0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_ROTARY_ENCODER, 0,
+        )
+        try {
+            activity.dispatchGenericMotionEvent(event)
+        } finally {
+            event.recycle()
+        }
     }
 
     companion object {
