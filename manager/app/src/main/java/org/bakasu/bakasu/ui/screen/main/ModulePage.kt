@@ -81,7 +81,6 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
@@ -138,6 +137,7 @@ import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
 import org.bakasu.bakasu.domain.usecase.TakeModuleUriPermissionUseCase
+import org.bakasu.bakasu.ui.component.CenteredRefreshIndicator
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.InstallConfirmationDialog
 import org.bakasu.bakasu.ui.component.SearchAppBar
@@ -908,12 +908,10 @@ private fun ModuleList(
             .fillMaxSize()
             .blurSource(),
         indicator = {
-            PullToRefreshDefaults.LoadingIndicator(
-                modifier = Modifier
-                    .padding(top = topPadding)
-                    .align(Alignment.TopCenter),
+            CenteredRefreshIndicator(
                 state = pullRefreshState,
                 isRefreshing = uiState.isRefreshing,
+                contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
             )
         },
         isRefreshing = uiState.isRefreshing,

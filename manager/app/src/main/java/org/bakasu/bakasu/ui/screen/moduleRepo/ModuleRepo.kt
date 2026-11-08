@@ -57,7 +57,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
@@ -106,6 +105,7 @@ import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.usecase.ObserveAssetDownloadUseCase
 import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
 import org.bakasu.bakasu.ui.component.CatalogCard
+import org.bakasu.bakasu.ui.component.CenteredRefreshIndicator
 import org.bakasu.bakasu.ui.component.NetworkRefreshContent
 import org.bakasu.bakasu.ui.component.RepositoryEmptyContent
 import org.bakasu.bakasu.ui.component.SearchAppBar
@@ -281,12 +281,10 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
                 viewModel.dispatch(ModuleRepoUiAction.PullRefresh)
             },
             indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
+                CenteredRefreshIndicator(
                     state = pullRefreshState,
                     isRefreshing = uiState.isPullRefreshing,
-                    modifier = Modifier
-                        .padding(top = innerPadding.calculateTopPadding())
-                        .align(Alignment.TopCenter),
+                    contentPadding = innerPadding,
                 )
             },
         ) {
