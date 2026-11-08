@@ -171,8 +171,6 @@ internal fun WearLogsPage(
                         title = { Text(sulogEntryTitle(entry), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                         transformation = SurfaceTransformation(spec),
-                        // The clock time fits the time slot; the full date stays in the content.
-                        time = entry.timestampText?.substringAfter(' ')?.let { { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
                         subtitle = tags.takeIf { it.isNotEmpty() }?.let { labels ->
                             {
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {

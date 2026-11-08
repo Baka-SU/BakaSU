@@ -6,11 +6,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -30,6 +32,37 @@ import org.junit.Test
 class WearSulogLoadingTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun blankDescriptionsDoNotCreateRowsAndTimeAppearsOnlyOnce() {
+        val timestamp = "2026-11-08 12:34:56"
+        val entry = mutableStateOf(SulogEntry("entry", SulogEventType.RootExecve, "su", timestamp, mapOf("comm" to "Command", "argv" to "")))
+        compose.setContent {
+            MaterialTheme {
+                AppScaffold(timeText = {}) {
+                    WearLogsPage(SulogUiState(isLoading = false, entries = listOf(entry.value), visibleEntries = listOf(entry.value)), {}, {}, {}, onEntry = {})
+                }
+            }
+        }
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Command"))
+        compose.onAllNodesWithText(timestamp, useUnmergedTree = true).assertCountEquals(1)
+        compose.onNodeWithText("12:34:56", useUnmergedTree = true).assertDoesNotExist()
+        val height = compose.onNodeWithText("Command").getUnclippedBoundsInRoot().let { it.bottom - it.top }
+        for (description in listOf(null, "", "   ")) {
+            compose.runOnIdle {
+                entry.value = entry.value.copy(
+                    fields = buildMap {
+                        put("comm", "Command")
+                        if (description != null) put("argv", description)
+                    },
+                )
+            }
+            assertEquals(height.value, compose.onNodeWithText("Command").getUnclippedBoundsInRoot().let { it.bottom - it.top }.value, 0.5f)
+            if (description != null) compose.onNodeWithText(description, useUnmergedTree = true).assertDoesNotExist()
+        }
+        compose.runOnIdle { entry.value = entry.value.copy(fields = mapOf("comm" to "Command", "argv" to "su -c id")) }
+        compose.onNodeWithText("su -c id", useUnmergedTree = true).assertExists()
+    }
 
     @Test
     fun everyPageLoadHidesCachedLogsWhileManualRefreshKeepsThem() {
