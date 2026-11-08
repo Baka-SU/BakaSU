@@ -604,6 +604,23 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.TemplateChoice)) },
                                     )
                                 }
+                                entry<WearRoute.AppProfileTemplateSearch> { route ->
+                                    WearSearchPage(stringResource(R.string.wear_template_search), "profile-templates", route.query, ::back) {
+                                        navigator.submitTemplateChoiceSearch(route, it)
+                                    }
+                                }
+                                entry<WearRoute.AppProfileTemplateResults> { route ->
+                                    WearAppProfileTemplateChoiceRoute(
+                                        route.uid,
+                                        route.packageName,
+                                        onBack = { if (navigator.top == route) back() },
+                                        templateViewModel = templateViewModel,
+                                        isPageLoading = templateChoiceLoading,
+                                        onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.TemplateChoice)) },
+                                        query = route.query,
+                                        onSaved = { navigator.finishTemplateChoice(route) },
+                                    )
+                                }
                                 entry<WearRoute.AppProfileCustom> { route ->
                                     WearAppProfileCustomRoute(
                                         route.uid,
@@ -922,7 +939,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                                     WearRoute.Templates, WearRoute.TemplateSearchResults -> WearOperationsPage.Templates
 
-                                    is WearRoute.AppProfileTemplateChoice -> WearOperationsPage.TemplateChoice
+                                    is WearRoute.AppProfileTemplateChoice, is WearRoute.AppProfileTemplateResults -> WearOperationsPage.TemplateChoice
 
                                     else -> null
                                 }
@@ -980,11 +997,21 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                 onSearch = {
                                                     when (operationsPage) {
                                                         WearOperationsPage.SuperUser -> appSearchInput()
+
                                                         WearOperationsPage.Modules -> moduleSearchInput()
+
                                                         WearOperationsPage.Logs -> logSearchInput()
-                                                        WearOperationsPage.Home, WearOperationsPage.OnlineTemplates, WearOperationsPage.TemplateChoice -> Unit
+
+                                                        WearOperationsPage.Home, WearOperationsPage.OnlineTemplates -> Unit
+
+                                                        WearOperationsPage.TemplateChoice -> templateChoice?.let {
+                                                            open(WearRoute.AppProfileTemplateSearch(it.uid, it.packageName, (route as? WearRoute.AppProfileTemplateResults)?.query.orEmpty()))
+                                                        }
+
                                                         WearOperationsPage.Templates -> open(WearRoute.TemplateSearch)
+
                                                         WearOperationsPage.Repository -> open(WearRoute.ModuleRepoSearch)
+
                                                         WearOperationsPage.Umount -> open(WearRoute.UmountSearch)
                                                     }
                                                 },

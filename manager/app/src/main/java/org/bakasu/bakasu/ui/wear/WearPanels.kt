@@ -118,7 +118,11 @@ internal fun WearOperationsPanel(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.wear_search_umount_paths), onSearch),
         )
 
-        WearOperationsPage.OnlineTemplates, WearOperationsPage.TemplateChoice -> emptyList()
+        WearOperationsPage.OnlineTemplates -> emptyList()
+
+        WearOperationsPage.TemplateChoice -> listOf(
+            WearIconAction(Icons.Rounded.Search, stringResource(R.string.wear_template_search), onSearch),
+        )
 
         WearOperationsPage.Templates -> listOf(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.wear_template_search), onSearch),

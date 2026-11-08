@@ -44,6 +44,8 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     is WearRoute.AppProfileTemplateChoice -> R.string.profile_template
 
+    is WearRoute.AppProfileTemplateSearch, is WearRoute.AppProfileTemplateResults -> R.string.wear_template_search
+
     is WearRoute.AppProfileCustom -> R.string.profile_custom
 
     WearRoute.AppFilter -> R.string.wear_filter_sort

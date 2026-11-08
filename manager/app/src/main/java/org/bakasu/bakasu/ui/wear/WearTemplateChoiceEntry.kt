@@ -20,3 +20,24 @@ internal fun rememberWearTemplateChoiceLoading(route: WearRoute.AppProfileTempla
     }
     return loading.value
 }
+
+/** Search retains the owning choice page and updates its one results destination. */
+internal fun WearNavigator.submitTemplateChoiceSearch(input: WearRoute.AppProfileTemplateSearch, query: String) {
+    if (top != input) return
+    back()
+    if (query.isBlank()) return
+    val previous = backStack.dropLast(1).lastOrNull() as? WearRoute.AppProfileTemplateResults
+    if (previous?.uid == input.uid && previous.packageName == input.packageName) {
+        back()
+        back()
+    }
+    open(WearRoute.AppProfileTemplateResults(input.uid, input.packageName, query.trim()))
+}
+
+/** A late save must not close a different screen or a different application's profile. */
+internal fun WearNavigator.finishTemplateChoice(result: WearRoute.AppProfileTemplateResults) {
+    if (top != result) return
+    val parent = WearRoute.AppProfileMode(result.uid, result.packageName)
+    if (parent !in backStack) return
+    while (top != parent) back()
+}

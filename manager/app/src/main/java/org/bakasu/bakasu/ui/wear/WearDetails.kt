@@ -347,6 +347,8 @@ internal fun WearAppProfileTemplateChoiceRoute(
     templateViewModel: TemplateViewModel,
     isPageLoading: Boolean,
     onOpenPanel: () -> Unit,
+    query: String = "",
+    onSaved: () -> Unit = onBack,
 ) {
     val viewModel = koinViewModel<AppProfileViewModel>(
         key = "wear-app-profile-template-$uid-$packageName",
@@ -364,7 +366,7 @@ internal fun WearAppProfileTemplateChoiceRoute(
 
                 AppProfileUiEvent.Saved -> {
                     error = null
-                    onBack()
+                    onSaved()
                 }
             }
         }
@@ -380,12 +382,13 @@ internal fun WearAppProfileTemplateChoiceRoute(
     } else {
         WearAppProfileTemplateChoicePage(
             profile = profile,
-            templates = templates.templateList,
+            templates = org.bakasu.bakasu.ui.viewmodel.filterProfileTemplates(templates.templateList, query),
             isRefreshing = templates.isRefreshing && !isPageLoading,
             isLoading = templates.isLoading || isPageLoading,
             loadFailed = templates.loadFailed,
             onBack = onBack,
             onOpenPanel = onOpenPanel,
+            noMatches = query.isNotBlank() && templates.templateList.isNotEmpty(),
             onChoose = { template: ProfileTemplate ->
                 viewModel.dispatch(
                     AppProfileUiAction.Save(

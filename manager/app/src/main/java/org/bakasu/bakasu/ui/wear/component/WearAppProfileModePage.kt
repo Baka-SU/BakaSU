@@ -64,6 +64,7 @@ fun WearAppProfileTemplateChoicePage(
     onBack: () -> Unit,
     onOpenPanel: () -> Unit,
     onChoose: (ProfileTemplate) -> Unit,
+    noMatches: Boolean = false,
 ) {
     WearChoicePage(
         title = stringResource(R.string.profile_template),
@@ -79,7 +80,7 @@ fun WearAppProfileTemplateChoicePage(
             if (loadFailed) {
                 item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_load_failed), tone = WearStatusTone.ERROR) }
             } else if (!isLoading && templates.isEmpty()) {
-                item { WearEmptyState(spec, Icons.Rounded.Description, stringResource(R.string.wear_template_empty)) }
+                item { WearEmptyState(spec, Icons.Rounded.Description, stringResource(if (noMatches) R.string.search_no_any_match else R.string.wear_template_empty)) }
             }
         },
     ) { id ->
