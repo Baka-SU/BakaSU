@@ -165,12 +165,7 @@ fun WearList(
     // Open space beneath the title at the list start. A user's scroll dismisses it for this
     // request, so removing bottom padding cannot immediately reopen it and move the hit target.
     var showRefreshGap by remember(isRefreshing, isLoading, listState) {
-        val first = listState.layoutInfo.visibleItems.firstOrNull()
-        // Round-screen transformations can leave the first item a few pixels above its padding
-        // after a layout change, even though no user scroll has left the title.
-        val atStart = !listState.canScrollBackward || first?.let {
-            it.index == 0 && it.offset >= listState.layoutInfo.beforeContentPadding - with(density) { 2.dp.roundToPx() }
-        } == true
+        val atStart = listState.isAtWearListStart(with(density) { 2.dp.roundToPx() })
         mutableStateOf(isRefreshing && !isLoading && atStart)
     }
     LaunchedEffect(listState.isScrollInProgress, listState.canScrollBackward) {

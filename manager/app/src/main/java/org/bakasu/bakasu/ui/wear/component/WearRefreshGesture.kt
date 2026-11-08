@@ -26,6 +26,10 @@ import org.bakasu.bakasu.R
 
 internal val WearPullThreshold = 48.dp
 
+/** Round-screen transformations can leave the first item slightly above its content padding. */
+internal fun TransformingLazyColumnState.isAtWearListStart(tolerancePx: Int): Boolean = !canScrollBackward ||
+    layoutInfo.visibleItems.firstOrNull()?.let { it.index == 0 && it.offset >= layoutInfo.beforeContentPadding - tolerancePx } == true
+
 /**
  * @author Hanhan_awa
  * @date 2026/10/1.
@@ -69,6 +73,7 @@ internal fun Modifier.wearRefreshGesture(
     val pullEnd by rememberUpdatedState(onPullEnd)
     val haptic = LocalHapticFeedback.current
     val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
+    val topTolerance = with(LocalDensity.current) { 2.dp.roundToPx() }
     val backLabel = stringResource(R.string.back)
     // The crown turned past the boundary: three times the touch threshold of extra rotation, with a
     // pause of the crown resetting it.
@@ -80,7 +85,7 @@ internal fun Modifier.wearRefreshGesture(
         val closing = closePanel != null
         val action = closePanel ?: panel
         val now = SystemClock.uptimeMillis()
-        val atBoundary = if (closing) !listState.canScrollForward else !listState.canScrollBackward
+        val atBoundary = if (closing) !listState.canScrollForward else listState.isAtWearListStart(topTolerance)
         val delta = if (closing) event.verticalScrollPixels else -event.verticalScrollPixels
         val sign = if (closing && !closePanelOnPullDown) -1f else 1f
         if (action == null || !active || !atBoundary || delta <= 0f || now - crown.lastEvent > 600) crown.accumulated = 0f
@@ -104,7 +109,7 @@ internal fun Modifier.wearRefreshGesture(
         }
         // The list still receives the event; past its top it has nothing left to scroll.
         false
-    }.pointerInput(listState, threshold) {
+    }.pointerInput(listState, threshold, topTolerance) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             var pullDown = 0f
@@ -115,7 +120,7 @@ internal fun Modifier.wearRefreshGesture(
             val slop = viewConfiguration.touchSlop
             // Only a gesture that starts at a boundary pulls past it, so a fling that scrolls back
             // to the top does not open the panel with the rest of its travel.
-            val startedAtTop = !listState.canScrollBackward
+            val startedAtTop = listState.isAtWearListStart(topTolerance)
             val startedAtEnd = !listState.canScrollForward
             val resumingPanel = heldPanelPull()
             try {
@@ -140,9 +145,9 @@ internal fun Modifier.wearRefreshGesture(
                         // A settling panel can be caught from either direction. An ordinary
                         // boundary pull still starts only towards its own action.
                         val canPull = when {
-                            resumingPanel > 0f -> downAction != null && startedAtTop && !listState.canScrollBackward
+                            resumingPanel > 0f -> downAction != null && startedAtTop && listState.isAtWearListStart(topTolerance)
                             resumingPanel < 0f -> upAction != null && startedAtEnd && !listState.canScrollForward
-                            total.y > 0f -> downAction != null && startedAtTop && !listState.canScrollBackward
+                            total.y > 0f -> downAction != null && startedAtTop && listState.isAtWearListStart(topTolerance)
                             else -> upAction != null && startedAtEnd && !listState.canScrollForward
                         }
                         if (pointer.isConsumed || abs(total.x) >= abs(total.y) || !canPull) {
@@ -158,7 +163,7 @@ internal fun Modifier.wearRefreshGesture(
                         }
                     }
                     // A pull grows only while its boundary is held, and moving back shrinks it.
-                    pullDown = if (downAction != null && startedAtTop && !listState.canScrollBackward) (pullDown + dy).coerceAtLeast(0f) else 0f
+                    pullDown = if (downAction != null && startedAtTop && listState.isAtWearListStart(topTolerance)) (pullDown + dy).coerceAtLeast(0f) else 0f
                     pullUp = if (upAction != null && startedAtEnd && !listState.canScrollForward) (pullUp - dy).coerceAtLeast(0f) else 0f
                     if (canceled) {
                         displacement.floatValue = 0f

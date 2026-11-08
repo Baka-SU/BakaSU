@@ -97,6 +97,35 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
     }
 
     @Test
+    fun secondPullOpensAfterReturningToTheTop() {
+        showHost()
+        compose.runOnIdle { pageState.dispatchRawDelta(80f * compose.activity.resources.displayMetrics.density) }
+        compose.runOnIdle { assertTrue("The first gesture must start away from the top", pageState.canScrollBackward) }
+        compose.onNodeWithTag("page").performTouchInput {
+            swipe(Offset(centerX, height * 0.2f), Offset(centerX, height * 0.8f), 600)
+        }
+        compose.runOnIdle { assertFalse("Scrolling to the top must not open the menu", menuOpen) }
+        compose.onNodeWithTag("page").performTouchInput {
+            swipe(Offset(centerX, height * 0.2f), Offset(centerX, height * 0.8f), 300)
+        }
+        assertFullMenu()
+    }
+
+    @Test
+    fun nearTopResidualDoesNotBlockTheNextPull() {
+        showHost()
+        // Reproduce the small residual offset left by the transforming list after returning.
+        compose.runOnIdle { pageState.dispatchRawDelta(compose.activity.resources.displayMetrics.density) }
+        compose.runOnIdle {
+            assertTrue("The reproduction must exercise canScrollBackward=true", pageState.canScrollBackward)
+        }
+        compose.onNodeWithTag("page").performTouchInput {
+            swipe(Offset(centerX, height * 0.2f), Offset(centerX, height * 0.8f), 300)
+        }
+        assertFullMenu()
+    }
+
+    @Test
     fun pullingPastThePageEndDoesNotRefreshOrOpenTheMenu() {
         showHost()
         compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(hasTestTag("page")), useUnmergedTree = true).performScrollToIndex(7)
