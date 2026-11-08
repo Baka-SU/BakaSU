@@ -41,6 +41,8 @@ import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleSwipeActions
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
+import org.bakasu.bakasu.ui.wear.component.WearStatusTone
+import org.bakasu.bakasu.ui.wear.component.wearStatusColors
 
 /**
  * @author Hanhan_awa
@@ -154,7 +156,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             secondaryLabel = if (pendingState != null || module.version.isNotBlank() || module.metamodule) {
                 {
                     Column {
-                        if (pendingState != null) {
+                        if (module.remove && pendingState != null) {
                             Text(pendingState, color = LocalContentColor.current)
                         }
                         if (module.version.isNotBlank() || module.metamodule) {
@@ -176,6 +178,10 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                                     )
                                 }
                             }
+                        }
+                        if (!module.remove && pendingState != null) {
+                            val (container, content) = wearStatusColors(WearStatusTone.WARNING)
+                            WearBadge(pendingState, containerColor = container ?: MaterialTheme.colorScheme.surfaceContainer, contentColor = content)
                         }
                     }
                 }

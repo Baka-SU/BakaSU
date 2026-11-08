@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -60,6 +61,9 @@ class WearModuleStateTest(private val round: Boolean) {
         compose.onNodeWithText(status, useUnmergedTree = true).assertIsDisplayed()
             .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
         assertFalse(layouts.single().hasVisualOverflow)
+        val versionBounds = compose.onNodeWithText(installed.value.version, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val statusBounds = compose.onNodeWithText(status, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertFalse("The version must precede the reboot warning", versionBounds.bottom > statusBounds.top)
         compose.onNodeWithText(compose.activity.getString(R.string.wear_meta_badge), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText(module.name).assertIsEnabled().performClick()
         assertEquals(module.id, opened)
