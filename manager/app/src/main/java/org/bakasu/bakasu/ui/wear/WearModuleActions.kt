@@ -7,6 +7,7 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Update
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +32,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleChangelogViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
+import org.bakasu.bakasu.ui.wear.component.WearInfoRow
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLogPage
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
@@ -61,18 +63,12 @@ internal fun WearModuleUpdatePage(
         if (module != null && update != null) {
             // The module and its version change lead, followed by the two actions.
             item {
-                WearModuleInfoCard(spec) {
-                    Text(
-                        module.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        stringResource(R.string.wear_update_version, module.version.ifBlank { stringResource(R.string.unknown) }, update.version),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                WearModuleInfoCard(spec, compact = true) {
+                    WearInfoRow(
+                        icon = Icons.Rounded.Update,
+                        label = module.name,
+                        value = stringResource(R.string.wear_update_version, module.version.ifBlank { stringResource(R.string.unknown) }, update.version),
+                        labelStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     )
                 }
             }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasScrollToIndexAction
@@ -14,6 +15,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
@@ -65,6 +68,20 @@ class WearModuleUpdateTest(private val round: Boolean) {
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
         compose.onNodeWithText(compose.activity.getString(R.string.wear_update_download)).assertIsEnabled().performClick()
         compose.runOnIdle { assertTrue(downloaded) }
+    }
+
+    @Test
+    fun longModuleNameAndVersionRemainUnclipped() {
+        val installed = module.copy(name = "A module with a deliberately long name", moduleUpdate = update.copy(version = "2026.11.08-long-release-version"))
+        showPage(installed)
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
+        val version = compose.activity.getString(R.string.wear_update_version, installed.version, installed.moduleUpdate!!.version)
+        for (text in listOf(installed.name, version)) {
+            val layouts = mutableListOf<TextLayoutResult>()
+            compose.onNodeWithText(text, useUnmergedTree = true)
+                .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            assertFalse(layouts.single().hasVisualOverflow)
+        }
     }
 
     private fun showPage(installed: InstalledModule) {
