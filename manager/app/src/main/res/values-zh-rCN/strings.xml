@@ -453,11 +453,11 @@
     <string name="download_complete_title">下载完成</string>
     <string name="download_complete_content">%s 下载成功</string>
     <string name="download_failed_title">下载失败</string>
-    <string name="wear_download_error_network">无法连接下载服务器，请检查网络。</string>
-    <string name="wear_download_error_timeout">下载请求超时。</string>
-    <string name="wear_download_error_http">服务器返回 HTTP %1$d。</string>
-    <string name="wear_download_error_storage">无法保存文件，请检查存储空间和访问权限。</string>
-    <string name="wear_download_error_unknown">无法完成下载，请重试。</string>
+    <string name="wear_download_error_network">无法连接网络</string>
+    <string name="wear_download_error_timeout">请求超时</string>
+    <string name="wear_download_error_http">HTTP %1$d</string>
+    <string name="wear_download_error_storage">无法保存文件</string>
+    <string name="wear_download_error_unknown">下载失败</string>
     <string name="download_failed_content">%s 下载失败</string>
     <string name="download_cancel">取消</string>
     <string name="download_install">安装</string>
@@ -703,7 +703,6 @@
     <string name="scroll_to_top">回到顶部</string>
     <string name="wear_display">显示</string>
     <string name="wear_link_mode">网页与模块 WebUI 打开方式</string>
-    <string name="wear_link_mode_summary">自动会尝试可用方式。选择手表或手机后，网页和模块 WebUI 只在所选设备打开。</string>
     <string name="wear_web_page">网页</string>
     <string name="wear_watch_webui">在手表上打开</string>
     <string name="wear_picker_mode">文件选择器</string>
@@ -870,7 +869,7 @@
     <string name="wear_download_confirm_title">下载此模块？</string>
     <string name="wear_download_then_install">下载后确认安装</string>
     <string name="wear_browser_open_failed">无法打开浏览器</string>
-    <string name="wear_download_verify_failed">文件校验失败</string>
+    <string name="wear_download_verify_failed">校验失败</string>
     <string name="selected_slot">已选择槽位: %1$s</string>
     <string name="module_changelog_failed">获取更新日志失败：%s</string>
     <string name="wear_mode_builtin">内置</string>
@@ -963,4 +962,5 @@
     <string name="wear_download_remove_message">取消此下载并移除任务？已完成的 ZIP 文件将保留。</string>
     <string name="wear_download_clear_all">全部清除</string>
     <string name="wear_download_clear_message">取消并移除所有模块下载任务？已完成的 ZIP 文件将保留。</string>
+    <string name="wear_download_url_blocked">下载地址被阻止</string>
 </resources>

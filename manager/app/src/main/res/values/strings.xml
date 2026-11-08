@@ -462,11 +462,11 @@
     <string name="download_complete_title">Download complete</string>
     <string name="download_complete_content">%s downloaded successfully</string>
     <string name="download_failed_title">Download failed</string>
-    <string name="wear_download_error_network">Unable to reach the server. Check your network.</string>
-    <string name="wear_download_error_timeout">The download timed out.</string>
-    <string name="wear_download_error_http">The server returned HTTP %1$d.</string>
-    <string name="wear_download_error_storage">Unable to save the file. Check storage space and access.</string>
-    <string name="wear_download_error_unknown">Unable to complete the download. Please retry.</string>
+    <string name="wear_download_error_network">Network unavailable</string>
+    <string name="wear_download_error_timeout">Request timed out</string>
+    <string name="wear_download_error_http">HTTP %1$d</string>
+    <string name="wear_download_error_storage">Cannot save file</string>
+    <string name="wear_download_error_unknown">Download failed</string>
     <string name="download_failed_content">Failed to download %s</string>
     <string name="download_cancel">Cancel</string>
     <string name="download_install">Install</string>
@@ -738,7 +738,6 @@
     <string name="scroll_to_top">Back to top</string>
     <string name="wear_display">Display</string>
     <string name="wear_link_mode">Open links and module WebUI</string>
-    <string name="wear_link_mode_summary">Automatic tries available methods. Choosing watch or phone opens links and module WebUI only on that device.</string>
     <string name="wear_web_page">Web page</string>
     <string name="wear_watch_webui">Open on watch</string>
     <string name="wear_picker_mode">File picker</string>
@@ -901,7 +900,7 @@
     <string name="wear_download_confirm_title">Download this module?</string>
     <string name="wear_download_then_install">Download, then confirm installing</string>
     <string name="wear_browser_open_failed">Couldn\'t open the browser</string>
-    <string name="wear_download_verify_failed">File verification failed</string>
+    <string name="wear_download_verify_failed">Verification failed</string>
     <string name="selected_slot">Selected slot: %1$s</string>
     <string name="module_changelog_failed">Fetch changelog failed: %s</string>
     <string name="wear_restore_module">Restore module</string>
@@ -989,4 +988,5 @@
     <string name="wear_download_remove_message">Cancel this transfer and remove its task? Completed ZIP files will be kept.</string>
     <string name="wear_download_clear_all">Clear all</string>
     <string name="wear_download_clear_message">Cancel and remove all module download tasks? Completed ZIP files will be kept.</string>
+    <string name="wear_download_url_blocked">Download URL blocked</string>
 </resources>

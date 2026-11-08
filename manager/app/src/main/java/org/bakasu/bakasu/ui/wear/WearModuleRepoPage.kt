@@ -5,10 +5,13 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -57,9 +61,11 @@ import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.CompactButton
+import androidx.wear.compose.material3.CompactButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
+import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.drawCircularProgressIndicator
 import kotlinx.coroutines.launch
@@ -68,6 +74,7 @@ import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
 import org.bakasu.bakasu.domain.model.DownloadFailureReason
 import org.bakasu.bakasu.domain.model.DownloadModuleInfo
+import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
 import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
@@ -468,20 +475,17 @@ private fun WearModuleIcon(size: Dp) {
         Modifier.size(size).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        // The puzzle piece's body sits lower left in its 24dp grid (x 2-19, y 5-22), with only thin
-        // tabs to the top and right, so it is moved by 1.2/24 of its size to look centered on the tile.
         Icon(
             Icons.Rounded.Extension,
             contentDescription = null,
-            modifier = Modifier.offset(x = glyph * 0.05f, y = -glyph * 0.05f).size(glyph),
+            modifier = Modifier.size(glyph),
             tint = MaterialTheme.colorScheme.onPrimaryContainer,
         )
     }
 }
 
 /**
- * Download identity stays in the same list items. Only the feedback below it changes, so failures
- * and retries do not recenter the icon/name or replace them with a loading screen.
+ * Download identity stays fixed; progress and compact failure feedback share the remaining space.
  */
 @Composable
 internal fun WearModuleDownloadScreen(name: String, version: String, state: ModuleDownloadUiState, fraction: () -> Float, onRetry: () -> Unit) {
@@ -499,84 +503,54 @@ internal fun WearModuleDownloadScreen(name: String, version: String, state: Modu
     }
     val failureTitle = stringResource(R.string.download_failed_title)
     Box(Modifier.fillMaxSize()) {
-        WearList(itemSpacing = 0.dp) { spec ->
-            item(key = "identity") {
-                WearScaledItem(spec) {
-                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(Modifier.testTag("module-download-icon")) { WearModuleIcon(48.dp) }
-                        Text(
-                            name,
-                            modifier = Modifier.padding(top = 8.dp),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (version.isNotBlank()) {
-                            Text(version, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
+        ScreenScaffold(contentPadding = PaddingValues(0.dp), timeText = {}, overscrollEffect = null) {
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                val density = LocalDensity.current
+                val showVersion = version.isNotBlank() && density.fontScale <= 1.1f
+                Column(
+                    Modifier.fillMaxSize().padding(start = maxWidth * 0.14f, end = maxWidth * 0.14f, top = maxHeight * 0.04f, bottom = maxHeight * 0.065f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(Modifier.testTag("module-download-icon")) { WearModuleIcon(48.dp) }
+                    Text(name, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (showVersion) {
+                        Text(version, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                }
-            }
-            if (!failed) {
-                item(key = "progress") {
-                    WearScaledItem(spec) {
-                        Column(
-                            Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Text(
-                                stringResource(if (state.phase == ModuleDownloadPhase.VERIFYING) R.string.wear_verifying_download else R.string.wear_downloading),
-                                modifier = Modifier.padding(top = 2.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                stringResource(R.string.wear_download_percent, ((state.fraction ?: 0f) * 100).toInt()),
-                                modifier = Modifier.graphicsLayer { alpha = if (state.fraction != null) 1f else 0f }
-                                    .then(if (state.fraction == null) Modifier.clearAndSetSemantics {} else Modifier),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
-                }
-            }
-            item(key = "feedback") {
-                WearScaledItem(spec) {
-                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                         if (failed) {
-                            Text(failureTitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
                             Text(
                                 moduleDownloadFailureText(state),
-                                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyExtraSmall,
+                                color = MaterialTheme.colorScheme.error,
                                 textAlign = TextAlign.Center,
-                                maxLines = Int.MAX_VALUE,
-                                softWrap = true,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         } else {
-                            Text(
-                                if (sizeKnown) stringResource(R.string.wear_download_size, formatFileSize(state.downloadedBytes), formatFileSize(state.totalBytes)) else formatFileSize(state.downloadedBytes),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    when {
+                                        state.phase == ModuleDownloadPhase.VERIFYING -> stringResource(R.string.wear_verifying_download)
+                                        state.fraction != null -> stringResource(R.string.wear_download_percent, ((state.fraction ?: 0f) * 100).toInt())
+                                        else -> stringResource(R.string.wear_downloading)
+                                    },
+                                    style = MaterialTheme.typography.bodyExtraSmall,
+                                    maxLines = 1,
+                                )
+                                Text(
+                                    if (sizeKnown) stringResource(R.string.wear_download_size, formatFileSize(state.downloadedBytes), formatFileSize(state.totalBytes)) else formatFileSize(state.downloadedBytes),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                )
+                            }
                         }
                     }
-                }
-            }
-            if (failed) {
-                item(key = "retry") {
-                    WearScaledItem(spec) {
-                        CompactButton(
-                            onClick = onRetry,
-                            modifier = Modifier.align(Alignment.Center).padding(vertical = 8.dp),
-                            icon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
-                            label = { Text(stringResource(R.string.network_retry)) },
-                        )
+                    // Reserve the same footer in every state so identity never jumps on failure.
+                    Box(Modifier.height(CompactButtonDefaults.Height), contentAlignment = Alignment.Center) {
+                        if (failed) {
+                            CompactButton(onClick = onRetry, icon = { Icon(Icons.Rounded.Refresh, null, Modifier.size(CompactButtonDefaults.ExtraSmallIconSize)) }, label = { Text(stringResource(R.string.network_retry)) })
+                        }
                     }
                 }
             }
@@ -611,7 +585,8 @@ private fun moduleDownloadFailureText(state: ModuleDownloadUiState): String {
     val verification = state.verificationFailure
     val failure = state.failure
     return when {
-        verification != null -> stringResource(verification.resId)
+        verification == DownloadVerificationFailure.URL_NOT_ALLOWED -> stringResource(R.string.wear_download_url_blocked)
+        verification != null -> stringResource(R.string.wear_download_verify_failed)
         state.phase == ModuleDownloadPhase.VERIFY_FAILED -> stringResource(R.string.wear_download_verify_failed)
         failure?.reason == DownloadFailureReason.HTTP && failure.httpStatus != null -> stringResource(R.string.wear_download_error_http, failure.httpStatus)
         failure != null && failure.reason != DownloadFailureReason.HTTP -> stringResource(failure.reason.resId)

@@ -13,12 +13,14 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,6 +58,7 @@ import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDelete
+import org.bakasu.bakasu.ui.wear.component.isAtWearListStart
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
@@ -96,8 +99,18 @@ internal fun WearLogsPage(
             "${state.selectedFilePath}:${entry.rawLine}:$occurrence"
         }
     }
+    val listState = rememberTransformingLazyColumnState()
+    val previousEntries = remember(state.selectedFilePath, state.searchText, state.selectedFilters) { mutableStateOf(state.visibleEntries) }
+    // Capture the old layout before replacing stable-keyed entries, including equal-length trims.
+    val followTop = previousEntries.value != state.visibleEntries && !pageLoading &&
+        !listState.isScrollInProgress && listState.isAtWearListStart(with(LocalDensity.current) { 2.dp.roundToPx() })
+    SideEffect {
+        if (followTop) listState.requestScrollToItem(0)
+        previousEntries.value = state.visibleEntries
+    }
     // Every visit and log operation loads the page; only an explicit refresh keeps the list.
     WearList(
+        listState = listState,
         isLoading = pageLoading,
         isRefreshing = refreshing,
         onRefresh = onRefresh,

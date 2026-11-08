@@ -100,6 +100,7 @@ internal fun WearDownloadsPage(
                 Button(
                     onClick = { if (task.status == DownloadStatus.COMPLETED) onInstall(task) },
                     enabled = !verifying,
+                    colors = ButtonDefaults.filledTonalButtonColors(),
                     modifier = Modifier.fillMaxWidth(),
                     icon = { DownloadModuleIcon(task) },
                     label = { Text(task.module?.name?.takeIf { it.isNotBlank() } ?: task.fileName, maxLines = 1, overflow = TextOverflow.Ellipsis) },

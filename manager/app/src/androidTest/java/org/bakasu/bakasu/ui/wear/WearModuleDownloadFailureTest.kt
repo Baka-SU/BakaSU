@@ -25,6 +25,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AppScaffold
@@ -54,7 +56,7 @@ class WearModuleDownloadFailureTest(private val round: Boolean, private val font
         compose.mainClock.autoAdvance = false
         compose.mainClock.advanceTimeBy(500)
         val iconBefore = compose.onNodeWithTag("module-download-icon").fetchSemanticsNode().boundsInRoot
-        val nameBefore = compose.onNodeWithText("Module").fetchSemanticsNode().boundsInRoot
+        val nameBefore = compose.onNodeWithText("A long module name").fetchSemanticsNode().boundsInRoot
         save("downloading")
         compose.runOnIdle {
             download.value = download.value.copy(phase = ModuleDownloadPhase.FAILED, failure = DownloadFailure(DownloadFailureReason.TIMEOUT))
@@ -63,7 +65,7 @@ class WearModuleDownloadFailureTest(private val round: Boolean, private val font
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(500)
         assertEquals(iconBefore, compose.onNodeWithTag("module-download-icon").fetchSemanticsNode().boundsInRoot)
-        assertEquals(nameBefore, compose.onNodeWithText("Module").fetchSemanticsNode().boundsInRoot)
+        assertEquals(nameBefore, compose.onNodeWithText("A long module name").fetchSemanticsNode().boundsInRoot)
         val pixels = compose.onNodeWithTag("download-page").captureToImage().toPixelMap()
         var red = 0
         for (y in 0 until pixels.height) {
@@ -74,17 +76,21 @@ class WearModuleDownloadFailureTest(private val round: Boolean, private val font
         }
         assertTrue("The failed progress ring must fill the whole arc, not retain the old percentage: $red", red > pixels.width * pixels.height * 0.08f)
         save("failed")
+        compose.onNodeWithTag("download-page").performTouchInput { swipeUp() }
+        compose.mainClock.advanceTimeBy(300)
+        assertEquals(iconBefore, compose.onNodeWithTag("module-download-icon").fetchSemanticsNode().boundsInRoot)
+        assertEquals(nameBefore, compose.onNodeWithText("A long module name").fetchSemanticsNode().boundsInRoot)
         compose.mainClock.autoAdvance = true
         val reason = compose.activity.getString(R.string.wear_download_error_timeout)
-        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(reason))
+        compose.onNode(hasScrollToIndexAction()).assertDoesNotExist()
         compose.onNodeWithText(reason).assertIsDisplayed()
         val retry = compose.activity.getString(R.string.network_retry)
-        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(retry))
+
         compose.onNodeWithText(retry).assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals(1, retries) }
         compose.onNodeWithText(reason).assertDoesNotExist()
         compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).assertDoesNotExist()
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(0)
+
         compose.onNodeWithTag("module-download-icon").assertIsDisplayed()
         save("retry")
     }
@@ -97,9 +103,9 @@ class WearModuleDownloadFailureTest(private val round: Boolean, private val font
             }
             CompositionLocalProvider(LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, fontScale)) {
                 MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(error = Color.Red)) {
-                    Box(Modifier.requiredSize(240.dp).background(MaterialTheme.colorScheme.background).testTag("download-page")) {
+                    Box(Modifier.requiredSize(192.dp).background(MaterialTheme.colorScheme.background).testTag("download-page")) {
                         AppScaffold(timeText = {}) {
-                            WearModuleDownloadScreen("Module", "v1", download.value, { download.value.fraction ?: 0f }) {
+                            WearModuleDownloadScreen("A long module name", "v1", download.value, { download.value.fraction ?: 0f }) {
                                 retries++
                                 download.value = ModuleDownloadUiState(phase = ModuleDownloadPhase.DOWNLOADING)
                             }

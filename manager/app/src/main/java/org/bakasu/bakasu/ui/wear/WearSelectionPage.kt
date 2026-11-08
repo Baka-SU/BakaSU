@@ -117,15 +117,6 @@ internal fun WearSelectionPage(
             preferences.link,
             onBack,
             icon = { selectionIcon(selection, it) },
-            extraContent = { spec ->
-                item {
-                    WearStatusItem(
-                        spec,
-                        Icons.Rounded.Info,
-                        stringResource(R.string.wear_link_mode_summary),
-                    )
-                }
-            },
         ) { preferenceViewModel.set(WearPreference.Link, it) }
 
         WearSelection.Language -> {
