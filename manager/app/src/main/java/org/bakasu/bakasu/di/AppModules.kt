@@ -495,8 +495,8 @@ val viewModelModule = module {
     viewModelOf(::ModuleDownloadViewModel)
     viewModelOf(::WearDownloadsViewModel)
     viewModel { parameters -> WearSearchViewModel(parameters[0], get(), get()) }
-    viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
-    viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
+    viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get()) }
     viewModelOf(::RepositorySourcesViewModel)
     viewModelOf(::TemplateViewModel)
     viewModelOf(::OnlineTemplateViewModel)

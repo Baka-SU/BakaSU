@@ -35,6 +35,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.wear.compose.material3.AppScaffold
@@ -42,10 +43,13 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -71,6 +75,7 @@ import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiState
+import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLoadFailureScreen
@@ -246,7 +251,9 @@ class WearRepositoryLoadingTest {
         var offline = false
         var introduction = "<p>First introduction</p>"
         val fields = """"id":"example","name":"Example","stable":{"version":"1","versionCode":1,"publishedAt":"2026-11-06"},"updatedAt":"2026-11-06""""
+        val requests = ConcurrentHashMap<String, AtomicInteger>()
         val client = OkHttpClient.Builder().addInterceptor { chain ->
+            requests.getOrPut(chain.request().url.encodedPath) { AtomicInteger() }.incrementAndGet()
             if (offline) throw IOException("Disconnected")
             val body = when {
                 chain.request().url.encodedPath.endsWith("index.json") -> """{"schemaVersion":1,"buildId":"one","modules":"api/v1/modules.json"}"""
@@ -259,13 +266,30 @@ class WearRepositoryLoadingTest {
         val network = NetworkRequestRepository(client)
         val repository = ModuleCatalogRepository(network, sourceStore, KernelSuRegistryRepository(registryApplication, client), NetworkStatusRepository(application))
         lateinit var viewModel: ModuleDetailViewModel
+        lateinit var listModel: ModuleRepoViewModel
+        val animations = mutableListOf<Boolean>()
+        runBlocking { repository.refresh(RepositorySource.KERNEL_SU_URL) }
+        compose.runOnIdle {
+            val koin = GlobalContext.get()
+            listModel = ModuleRepoViewModel(
+                ObserveCatalogModulesUseCase(repository), RefreshModuleCatalogUseCase(repository), koin.get(), koin.get(), koin.get(),
+                ObserveRepositorySourcesUseCase(repository), GetCatalogModuleUseCase(repository), IsCatalogModuleCurrentUseCase(repository), SavedStateHandle(),
+            )
+            scope.launch { listModel.state.collect { animations += it.isRefreshing } }
+        }
+        compose.waitUntil(10_000) { !listModel.state.value.isRefreshing }
         fun openDetail() {
             compose.runOnIdle {
                 store.clear()
                 viewModel = ModuleDetailViewModel(
-                    "example", RepositorySource.KERNEL_SU_URL, GetCatalogModuleUseCase(repository), GetModuleReadmeUseCase(repository),
-                    GetModuleReleaseDetailsUseCase(ModuleReleaseRepository(network, scope)), ObserveCatalogModulesUseCase(repository),
-                    ObserveRepositorySourcesUseCase(repository), IsCatalogModuleCurrentUseCase(repository), RefreshModuleCatalogUseCase(repository),
+                    "example",
+                    RepositorySource.KERNEL_SU_URL,
+                    GetCatalogModuleUseCase(repository),
+                    GetModuleReadmeUseCase(repository),
+                    GetModuleReleaseDetailsUseCase(ModuleReleaseRepository(network, scope)),
+                    ObserveCatalogModulesUseCase(repository),
+                    ObserveRepositorySourcesUseCase(repository),
+                    IsCatalogModuleCurrentUseCase(repository),
                 )
                 store.put("detail", viewModel)
             }
@@ -276,7 +300,11 @@ class WearRepositoryLoadingTest {
             compose.waitUntil(10_000) { viewModel.state.value.documents.values.singleOrNull()?.loading == false }
         }
         try {
+            animations.clear()
+            val indexRequests = requests.filterKeys { it.endsWith("index.json") || it.endsWith("modules.json") }.values.sumOf { it.get() }
             openDetail()
+            assertEquals(indexRequests, requests.filterKeys { it.endsWith("index.json") || it.endsWith("modules.json") }.values.sumOf { it.get() })
+            assertTrue(animations.none { it })
             assertNotNull(viewModel.state.value.module)
             readme()
             assertEquals(introduction, viewModel.state.value.documents.values.single().document?.content)
@@ -299,7 +327,9 @@ class WearRepositoryLoadingTest {
             openDetail()
             assertNotNull(viewModel.state.value.error)
             assertNull(viewModel.state.value.module)
-            assertTrue(repository.modules.value.isEmpty())
+            assertFalse(repository.modules.value.isEmpty())
+            assertTrue(repository.failures.value.isEmpty())
+            assertTrue(animations.none { it })
             assertTrue(runBlocking { repository.refresh() } is ModuleCatalogResult.Failure)
             offline = false
             introduction = "<p>Updated introduction</p>"
@@ -310,10 +340,69 @@ class WearRepositoryLoadingTest {
             readme()
             assertEquals(introduction, viewModel.state.value.documents.values.single().document?.content)
         } finally {
-            compose.runOnIdle { store.clear() }
+            compose.runOnIdle {
+                store.clear()
+                ViewModelStore().apply {
+                    put("list", listModel)
+                    clear()
+                }
+            }
             scope.cancel()
             client.connectionPool.evictAll()
             cacheDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun mmrlDetailsReuseTheIndexAndRemovedSourcesCannotBeOpened() {
+        val application = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application
+        val koin = GlobalContext.get()
+        val sourceStore = koin.get<RepositorySourceStore>()
+        val original = sourceStore.load()
+        val source = RepositorySource("https://mmrl.example.invalid/", "MMRL")
+        runBlocking { sourceStore.save(original + source) }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        val store = ViewModelStore()
+        val requests = AtomicInteger()
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            requests.incrementAndGet()
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body("""{"name":"MMRL","modules":[{"id":"example","name":"Example","versionCode":1,"versions":[{"versionCode":1,"version":"1","zipUrl":"module.zip"}]}]}""".toResponseBody()).build()
+        }.build()
+        val network = NetworkRequestRepository(client)
+        val repository = ModuleCatalogRepository(network, sourceStore, KernelSuRegistryRepository(application, client), NetworkStatusRepository(application))
+        lateinit var detail: ModuleDetailViewModel
+        try {
+            assertTrue(runBlocking { repository.refresh(source.url) } is ModuleCatalogResult.Success)
+            assertEquals(1, requests.get())
+            compose.runOnIdle {
+                detail = ModuleDetailViewModel(
+                    "example",
+                    source.url,
+                    GetCatalogModuleUseCase(repository),
+                    GetModuleReadmeUseCase(repository),
+                    GetModuleReleaseDetailsUseCase(ModuleReleaseRepository(network, scope)),
+                    ObserveCatalogModulesUseCase(repository),
+                    ObserveRepositorySourcesUseCase(repository),
+                    IsCatalogModuleCurrentUseCase(repository),
+                )
+                store.put("detail", detail)
+            }
+            compose.waitUntil(5_000) { !detail.state.value.loading }
+            assertNotNull(detail.state.value.module)
+            compose.runOnIdle { detail.refresh() }
+            compose.waitUntil(5_000) { !detail.state.value.loading }
+            assertEquals(1, requests.get())
+            runBlocking { repository.remove(source.url) }
+            compose.waitUntil(5_000) { detail.state.value.module == null }
+            assertEquals(org.bakasu.bakasu.domain.model.ModuleCatalogFailure.NotFound, detail.state.value.error)
+            assertTrue(runBlocking { repository.get("example", source.url, forceDetail = true) } is ModuleCatalogResult.Failure)
+            assertEquals(1, requests.get())
+        } finally {
+            compose.runOnIdle { store.clear() }
+            scope.cancel()
+            runBlocking { sourceStore.save(original) }
+            client.connectionPool.evictAll()
         }
     }
 

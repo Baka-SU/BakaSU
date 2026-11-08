@@ -194,8 +194,8 @@ class ModuleCatalogRepository(
                         return@withLock ModuleCatalogResult.Failure(ModuleCatalogFailure.NotFound)
                     }
                     val failure = failure(error, source)
-                    mutableFailures.value = mutableFailures.value + (url to failure)
-                    return@withLock ModuleCatalogResult.Failure(if (failure.reason == RepositoryError.OFFLINE) ModuleCatalogFailure.Offline else ModuleCatalogFailure.Network(""))
+                    // A detail failure does not invalidate the successfully loaded index.
+                    return@withLock ModuleCatalogResult.Failure(if (failure.reason == RepositoryError.OFFLINE) ModuleCatalogFailure.Offline else ModuleCatalogFailure.Network(""), failure)
                 }
                 if (registry.currentCatalog()?.buildId != load.catalog.buildId) {
                     return@withLock ModuleCatalogResult.Failure(ModuleCatalogFailure.Network(""))
