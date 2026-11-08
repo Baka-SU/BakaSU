@@ -5,6 +5,8 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothClass
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.companion.CompanionDeviceManager
@@ -12,6 +14,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import java.io.Closeable
@@ -53,6 +56,17 @@ import org.bakasu.bakasu.domain.model.BridgeStage
 import org.bakasu.bakasu.domain.model.BridgeState
 import org.bakasu.bakasu.domain.model.BridgeTransfer
 
+internal data class BridgePhoneCandidate(val peer: BridgePeer, val phone: Boolean?, val connected: Boolean?)
+
+/** An unknown device/connection may be probed, but a known accessory or offline phone must not be. */
+internal fun selectBridgePhones(candidates: List<BridgePhoneCandidate>, remembered: String?): List<BridgePhoneCandidate> {
+    val phones = candidates.filter { it.peer.address.equals(remembered, true) || it.phone != false }
+    if (phones.isEmpty()) throw BridgeException(BridgeFailure.NOT_PAIRED)
+    val available = phones.filter { it.connected != false }
+    if (available.isEmpty()) throw BridgeException(BridgeFailure.NOT_CONNECTED)
+    return available.sortedBy { !it.peer.address.equals(remembered, true) }
+}
+
 @SuppressLint("MissingPermission") // Constructed only after adapter() checks Bluetooth access.
 internal class BridgeConnection(val socket: BluetoothSocket, private val onClosed: (BridgeConnection) -> Unit) : Closeable {
     val peer: String = socket.remoteDevice.address.uppercase(Locale.ROOT)
@@ -91,8 +105,10 @@ class CompanionBridgeRepository(
         private const val REMEMBERED = "wear_bridge_remembered"
         private val deadlines = Executors.newSingleThreadScheduledExecutor { task -> Thread(task, "webui-bt-handshake").apply { isDaemon = true } }
 
-        internal fun <T> handshake(socket: BluetoothSocket, timeoutSeconds: Long = 15, block: () -> T): T {
-            val deadline = deadlines.schedule({ runCatching { socket.close() } }, timeoutSeconds, TimeUnit.SECONDS)
+        internal fun <T> handshake(socket: BluetoothSocket, timeoutSeconds: Long = 15, block: () -> T): T = handshakeMillis(socket, timeoutSeconds * 1000L, block)
+
+        private fun <T> handshakeMillis(socket: BluetoothSocket, timeoutMillis: Long, block: () -> T): T {
+            val deadline = deadlines.schedule({ runCatching { socket.close() } }, timeoutMillis, TimeUnit.MILLISECONDS)
             return try {
                 block()
             } finally {
@@ -147,6 +163,33 @@ class CompanionBridgeRepository(
     }
 
     fun bondedPeers(): List<BridgePeer> = adapter().bondedDevices.map { BridgePeer(it.address, it.name.orEmpty().ifBlank { it.address }) }.sortedBy { it.name }
+
+    private fun phoneCandidates(): List<BridgePhoneCandidate> {
+        val candidates = adapter().bondedDevices.map { device ->
+            val phone = when (device.bluetoothClass?.majorDeviceClass) {
+                BluetoothClass.Device.Major.PHONE -> true
+                null, 0, BluetoothClass.Device.Major.UNCATEGORIZED -> null
+                else -> false
+            }
+            val connected = when {
+                activeConnections.any { it.peer.equals(device.address, true) && it.socket.isConnected } -> true
+
+                Build.VERSION.SDK_INT >= 36 && Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1 -> try {
+                    device.isConnected(BluetoothDevice.TRANSPORT_BREDR) || device.isConnected(BluetoothDevice.TRANSPORT_LE)
+                } catch (error: SecurityException) {
+                    throw BridgeException(BridgeFailure.PERMISSION, error)
+                } catch (error: RuntimeException) {
+                    Log.w("CompanionBridge", "Phone connection state unavailable", error)
+                    null
+                }
+
+                // Older Android has no public initial ACL query. Probe it once with a shared deadline.
+                else -> null
+            }
+            BridgePhoneCandidate(BridgePeer(device.address, device.name.orEmpty().ifBlank { device.address }), phone, connected)
+        }
+        return selectBridgePhones(candidates, state.value.peer?.address)
+    }
 
     /** The watch or phone this Manager was paired with through the companion device manager. */
     @Suppress("DEPRECATION")
@@ -354,16 +397,18 @@ class CompanionBridgeRepository(
         try {
             mutableTransfer.value = null
             requirePermission()
-            mutableTransfer.value = BridgeTransfer(BridgeStage.CONNECTING)
             require(BridgeHandoff.valid(action, value))
-            val bonded = bondedPeers()
-            if (bonded.isEmpty()) throw BridgeException(BridgeFailure.NOT_PAIRED)
-            val candidates = bonded.sortedBy { !it.address.equals(state.value.peer?.address, true) }
+            val candidates = phoneCandidates()
+            val probeDeadline = SystemClock.elapsedRealtime() + 5_000L
             var reachedPhone = false
-            for (peer in candidates) {
+            for (candidate in candidates) {
+                val peer = candidate.peer
+                val remainingMillis = probeDeadline - SystemClock.elapsedRealtime()
+                if (remainingMillis <= 0L) break
+                mutableTransfer.value = BridgeTransfer(if (candidate.connected == true) BridgeStage.CONNECTING else BridgeStage.CHECKING)
                 try {
                     val result = socketRequest(peer.address) { connection ->
-                        val initialServerNonce = handshake(connection.socket, 5) {
+                        val initialServerNonce = handshakeMillis(connection.socket, remainingMillis) {
                             connection.socket.connect()
                             connection.output.apply {
                                 writeUTF(WIRE_VERSION)
@@ -374,6 +419,7 @@ class CompanionBridgeRepository(
                             connection.input.readUTF()
                         }
                         reachedPhone = true
+                        mutableTransfer.value = BridgeTransfer(BridgeStage.CONNECTING)
                         val operation = BridgeHandoff.authenticationAction(action, value, title)
                         val nonce = UUID.randomUUID().toString()
                         val previousKey = savedSecret(peer.address)

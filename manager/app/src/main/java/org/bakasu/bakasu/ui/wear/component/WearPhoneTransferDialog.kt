@@ -32,9 +32,11 @@ fun WearPhoneTransferDialog(transfer: BridgeTransfer?, onCancel: () -> Unit, onD
     var shown by remember { mutableStateOf(transfer) }
     if (transfer != null) shown = transfer
     val state = shown
-    val waiting = state?.stage == BridgeStage.CONNECTING || state?.stage == BridgeStage.WAITING
+    val waiting = state?.stage in setOf(BridgeStage.CHECKING, BridgeStage.CONNECTING, BridgeStage.WAITING)
     val failed = state?.stage == BridgeStage.FAILED
     val text = when (state?.stage) {
+        BridgeStage.CHECKING -> stringResource(R.string.wear_phone_checking)
+
         BridgeStage.CONNECTING -> stringResource(R.string.wear_bridge_connecting)
 
         BridgeStage.WAITING -> stringResource(R.string.wear_bridge_confirming)
@@ -44,6 +46,7 @@ fun WearPhoneTransferDialog(transfer: BridgeTransfer?, onCancel: () -> Unit, onD
                 BridgeFailure.PERMISSION -> R.string.wear_bridge_permission_short
                 BridgeFailure.BLUETOOTH_DISABLED -> R.string.wear_bridge_bluetooth_short
                 BridgeFailure.NOT_PAIRED -> R.string.wear_bridge_pair_short
+                BridgeFailure.NOT_CONNECTED -> R.string.wear_phone_not_connected
                 BridgeFailure.REJECTED -> R.string.wear_bridge_rejected
                 BridgeFailure.NOTIFICATIONS -> R.string.wear_bridge_notification_short
                 BridgeFailure.OPEN_FAILED -> R.string.wear_link_open_failed
@@ -68,7 +71,7 @@ fun WearPhoneTransferDialog(transfer: BridgeTransfer?, onCancel: () -> Unit, onD
         ),
     ) {
         when {
-            state?.stage == BridgeStage.CONNECTING -> WearLoadingIndicator()
+            state?.stage == BridgeStage.CONNECTING || state?.stage == BridgeStage.CHECKING -> WearLoadingIndicator()
 
             state?.stage == BridgeStage.OPENED -> OpenOnPhoneDialogDefaults.Icon()
 

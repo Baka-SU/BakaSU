@@ -14,6 +14,7 @@ enum class BridgeFailure(@param:StringRes val resId: Int) {
     ASSOCIATION(R.string.wear_bridge_association_unsupported),
     NOTIFICATIONS(R.string.wear_bridge_notification_required),
     NOT_PAIRED(R.string.wear_bridge_not_paired),
+    NOT_CONNECTED(R.string.wear_phone_not_connected),
     REJECTED(R.string.wear_bridge_rejected),
 }
 
@@ -23,7 +24,7 @@ data class BridgeState(val peer: BridgePeer? = null, val enabled: Boolean = fals
 
 enum class BridgeAction { WEB_UI, LINK }
 
-enum class BridgeStage { CONNECTING, WAITING, OPENED, FAILED }
+enum class BridgeStage { CHECKING, CONNECTING, WAITING, OPENED, FAILED }
 
 data class BridgeTransfer(val stage: BridgeStage, val failure: BridgeFailure? = null)
 

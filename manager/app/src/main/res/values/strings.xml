@@ -945,6 +945,8 @@
     <string name="wear_bridge_disconnect_message">Remove the saved phone and watch connection?</string>
     <string name="wear_display_interaction">Screen behavior &amp; haptics</string>
     <string name="wear_phone_connection_failed">Unable to connect to phone</string>
+    <string name="wear_phone_not_connected">Watch is not connected to a phone</string>
+    <string name="wear_phone_checking">Checking phone connection</string>
     <string name="wear_phone_result_unknown">Couldn\'t confirm the result. Check your phone.</string>
     <string name="wear_bridge_active_connection">Connected to %1$s</string>
     <string name="wear_repository_url_hint">Enter a repository server URL</string>
