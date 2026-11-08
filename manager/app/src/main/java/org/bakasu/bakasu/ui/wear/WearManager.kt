@@ -220,7 +220,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                 WearRoute.DynamicManagerApps -> dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Search(""))
 
-                WearRoute.Templates, is WearRoute.AppProfileTemplateChoice -> templateViewModel.dispatch(TemplateUiAction.Refresh())
+                WearRoute.Templates -> templateViewModel.dispatch(TemplateUiAction.Refresh())
 
                 else -> Unit
             }
@@ -229,6 +229,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     }
     fun back() = navigator.back()
     val repositoryPageLoading = rememberWearRepositoryLoading(WearRoute.ModuleRepo in navigator.backStack, catalog.repositoryUrl) { moduleRepoViewModel.refresh() }
+    val templateChoice = navigator.backStack.filterIsInstance<WearRoute.AppProfileTemplateChoice>().lastOrNull()
+    val templateChoiceLoading = rememberWearTemplateChoiceLoading(templateChoice) { templateViewModel.fetchTemplates() }
     val umountOpen = WearRoute.Umount in navigator.backStack
     LaunchedEffect(umountOpen) {
         if (umountOpen) umountViewModel.dispatch(UmountManagerUiAction.Refresh())
@@ -590,6 +592,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         route.packageName,
                                         onBack = { if (navigator.top == route) back() },
                                         templateViewModel = templateViewModel,
+                                        isPageLoading = templateChoiceLoading,
                                         onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.TemplateChoice)) },
                                     )
                                 }
