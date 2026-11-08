@@ -163,6 +163,8 @@ internal fun WearLogsPage(
             }
             itemsIndexed(state.visibleEntries, key = { index, _ -> entryKeys[index] }) { _, entry ->
                 val tags = sulogEntrySummaryTags(entry) + listOfNotNull(sulogEntryStatus(entry))
+                val description = sulogEntryDescription(entry)?.takeIf { it.isNotBlank() }
+                val timestamp = entry.timestampText?.takeIf { it.isNotBlank() }
                 WearRefreshItem(spec) {
                     TitleCard(
                         onClick = { onEntry(entry) },
@@ -180,20 +182,25 @@ internal fun WearLogsPage(
                                 }
                             }
                         },
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            sulogEntryDescription(entry)?.let {
-                                Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        content = if (description != null || timestamp != null) {
+                            {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    description?.let {
+                                        Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    }
+                                    timestamp?.let {
+                                        Text(
+                                            it,
+                                            style = MaterialTheme.typography.bodyExtraSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
                             }
-                            entry.timestampText?.let {
-                                Text(
-                                    it,
-                                    style = MaterialTheme.typography.bodyExtraSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
+                        } else {
+                            null
+                        },
+                    )
                 }
             }
         }
