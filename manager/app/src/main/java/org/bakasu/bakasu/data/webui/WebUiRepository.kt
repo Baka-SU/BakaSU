@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.data.webui
 
+import android.util.Log
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.internal.UiThreadHandler
@@ -41,7 +42,7 @@ class WebUiRepository(
     fun openFile(path: String) = runCatching {
         val file = SuFile(path).apply { shell = ksuCliRepository.getRootShell(true) }
         SuFileInputStream.open(file)
-    }.getOrNull()
+    }.onFailure { Log.w("ModuleWebUI", "Cannot open module file: $path", it) }.getOrNull()
 
     private class ShellWebUiProcess(
         private val shell: Shell,

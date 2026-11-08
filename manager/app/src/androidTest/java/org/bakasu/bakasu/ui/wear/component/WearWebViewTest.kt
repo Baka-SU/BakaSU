@@ -102,34 +102,29 @@ class WearWebViewTest(private val round: Boolean) {
     }
 
     @Test
-    fun shortNavigationIsCenteredAndDragsWithoutEnteringAMode() {
+    fun navigationPageKeepsItsViewportAndDraggingDoesNotClickThrough() {
         showPage("wear-webview-navigation.html")
         val viewport = compose.runOnIdle { webView.parent as View }
         compose.runOnIdle {
-            assertTrue(webView.height * webView.scaleY < viewport.height / 2f)
-            assertEquals(viewport.height / 2f, webView.translationY + webView.height * webView.scaleY / 2f, 2f)
+            assertTrue(webView.height * webView.scaleY > viewport.height / 2f)
         }
         assertPageClearOfControls()
-        screenshot("navigation-centered")
+        screenshot("navigation-viewport")
         listOf("status", "config", "modules", "info").forEach { clickPageButton(it) }
         val initial = compose.runOnIdle { Offset(webView.translationX, webView.translationY) }
         compose.onNodeWithTag("web-host").performTouchInput {
             swipe(center, center - Offset(width * 0.07f, height * 0.07f), 500)
         }
         compose.runOnIdle {
-            if (round) assertTrue(webView.translationX < initial.x)
-            assertTrue(webView.translationY < initial.y)
             assertEquals(0, backCount)
         }
         assertEquals("A drag must not click the navigation", 4, js("clicks.length").toInt())
         assertPageClearOfControls()
         screenshot("navigation-dragged")
         clickPageButton("modules")
-        val movedTop = compose.runOnIdle { webView.translationY }
         compose.onNodeWithTag("web-host").performTouchInput {
             swipe(center, center + Offset(0f, height * 0.07f), 500)
         }
-        compose.runOnIdle { assertTrue(webView.translationY > movedTop) }
         assertEquals("A vertical drag must not click the navigation", 5, js("clicks.length").toInt())
         assertPageClearOfControls()
         control(R.string.wear_web_tools).performClick()
@@ -138,6 +133,17 @@ class WearWebViewTest(private val round: Boolean) {
             assertEquals(initial.x, webView.translationX, 1f)
             assertEquals(initial.y, webView.translationY, 1f)
         }
+    }
+
+    @Test
+    fun viewportHeightPageKeepsItsContentAboveNavigation() {
+        showPage("wear-webview-viewport.html")
+        assertTrue(js("document.querySelector('main').getBoundingClientRect().height").toDouble() > 40)
+        clickPageButton("status")
+        clickPageButton("config")
+        assertEquals("[\"status\",\"config\"]", js("clicks"))
+        assertPageClearOfControls()
+        screenshot("viewport-content")
     }
 
     @Test

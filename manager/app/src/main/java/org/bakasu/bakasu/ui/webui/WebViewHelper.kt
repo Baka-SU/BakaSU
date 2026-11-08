@@ -8,7 +8,9 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.view.ViewGroup
+import android.webkit.ConsoleMessage
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
 import android.webkit.RenderProcessGoneDetail
@@ -97,6 +99,7 @@ private fun Uri.isModuleOrigin() = scheme == "https" && host == MODULE_HOST ||
     scheme.equals("ksu", ignoreCase = true) && host.equals("icon", ignoreCase = true)
 
 private const val MODULE_HOST = "mui.kernelsu.org"
+private const val TAG = "ModuleWebUI"
 
 /**
  * Creates the module WebView for [webUIState], whose module name and directory are already set,
@@ -127,6 +130,7 @@ internal fun createWebView(
     }
 
     val webView = WebView(activity)
+    Log.i(TAG, "Opening ${webUIState.modDir}, remote=$restrictToModule, WebView=${WebView.getCurrentWebViewPackage()?.versionName}")
     webView.setBackgroundColor(Color.TRANSPARENT)
 
     WebView.setWebContentsDebuggingEnabled(
@@ -158,26 +162,31 @@ internal fun createWebView(
     webView.webViewClient = object : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
             webUIState.pageLoaded = false
+            Log.i(TAG, "Page started: $url")
         }
 
         override fun onPageFinished(view: WebView, url: String?) {
             webUIState.pageLoaded = true
+            Log.i(TAG, "Page finished: $url")
             if (webUIState.uiEvent !is WebUIEvent.Error) onPageLoaded?.invoke()
         }
 
         override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+            Log.e(TAG, "Resource failed: ${request.url}, mainFrame=${request.isForMainFrame}, code=${error.errorCode}, ${error.description}")
             if (restrictToModule && request.isForMainFrame) {
                 webUIState.uiEvent = WebUIEvent.Error(activity.getString(R.string.wear_webui_load_failed))
             }
         }
 
         override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse) {
+            Log.e(TAG, "HTTP ${errorResponse.statusCode}: ${request.url}, mainFrame=${request.isForMainFrame}")
             if (restrictToModule && request.isForMainFrame) {
                 webUIState.uiEvent = WebUIEvent.Error(activity.getString(R.string.wear_webui_load_failed))
             }
         }
 
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+            Log.e(TAG, "Renderer exited: crashed=${detail.didCrash()}")
             if (!recoverFromRenderCrash) {
                 return super.onRenderProcessGone(view, detail)
             }
@@ -230,6 +239,17 @@ internal fun createWebView(
 
     // WebChromeClient
     webView.webChromeClient = object : WebChromeClient() {
+        override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+            val priority = when (message.messageLevel()) {
+                ConsoleMessage.MessageLevel.ERROR -> Log.ERROR
+                ConsoleMessage.MessageLevel.WARNING -> Log.WARN
+                ConsoleMessage.MessageLevel.DEBUG -> Log.DEBUG
+                else -> Log.INFO
+            }
+            Log.println(priority, TAG, "${message.sourceId()}:${message.lineNumber()}: ${message.message()}")
+            return true
+        }
+
         override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
             if (message == null || result == null) return false
             webUIState.uiEvent = WebUIEvent.ShowAlert(message, result)

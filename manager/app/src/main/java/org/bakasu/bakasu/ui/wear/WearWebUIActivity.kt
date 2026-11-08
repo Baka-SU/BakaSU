@@ -120,7 +120,7 @@ private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) 
 }
 
 @Composable
-private fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
+internal fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
     val back: () -> Unit = { if (state.webCanGoBack) state.webView?.goBack() else onFinish() }
     BackHandler { back() }
     AppScaffold(timeText = {}, containerColor = Color.Transparent) {

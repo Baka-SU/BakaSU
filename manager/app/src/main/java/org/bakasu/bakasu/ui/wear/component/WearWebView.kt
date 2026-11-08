@@ -152,8 +152,8 @@ internal fun WearWebView(webView: WebView, onBack: () -> Unit, modifier: Modifie
 }
 
 /**
- * Measures short pages at their content height so a navigation-only WebUI is centered. Long pages
- * scroll inside the available rectangle. Native child transforms preserve WebView touch mapping.
+ * Gives responsive pages a real viewport, including those whose content depends on 100vh or flex
+ * height. Native child transforms preserve WebView touch mapping inside the available rectangle.
  */
 @SuppressLint("ViewConstructor")
 private class WearWebViewViewport(context: Context, private val webView: WebView) : ViewGroup(context) {
@@ -179,7 +179,7 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
             builtInZoomControls = true
             displayZoomControls = false
         }
-        addView(webView)
+        addView(webView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         webView.pivotX = 0f
         webView.pivotY = 0f
     }
@@ -209,7 +209,7 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
         val pageHeight = (height - controlsHeight - inset).coerceAtLeast(1f)
         webView.measure(
             MeasureSpec.makeMeasureSpec((pageWidth / pageScale).toInt().coerceAtLeast(1), MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec((pageHeight / pageScale).toInt().coerceAtLeast(1), MeasureSpec.AT_MOST),
+            MeasureSpec.makeMeasureSpec((pageHeight / pageScale).toInt().coerceAtLeast(1), MeasureSpec.EXACTLY),
         )
     }
 

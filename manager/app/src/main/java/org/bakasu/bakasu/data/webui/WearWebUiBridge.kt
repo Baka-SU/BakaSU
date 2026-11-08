@@ -139,6 +139,9 @@ class RemoteWebUiBackend private constructor(
                 val input = connection.input
                 return if (timeout) CompanionBridgeRepository.handshake(connection.socket) { read(input) } else read(input)
             }
+        } catch (error: Exception) {
+            Log.w("RemoteWebUi", "Module RPC failed: $op", error)
+            throw error
         } finally {
             requests.release()
         }
@@ -147,6 +150,7 @@ class RemoteWebUiBackend private constructor(
     /** A single answer frame: its payload, or null when the watch answered with an error frame. */
     private fun single(op: String, arg: String, extra: Int = 0): ByteArray? = call(op, arg, extra) { input ->
         val (type, payload) = with(WearWebUiProtocol) { input.readFrame() }
+        if (type != WearWebUiProtocol.FRAME_OK) Log.w("RemoteWebUi", "Module RPC rejected: $op, frame=$type")
         payload.takeIf { type == WearWebUiProtocol.FRAME_OK }
     }
 
@@ -215,6 +219,7 @@ class RemoteWebUiBackend private constructor(
             }
             when {
                 type != WearWebUiProtocol.FRAME_CHUNK -> {
+                    Log.w("RemoteWebUi", "Module file rejected: $path, frame=$type")
                     null
                 }
 
@@ -257,7 +262,10 @@ class RemoteWebUiBackend private constructor(
                 val (type, payload) = CompanionBridgeRepository.handshake(connection.socket) {
                     with(WearWebUiProtocol) { connection.input.readFrame() }
                 }
-                if (type != WearWebUiProtocol.FRAME_OK) return null
+                if (type != WearWebUiProtocol.FRAME_OK) {
+                    Log.w("RemoteWebUi", "Session claim rejected: frame=$type")
+                    return null
+                }
                 val session = JSONObject(payload.decodeToString())
                 val module = session.getString("module")
                 require(module.isNotEmpty() && '/' !in module && module != "..") { "Invalid module" }
@@ -302,6 +310,7 @@ private class RemoteFileInputStream(
                     with(WearWebUiProtocol) { input.readFrame() }
                 }
             } catch (error: Exception) {
+                Log.w("RemoteWebUi", "Module file stream interrupted", error)
                 close()
                 throw error
             }
@@ -344,8 +353,8 @@ internal fun serveWebUiClaim(connection: BridgeConnection) {
                 output.writeFrame(FRAME_OK, session.toString().toByteArray())
             }
         }
-    } catch (_: Exception) {
-        // The phone closed the socket or the connection dropped; the claim simply fails.
+    } catch (error: Exception) {
+        Log.w("RemoteWebUi", "Session claim response failed", error)
     } finally {
         connection.close()
     }
@@ -429,8 +438,8 @@ internal suspend fun serveWebUiCall(
                 else -> answer(null)
             }
         }
-    } catch (_: Exception) {
-        // The phone closed the socket or the connection dropped; the call simply ends.
+    } catch (error: Exception) {
+        Log.w("RemoteWebUi", "Module RPC failed", error)
     } finally {
         connection.close()
     }
