@@ -24,6 +24,7 @@ import org.bakasu.bakasu.domain.model.FlashOperation
 import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
 import org.bakasu.bakasu.domain.usecase.TakeModuleUriPermissionUseCase
 import org.bakasu.bakasu.ui.viewmodel.FlashUiAction
+import org.bakasu.bakasu.ui.viewmodel.FlashUiState
 import org.bakasu.bakasu.ui.viewmodel.FlashViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearChip
@@ -70,6 +71,14 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
     }
     LaunchedEffect(state.exitCode) { if (state.exitCode == 0) onInstalled() }
 
+    WearFlashPage(operation, state, fileError, onBack) {
+        viewModel.dispatch(FlashUiAction.Reboot(allowSoftReboot = operation is FlashOperation.Module))
+    }
+}
+
+/** Renders the progress and actions for the current operation. */
+@Composable
+internal fun WearFlashPage(operation: FlashOperation, state: FlashUiState, fileError: Boolean, onBack: () -> Unit, onReboot: () -> Unit) {
     val failed = fileError || state.exitCode.let { it != null && it != 0 }
     val status = when {
         failed -> WearFlashStatus.FAILED
@@ -77,6 +86,7 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
         else -> WearFlashStatus.RUNNING
     }
     val isModule = operation is FlashOperation.Module
+    val showStatusHeading = operation !is FlashOperation.Module && operation !is FlashOperation.Boot
     val lines = remember(state.output) { state.output.toLogLines() }
     val currentStep = lines.lastOrNull { it.isNotBlank() }
     val title = stringResource(
@@ -100,13 +110,13 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
 
     WearList(
         onBack = onBack,
-        onConfirm = ({ viewModel.dispatch(FlashUiAction.Reboot(allowSoftReboot = isModule)) }).takeIf { status == WearFlashStatus.SUCCESS && state.showReboot },
+        onConfirm = onReboot.takeIf { status == WearFlashStatus.SUCCESS && state.showReboot },
         confirmLabel = stringResource(R.string.wear_reboot_device),
     ) { spec ->
         item { WearPageHeader(spec, title) }
         when (status) {
             WearFlashStatus.RUNNING -> {
-                item { WearSectionHeader(spec, stringResource(R.string.wear_install_status)) }
+                if (showStatusHeading) item { WearSectionHeader(spec, stringResource(R.string.wear_install_status)) }
                 item {
                     WearChip(
                         spec,
@@ -127,7 +137,7 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
             }
 
             WearFlashStatus.SUCCESS -> {
-                item { WearSectionHeader(spec, stringResource(R.string.wear_result)) }
+                if (showStatusHeading) item { WearSectionHeader(spec, stringResource(R.string.wear_result)) }
                 item {
                     WearChip(
                         spec,
@@ -157,7 +167,7 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
             }
 
             WearFlashStatus.FAILED -> {
-                item { WearSectionHeader(spec, stringResource(R.string.wear_result)) }
+                if (showStatusHeading) item { WearSectionHeader(spec, stringResource(R.string.wear_result)) }
                 item {
                     WearChip(
                         spec,
