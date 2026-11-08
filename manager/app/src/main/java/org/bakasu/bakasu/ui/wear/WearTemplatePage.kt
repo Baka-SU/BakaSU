@@ -12,7 +12,6 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Group
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Numbers
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Save
@@ -31,8 +30,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.wear.compose.material3.AlertDialog
-import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
@@ -40,7 +37,6 @@ import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.domain.model.ProfileTemplateFailure
-import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiAction
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiEvent
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiState
@@ -54,10 +50,10 @@ import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
-import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearLoadFailureContent
 import org.bakasu.bakasu.ui.wear.component.WearLoadFailureScreen
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -185,23 +181,6 @@ internal fun rememberWearTemplateImport(viewModel: TemplateViewModel): () -> Uni
     }
 }
 
-/** The no-network AlertDialog; it only closes, as nothing can be loaded without a network. */
-@Composable
-private fun rememberWearOfflineDialog(onDismissed: () -> Unit = {}) = rememberCustomDialog { dismiss ->
-    val close = {
-        dismiss()
-        onDismissed()
-    }
-    AlertDialog(
-        visible = true,
-        onDismissRequest = close,
-        icon = { WearDialogIcon(Icons.Rounded.Error, tint = MaterialTheme.colorScheme.error) },
-        title = { Text(stringResource(R.string.wear_template_offline)) },
-        text = { Text(stringResource(R.string.wear_no_internet)) },
-        edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
-    )
-}
-
 /**
  * Online templates for browsing. Loading or viewing them stores nothing; only Import stores the chosen
  * template as a local one, which App Profile can then select.
@@ -218,39 +197,12 @@ internal fun WearOnlineTemplatePage(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val failure = state.loadFailure
-    val offlineDialog = rememberWearOfflineDialog()
-    // Closing feedback keeps the page available for another explicit refresh.
-    val failureDialog = rememberCustomDialog { dismiss ->
-        AlertDialog(
-            visible = true,
-            onDismissRequest = dismiss,
-            icon = { WearDialogIcon(Icons.Rounded.Info) },
-            title = { Text(stringResource(R.string.wear_repo_connect_failed)) },
-            text = {
-                Text(
-                    stringResource(
-                        if (failure == ProfileTemplateFailure.Invalid) R.string.wear_template_online_invalid else R.string.wear_template_online_failed,
-                    ),
-                )
-            },
-            confirmButton = {
-                AlertDialogDefaults.ConfirmButton(
-                    onClick = {
-                        dismiss()
-                        viewModel.dispatch(OnlineTemplateUiAction.Load)
-                    },
-                )
-            },
-            dismissButton = { AlertDialogDefaults.DismissButton(onClick = dismiss) },
-        )
+    var retryLoading by remember(viewModel) { mutableStateOf(false) }
+    LaunchedEffect(state.loading) {
+        if (!state.loading) retryLoading = false
     }
-    LaunchedEffect(failure) {
-        if (failure == ProfileTemplateFailure.Offline) {
-            offlineDialog.show()
-        } else if (failure != null) {
-            failureDialog.show()
-        }
-    }
+    val loading = state.isLoading || (retryLoading && state.loading)
+    val failed = !state.loading && failure != null
     WearOperationsHost(
         menuKey = WearOperationsPage.OnlineTemplates,
         menuOpen = menuOpen,
@@ -272,14 +224,41 @@ internal fun WearOnlineTemplatePage(
             )
         },
     ) {
-        WearList(isLoading = state.isLoading, isRefreshing = state.isRefreshing, onBack = onBack, onOpenPanel = onOpenPanel, hasOperationsPanel = true, panelLabel = stringResource(R.string.wear_operations)) { spec ->
+        WearList(
+            isLoading = loading,
+            isRefreshing = state.isRefreshing && !loading,
+            onBack = onBack,
+            onOpenPanel = onOpenPanel,
+            hasOperationsPanel = true,
+            panelLabel = stringResource(R.string.wear_operations),
+            onConfirm = if (failed) {
+                {
+                    retryLoading = true
+                    viewModel.dispatch(OnlineTemplateUiAction.Load)
+                }
+            } else {
+                null
+            },
+            confirmLabel = if (failed) stringResource(R.string.network_retry) else null,
+        ) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.wear_template_online)) }
-            if (failure != null) {
-                item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_template_online_failed), tone = WearStatusTone.ERROR) }
+            if (failed) {
+                item {
+                    WearLoadFailureContent(
+                        spec,
+                        stringResource(
+                            when (failure) {
+                                ProfileTemplateFailure.Offline -> R.string.wear_no_internet
+                                ProfileTemplateFailure.Invalid -> R.string.wear_template_online_invalid
+                                else -> R.string.wear_template_online_failed
+                            },
+                        ),
+                    )
+                }
             } else if (state.hasLoaded && !state.loading && state.templates.isEmpty()) {
                 item { WearEmptyState(spec, Icons.Rounded.Cloud, stringResource(R.string.wear_template_online_empty)) }
             }
-            LazySegmentedColumn(state.templates, { it.id }) { template ->
+            LazySegmentedColumn(if (failed) emptyList() else state.templates, { it.id }) { template ->
                 WearSettingsJumpPageWidget(
                     spec,
                     template.name.ifBlank { template.id },
