@@ -7,7 +7,7 @@ import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.lazy.TransformationSpec
 
 /**
- * Uses the shared hold-to-reveal gesture. Revealing never deletes; [onDelete] asks for confirmation.
+ * Uses the shared left-swipe and hold-to-reveal gestures. Revealing never deletes; [onDelete] asks for confirmation.
  * Key the enclosing item by its entry, and leave the content transformation to this wrapper.
  */
 @Composable
