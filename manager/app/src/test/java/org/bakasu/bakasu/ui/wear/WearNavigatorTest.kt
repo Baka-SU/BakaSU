@@ -11,6 +11,18 @@ class WearNavigatorTest {
     private fun navigator() = WearNavigator(NavBackStack<NavKey>(WearRoute.Main), {}, {}, { fail("Unexpected app exit") })
 
     @Test
+    fun directPatchRequiresLoadedUninstalledGkiAndDoesNotConfuseMissingRoot() {
+        val home = org.bakasu.bakasu.domain.model.HomeDashboardState(
+            isInitialDataLoaded = true,
+            systemStatus = org.bakasu.bakasu.domain.model.KernelStatus(kernelVersion = org.bakasu.bakasu.KernelVersion(6, 1, 0)),
+        )
+        org.junit.Assert.assertTrue(home.canOpenPatchDirectly())
+        org.junit.Assert.assertFalse(home.copy(isInitialDataLoaded = false).canOpenPatchDirectly())
+        org.junit.Assert.assertFalse(home.copy(systemStatus = home.systemStatus.copy(ksuVersion = 100, isRootAvailable = false)).canOpenPatchDirectly())
+        org.junit.Assert.assertFalse(home.copy(systemStatus = home.systemStatus.copy(kernelVersion = org.bakasu.bakasu.KernelVersion(4, 4, 0))).canOpenPatchDirectly())
+    }
+
+    @Test
     fun patchingWithoutRootReturnsToThePageBeforeInstallation() {
         val navigator = navigator()
         navigator.open(WearRoute.KernelInstall)

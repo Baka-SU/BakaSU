@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.ProfileTemplate
@@ -62,8 +63,10 @@ class TemplateViewModel(
     private val search = MutableStateFlow("")
     private val lastLoad = MutableStateFlow<Result<Unit>?>(null)
 
+    private val templatesSource = observeTemplates()
+
     val state: StateFlow<TemplateUiState> = combine(
-        observeTemplates(),
+        templatesSource,
         observeRefreshing(),
         observeOffline(),
         search,
@@ -92,6 +95,8 @@ class TemplateViewModel(
     suspend fun fetchTemplates(sync: Boolean = false) {
         val result = refreshTemplates(sync)
         lastLoad.value = result
+        // Entry loading ends only once the same data and result are available to the UI collector.
+        state.first { !it.isLoading && !it.isRefreshing && it.templateList == templatesSource.value && it.loadFailed == result.isFailure }
         result.exceptionOrNull()?.let {
             mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty()))
         }

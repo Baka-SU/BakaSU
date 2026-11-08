@@ -2,23 +2,50 @@ package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
-/** The visit survives the operations panel, but a new visit waits for its own local template read. */
-@Composable
-internal fun rememberWearTemplateChoiceLoading(route: WearRoute.AppProfileTemplateChoice?, fetch: suspend () -> Unit): Boolean {
-    val loading = remember(route) { mutableStateOf(route != null) }
-    LaunchedEffect(route) {
-        if (route != null) {
+/** Each visit owns its loading reason; unrelated shared refreshes cannot show a pull indicator. */
+internal class WearTemplateChoiceLoading(private val scope: CoroutineScope, private val fetch: suspend () -> Unit) {
+    var loading by mutableStateOf(true)
+        private set
+    var refreshing by mutableStateOf(false)
+        private set
+
+    suspend fun enter() {
+        try {
+            fetch()
+        } finally {
+            loading = false
+        }
+    }
+
+    fun refresh() {
+        if (loading || refreshing) return
+        refreshing = true
+        scope.launch {
             try {
                 fetch()
             } finally {
-                loading.value = false
+                refreshing = false
             }
         }
     }
-    return loading.value
+}
+
+@Composable
+internal fun rememberWearTemplateChoiceLoading(route: WearRoute.AppProfileTemplateChoice?, fetch: suspend () -> Unit): WearTemplateChoiceLoading {
+    val scope = rememberCoroutineScope()
+    val currentFetch by rememberUpdatedState(fetch)
+    val state = remember(route) { WearTemplateChoiceLoading(scope) { currentFetch() } }
+    LaunchedEffect(route) { if (route != null) state.enter() }
+    return state
 }
 
 /** Search retains the owning choice page and updates its one results destination. */

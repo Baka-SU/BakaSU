@@ -343,6 +343,7 @@ internal fun WearAppProfileTemplateChoiceRoute(
     onBack: () -> Unit,
     templateViewModel: TemplateViewModel,
     isPageLoading: Boolean,
+    isManualRefreshing: Boolean,
     onOpenPanel: () -> Unit,
     query: String = "",
     onSaved: () -> Unit = onBack,
@@ -380,7 +381,7 @@ internal fun WearAppProfileTemplateChoiceRoute(
         WearAppProfileTemplateChoicePage(
             profile = profile,
             templates = org.bakasu.bakasu.ui.viewmodel.filterProfileTemplates(templates.templateList, query),
-            isRefreshing = templates.isRefreshing && !isPageLoading,
+            isRefreshing = isManualRefreshing && !isPageLoading,
             isLoading = templates.isLoading || isPageLoading,
             loadFailed = templates.loadFailed,
             onBack = onBack,

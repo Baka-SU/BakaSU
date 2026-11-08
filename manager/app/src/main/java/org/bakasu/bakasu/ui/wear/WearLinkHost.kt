@@ -27,6 +27,7 @@ import org.bakasu.bakasu.ui.wear.component.WearLoadingOverlay
 import org.bakasu.bakasu.ui.wear.component.WearPhoneTransferDialog
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
+import org.bakasu.bakasu.ui.wear.component.WearWatchOpenFailureDialog
 
 /** Opens local pages and hosts the shared permission and phone-transfer feedback. */
 @Composable
@@ -87,7 +88,8 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, showLoading: Boolean, on
         },
         onDismiss = viewModel::dismissResult,
     )
-    WearErrorDialog(failureText.takeIf { failed != null && !failed.automaticLink }, viewModel::dismissResult)
+    WearWatchOpenFailureDialog(failureText.takeIf { failed?.onWatch == true }, viewModel::dismissResult)
+    WearErrorDialog(failureText.takeIf { failed != null && !failed.automaticLink && !failed.onWatch }, viewModel::dismissResult)
 }
 
 @Composable

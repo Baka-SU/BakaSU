@@ -6,7 +6,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -44,6 +43,7 @@ import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
+import org.bakasu.bakasu.ui.wear.component.WearWatchOpenFailureDialog
 import org.bakasu.bakasu.ui.wear.component.WearWebView
 import org.bakasu.bakasu.ui.webui.HandleConfigurationChanges
 import org.bakasu.bakasu.ui.webui.HandleWebViewLifecycle
@@ -107,13 +107,7 @@ private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) 
         onDispose { webUIState.dispose() }
     }
     when (val event = webUIState.uiEvent) {
-        is WebUIEvent.Error -> LaunchedEffect(event) {
-            Toast.makeText(activity, event.message, Toast.LENGTH_SHORT).show()
-            onFinish()
-        }
-
         is WebUIEvent.Close -> LaunchedEffect(event) { onFinish() }
-
         else -> Unit
     }
     WearWebUIScreen(webUIState, onFinish)
@@ -127,6 +121,8 @@ internal fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
         WearSwipeToDismissBox(onDismissed = back) { background ->
             if (!background) {
                 when (val event = state.uiEvent) {
+                    is WebUIEvent.Error -> WearWatchOpenFailureDialog(stringResource(R.string.wear_link_open_failed), onFinish)
+
                     // A waiting spinner; the branded loading screen is only shown at app startup.
                     WebUIEvent.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         WearLoadingIndicator()

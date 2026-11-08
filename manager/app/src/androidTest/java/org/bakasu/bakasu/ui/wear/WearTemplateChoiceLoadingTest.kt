@@ -1,11 +1,18 @@
 package org.bakasu.bakasu.ui.wear
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import kotlinx.coroutines.CompletableDeferred
@@ -21,51 +28,70 @@ class WearTemplateChoiceLoadingTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun preloadedTemplatesStillWaitForEachVisitAndMenuRefreshKeepsTheChoices() {
-        val route = mutableStateOf<WearRoute.AppProfileTemplateChoice?>(null)
-        val menu = mutableStateOf(false)
-        val refreshing = mutableStateOf(false)
+    fun coldAndCachedVisitsUsePageLoadingAndOnlyTheirOwnRefreshShowsTheIndicator() {
+        val parent = WearRoute.AppProfileMode(10001, "example")
+        val choice = WearRoute.AppProfileTemplateChoice(10001, "example")
+        val stack = NavBackStack<NavKey>(parent)
+        val templates = mutableStateOf(emptyList<ProfileTemplate>())
         var pending = CompletableDeferred<Unit>()
         var requests = 0
+        lateinit var loading: WearTemplateChoiceLoading
         val template = ProfileTemplate(id = "example", name = "Loaded template")
         compose.setContent {
-            val loading = rememberWearTemplateChoiceLoading(route.value) {
+            loading = rememberWearTemplateChoiceLoading(stack.filterIsInstance<WearRoute.AppProfileTemplateChoice>().lastOrNull()) {
                 requests++
                 pending.await()
+                templates.value = listOf(template)
             }
             MaterialTheme {
                 AppScaffold(timeText = {}) {
-                    if (route.value != null && !menu.value) {
-                        WearAppProfileTemplateChoicePage(AppProfile("test"), listOf(template), refreshing.value, loading, false, {}, {}, {})
-                    }
+                    NavDisplay(
+                        backStack = stack,
+                        onBack = { stack.removeAt(stack.lastIndex) },
+                        entryProvider = withPageTransitions(
+                            entryProvider {
+                                entry(parent) { Box(Modifier.fillMaxSize()) }
+                                entry(choice) {
+                                    WearAppProfileTemplateChoicePage(AppProfile("test"), templates.value, loading.refreshing, loading.loading, false, {}, {}, {})
+                                }
+                                entry<WearRoute.AppProfileTemplateSearch> { Box(Modifier.fillMaxSize()) }
+                            },
+                        ) { _, content -> content() },
+                    )
                 }
             }
         }
+        val indicator = compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading))
         repeat(2) { visit ->
             compose.runOnIdle {
                 pending = CompletableDeferred()
-                route.value = WearRoute.AppProfileTemplateChoice(10001, "example")
+                stack.add(choice)
             }
-            compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).assertIsDisplayed()
+            indicator.assertIsDisplayed()
             compose.onNodeWithText(template.name).assertDoesNotExist()
             compose.runOnIdle {
-                assertEquals(visit + 1, requests)
+                assertEquals(visit * 2 + 1, requests)
                 pending.complete(Unit)
             }
-            compose.onNodeWithText(template.name).assertExists()
-            compose.runOnIdle { menu.value = true }
-            compose.runOnIdle { menu.value = false }
-            compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).assertDoesNotExist()
+            compose.mainClock.autoAdvance = false
+            repeat(8) {
+                compose.mainClock.advanceTimeByFrame()
+                compose.onNodeWithText(template.name).assertExists()
+                indicator.assertDoesNotExist()
+            }
+            compose.mainClock.autoAdvance = true
+            compose.runOnIdle { stack.add(WearRoute.AppProfileTemplateSearch(10001, "example", "")) }
+            compose.runOnIdle { stack.removeAt(stack.lastIndex) }
+            indicator.assertDoesNotExist()
             compose.runOnIdle {
-                assertEquals(visit + 1, requests)
-                refreshing.value = true
+                pending = CompletableDeferred()
+                loading.refresh()
             }
             compose.onNodeWithText(template.name).assertExists()
-            compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).assertExists()
-            compose.runOnIdle {
-                refreshing.value = false
-                route.value = null
-            }
+            indicator.assertIsDisplayed()
+            compose.runOnIdle { pending.complete(Unit) }
+            indicator.assertDoesNotExist()
+            compose.runOnIdle { stack.removeAt(stack.lastIndex) }
         }
     }
 }

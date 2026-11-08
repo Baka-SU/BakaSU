@@ -31,6 +31,7 @@ data class DynamicManagerUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val isSubmitting: Boolean = false,
+    val loadFailed: Boolean = false,
 )
 
 sealed interface DynamicManagerUiAction {
@@ -58,13 +59,16 @@ class DynamicManagerViewModel(
     private val clearDynamicManager: ClearDynamicManagerUseCase,
 ) : ViewModel() {
     private var submitJob: Job? = null
+    private var refreshJob: Job? = null
+    private val loadFailed = MutableStateFlow(false)
     private val search = MutableStateFlow("")
     private val mutableEvents = MutableSharedFlow<DynamicManagerUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<DynamicManagerUiEvent> = mutableEvents.asSharedFlow()
 
-    val state: StateFlow<DynamicManagerUiState> = combine(observeState(), search) { source, query ->
+    val state: StateFlow<DynamicManagerUiState> = combine(observeState(), search, loadFailed) { source, query, failed ->
         val normalized = query.trim()
         DynamicManagerUiState(
+            loadFailed = failed,
             config = source.config,
             apps = if (normalized.isEmpty()) {
                 source.apps
@@ -88,7 +92,9 @@ class DynamicManagerViewModel(
 
     fun dispatch(action: DynamicManagerUiAction) {
         when (action) {
-            DynamicManagerUiAction.Refresh -> viewModelScope.launch { refresh() }
+            DynamicManagerUiAction.Refresh -> if (refreshJob?.isActive != true) {
+                refreshJob = viewModelScope.launch { refresh() }
+            }
 
             is DynamicManagerUiAction.Search -> search.value = action.query
 
@@ -106,7 +112,10 @@ class DynamicManagerViewModel(
         }
     }
 
-    suspend fun refresh(): Result<Unit> = refreshDynamicManager()
+    suspend fun refresh(): Result<Unit> {
+        loadFailed.value = false
+        return refreshDynamicManager().also { loadFailed.value = it.isFailure }
+    }
 
     private fun submit(
         operation: DynamicManagerOperation,

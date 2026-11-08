@@ -16,8 +16,10 @@ import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Undo
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -188,6 +190,7 @@ internal fun WearDynamicManagerAppsPage(
     state: DynamicManagerUiState,
     onBack: () -> Unit,
     onSearch: () -> Unit,
+    onRetry: () -> Unit,
     onSelect: (DynamicManagerApp) -> Unit,
 ) {
     var pending by remember { mutableStateOf<DynamicManagerApp?>(null) }
@@ -198,10 +201,41 @@ internal fun WearDynamicManagerAppsPage(
         pending?.let(onSelect)
         pending = null
     }
-    WearList(isLoading = state.isLoading || state.isSubmitting, onBack = onBack) { spec ->
+    val needsRetry = state.loadFailed || state.apps.isEmpty()
+    WearList(
+        isLoading = state.isLoading || state.isSubmitting,
+        isRefreshing = state.isRefreshing,
+        onBack = onBack,
+        onConfirm = onRetry.takeIf { needsRetry },
+        confirmLabel = stringResource(R.string.network_retry),
+        confirmEnabled = !state.isRefreshing,
+    ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.search_apps)) }
         item { WearActionButton(spec, Icons.Rounded.Search, stringResource(R.string.search_apps), onSearch, largeIcon = true) }
-        LazySegmentedColumn(state.apps, { it.packageName }) { app ->
+        if (needsRetry) {
+            item {
+                WearEmptyState(
+                    spec,
+                    if (state.loadFailed) {
+                        Icons.Rounded.Warning
+                    } else if (state.search.isNotBlank()) {
+                        Icons.Rounded.SearchOff
+                    } else {
+                        Icons.Rounded.Apps
+                    },
+                    stringResource(
+                        if (state.loadFailed) {
+                            R.string.wear_load_failed
+                        } else if (state.search.isNotBlank()) {
+                            R.string.search_no_any_match
+                        } else {
+                            R.string.no_apps_found
+                        },
+                    ),
+                )
+            }
+        }
+        LazySegmentedColumn(if (state.loadFailed) emptyList() else state.apps, { it.packageName }) { app ->
             val source = if (!app.isChangeable) {
                 stringResource(
                     when (app.managerSignatureIndex) {

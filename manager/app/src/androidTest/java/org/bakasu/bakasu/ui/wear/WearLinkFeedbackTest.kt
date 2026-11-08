@@ -24,7 +24,7 @@ class WearLinkFeedbackTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun explicitWatchFailureKeepsTheOrdinaryDialog() {
+    fun explicitWatchFailureUsesTheWatchTransferAppearance() {
         lateinit var viewModel: WearLinkViewModel
         compose.setContent {
             MaterialTheme {
@@ -36,9 +36,12 @@ class WearLinkFeedbackTest {
                 }
             }
         }
+        compose.mainClock.autoAdvance = false
         compose.runOnIdle { viewModel.fail(WearLinkFailure.WEBVIEW_UNAVAILABLE) }
-        compose.onNodeWithText(compose.activity.getString(R.string.operation_failed)).assertExists()
-        compose.onNodeWithText(compose.activity.getString(R.string.wear_link_open_failed)).assertExists()
+        compose.mainClock.advanceTimeBy(500)
+        compose.onNodeWithText(compose.activity.getString(R.string.operation_failed)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_watch_webui), useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_link_open_failed)).assertExists()
         compose.runOnIdle { viewModel.dismissResult() }
     }
 

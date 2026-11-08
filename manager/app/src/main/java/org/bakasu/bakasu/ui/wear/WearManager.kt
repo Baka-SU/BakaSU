@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.spring
@@ -175,20 +176,10 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     var signatureSize by rememberSaveable { mutableStateOf("") }
     var signatureHash by rememberSaveable { mutableStateOf("") }
     val operationFailedText = stringResource(R.string.operation_failed)
-    // Missing root shows as a dialog; other list load failures show on the list.
+    // Missing root is explained by the home warning; other load failures show on the list.
     val superuserError = superuser.loadFailure
         ?.takeIf { it != SuperUserLoadFailure.ROOT_ACCESS_REQUIRED }
         ?.let { stringResource(R.string.wear_load_failed) }
-    val rootDeniedDialog = rememberCustomDialog { dismiss ->
-        AlertDialog(
-            visible = true,
-            onDismissRequest = dismiss,
-            icon = { WearDialogIcon(Icons.Rounded.Error, tint = MaterialTheme.colorScheme.error) },
-            title = { Text(stringResource(R.string.wear_warning_root)) },
-            text = { Text(stringResource(R.string.grant_root_failed)) },
-            edgeButton = { AlertDialogDefaults.EdgeButton(onClick = dismiss) },
-        )
-    }
 
     // Settings feedback belongs to the page that caused it; navigating clears it.
     fun clearSettingsFeedback() {
@@ -330,10 +321,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     LaunchedEffect(homeViewModel) {
         homeViewModel.events.collect { event -> if (event is HomeUiEvent.Error) homeError = event.message }
     }
-    // Each refresh clears the failure, so a retry that is refused again shows the dialog again.
-    LaunchedEffect(superuser.loadFailure) {
-        if (superuser.loadFailure == SuperUserLoadFailure.ROOT_ACCESS_REQUIRED) rootDeniedDialog.show()
-    }
     LaunchedEffect(moduleViewModel, operationFailedText) {
         moduleViewModel.events.collect { event ->
             when (event) {
@@ -446,6 +433,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         },
                                         onSettings = dispatchSettings,
                                         onOpen = ::open,
+                                        onInstall = {
+                                            if (home.canOpenPatchDirectly()) navigator.open(WearRoute.LkmInstall, immediately = true) else open(WearRoute.KernelInstall)
+                                        },
                                         onTitleChange = { mainTitle = it },
                                         onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
                                     )
@@ -600,7 +590,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         route.packageName,
                                         onBack = { if (navigator.top == route) back() },
                                         templateViewModel = templateViewModel,
-                                        isPageLoading = templateChoiceLoading,
+                                        isPageLoading = templateChoiceLoading.loading,
+                                        isManualRefreshing = templateChoiceLoading.refreshing,
                                         onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.TemplateChoice)) },
                                     )
                                 }
@@ -615,7 +606,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         route.packageName,
                                         onBack = { if (navigator.top == route) back() },
                                         templateViewModel = templateViewModel,
-                                        isPageLoading = templateChoiceLoading,
+                                        isPageLoading = templateChoiceLoading.loading,
+                                        isManualRefreshing = templateChoiceLoading.refreshing,
                                         onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.TemplateChoice)) },
                                         query = route.query,
                                         onSaved = { navigator.finishTemplateChoice(route) },
@@ -819,7 +811,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     }
                                 }
                                 entry<WearRoute.DynamicManagerApps>(metadata = DynamicManagerTransitions) {
-                                    WearDynamicManagerAppsPage(dynamicManager, ::back, { open(WearRoute.DynamicManagerSearch) }) {
+                                    WearDynamicManagerAppsPage(dynamicManager, ::back, { open(WearRoute.DynamicManagerSearch) }, { dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Refresh) }) {
                                         dynamicManagerViewModel.dispatch(DynamicManagerUiAction.SelectApp(it))
                                     }
                                 }
@@ -915,6 +907,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     )
                                 }
                             },
+                            immediateEntry = navigator.immediateEntry,
                             pageContent = page@{ key, content ->
                                 val route = key as WearRoute
                                 // The cloud entry owns its ViewModel and refresh menu, so opening a local menu never loads it.
@@ -980,13 +973,13 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                                                             WearOperationsPage.Umount -> umountViewModel.dispatch(UmountManagerUiAction.Refresh())
 
-                                                            WearOperationsPage.TemplateChoice -> templateViewModel.dispatch(TemplateUiAction.Refresh())
+                                                            WearOperationsPage.TemplateChoice -> templateChoiceLoading.refresh()
                                                         }
                                                     }
                                                 },
                                                 isRefreshing = when (operationsPage) {
                                                     WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates -> false
-                                                    WearOperationsPage.TemplateChoice -> templates.isLoading || templates.isRefreshing
+                                                    WearOperationsPage.TemplateChoice -> templateChoiceLoading.loading || templateChoiceLoading.refreshing
                                                     WearOperationsPage.Home -> home.isRefreshing
                                                     WearOperationsPage.SuperUser -> superuser.isRefreshing
                                                     WearOperationsPage.Modules -> modules.isRefreshing
@@ -1113,10 +1106,12 @@ private val DynamicManagerTransitions: Map<String, Any> = if (Build.VERSION.SDK_
  */
 internal fun <T : Any> withPageTransitions(
     provider: (T) -> NavEntry<T>,
+    immediateEntry: T? = null,
     pageContent: @Composable (T, @Composable () -> Unit) -> Unit,
 ): (T) -> NavEntry<T> = { key ->
     val entry = provider(key)
-    NavEntry(key, entry.contentKey, WearPageTransitions + entry.metadata) { pageContent(key) { entry.Content() } }
+    val forward = if (key == immediateEntry) NavDisplay.transitionSpec { EnterTransition.None togetherWith ExitTransition.None } else emptyMap()
+    NavEntry(key, entry.contentKey, WearPageTransitions + entry.metadata + forward) { pageContent(key) { entry.Content() } }
 }
 
 /**
@@ -1138,6 +1133,7 @@ private fun WearMainPages(
     onModule: (ModuleUiAction) -> Unit,
     onSettings: (SettingsUiAction) -> Unit,
     onOpen: (WearRoute) -> Unit,
+    onInstall: () -> Unit,
     onTitleChange: (Int) -> Unit,
     onWebUi: (InstalledModule) -> Unit,
 ) {
@@ -1206,7 +1202,7 @@ private fun WearMainPages(
                                 { activity?.finish() },
                                 { onOpen(WearRoute.Operations(WearOperationsPage.Home)) },
                                 homeListState,
-                                onInstall = { onOpen(WearRoute.KernelInstall) },
+                                onInstall = onInstall,
                                 onVersionInfo = { onOpen(WearRoute.HomeVersionInfo) },
                                 onStatusInfo = { onOpen(WearRoute.HomeStatusInfo) },
                                 hasOperationsPanel = true,
@@ -1276,3 +1272,6 @@ internal fun onlineTemplateViewModel(provider: ViewModelStoreProvider): OnlineTe
     val owner = rememberViewModelStoreOwner(key = OnlineTemplatesContentKey, provider = provider)
     return koinViewModel(viewModelStoreOwner = owner)
 }
+
+/** Only the loaded home state can identify the first-install shortcut. */
+internal fun HomeDashboardState.canOpenPatchDirectly(): Boolean = isInitialDataLoaded && systemStatus.ksuVersion == null && systemStatus.kernelVersion.isGKI()

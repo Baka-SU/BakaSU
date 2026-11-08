@@ -34,7 +34,7 @@ sealed interface WearLinkEvent {
 /** A local link failure, presented separately from the shared phone transfer state. */
 sealed interface WearLinkResult {
     /** A null [reason] is an unexpected failure; [onPhone] marks a module WebUI the phone could not open. */
-    data class Failed(val reason: WearLinkFailure?, val onPhone: Boolean = false, val bridgeFailure: BridgeFailure? = null, val automaticLink: Boolean = false) : WearLinkResult
+    data class Failed(val reason: WearLinkFailure?, val onPhone: Boolean = false, val bridgeFailure: BridgeFailure? = null, val automaticLink: Boolean = false, val onWatch: Boolean = false) : WearLinkResult
 }
 
 /**
@@ -90,7 +90,7 @@ class WearLinkViewModel(
             return
         }
         webViewRequest = null
-        run(automaticLink = request.mode == "auto") {
+        run(automaticLink = request.mode == "auto", onWatch = request.mode == "webview") {
             showResolution(url, request.mode, repository.continueLink(url, request.resolution.remaining, request.resolution.phoneFailure))
         }
     }
@@ -99,7 +99,7 @@ class WearLinkViewModel(
         if (webViewRequest?.url == url) webViewRequest = null
     }
 
-    private fun open(url: String, mode: String, phoneFirst: Boolean = false) = run(automaticLink = mode == "auto") {
+    private fun open(url: String, mode: String, phoneFirst: Boolean = false) = run(automaticLink = mode == "auto", onWatch = mode == "webview") {
         webViewRequest = null
         showResolution(url, mode, repository.resolve(url, mode, phoneFirst))
     }
@@ -136,7 +136,7 @@ class WearLinkViewModel(
     }
 
     fun fail(reason: WearLinkFailure?) {
-        mutableResult.value = WearLinkResult.Failed(reason)
+        mutableResult.value = WearLinkResult.Failed(reason, onWatch = true)
     }
 
     fun dismissResult() {
@@ -150,7 +150,7 @@ class WearLinkViewModel(
     }
 
     /** One opening at a time, shown as loading until it ends; a failure becomes the result. */
-    private fun run(onPhone: Boolean = false, automaticLink: Boolean = false, block: suspend () -> Unit) {
+    private fun run(onPhone: Boolean = false, automaticLink: Boolean = false, onWatch: Boolean = false, block: suspend () -> Unit) {
         if (task?.isActive == true) return
         task = viewModelScope.launch {
             mutableLoading.value = true
@@ -165,7 +165,7 @@ class WearLinkViewModel(
                 }
             } catch (error: Exception) {
                 val linkError = error as? WearLinkException
-                mutableResult.value = WearLinkResult.Failed(linkError?.reason, onPhone, linkError?.phoneFailure, automaticLink)
+                mutableResult.value = WearLinkResult.Failed(linkError?.reason, onPhone, linkError?.phoneFailure, automaticLink, onWatch)
             } finally {
                 mutableLoading.value = false
             }
