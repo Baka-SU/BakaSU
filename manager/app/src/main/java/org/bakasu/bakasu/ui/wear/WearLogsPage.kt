@@ -53,6 +53,7 @@ import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
@@ -60,7 +61,6 @@ import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
-import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
 
 /**
  * @author Hanhan_awa
@@ -156,33 +156,35 @@ internal fun WearLogsPage(
             }
             itemsIndexed(state.visibleEntries, key = { index, entry -> "$index:${entry.key}" }) { _, entry ->
                 val tags = sulogEntrySummaryTags(entry) + listOfNotNull(sulogEntryStatus(entry))
-                TitleCard(
-                    onClick = { onEntry(entry) },
-                    title = { Text(sulogEntryTitle(entry), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                    modifier = Modifier.wearRefreshOffset().fillMaxWidth().padding(vertical = 2.dp).transformedHeight(this, spec),
-                    transformation = SurfaceTransformation(spec),
-                    // The clock time fits the time slot; the full date stays in the content.
-                    time = entry.timestampText?.substringAfter(' ')?.let { { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
-                    subtitle = tags.takeIf { it.isNotEmpty() }?.let { labels ->
-                        {
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                labels.forEach { label ->
-                                    WearBadge(label, containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+                WearRefreshItem(spec) {
+                    TitleCard(
+                        onClick = { onEntry(entry) },
+                        title = { Text(sulogEntryTitle(entry), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        transformation = SurfaceTransformation(spec),
+                        // The clock time fits the time slot; the full date stays in the content.
+                        time = entry.timestampText?.substringAfter(' ')?.let { { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
+                        subtitle = tags.takeIf { it.isNotEmpty() }?.let { labels ->
+                            {
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    labels.forEach { label ->
+                                        WearBadge(label, containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+                                    }
                                 }
                             }
-                        }
-                    },
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        sulogEntryDescription(entry)?.let {
-                            Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        }
-                        entry.timestampText?.let {
-                            Text(
-                                it,
-                                style = MaterialTheme.typography.bodyExtraSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                        },
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            sulogEntryDescription(entry)?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            }
+                            entry.timestampText?.let {
+                                Text(
+                                    it,
+                                    style = MaterialTheme.typography.bodyExtraSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
