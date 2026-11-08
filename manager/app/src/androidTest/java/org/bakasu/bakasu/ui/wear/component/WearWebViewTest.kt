@@ -3,28 +3,41 @@ package org.bakasu.bakasu.ui.wear.component
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.platform.app.InstrumentationRegistry
@@ -65,7 +78,7 @@ class WearWebViewTest(private val round: Boolean) {
     }
 
     @Test
-    fun pageAndControlsStayVisibleAndScalingKeepsClicksAligned() {
+    fun pageUsesAvailableHeightAndScalingKeepsClicksAligned() {
         showPage()
         val viewport = compose.runOnIdle { webView.parent as View }
         val hostBounds = compose.onNodeWithTag("web-host").fetchSemanticsNode().boundsInRoot
@@ -74,7 +87,7 @@ class WearWebViewTest(private val round: Boolean) {
             assertEquals(hostBounds.height, viewport.height.toFloat(), 1f)
             assertEquals(0.8f, webView.scaleX, 0.001f)
         }
-        assertPageClearOfControls()
+        assertPageFitsViewport()
         listOf("tl", "tr", "bl", "br").forEach { clickPageButton(it) }
         js("clicks = []")
         val initialWidth = js("innerWidth").toInt()
@@ -82,20 +95,20 @@ class WearWebViewTest(private val round: Boolean) {
         clickPageButton("center")
         assertEquals("[\"center\"]", js("clicks"))
 
-        control(R.string.wear_web_tools).performClick()
-        compose.onNodeWithText(compose.activity.getString(R.string.wear_web_scale, 80)).performClick()
-        control(R.string.close).performClick()
+        openTools()
+        clickTool(compose.activity.getString(R.string.wear_web_scale, 80))
+        closeTools()
         compose.waitUntil(10_000) { js("innerWidth").toInt() < initialWidth }
-        assertPageClearOfControls()
+        assertPageFitsViewport()
         clickPageButton("center")
         assertEquals("[\"center\",\"center\"]", js("clicks"))
         compose.runOnIdle { assertEquals(1f, webView.scaleX, 0.001f) }
 
-        control(R.string.wear_web_tools).performClick()
-        compose.onNodeWithText(compose.activity.getString(R.string.wear_web_scale, 100)).performClick()
-        control(R.string.close).performClick()
+        openTools()
+        clickTool(compose.activity.getString(R.string.wear_web_scale, 100))
+        closeTools()
         compose.waitUntil(10_000) { js("innerWidth").toInt() > initialWidth }
-        assertPageClearOfControls()
+        assertPageFitsViewport()
         clickPageButton("center")
         assertEquals("[\"center\",\"center\",\"center\"]", js("clicks"))
         screenshot("small")
@@ -108,7 +121,7 @@ class WearWebViewTest(private val round: Boolean) {
         compose.runOnIdle {
             assertTrue(webView.height * webView.scaleY > viewport.height / 2f)
         }
-        assertPageClearOfControls()
+        assertPageFitsViewport()
         screenshot("navigation-viewport")
         listOf("status", "config", "modules", "info").forEach { clickPageButton(it) }
         val initial = compose.runOnIdle { Offset(webView.translationX, webView.translationY) }
@@ -119,16 +132,16 @@ class WearWebViewTest(private val round: Boolean) {
             assertEquals(0, backCount)
         }
         assertEquals("A drag must not click the navigation", 4, js("clicks.length").toInt())
-        assertPageClearOfControls()
+        assertPageFitsViewport()
         screenshot("navigation-dragged")
         clickPageButton("modules")
         compose.onNodeWithTag("web-host").performTouchInput {
             swipe(center, center + Offset(0f, height * 0.07f), 500)
         }
         assertEquals("A vertical drag must not click the navigation", 5, js("clicks.length").toInt())
-        assertPageClearOfControls()
-        control(R.string.wear_web_tools).performClick()
-        control(R.string.wear_web_reset).performClick()
+        assertPageFitsViewport()
+        openTools()
+        clickTool(compose.activity.getString(R.string.wear_web_reset))
         compose.runOnIdle {
             assertEquals(initial.x, webView.translationX, 1f)
             assertEquals(initial.y, webView.translationY, 1f)
@@ -142,26 +155,31 @@ class WearWebViewTest(private val round: Boolean) {
         clickPageButton("status")
         clickPageButton("config")
         assertEquals("[\"status\",\"config\"]", js("clicks"))
-        assertPageClearOfControls()
+        assertPageFitsViewport()
         screenshot("viewport-content")
     }
 
     @Test
-    fun controlsFitTheRoundDisplayAndDoNotClickThrough() {
+    fun menuActionsScrollIntoViewAndDoNotClickThrough() {
         showPage()
-        control(R.string.wear_web_tools).performClick()
+        openTools()
         listOf(R.string.back, R.string.wear_web_reset, R.string.close).forEach { resource ->
-            val bounds = control(resource).fetchSemanticsNode().boundsInRoot
-            assertInsideDisplay(bounds.topLeft)
-            assertInsideDisplay(bounds.topRight)
-            assertInsideDisplay(bounds.bottomLeft)
-            assertInsideDisplay(bounds.bottomRight)
+            if (resource == R.string.close) {
+                compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
+            } else {
+                compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(compose.activity.getString(resource)))
+            }
+            val label = compose.onNodeWithText(compose.activity.getString(resource), useUnmergedTree = true)
+            label.assertIsDisplayed()
+            val bounds = label.fetchSemanticsNode().boundsInRoot
+            val origin = compose.onNodeWithTag("web-host").fetchSemanticsNode().boundsInRoot.topLeft
+            assertInsideDisplay(bounds.center - origin)
         }
         screenshot("controls")
-        compose.onNodeWithTag("web-host").performTouchInput { click(Offset(width / 2f, height * 0.1f)) }
+        compose.onNodeWithText(compose.activity.getString(R.string.wear_web_scale, 80)).performTouchInput { click() }
         assertEquals("[]", js("clicks"))
-        control(R.string.close).performTouchInput { click() }
-        control(R.string.wear_web_tools).assertExists()
+        closeTools()
+        compose.onNodeWithText(compose.activity.getString(R.string.wear_web_tools)).assertDoesNotExist()
     }
 
     @Test
@@ -169,7 +187,7 @@ class WearWebViewTest(private val round: Boolean) {
         showPage()
         val initial = compose.runOnIdle { Offset(webView.translationX, webView.translationY) }
         compose.onNodeWithTag("web-host").performTouchInput {
-            // Stay on the page, clear of the bottom-center native controls even on a 192dp watch.
+            // Scroll within the native viewport, including on a 192dp watch.
             swipe(Offset(width * 0.25f, height * 0.55f), Offset(width * 0.25f, height * 0.25f), 500)
         }
         compose.waitUntil(10_000) { js("scrollY").toDouble() > 20 }
@@ -178,13 +196,91 @@ class WearWebViewTest(private val round: Boolean) {
             assertEquals(initial.y, webView.translationY, 0.01f)
             assertEquals(0, backCount)
         }
-        control(R.string.wear_web_tools).performClick()
+        openTools()
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         control(R.string.close).assertDoesNotExist()
         compose.runOnIdle { assertEquals(0, backCount) }
-        control(R.string.wear_web_tools).performClick()
+        openTools()
         control(R.string.back).performClick()
         compose.runOnIdle { assertEquals(1, backCount) }
+    }
+
+    @Test
+    fun boundaryPullOpensToolsWithoutClickingThePage() {
+        showPage("wear-webview-navigation.html")
+        compose.onNodeWithTag("web-host").performTouchInput {
+            swipe(Offset(centerX, height * 0.3f), Offset(centerX, height * 0.85f), 500)
+        }
+        control(R.string.wear_web_tools).assertExists()
+        assertEquals("[]", js("clicks"))
+        val sameWebView = webView
+        closeTools()
+        compose.runOnIdle { assertTrue(sameWebView === webView && webView.parent != null) }
+        clickPageButton("modules")
+        assertEquals("[\"modules\"]", js("clicks"))
+    }
+
+    @Test
+    fun shortAndReversedPullsDoNotOpenTools() {
+        showPage("wear-webview-navigation.html")
+        compose.onNodeWithTag("web-host").performTouchInput {
+            down(Offset(centerX, height * 0.3f))
+            moveBy(Offset(0f, height * 0.08f), delayMillis = 200)
+            up()
+        }
+        control(R.string.wear_web_tools).assertDoesNotExist()
+        compose.onNodeWithTag("web-host").performTouchInput {
+            down(Offset(centerX, height * 0.3f))
+            moveTo(Offset(centerX, height * 0.8f), delayMillis = 300)
+            moveTo(Offset(centerX, height * 0.35f), delayMillis = 300)
+            up()
+        }
+        control(R.string.wear_web_tools).assertDoesNotExist()
+        assertEquals("[]", js("clicks"))
+    }
+
+    @Test
+    fun crownReturnsToTheSamePageAfterClosingTools() {
+        showPage()
+        rotateCrown(64f)
+        compose.waitUntil(5_000) { js("scrollY").toDouble() > 20 }
+        val before = js("scrollY").toDouble()
+        openTools()
+        rotateCrown(64f)
+        assertEquals(before, js("scrollY").toDouble(), 1.0)
+        closeTools()
+        rotateCrown(64f)
+        compose.waitUntil(5_000) { js("scrollY").toDouble() > before + 20 }
+    }
+
+    @Test
+    fun twoFingerGestureDoesNotOpenToolsOrClickThrough() {
+        showPage("wear-webview-navigation.html")
+        compose.onNodeWithTag("web-host").performTouchInput {
+            down(0, Offset(centerX - width * 0.1f, centerY))
+            down(1, Offset(centerX + width * 0.1f, centerY))
+            moveTo(0, Offset(centerX - width * 0.2f, height * 0.75f), delayMillis = 200)
+            moveTo(1, Offset(centerX + width * 0.2f, height * 0.75f), delayMillis = 200)
+            up(0)
+            up(1)
+        }
+        control(R.string.wear_web_tools).assertDoesNotExist()
+        assertEquals("[]", js("clicks"))
+    }
+
+    private fun rotateCrown(distanceDp: Float) {
+        compose.runOnIdle {
+            val now = SystemClock.uptimeMillis()
+            val coordinates = MotionEvent.PointerCoords().apply {
+                setAxisValue(MotionEvent.AXIS_SCROLL, -distanceDp * compose.activity.resources.displayMetrics.density / ViewConfiguration.get(compose.activity).scaledVerticalScrollFactor)
+            }
+            val event = MotionEvent.obtain(now, now, MotionEvent.ACTION_SCROLL, 1, arrayOf(MotionEvent.PointerProperties().apply { id = 0 }), arrayOf(coordinates), 0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_ROTARY_ENCODER, 0)
+            try {
+                compose.activity.dispatchGenericMotionEvent(event)
+            } finally {
+                event.recycle()
+            }
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -199,6 +295,8 @@ class WearWebViewTest(private val round: Boolean) {
             val configuration = Configuration(LocalConfiguration.current).apply {
                 screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
                     if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
+                screenWidthDp = 192
+                screenHeightDp = 192
             }
             CompositionLocalProvider(LocalConfiguration provides configuration) {
                 MaterialTheme {
@@ -206,8 +304,10 @@ class WearWebViewTest(private val round: Boolean) {
                         // Exercise the touch-driven parent as well, including on API 36+ emulators.
                         SwipeToDismissBox(onDismissed = { backCount++ }) { background ->
                             if (!background) {
-                                Box(Modifier.fillMaxSize().clip(if (round) CircleShape else RectangleShape).testTag("web-host")) {
-                                    WearWebView(webView, onBack = { backCount++ })
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Box(Modifier.size(192.dp).clip(if (round) CircleShape else RectangleShape).testTag("web-host")) {
+                                        WearWebView(webView, onBack = { backCount++ })
+                                    }
                                 }
                             }
                         }
@@ -223,16 +323,33 @@ class WearWebViewTest(private val round: Boolean) {
         compose.waitUntil(10_000) { compose.runOnIdle { webView.hasWindowFocus() && (asset != "wear-webview.html" || webView.canScrollVertically(1)) } }
     }
 
-    private fun control(resource: Int) = compose.onNodeWithContentDescription(compose.activity.getString(resource))
+    private fun control(resource: Int) = compose.onNodeWithText(compose.activity.getString(resource))
 
-    private fun assertPageClearOfControls() {
-        val tools = control(R.string.wear_web_tools).fetchSemanticsNode().boundsInRoot
+    private fun clickTool(text: String) {
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(text))
+        compose.onNodeWithText(text).assertIsDisplayed().performClick()
+    }
+
+    private fun closeTools() {
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
+        control(R.string.close).assertIsDisplayed().performClick()
+    }
+
+    private fun openTools() {
+        val actions = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions))
+            .fetchSemanticsNode().config[SemanticsActions.CustomActions]
+        compose.runOnIdle { actions.single { it.label == compose.activity.getString(R.string.wear_web_tools) }.action() }
+    }
+
+    private fun assertPageFitsViewport() {
         compose.runOnIdle {
             val left = webView.translationX
             val top = webView.translationY
             val right = left + webView.width * webView.scaleX
             val bottom = top + webView.height * webView.scaleY
-            assertTrue("Page content must not overlap the controls", bottom < tools.top)
+            val viewport = webView.parent as View
+            val expectedHeight = if (round) viewport.height - minOf(viewport.width, viewport.height) * (1f - 1f / kotlin.math.sqrt(2f)) else viewport.height.toFloat()
+            assertEquals("No space is reserved for tools", expectedHeight, bottom - top, 1f)
             listOf(Offset(left, top), Offset(right, top), Offset(left, bottom), Offset(right, bottom)).forEach { assertInsideDisplay(it) }
         }
     }
