@@ -164,6 +164,7 @@
     <string name="home_pr_build_warning">当前为 PR 调试构建，请勿在生产环境中使用！</string>
     <string name="action">执行</string>
     <string name="close">关闭</string>
+    <string name="external_link_open_failed">无法打开链接</string>
     <string name="direct_install">直接安装（推荐）</string>
     <string name="select_file">选择一个需要修补的镜像</string>
     <string name="install_inactive_slot">安装到未使用的槽位（OTA 后）</string>
