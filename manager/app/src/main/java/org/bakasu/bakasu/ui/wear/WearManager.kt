@@ -37,7 +37,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.ViewModelStoreProvider
 import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreProvider
@@ -287,6 +290,11 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val logsActive = navigator.backStack.any { it == WearRoute.Logs || it == WearRoute.LogSearchResults }
     ActivityResumeEffect(sulogViewModel, logsActive) {
         if (logsActive) sulogViewModel.dispatch(SulogUiAction.LoadInitialData)
+    }
+    val logsVisible = navigator.top == WearRoute.Logs || navigator.top == WearRoute.LogSearchResults || navigator.top == WearRoute.LogOptions
+    val logLifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(sulogViewModel, logsVisible, logLifecycle) {
+        if (logsVisible) logLifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { sulogViewModel.observeLive() }
     }
     LaunchedEffect(sulogViewModel) {
         sulogViewModel.events.collect { event ->

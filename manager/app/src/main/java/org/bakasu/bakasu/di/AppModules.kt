@@ -303,7 +303,7 @@ val repositoryModule = module {
     singleOf(::NetworkStatusRepository)
     singleOf(::NetworkRequestRepository)
     singleOf(::DynamicManagerRepository)
-    singleOf(::SulogRepository)
+    single { SulogRepository(get()) }
     singleOf(::BugreportRepository)
     singleOf(::UmountRepository)
     singleOf(::ModuleCatalogRepository)

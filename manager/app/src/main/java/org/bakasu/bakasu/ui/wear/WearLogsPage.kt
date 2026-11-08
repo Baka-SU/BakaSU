@@ -16,6 +16,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -89,6 +90,14 @@ internal fun WearLogsPage(
     val refreshing = loading == SulogLoading.REFRESH && !pageLoading
     val failures = listOfNotNull(error, state.errorMessage).filter { it.isNotBlank() }.distinct()
     WearErrorDialog(failures.takeIf { it.isNotEmpty() && !pageLoading && !refreshing }?.joinToString("\n"))
+    val entryKeys = remember(state.visibleEntries, state.selectedFilePath) {
+        val occurrences = mutableMapOf<String, Int>()
+        state.visibleEntries.map { entry ->
+            val occurrence = occurrences.getOrDefault(entry.rawLine, 0)
+            occurrences[entry.rawLine] = occurrence + 1
+            "${state.selectedFilePath}:${entry.rawLine}:$occurrence"
+        }
+    }
     // Every visit and log operation loads the page; only an explicit refresh keeps the list.
     WearList(
         isLoading = pageLoading,
@@ -144,7 +153,7 @@ internal fun WearLogsPage(
                 )
             }
         }
-        if (failures.isEmpty()) {
+        if (state.visibleEntries.isNotEmpty() || failures.isEmpty()) {
             if (state.visibleEntries.isEmpty()) {
                 item {
                     if (state.searchText.isNotBlank()) {
@@ -154,7 +163,7 @@ internal fun WearLogsPage(
                     }
                 }
             }
-            itemsIndexed(state.visibleEntries, key = { index, entry -> "$index:${entry.key}" }) { _, entry ->
+            itemsIndexed(state.visibleEntries, key = { index, _ -> entryKeys[index] }) { _, entry ->
                 val tags = sulogEntrySummaryTags(entry) + listOfNotNull(sulogEntryStatus(entry))
                 WearRefreshItem(spec) {
                     TitleCard(
