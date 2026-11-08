@@ -121,5 +121,5 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     WearRoute.Licenses, is WearRoute.LicenseDetail -> R.string.open_source_license
 
-    is WearRoute.Browser -> R.string.wear_link_mode
+    is WearRoute.Browser -> R.string.wear_web_page
 }

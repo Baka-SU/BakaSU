@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.RemoveModerator
 import androidx.compose.material.icons.rounded.Schedule
@@ -40,6 +41,7 @@ import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
+import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearChoicePage
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
@@ -115,6 +117,15 @@ internal fun WearSelectionPage(
             preferences.link,
             onBack,
             icon = { selectionIcon(selection, it) },
+            extraContent = { spec ->
+                item {
+                    WearStatusItem(
+                        spec,
+                        Icons.Rounded.Info,
+                        stringResource(R.string.wear_link_mode_summary),
+                    )
+                }
+            },
         ) { preferenceViewModel.set(WearPreference.Link, it) }
 
         WearSelection.Language -> {

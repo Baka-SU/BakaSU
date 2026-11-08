@@ -697,7 +697,9 @@
     <string name="wear_security">安全</string>
     <string name="scroll_to_top">回到顶部</string>
     <string name="wear_display">显示</string>
-    <string name="wear_link_mode">模块 WebUI 打开方式</string>
+    <string name="wear_link_mode">网页与模块 WebUI 打开方式</string>
+    <string name="wear_link_mode_summary">自动会尝试可用方式。选择手表或手机后，网页和模块 WebUI 只在所选设备打开。</string>
+    <string name="wear_web_page">网页</string>
     <string name="wear_watch_webui">在手表上打开</string>
     <string name="wear_picker_mode">文件选择器</string>
     <string name="wear_no_system_file_picker">没有应用程序能够处理这项操作</string>

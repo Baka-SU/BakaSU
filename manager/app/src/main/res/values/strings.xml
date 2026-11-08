@@ -732,7 +732,9 @@
     <string name="wear_webui">WebUI</string>
     <string name="scroll_to_top">Back to top</string>
     <string name="wear_display">Display</string>
-    <string name="wear_link_mode">Open module WebUI</string>
+    <string name="wear_link_mode">Open links and module WebUI</string>
+    <string name="wear_link_mode_summary">Automatic tries available methods. Choosing watch or phone opens links and module WebUI only on that device.</string>
+    <string name="wear_web_page">Web page</string>
     <string name="wear_watch_webui">Open on watch</string>
     <string name="wear_picker_mode">File picker</string>
     <string name="wear_no_system_file_picker">No application can handle this action</string>
