@@ -31,6 +31,8 @@ class WearLanguageGroupingTest {
         assertEquals(listOf("zh-HK"), recommend("zh-Hant-HK"))
         assertEquals(listOf("zh-CN"), recommend("zh-Hans-SG"))
         assertEquals(listOf("pt-BR", "pt"), recommend("pt-BR", "pt-PT"))
+        assertEquals(listOf("be"), recommend("be-BY"))
+        assertEquals(listOf("bn-BD", "bn"), recommend("bn-BD", "bn-IN"))
         assertEquals(emptyList<String>(), recommend("eo"))
     }
 
