@@ -9,8 +9,11 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -143,9 +146,14 @@ class SulogLoadingTest {
         }
         coEvery { clean("selected") } coAnswers {
             operation.await()
+            read.await()
             Result.success(Unit)
         }
         coEvery { refresh(any()) } coAnswers {
+            read.await()
+            Result.success(Unit)
+        }
+        coEvery { refresh.selectFile(any()) } coAnswers {
             read.await()
             Result.success(Unit)
         }
@@ -167,8 +175,8 @@ class SulogLoadingTest {
         }
         coVerify(exactly = 1) { enable(true) }
         coVerify(exactly = 1) { clean("selected") }
-        coVerify(exactly = 2) { refresh("selected") }
-        coVerify(exactly = 1) { refresh("other") }
+        coVerify(exactly = 1) { refresh("selected") }
+        coVerify(exactly = 1) { refresh.selectFile("other") }
     }
 
     @Test
@@ -251,6 +259,67 @@ class SulogLoadingTest {
         model.dispatch(SulogUiAction.LoadInitialData)
         runCurrent()
         coVerify(exactly = 1) { refresh(null) }
+    }
+
+    @Test
+    fun liveReadsStaySilentPauseForOperationsAndStopWhenDisabledOrClosed() = runTest(dispatcher) {
+        source.value = SulogState(enabled = true, isLoading = false, selectedFilePath = "history")
+        var silentReads = 0
+        coEvery { refresh.silently() } coAnswers {
+            silentReads++
+            Result.success(Unit)
+        }
+        val manual = CompletableDeferred<Unit>()
+        coEvery { refresh("history") } coAnswers {
+            manual.await()
+            Result.success(Unit)
+        }
+        val model = viewModel()
+        val observer = backgroundScope.launch { model.observeLive() }
+        runCurrent()
+        assertEquals(1, silentReads)
+        assertEquals(SulogLoading.NONE, model.loading.value)
+        assertFalse(model.state.value.isRefreshing)
+        advanceTimeBy(1_000)
+        runCurrent()
+        assertEquals(2, silentReads)
+        model.dispatch(SulogUiAction.Refresh)
+        runCurrent()
+        advanceTimeBy(3_000)
+        runCurrent()
+        assertEquals(2, silentReads)
+        manual.complete(Unit)
+        runCurrent()
+        assertEquals(3, silentReads)
+        source.value = source.value.copy(enabled = false)
+        runCurrent()
+        advanceTimeBy(3_000)
+        runCurrent()
+        assertEquals(3, silentReads)
+        source.value = source.value.copy(enabled = true)
+        runCurrent()
+        assertEquals(4, silentReads)
+        observer.cancelAndJoin()
+        advanceTimeBy(3_000)
+        runCurrent()
+        assertEquals(4, silentReads)
+        assertEquals(SulogLoading.NONE, model.loading.value)
+        assertEquals("history", model.state.value.selectedFilePath)
+    }
+
+    @Test
+    fun deletingAnUnselectedPathDoesNotCleanTheSelectedFile() = runTest(dispatcher) {
+        source.value = SulogState(isLoading = false, selectedFilePath = "A")
+        coEvery { clean("B") } returns Result.success(Unit)
+        val model = viewModel()
+        runCurrent()
+        model.dispatch(SulogUiAction.CleanPath("B"))
+        runCurrent()
+        coVerify(exactly = 1) { clean("B") }
+        coVerify(exactly = 0) { clean("A") }
+        coVerify(exactly = 0) { refresh(any()) }
+        assertEquals("A", model.state.value.selectedFilePath)
+        assertEquals(SulogLoading.NONE, model.loading.value)
     }
 
     private fun viewModel(): SulogViewModel {

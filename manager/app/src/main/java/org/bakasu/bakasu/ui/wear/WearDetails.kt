@@ -345,6 +345,7 @@ internal fun WearAppProfileTemplateChoiceRoute(
     packageName: String,
     onBack: () -> Unit,
     templateViewModel: TemplateViewModel,
+    isPageLoading: Boolean,
     onOpenPanel: () -> Unit,
 ) {
     val viewModel = koinViewModel<AppProfileViewModel>(
@@ -380,8 +381,8 @@ internal fun WearAppProfileTemplateChoiceRoute(
         WearAppProfileTemplateChoicePage(
             profile = profile,
             templates = templates.templateList,
-            isRefreshing = templates.isRefreshing,
-            isLoading = templates.isLoading,
+            isRefreshing = templates.isRefreshing && !isPageLoading,
+            isLoading = templates.isLoading || isPageLoading,
             loadFailed = templates.loadFailed,
             onBack = onBack,
             onOpenPanel = onOpenPanel,

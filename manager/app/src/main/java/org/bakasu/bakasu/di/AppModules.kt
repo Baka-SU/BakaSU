@@ -152,6 +152,7 @@ import org.bakasu.bakasu.domain.usecase.RefreshSulogUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshSuperUsersUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshUmountPathsUseCase
 import org.bakasu.bakasu.domain.usecase.ReleaseScriptUseCase
+import org.bakasu.bakasu.domain.usecase.RemoveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.RemovePreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveUmountPathUseCase
@@ -303,7 +304,7 @@ val repositoryModule = module {
     singleOf(::NetworkStatusRepository)
     singleOf(::NetworkRequestRepository)
     singleOf(::DynamicManagerRepository)
-    singleOf(::SulogRepository)
+    single { SulogRepository(get()) }
     singleOf(::BugreportRepository)
     singleOf(::UmountRepository)
     singleOf(::ModuleCatalogRepository)
@@ -357,6 +358,7 @@ val useCaseModule = module {
     factoryOf(::EnsureManagerInstalledUseCase)
     factoryOf(::RebootUseCase)
     factoryOf(::EnqueueDownloadUseCase)
+    factoryOf(::RemoveDownloadUseCase)
     factoryOf(::EnqueueManagerUpdateUseCase)
     factoryOf(::ObserveDownloadUseCase)
     factoryOf(::ObserveCompanionBridgeUseCase)
@@ -495,8 +497,8 @@ val viewModelModule = module {
     viewModelOf(::ModuleDownloadViewModel)
     viewModelOf(::WearDownloadsViewModel)
     viewModel { parameters -> WearSearchViewModel(parameters[0], get(), get()) }
-    viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
-    viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
+    viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get()) }
     viewModelOf(::RepositorySourcesViewModel)
     viewModelOf(::TemplateViewModel)
     viewModelOf(::OnlineTemplateViewModel)

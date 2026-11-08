@@ -7,11 +7,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollToNode
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import org.bakasu.bakasu.R
@@ -42,8 +45,8 @@ class WearSulogLoadingTest {
                 }
             }
         }
-        val title = compose.activity.getString(R.string.sulog)
-        val indicator = compose.activity.getString(R.string.wear_loading)
+        val title = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.sulog)
+        val indicator = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.wear_loading)
         repeat(3) {
             compose.runOnIdle { loading.value = SulogLoading.PAGE }
             compose.onNodeWithText(title).assertDoesNotExist()
@@ -66,6 +69,27 @@ class WearSulogLoadingTest {
     }
 
     @Test
+    fun silentAppendAndLineTrimmingKeepTheReadPositionWithoutLoading() {
+        fun entry(id: Int) = SulogEntry("$id", SulogEventType.RootExecve, "seq=$id comm=Record-$id", null, mapOf("comm" to "Record-$id"))
+        val records = (1..1_000).map(::entry)
+        val state = mutableStateOf(SulogUiState(isLoading = false, selectedFilePath = "today", entries = records, visibleEntries = records.reversed()))
+        compose.setContent {
+            MaterialTheme { AppScaffold(timeText = {}) { WearLogsPage(state.value, {}, {}, {}, onEntry = {}) } }
+        }
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Record-990"))
+        val before = compose.onNodeWithText("Record-990").getUnclippedBoundsInRoot()
+        compose.runOnIdle {
+            val updated = (2..1_001).map(::entry)
+            state.value = state.value.copy(entries = updated, visibleEntries = updated.reversed())
+        }
+        val after = compose.onNodeWithText("Record-990").getUnclippedBoundsInRoot()
+        assertEquals(before.top.value, after.top.value, 1f)
+        compose.onNodeWithContentDescription(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.wear_loading)).assertDoesNotExist()
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Record-1001"))
+        compose.onNodeWithText("Record-1001").assertExists()
+    }
+
+    @Test
     fun oldFailureStaysHiddenUntilTheCurrentRequestFinishes() {
         val loading = mutableStateOf(SulogLoading.PAGE)
         val state = mutableStateOf(SulogUiState(isLoading = false, errorMessage = "Previous failure"))
@@ -83,6 +107,6 @@ class WearSulogLoadingTest {
             loading.value = SulogLoading.NONE
         }
         compose.onNode(isDialog()).assertDoesNotExist()
-        compose.onNodeWithText(compose.activity.getString(R.string.wear_no_logs)).assertExists()
+        compose.onNodeWithText(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.wear_no_logs)).assertExists()
     }
 }

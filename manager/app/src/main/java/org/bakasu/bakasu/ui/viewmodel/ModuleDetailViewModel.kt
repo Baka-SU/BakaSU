@@ -25,7 +25,6 @@ import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
 import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
-import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
 
 data class ModuleDetailUiState(
     val module: CatalogModule? = null,
@@ -62,7 +61,6 @@ class ModuleDetailViewModel(
     private val observeModules: ObserveCatalogModulesUseCase,
     private val observeSources: ObserveRepositorySourcesUseCase,
     private val isCurrent: IsCatalogModuleCurrentUseCase,
-    private val refreshCatalog: RefreshModuleCatalogUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ModuleDetailUiState())
 
@@ -120,11 +118,6 @@ class ModuleDetailViewModel(
         if (detailJob?.isActive == true) return
         detailJob = viewModelScope.launch {
             mutableState.update { it.copy(loading = true, error = null, repositoryFailure = null) }
-            val refreshed = refreshCatalog(repositoryUrl)
-            if (refreshed is ModuleCatalogResult.Failure) {
-                mutableState.value = ModuleDetailUiState(loading = false, error = refreshed.reason, repositoryFailure = observeSources.failures.value[repositoryUrl])
-                return@launch
-            }
             when (val result = getModule(moduleId, repositoryUrl, forceDetail = true)) {
                 is ModuleCatalogResult.Success -> mutableState.update {
                     if (observeSources.sources.value.none { source -> source.url == repositoryUrl }) {
@@ -132,7 +125,9 @@ class ModuleDetailViewModel(
                     }
                     val current = observeModules().value.firstOrNull { module -> module.catalogId == result.value.catalogId }
                         ?: return@update ModuleDetailUiState(loading = false, error = ModuleCatalogFailure.NotFound)
-                    if (!current.detailLoaded || current.registryMetadata?.buildId != result.value.registryMetadata?.buildId) return@update it
+                    if (!current.detailLoaded || current.registryMetadata?.buildId != result.value.registryMetadata?.buildId) {
+                        return@update ModuleDetailUiState(loading = false, error = ModuleCatalogFailure.Network(""))
+                    }
                     it.copy(
                         module = current,
                         loading = false,
@@ -144,7 +139,7 @@ class ModuleDetailViewModel(
                 }
 
                 is ModuleCatalogResult.Failure -> {
-                    mutableState.value = ModuleDetailUiState(loading = false, error = result.reason, repositoryFailure = observeSources.failures.value[repositoryUrl])
+                    mutableState.value = ModuleDetailUiState(loading = false, error = result.reason, repositoryFailure = result.repositoryFailure ?: observeSources.failures.value[repositoryUrl])
                 }
             }
             if (mutableState.value.documents.isNotEmpty()) loadReadme(retry = true)

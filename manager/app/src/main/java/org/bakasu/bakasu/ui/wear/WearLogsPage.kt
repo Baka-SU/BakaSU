@@ -9,13 +9,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Article
-import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material.icons.rounded.Error
-import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.itemsIndexed
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CompactButton
 import androidx.wear.compose.material3.CompactButtonDefaults
@@ -31,7 +33,6 @@ import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.TitleCard
-import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.SulogEntry
 import org.bakasu.bakasu.domain.model.SulogEventFilter
@@ -48,15 +49,13 @@ import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
-import org.bakasu.bakasu.ui.wear.component.WearIconAction
-import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
-import org.bakasu.bakasu.ui.wear.component.WearStatusTone
+import org.bakasu.bakasu.ui.wear.component.WearSwipeToDelete
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
@@ -89,6 +88,14 @@ internal fun WearLogsPage(
     val refreshing = loading == SulogLoading.REFRESH && !pageLoading
     val failures = listOfNotNull(error, state.errorMessage).filter { it.isNotBlank() }.distinct()
     WearErrorDialog(failures.takeIf { it.isNotEmpty() && !pageLoading && !refreshing }?.joinToString("\n"))
+    val entryKeys = remember(state.visibleEntries, state.selectedFilePath) {
+        val occurrences = mutableMapOf<String, Int>()
+        state.visibleEntries.map { entry ->
+            val occurrence = occurrences.getOrDefault(entry.rawLine, 0)
+            occurrences[entry.rawLine] = occurrence + 1
+            "${state.selectedFilePath}:${entry.rawLine}:$occurrence"
+        }
+    }
     // Every visit and log operation loads the page; only an explicit refresh keeps the list.
     WearList(
         isLoading = pageLoading,
@@ -144,7 +151,7 @@ internal fun WearLogsPage(
                 )
             }
         }
-        if (failures.isEmpty()) {
+        if (state.visibleEntries.isNotEmpty() || failures.isEmpty()) {
             if (state.visibleEntries.isEmpty()) {
                 item {
                     if (state.searchText.isNotBlank()) {
@@ -154,7 +161,7 @@ internal fun WearLogsPage(
                     }
                 }
             }
-            itemsIndexed(state.visibleEntries, key = { index, entry -> "$index:${entry.key}" }) { _, entry ->
+            itemsIndexed(state.visibleEntries, key = { index, _ -> entryKeys[index] }) { _, entry ->
                 val tags = sulogEntrySummaryTags(entry) + listOfNotNull(sulogEntryStatus(entry))
                 WearRefreshItem(spec) {
                     TitleCard(
@@ -214,24 +221,27 @@ internal fun WearLogEntryPage(entry: SulogEntry?, onBack: () -> Unit) {
     }
 }
 
-/** The log file, the event types shown and cleaning the selected file. */
+/** File selection and deletion target each date row independently. */
 @Composable
 internal fun WearLogOptionsPage(
     state: SulogUiState,
     onBack: () -> Unit,
     onSelectFile: (String) -> Unit,
     onToggleFilter: (SulogEventFilter) -> Unit,
-    onClean: () -> Unit,
+    onClean: (String) -> Unit,
     loading: SulogLoading = SulogLoading.NONE,
 ) {
+    var pendingPath by remember { mutableStateOf<String?>(null) }
+    val listState = rememberTransformingLazyColumnState()
+    val deleteLabel = stringResource(R.string.delete)
     val cleanDialog = rememberWearConfirmDialog(
         stringResource(R.string.sulog_clean_title),
         stringResource(R.string.confirm_delete),
         destructive = true,
-        onConfirm = onClean,
+        onConfirm = { pendingPath?.let(onClean) },
     )
     val selectedPath = state.selectedFilePath ?: state.files.firstOrNull()?.path
-    WearList(isLoading = loading == SulogLoading.OPERATION || loading == SulogLoading.PAGE, onBack = onBack) { spec ->
+    WearList(isLoading = loading == SulogLoading.OPERATION || loading == SulogLoading.PAGE, onBack = onBack, listState = listState) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.sulog_filter_title)) }
         SegmentedColumn(SulogEventFilter.entries, { "filter-$it" }) { filter ->
             WearSettingsSwitchWidget(
@@ -244,30 +254,18 @@ internal fun WearLogOptionsPage(
         if (state.files.isNotEmpty()) {
             item { WearSectionHeader(spec, stringResource(R.string.sulog_log_files)) }
             LazySegmentedColumn(state.files, { it.path }) { file ->
-                RadioButton(
-                    selected = file.path == selectedPath,
-                    onSelect = { onSelectFile(file.path) },
-                    modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
-                        .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
-                    transformation = SurfaceTransformation(spec),
-                    label = { Text(file.name.toSulogDisplayName(), maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                )
+                WearSwipeToDelete(spec, listState.isScrollInProgress, deleteLabel, {
+                    pendingPath = file.path
+                    cleanDialog.show()
+                }) {
+                    RadioButton(
+                        selected = file.path == selectedPath,
+                        onSelect = { onSelectFile(file.path) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(file.name.toSulogDisplayName(), maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                    )
+                }
             }
-        }
-        item {
-            WearActionButton(
-                spec,
-                Icons.Rounded.DeleteSweep,
-                stringResource(R.string.sulog_clean_title),
-                cleanDialog::show,
-                enabled = state.selectedFilePath != null && !state.isRefreshing,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    iconColor = MaterialTheme.colorScheme.onErrorContainer,
-                ),
-            )
         }
     }
 }

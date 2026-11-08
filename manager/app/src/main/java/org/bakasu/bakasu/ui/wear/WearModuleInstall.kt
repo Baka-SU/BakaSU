@@ -36,6 +36,7 @@ import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.file.ModuleUtils
 import org.bakasu.bakasu.data.file.ZipFileInfo
+import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.ModuleRelease
@@ -73,15 +74,17 @@ class WearModuleInstaller internal constructor(
 
     fun install(uri: String) = navigator.open(WearRoute.ModuleInstall(uri))
 
-    fun download(moduleName: String, release: ModuleRelease, asset: ModuleReleaseAsset) = navigator.open(
+    fun download(module: CatalogModule, release: ModuleRelease, asset: ModuleReleaseAsset) = navigator.open(
         WearRoute.OnlineModuleDownload(
-            moduleName,
+            module.moduleName,
             asset.name,
             asset.downloadUrl,
             asset.expected?.size ?: 0L,
             asset.expected?.sha256.orEmpty(),
             release.name.ifBlank { release.tagName },
             verificationRequired = asset.verificationRequired,
+            iconUrl = module.iconUrl ?: module.registryMetadata?.iconUrl,
+            iconOrigin = module.repositoryUrl.takeIf { module.registryMetadata != null },
         ),
     )
 

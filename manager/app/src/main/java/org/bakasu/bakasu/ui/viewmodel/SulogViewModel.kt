@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,8 +14,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.SulogEntry
 import org.bakasu.bakasu.domain.model.SulogEventFilter
@@ -74,6 +78,7 @@ sealed interface SulogUiAction {
     data object RefreshLatest : SulogUiAction
     data object Enable : SulogUiAction
     data object CleanFile : SulogUiAction
+    data class CleanPath(val path: String) : SulogUiAction
     data class Search(val query: String) : SulogUiAction
     data class ToggleFilter(val filter: SulogEventFilter) : SulogUiAction
     data class SelectFile(val path: String) : SulogUiAction
@@ -150,15 +155,9 @@ class SulogViewModel(
 
             SulogUiAction.Enable -> enable()
 
-            SulogUiAction.CleanFile -> state.value.selectedFilePath?.let { path ->
-                load(SulogLoading.OPERATION) {
-                    val result = cleanSulog(path)
-                    currentCoroutineContext().ensureActive()
-                    result.exceptionOrNull()?.let {
-                        mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))
-                    } ?: refresh(path, SulogLoading.OPERATION)
-                }
-            }
+            SulogUiAction.CleanFile -> sourceState.value.selectedFilePath?.let(::clean)
+
+            is SulogUiAction.CleanPath -> clean(action.path)
 
             is SulogUiAction.Search -> search.value = action.query
 
@@ -169,7 +168,33 @@ class SulogViewModel(
                 setStringSetPreference(PREF_SULOG_FILTERS, filters.value.map { it.name }.toSet())
             }
 
-            is SulogUiAction.SelectFile -> refresh(action.path, SulogLoading.OPERATION)
+            is SulogUiAction.SelectFile -> {
+                refreshJob?.cancel()
+                refreshJob = load(SulogLoading.OPERATION) { reportFailure(refreshSulog.selectFile(action.path)) }
+            }
+        }
+    }
+
+    /** The visible page owns this collector; leaving it cancels any pending read. */
+    suspend fun observeLive() {
+        combine(sourceState, loading) { source, loading ->
+            source.enabled && !source.isLoading && loading == SulogLoading.NONE
+        }.distinctUntilChanged().collectLatest { idleAndEnabled ->
+            if (idleAndEnabled) {
+                while (currentCoroutineContext().isActive) {
+                    refreshSulog.silently()
+                    delay(1_000)
+                }
+            }
+        }
+    }
+
+    private fun clean(path: String) {
+        refreshJob?.cancel()
+        load(SulogLoading.OPERATION) {
+            val result = cleanSulog(path)
+            currentCoroutineContext().ensureActive()
+            result.exceptionOrNull()?.let { mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty())) }
         }
     }
 
@@ -199,7 +224,10 @@ class SulogViewModel(
     }
 
     private suspend fun read(preferredFilePath: String?) {
-        val result = refreshSulog(preferredFilePath)
+        reportFailure(refreshSulog(preferredFilePath))
+    }
+
+    private suspend fun reportFailure(result: Result<Unit>) {
         currentCoroutineContext().ensureActive()
         result.exceptionOrNull()?.let {
             mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty()))

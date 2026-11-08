@@ -11,6 +11,8 @@ enum class DownloadVerificationFailure(@param:StringRes val resId: Int) {
     SHA256_MISMATCH(R.string.repo_download_verify_failed),
 }
 
+data class DownloadModuleInfo(val name: String, val iconUrl: String? = null, val iconOrigin: String? = null)
+
 data class DownloadState(
     val id: Int,
     val fileName: String,
@@ -24,4 +26,5 @@ data class DownloadState(
     val error: String? = null,
     val expected: ExpectedFile? = null,
     val verificationFailure: DownloadVerificationFailure? = null,
+    val module: DownloadModuleInfo? = null,
 )

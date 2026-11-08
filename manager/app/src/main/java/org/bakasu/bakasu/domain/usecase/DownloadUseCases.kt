@@ -4,13 +4,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import org.bakasu.bakasu.data.download.DownloadRepository
+import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.domain.model.ManagerUpdateInfo
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 
 class EnqueueDownloadUseCase(private val repository: DownloadRepository) {
-    operator fun invoke(url: String, fileName: String, expected: ExpectedFile? = null): Int = repository.enqueue(url, fileName, expected)
+    operator fun invoke(url: String, fileName: String, expected: ExpectedFile? = null, module: DownloadModuleInfo? = null): Int = repository.enqueue(url, fileName, expected, module)
 }
 
 class EnqueueManagerUpdateUseCase(private val repository: DownloadRepository) {
@@ -19,6 +20,10 @@ class EnqueueManagerUpdateUseCase(private val repository: DownloadRepository) {
 
 class CancelDownloadUseCase(private val repository: DownloadRepository) {
     operator fun invoke(id: Int) = repository.cancel(id)
+}
+
+class RemoveDownloadUseCase(private val repository: DownloadRepository) {
+    operator fun invoke(id: Int) = repository.remove(id)
 }
 
 class ObserveDownloadUseCase(private val repository: DownloadRepository) {

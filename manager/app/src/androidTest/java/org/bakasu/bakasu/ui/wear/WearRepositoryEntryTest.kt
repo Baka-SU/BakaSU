@@ -85,9 +85,8 @@ class WearRepositoryEntryTest {
         compose.runOnIdle { assertEquals(2, requests) }
         val loading = resources.getString(R.string.wear_loading)
         compose.onAllNodesWithContentDescription(loading).assertCountEquals(1)
-        val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
-        val title = compose.onNodeWithText(resources.getString(R.string.module_repo)).getUnclippedBoundsInRoot()
-        assertTrue(indicator.top >= title.bottom)
+        compose.onNodeWithContentDescription(loading).assertIsDisplayed()
+        compose.onNodeWithText(resources.getString(R.string.module_repo)).assertDoesNotExist()
         compose.runOnIdle {
             finish()
             navigator.open(WearRoute.Operations(WearOperationsPage.Repository))
@@ -242,7 +241,7 @@ class WearRepositoryEntryTest {
                             },
                         ) {
                             Box(Modifier.fillMaxSize().testTag("repository")) {
-                                WearModuleRepoPage(state, { refresh(true) }, navigator::back, { navigator.open(WearRoute.Operations(WearOperationsPage.Repository)) }, true, pageLoading) {}
+                                WearModuleRepoPage(state, { refresh(true) }, navigator::back, { navigator.open(WearRoute.Operations(WearOperationsPage.Repository)) }, true, pageLoading, onRetry = { refresh() }) {}
                             }
                         }
                     } else {

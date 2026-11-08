@@ -51,8 +51,8 @@ import kotlinx.coroutines.launch
 private const val RevealHoldMillis = 400L
 
 /**
- * Row actions open after a 0.4 s hold, without executing an action.
- * Any other touch keeps its ordinary meaning (tap, list scroll, pager swipe).
+ * A left swipe or a 0.4 s hold reveals actions without executing them.
+ * Taps, vertical scrolling and right swipes on covered rows retain their ordinary meaning.
  */
 @Composable
 fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
@@ -151,18 +151,26 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
                     } while (event.changes.any { it.pressed })
                     return@awaitEachGesture
                 }
-                // Lifting or moving before the hold completes leaves the touch to the row, list and pager.
                 val interrupted = withTimeoutOrNull(RevealHoldMillis) {
+                    var cancelled = true
                     while (true) {
                         val change = awaitPointerEvent(PointerEventPass.Initial).changes
                             .firstOrNull { it.id == down.id }
-                        if (change == null || !change.pressed || (change.position - down.position).getDistance() > slop) break
+                        if (change == null || !change.pressed || change.isConsumed) break
+                        val delta = change.position - down.position
+                        // Claim a left swipe before the pager; right swipes and vertical scrolls pass through.
+                        if (delta.x < -slop / 2 && abs(delta.x) > abs(delta.y)) {
+                            change.consume()
+                            cancelled = false
+                            break
+                        }
+                        if (delta.getDistance() > slop) break
                     }
-                    true
+                    cancelled
                 }
-                if (interrupted != null) return@awaitEachGesture
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                // After the hold, this gesture belongs to the row: it never clicks, scrolls or pages.
+                if (interrupted == true) return@awaitEachGesture
+                if (interrupted == null) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                // Revealing never enters the full-swipe state or invokes the action.
                 scope.launch { state.animateTo(RevealValue.RightRevealing) }
                 do {
                     val event = awaitPointerEvent(PointerEventPass.Initial)

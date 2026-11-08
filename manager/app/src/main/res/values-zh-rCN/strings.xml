@@ -950,4 +950,8 @@
     <string name="wear_template_empty">暂无模板</string>
     <string name="wear_template_no_matches">未找到匹配的模板</string>
     <string name="wear_template_created">模板创建成功</string>
+    <string name="wear_download_remove_title">删除下载任务？</string>
+    <string name="wear_download_remove_message">取消此下载并移除任务？已完成的 ZIP 文件将保留。</string>
+    <string name="wear_download_clear_all">全部清除</string>
+    <string name="wear_download_clear_message">取消并移除所有模块下载任务？已完成的 ZIP 文件将保留。</string>
 </resources>

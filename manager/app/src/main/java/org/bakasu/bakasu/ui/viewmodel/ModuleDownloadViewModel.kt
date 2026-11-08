@@ -7,11 +7,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
@@ -46,7 +46,7 @@ class ModuleDownloadViewModel(
     private var job: Job? = null
 
     /** A repository ZIP is offered for installing only when it matches the published size and SHA-256. */
-    fun start(asset: ModuleReleaseAsset) {
+    fun start(asset: ModuleReleaseAsset, module: DownloadModuleInfo? = null) {
         if (job?.isActive == true) return
         if (asset.verificationRequired && asset.expected == null) {
             mutableState.value = ModuleDownloadUiState(asset, ModuleDownloadPhase.VERIFY_FAILED)
@@ -56,17 +56,19 @@ class ModuleDownloadViewModel(
         job = viewModelScope.launch {
             val phase = try {
                 // The service keeps enforcing published integrity even after this page closes.
-                val id = enqueue(asset.downloadUrl, asset.name, asset.expected)
-                val result = observe(id).filterNotNull()
+                val id = enqueue(asset.downloadUrl, asset.name, asset.expected, module)
+                val result = observe(id)
                     .onEach { download ->
-                        mutableState.update { it.copy(downloadedBytes = download.downloadedBytes, totalBytes = download.totalBytes) }
+                        if (download != null) mutableState.update { it.copy(downloadedBytes = download.downloadedBytes, totalBytes = download.totalBytes) }
                     }
-                    .first { it.status == DownloadStatus.COMPLETED || it.status == DownloadStatus.FAILED }
-                val uri = result.resultUri
-                if (result.status == DownloadStatus.COMPLETED && uri != null) {
+                    .first { it == null || it.status == DownloadStatus.COMPLETED || it.status == DownloadStatus.FAILED }
+                val uri = result?.resultUri
+                if (result?.status == DownloadStatus.COMPLETED && uri != null) {
                     mutableState.update { it.copy(phase = ModuleDownloadPhase.VERIFYING) }
                 }
                 when {
+                    result == null -> ModuleDownloadPhase.FAILED
+
                     result.verificationFailure != null -> ModuleDownloadPhase.VERIFY_FAILED
 
                     result.status == DownloadStatus.FAILED || uri == null -> ModuleDownloadPhase.FAILED
