@@ -30,6 +30,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -181,12 +182,15 @@ fun WearList(
         if (listState.isScrollInProgress && listState.canScrollBackward) showRefreshGap = false
     }
     val titleBottomPadding = if (timeMode == "title") 0.dp else ListHeaderDefaults.ContentPadding.calculateBottomPadding()
-    val refreshOffset by animateDpAsState(
-        // Reuse the space already below the title text instead of adding it a second time.
-        targetValue = if (showRefreshGap) (WearLoadingIndicatorSize + WearRefreshSpacing * 2 - titleBottomPadding - itemSpacing).coerceAtLeast(0.dp) else 0.dp,
-        animationSpec = if (reduceMotion) snap() else tween(180),
-        label = "wear-refresh-content-offset",
-    )
+    // A display change starts with its own geometry instead of animating from the old title gap.
+    val refreshOffset by key(timeMode, configuration, density) {
+        animateDpAsState(
+            // Reuse the space already below the title text instead of adding it a second time.
+            targetValue = if (showRefreshGap) (WearLoadingIndicatorSize + WearRefreshSpacing * 2 - titleBottomPadding - itemSpacing).coerceAtLeast(0.dp) else 0.dp,
+            animationSpec = if (reduceMotion) snap() else tween(180),
+            label = "wear-refresh-content-offset",
+        )
+    }
     val screenActive = LocalScreenIsActive.current
     // The page yields gestures and reveal updates while the shared menu is active.
     val panelHosted = LocalWearPanelHosted.current
@@ -211,22 +215,15 @@ fun WearList(
     val panelDismissals = LocalWearPanelDismissals.current
     var lastDismissal by remember { mutableIntStateOf(panelDismissals) }
     val panelWasDismissed = lastDismissal != panelDismissals
-    // The pull the panel and the page behind it both follow.
-    val panelTarget = if (panelWasDismissed) {
-        0f
-    } else if (openingPanel) {
-        1f
-    } else {
-        (pullProgress.floatValue * threshold / viewportHeight).coerceIn(0f, 1f)
-    }
-    // Follow the finger directly; settle without resistance or spring overshoot.
-    val following = reduceMotion || (pullProgress.floatValue > 0f && !openingPanel)
-    val panelProgress by animateFloatAsState(
-        targetValue = panelTarget,
-        animationSpec = if (following || draggingPanel || panelHosted || panelWasDismissed) snap() else tween(180),
-        label = "wear-panel-reveal",
-        // Committing the logical destination keeps the same menu in the shared host.
-        finishedListener = { progress -> if (openingPanel && progress == 1f && screenActive) onOpenPanel?.invoke() },
+    val panelProgress = wearPanelReveal(
+        pullPixels = pullProgress.floatValue * threshold,
+        height = viewportHeight,
+        opening = openingPanel,
+        dragging = draggingPanel,
+        hosted = panelHosted,
+        dismissed = panelWasDismissed,
+        active = screenActive,
+        onOpen = { onOpenPanel?.invoke() },
     )
     // Movement, scale and scrim share the reveal, including the destination's closing animation.
     val panelPull = LocalWearPanelPull.current
@@ -236,7 +233,7 @@ fun WearList(
         else -> panelProgress
     }.coerceAtLeast(0f)
     val pageRecess = revealProgress.coerceIn(0f, WearPageRecessLimit)
-    val pageScale = 1f - WearPanelPageScale * pageRecess
+    val pageScale = wearPanelPageScale(pageRecess)
     // The destination has started closing or has left; the held preview goes away at once, so the
     // closing panel uncovers the page rather than a copy of itself.
     LaunchedEffect(panelDismissals) {
@@ -409,12 +406,9 @@ fun WearList(
                         var indicatorTop by remember(timeMode, configuration, density, timeTitleBottom, viewportHeight) {
                             mutableStateOf<Dp?>(null)
                         }
-                        // Let the title's initial layout settle, including a display-mode change.
-                        // Once scrolling dismisses the gap, retain the last stationary position.
+                        // Capture the request's first layout; display changes create a new anchor.
                         SideEffect {
-                            if (measuredTop != null && (indicatorTop == null || (showRefreshGap && !listState.isScrollInProgress))) {
-                                indicatorTop = measuredTop
-                            }
+                            if (measuredTop != null && indicatorTop == null) indicatorTop = measuredTop
                         }
                         val top = indicatorTop ?: measuredTop ?: contentPadding.calculateTopPadding()
                         WearLoadingIndicator(
@@ -508,9 +502,6 @@ fun WearList(
         }
     }
 }
-
-/** How far the page shrinks behind a pulled panel. */
-private const val WearPanelPageScale = 0.12f
 
 /** Dimming follows the complete reveal, so the page remains visible while it recedes. */
 internal const val WearPanelDimReach = 1f

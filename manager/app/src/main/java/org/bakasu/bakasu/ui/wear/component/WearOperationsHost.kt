@@ -1,6 +1,9 @@
 package org.bakasu.bakasu.ui.wear.component
 
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -23,8 +26,36 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.hierarchicalFocusGroup
+
+/** The list and native WebView use the same finger-following reveal and release animation. */
+@Composable
+internal fun wearPanelReveal(
+    pullPixels: Float,
+    height: Float,
+    opening: Boolean,
+    dragging: Boolean,
+    hosted: Boolean,
+    dismissed: Boolean,
+    active: Boolean,
+    onOpen: () -> Unit,
+): Float {
+    val progress by animateFloatAsState(
+        targetValue = when {
+            dismissed -> 0f
+            opening -> 1f
+            else -> (pullPixels / height.coerceAtLeast(1f)).coerceIn(0f, 1f)
+        },
+        animationSpec = if (LocalReduceMotion.current || dragging || hosted || dismissed || (pullPixels > 0f && !opening)) snap() else tween(180),
+        label = "wear-panel-reveal",
+        finishedListener = { if (opening && it == 1f && active) onOpen() },
+    )
+    return progress
+}
+
+internal fun wearPanelPageScale(progress: Float): Float = 1f - 0.12f * progress.coerceIn(0f, 1.2f)
 
 /** Keeps a menu in its owning navigation entry, including while that entry animates away. */
 @Composable
