@@ -102,6 +102,8 @@ sealed interface WearRoute : NavKey {
         val version: String = "",
         val update: Boolean = false,
         val verificationRequired: Boolean = false,
+        val iconUrl: String? = null,
+        val iconOrigin: String? = null,
     ) : WearRoute,
         NeedsRoot
 

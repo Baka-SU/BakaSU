@@ -13,8 +13,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
-import org.bakasu.bakasu.domain.usecase.CancelDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadsUseCase
+import org.bakasu.bakasu.domain.usecase.RemoveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
 
 sealed interface WearDownloadsEvent {
@@ -24,7 +24,7 @@ sealed interface WearDownloadsEvent {
 
 class WearDownloadsViewModel(
     observe: ObserveDownloadsUseCase,
-    private val cancelDownload: CancelDownloadUseCase,
+    private val removeDownload: RemoveDownloadUseCase,
     private val verify: VerifyModuleDownloadUseCase,
 ) : ViewModel() {
     val downloads = observe().map { tasks -> tasks.filter { it.fileName.endsWith(".zip", ignoreCase = true) }.sortedByDescending { it.id } }
@@ -34,7 +34,9 @@ class WearDownloadsViewModel(
     private val mutableEvents = MutableSharedFlow<WearDownloadsEvent>(extraBufferCapacity = 1)
     val events = mutableEvents.asSharedFlow()
 
-    fun cancel(id: Int) = cancelDownload(id)
+    fun remove(id: Int) = removeDownload(id)
+
+    fun clear() = downloads.value.forEach { removeDownload(it.id) }
 
     fun install(download: DownloadState) {
         val uri = download.resultUri ?: return

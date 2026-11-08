@@ -152,6 +152,7 @@ import org.bakasu.bakasu.domain.usecase.RefreshSulogUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshSuperUsersUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshUmountPathsUseCase
 import org.bakasu.bakasu.domain.usecase.ReleaseScriptUseCase
+import org.bakasu.bakasu.domain.usecase.RemoveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.RemovePreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveUmountPathUseCase
@@ -357,6 +358,7 @@ val useCaseModule = module {
     factoryOf(::EnsureManagerInstalledUseCase)
     factoryOf(::RebootUseCase)
     factoryOf(::EnqueueDownloadUseCase)
+    factoryOf(::RemoveDownloadUseCase)
     factoryOf(::EnqueueManagerUpdateUseCase)
     factoryOf(::ObserveDownloadUseCase)
     factoryOf(::ObserveCompanionBridgeUseCase)

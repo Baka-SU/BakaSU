@@ -54,6 +54,7 @@ import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
@@ -193,7 +194,7 @@ private fun catalogModuleViewModel(moduleId: String, repositoryUrl: String): Mod
 
 /** The download confirmation; confirming opens the download route for the chosen file. */
 @Composable
-private fun rememberModuleDownload(moduleName: String, installer: WearModuleInstaller): (ModuleRelease, ModuleReleaseAsset) -> Unit {
+private fun rememberModuleDownload(module: CatalogModule?, installer: WearModuleInstaller): (ModuleRelease, ModuleReleaseAsset) -> Unit {
     var pendingRelease by remember { mutableStateOf<ModuleRelease?>(null) }
     var pendingAsset by remember { mutableStateOf<ModuleReleaseAsset?>(null) }
     val thenInstall = stringResource(R.string.wear_download_then_install)
@@ -214,7 +215,7 @@ private fun rememberModuleDownload(moduleName: String, installer: WearModuleInst
                     onClick = {
                         dismiss()
                         val release = pendingRelease
-                        if (release != null && asset != null) installer.download(moduleName, release, asset)
+                        if (module != null && release != null && asset != null) installer.download(module, release, asset)
                     },
                 )
             },
@@ -240,7 +241,7 @@ internal fun WearOnlineModulePage(
     val viewModel = catalogModuleViewModel(moduleId, repositoryUrl)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val module = state.module
-    val requestDownload = rememberModuleDownload(module?.moduleName.orEmpty(), installer)
+    val requestDownload = rememberModuleDownload(module, installer)
     if (!state.loading && (state.error != null || state.repositoryFailure != null)) {
         WearLoadFailureScreen(
             if (state.error == ModuleCatalogFailure.NotFound) stringResource(R.string.repo_module_unavailable) else wearRepositoryFailureText(state.repositoryFailure),
@@ -340,7 +341,7 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String
     val viewModel = catalogModuleViewModel(moduleId, repositoryUrl)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val module = state.module
-    val requestDownload = rememberModuleDownload(module?.moduleName.orEmpty(), installer)
+    val requestDownload = rememberModuleDownload(module, installer)
     // The README is its own document, loaded once the module details are.
     val readme = module?.let { state.documents[it.readmeUrl.ifBlank { it.sourceUrl }] }
     LaunchedEffect(module?.catalogId, module?.detailLoaded, module?.registryMetadata?.buildId, state.loading) {
@@ -432,7 +433,7 @@ internal fun WearModuleDownloadPage(route: WearRoute.OnlineModuleDownload, onDow
     val download by downloadState
     val asset = remember(route) { route.asset() }
     LaunchedEffect(viewModel) {
-        if (viewModel.state.value.phase == null) viewModel.start(asset)
+        if (viewModel.state.value.phase == null) viewModel.start(asset, DownloadModuleInfo(route.name, route.iconUrl, route.iconOrigin))
     }
     LaunchedEffect(download.resultUri) {
         download.resultUri?.let(onDownloaded)
@@ -443,7 +444,7 @@ internal fun WearModuleDownloadPage(route: WearRoute.OnlineModuleDownload, onDow
         download,
         // Read through the state when the ring draws, not captured once.
         fraction = { downloadState.value.fraction ?: 1f.takeIf { downloadState.value.phase == ModuleDownloadPhase.VERIFYING } ?: 0f },
-    ) { viewModel.start(asset) }
+    ) { viewModel.start(asset, DownloadModuleInfo(route.name, route.iconUrl, route.iconOrigin)) }
 }
 
 /** The default module icon on a rounded tonal tile, standing in for a module's own icon. */
