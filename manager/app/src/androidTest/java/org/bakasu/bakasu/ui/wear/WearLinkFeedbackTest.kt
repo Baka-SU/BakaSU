@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.data.network.WearLinkFailure
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearToastHost
@@ -21,6 +22,25 @@ import org.koin.compose.viewmodel.koinViewModel
 class WearLinkFeedbackTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun explicitWatchFailureKeepsTheOrdinaryDialog() {
+        lateinit var viewModel: WearLinkViewModel
+        compose.setContent {
+            MaterialTheme {
+                AppScaffold {
+                    WearToastHost {
+                        viewModel = koinViewModel()
+                        WearLinkHost(viewModel, false) {}
+                    }
+                }
+            }
+        }
+        compose.runOnIdle { viewModel.fail(WearLinkFailure.WEBVIEW_UNAVAILABLE) }
+        compose.onNodeWithText(compose.activity.getString(R.string.operation_failed)).assertExists()
+        compose.onNodeWithText(compose.activity.getString(R.string.wear_link_open_failed)).assertExists()
+        compose.runOnIdle { viewModel.dismissResult() }
+    }
 
     @Test
     fun finalAutomaticLinkFailureKeepsTheResultUntilConfirmationDismisses() {

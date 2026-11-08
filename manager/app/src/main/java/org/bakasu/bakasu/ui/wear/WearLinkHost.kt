@@ -66,6 +66,7 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, showLoading: Boolean, on
     val failureText = stringResource(
         when {
             failed?.bridgeFailure == BridgeFailure.RESULT_UNKNOWN -> R.string.wear_phone_result_unknown
+            failed?.bridgeFailure != null -> failed.bridgeFailure.resId
             failed?.automaticLink == true -> R.string.wear_link_open_failed
             failed?.reason == WearLinkFailure.BROWSER_FAILED -> R.string.wear_browser_open_failed
             else -> R.string.wear_link_open_failed

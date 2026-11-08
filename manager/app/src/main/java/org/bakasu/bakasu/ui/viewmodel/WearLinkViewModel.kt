@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import org.bakasu.bakasu.data.network.WearLinkException
 import org.bakasu.bakasu.data.network.WearLinkFailure
 import org.bakasu.bakasu.data.network.WearLinkRepository
+import org.bakasu.bakasu.data.network.WearLinkResolution
 import org.bakasu.bakasu.data.network.WearLinkTarget
 import org.bakasu.bakasu.domain.model.BridgeException
 import org.bakasu.bakasu.domain.model.BridgeFailure
@@ -37,7 +38,7 @@ sealed interface WearLinkResult {
 }
 
 /**
- * About links try the phone first. Other links and module WebUI retain the saved opening mode.
+ * Every entry respects the saved mode. Automatic About links try the phone first.
  */
 class WearLinkViewModel(
     private val repository: WearLinkRepository,
@@ -52,8 +53,9 @@ class WearLinkViewModel(
     private val mutableResult = MutableStateFlow<WearLinkResult?>(null)
     val result = mutableResult.asStateFlow()
     private var task: Job? = null
-    private data class WebViewRequest(val url: String, val mode: String, val phoneFirst: Boolean)
+    private data class WebViewRequest(val url: String, val mode: String, val resolution: WearLinkResolution)
     private var webViewRequest: WebViewRequest? = null
+    private var navigatingLink = false
     val transfer = observeBridge.transfer
     val permissionRequest = observeBridge.permissionRequest
     fun answerPermission(id: String, granted: Boolean) = configureBridge.answerPermission(id, granted)
@@ -62,7 +64,21 @@ class WearLinkViewModel(
     private val mode get() = getPreference.wear(WearPreference.Link)
 
     fun open(url: String) = open(url, mode)
-    fun openAboutLink(url: String) = open(url, "auto", phoneFirst = true)
+    fun openAboutLink(url: String) = open(url, mode, phoneFirst = true)
+
+    /** Internal Browser navigation continues the request; user navigation still cancels it. */
+    fun navigateWithinLink(navigate: () -> Unit) {
+        navigatingLink = true
+        try {
+            navigate()
+        } finally {
+            navigatingLink = false
+        }
+    }
+
+    fun onNavigation() {
+        if (!navigatingLink) cancel()
+    }
 
     /** Continue the original attempt, even if the module preference changed while it was loading. */
     fun webViewFailed(url: String) {
@@ -74,10 +90,8 @@ class WearLinkViewModel(
             return
         }
         webViewRequest = null
-        when {
-            request.phoneFirst -> run(automaticLink = true) { repository.openBrowser(url) }
-            request.mode == "auto" -> open(url, "phone")
-            else -> fail(WearLinkFailure.WEBVIEW_UNAVAILABLE)
+        run(automaticLink = request.mode == "auto") {
+            showResolution(url, request.mode, repository.continueLink(url, request.resolution.remaining, request.resolution.phoneFailure))
         }
     }
 
@@ -85,11 +99,15 @@ class WearLinkViewModel(
         if (webViewRequest?.url == url) webViewRequest = null
     }
 
-    private fun open(url: String, mode: String, phoneFirst: Boolean = false) = run(automaticLink = phoneFirst) {
+    private fun open(url: String, mode: String, phoneFirst: Boolean = false) = run(automaticLink = mode == "auto") {
         webViewRequest = null
-        when (if (phoneFirst) repository.resolveAboutLink(url) else repository.resolve(url, mode)) {
+        showResolution(url, mode, repository.resolve(url, mode, phoneFirst))
+    }
+
+    private suspend fun showResolution(url: String, mode: String, resolution: WearLinkResolution) {
+        when (resolution.target) {
             WearLinkTarget.WEBVIEW -> {
-                webViewRequest = WebViewRequest(url, mode, phoneFirst)
+                webViewRequest = WebViewRequest(url, mode, resolution)
                 mutableEvents.emit(WearLinkEvent.WebView(url))
             }
 
@@ -142,12 +160,12 @@ class WearLinkViewModel(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: BridgeException) {
-                // Automatic links own their final outcome; explicit phone operations keep the shared dialog.
-                if (automaticLink && error.reason !in setOf(BridgeFailure.PERMISSION, BridgeFailure.REJECTED)) {
+                if (automaticLink) {
                     mutableResult.value = WearLinkResult.Failed(null, bridgeFailure = error.reason, automaticLink = true)
                 }
             } catch (error: Exception) {
-                mutableResult.value = WearLinkResult.Failed((error as? WearLinkException)?.reason, onPhone, automaticLink = automaticLink)
+                val linkError = error as? WearLinkException
+                mutableResult.value = WearLinkResult.Failed(linkError?.reason, onPhone, linkError?.phoneFailure, automaticLink)
             } finally {
                 mutableLoading.value = false
             }

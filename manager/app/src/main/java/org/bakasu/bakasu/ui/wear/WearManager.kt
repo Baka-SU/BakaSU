@@ -198,7 +198,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val navigator = rememberWearNavigator(
         onChange = {
             clearSettingsFeedback()
-            linkViewModel.cancel()
+            linkViewModel.onNavigation()
         },
         // Search results live on their own page; leaving it clears the query of its list.
         onLeave = { route ->
@@ -892,7 +892,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         onBack = ::back,
                                         onOpened = { linkViewModel.webViewOpened(route.url) },
                                         onUnavailable = {
-                                            back()
+                                            linkViewModel.navigateWithinLink { back() }
                                             linkViewModel.webViewFailed(route.url)
                                         },
                                     )
@@ -1007,7 +1007,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                 }
                 WearOperationsBackHandler(operationsOnTop) { back() }
                 // Over the pages: waiting for a link to open, which Back cancels, and its result.
-                WearLinkHost(linkViewModel, showLinkLoading) { open(WearRoute.Browser(it)) }
+                WearLinkHost(linkViewModel, showLinkLoading) { url ->
+                    linkViewModel.navigateWithinLink { open(WearRoute.Browser(url)) }
+                }
             }
         }
     }
