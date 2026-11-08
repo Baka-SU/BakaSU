@@ -101,7 +101,27 @@ internal fun WearModuleRepoPage(
     onOpen: (CatalogModule) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    WearModuleRepoPage(state, { viewModel.refresh(fromPull = true) }, onBack, onOpenPanel, hasOperationsPanel, isPageLoading, onOpen)
+    var retryLoading by remember(viewModel) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    WearModuleRepoPage(
+        state,
+        { viewModel.refresh(fromPull = true) },
+        onBack,
+        onOpenPanel,
+        hasOperationsPanel,
+        isPageLoading = isPageLoading || retryLoading,
+        onRetry = {
+            retryLoading = true
+            scope.launch {
+                try {
+                    viewModel.refresh().join()
+                } finally {
+                    retryLoading = false
+                }
+            }
+        },
+        onOpen = onOpen,
+    )
 }
 
 @Composable
@@ -112,6 +132,7 @@ internal fun WearModuleRepoPage(
     onOpenPanel: () -> Unit,
     hasOperationsPanel: Boolean = false,
     isPageLoading: Boolean = false,
+    onRetry: () -> Unit = onRefresh,
     onOpen: (CatalogModule) -> Unit,
 ) {
     val loading = isPageLoading || (state.isRefreshing && !state.isPullRefreshing)
@@ -121,7 +142,7 @@ internal fun WearModuleRepoPage(
         isRefreshing = state.isRefreshing && state.isPullRefreshing && !loading,
         onRefresh = onRefresh,
         onBack = onBack,
-        onConfirm = if (failed) onRefresh else null,
+        onConfirm = if (failed) onRetry else null,
         confirmLabel = if (failed) stringResource(R.string.network_retry) else null,
         backToTop = !failed,
         onOpenPanel = onOpenPanel,
