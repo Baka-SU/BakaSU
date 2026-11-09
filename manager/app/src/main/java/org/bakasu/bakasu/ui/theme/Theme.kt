@@ -124,7 +124,6 @@ import top.yukonga.miuix.kmp.blur.textureBlurEffect
 class ThemeConfig(
     private val defaultSeedColor: () -> Int,
 ) {
-    // 主题状态
     var customBackgroundUri by mutableStateOf<Uri?>(null)
     var backgroundDim by mutableFloatStateOf(0f)
     var forceDarkMode by mutableStateOf<Boolean?>(null)
@@ -135,7 +134,6 @@ class ThemeConfig(
     var dynamicColorSpec by mutableStateOf(ColorSpec.SpecVersion.SPEC_2021)
     var dynamicPaletteStyle by mutableStateOf(PaletteStyle.TonalSpot)
 
-    // 背景状态
     var backgroundImageLoaded by mutableStateOf(false)
     var isThemeChanging by mutableStateOf(false)
     var isHighContrastMode by mutableStateOf(false)
@@ -359,7 +357,6 @@ fun KernelSUTheme(
     val context = LocalContext.current
     val systemIsDark = isSystemInDarkTheme()
 
-    // 初始化主题
     ThemeInitializer(
         context = context,
         systemIsDark = systemIsDark,
@@ -370,7 +367,6 @@ fun KernelSUTheme(
         settings = settings,
     )
 
-    // 创建颜色方案
     val colorScheme = createColorScheme(
         resolvedDarkTheme,
         resolvedDynamicColor,
@@ -378,7 +374,6 @@ fun KernelSUTheme(
         backgroundRenderState,
     )
 
-    // 系统栏样式
     SystemBarController(resolvedDarkTheme)
 
     val systemDensity = LocalDensity.current
@@ -443,7 +438,6 @@ private fun ThemeInitializer(
     cardConfig: CardConfig,
     settings: AppSettingsRepository,
 ) {
-    // 处理系统主题变化
     LaunchedEffect(systemIsDark) {
         if (themeConfig.forceDarkMode == null) {
             cardConfig.apply {
@@ -454,7 +448,6 @@ private fun ThemeInitializer(
         }
     }
 
-    // 初始加载配置
     LaunchedEffect(Unit) {
         // Composition can start before application startup has finished preloading
         // DataStore. Read it here first so the persisted background URI is never
@@ -543,7 +536,6 @@ private fun BackgroundLayer(
         }
     }
 
-    // 默认背景
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -622,6 +614,7 @@ fun Modifier.blurEffect(
     var coordinates by remember {
         mutableStateOf<LayoutCoordinates?>(null)
     }
+    val panelBounds = remember { PanelLayoutBounds() }
 
     return LocalBlurState.current?.let { backdrop ->
         // 0.8f like haze, for material design without custom background enable
@@ -638,6 +631,7 @@ fun Modifier.blurEffect(
             Modifier
                 .onGloballyPositioned { newCoordinates ->
                     coordinates = newCoordinates.takeIf { it.isAttached }
+                    panelBounds.update(newCoordinates)
                 }
                 .drawBackdrop(
                     backdrop = backdrop,
@@ -645,6 +639,7 @@ fun Modifier.blurEffect(
                     effects = {
                         renderState.blurFrameTick
                         stretchOverscrollState?.version
+                        panelBounds.bounds
 
                         textureBlurEffect(
                             blurRadiusX = 25f,
@@ -693,6 +688,7 @@ private fun Modifier.renderBackgroundFallback(
     var coordinates by remember {
         mutableStateOf<LayoutCoordinates?>(null)
     }
+    val panelBounds = remember { PanelLayoutBounds() }
 
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainer
     val dimColor = backgroundColor.copy(alpha = themeConfig.backgroundDim)
@@ -713,10 +709,12 @@ private fun Modifier.renderBackgroundFallback(
     return this
         .onGloballyPositioned { newCoordinates ->
             coordinates = newCoordinates.takeIf { it.isAttached }
+            panelBounds.update(newCoordinates)
         }
         .drawWithContent {
             renderState.blurFrameTick
             stretchOverscrollState?.version
+            panelBounds.bounds
 
             val boundsInBackground = coordinates?.boundsInBackgroundNow(backgroundAnchor)
                 ?: coordinates?.localBoundsInWindowNow()
@@ -850,6 +848,19 @@ private fun Rect.mapToBitmapBounds(
     )
 }
 
+private class PanelLayoutBounds {
+    var bounds: Rect? by mutableStateOf<Rect?>(null)
+        private set
+
+    fun update(coordinates: LayoutCoordinates?) {
+        val attached = coordinates?.takeIf { it.isAttached } ?: return
+        if (attached.size.width <= 0 || attached.size.height <= 0) return
+
+        val newBounds = attached.localBoundsInWindowNow() ?: return
+        if (bounds != newBounds) bounds = newBounds
+    }
+}
+
 @Composable
 fun Modifier.renderBackgroundBlur(
     tintColor: Color? = null,
@@ -864,6 +875,8 @@ fun Modifier.renderBackgroundBlur(
     var coordinates by remember {
         mutableStateOf<LayoutCoordinates?>(null)
     }
+
+    val panelBounds = remember { PanelLayoutBounds() }
 
     val tintColor = (tintColor ?: MaterialTheme.colorScheme.surfaceBright).copy(
         alpha = cardConfig.cardAlpha,
@@ -881,10 +894,12 @@ fun Modifier.renderBackgroundBlur(
     return this
         .onGloballyPositioned { newCoordinates ->
             coordinates = newCoordinates.takeIf { it.isAttached }
+            panelBounds.update(newCoordinates)
         }
         .drawWithContent {
             renderState.blurFrameTick
             stretchOverscrollState?.version
+            panelBounds.bounds
 
             val currentBitmap = renderState.blurImageBitmap
             val currentBoundsInBackground = coordinates?.boundsInBackgroundNow(backgroundBlurAnchor)
