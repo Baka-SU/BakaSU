@@ -31,10 +31,19 @@ ifeq ($(ARCH),arm)
 KSU_RUNNER_LIBS := $(shell $(CC) $(CLANG_FLAGS) -print-libgcc-file-name)
 endif
 
+# The runner is exec'd by PID 1, so it has to load on every page size a
+# target can use: the kernel rejects a PT_LOAD whose p_offset and p_vaddr
+# disagree modulo PAGE_SIZE (elf_map() computes p_offset - ELF_PAGEOFFSET()
+# and vm_mmap() returns -EINVAL for an unaligned offset). ld.lld defaults to
+# 4K on x86_64 and 64K on arm64, so pin the maximum and lay the segments out
+# contiguously instead of relying on the emulation's default.
+KSU_RUNNER_LDFLAGS := -static -nostdlib -e _start --gc-sections -s \
+	-z max-page-size=0x10000 -z noseparate-code
+
 quiet_cmd_ksu_runner = CC      $@
       cmd_ksu_runner = mkdir -p $(dir $@) && \
 		$(CC) $(KSU_RUNNER_CFLAGS) -c -o $@.o $< && \
-		$(LD) -static -nostdlib -e _start --gc-sections -s -o $@ $@.o $(KSU_RUNNER_LIBS) && \
+		$(LD) $(KSU_RUNNER_LDFLAGS) -o $@ $@.o $(KSU_RUNNER_LIBS) && \
 		rm -f $@.o
 
 $(KSU_RUNNER_TARGET): $(KSU_RUNNER_SRC)/runner.c \
