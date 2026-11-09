@@ -1,5 +1,11 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -32,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -66,6 +73,7 @@ import org.bakasu.bakasu.ui.wear.component.WearInfoRow
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
@@ -604,17 +612,25 @@ internal fun WearAppDetail(
                     ),
                 )
             }
-            if (!profile.allowSu && !profile.nonRootUseDefault) {
-                item {
-                    WearSettingsSwitchWidget(
-                        spec,
-                        stringResource(R.string.profile_umount_modules),
-                        profile.umountModules,
-                        { save(profile.copy(umountModules = it, nonRootUseDefault = false)) },
-                        enabled = !isManager,
-                        secondaryLabel = stringResource(R.string.profile_umount_modules_summary),
-                        icon = Icons.Rounded.Extension,
-                    )
+            item(key = "umount-modules") {
+                val visibility = remember { MutableTransitionState(false) }
+                visibility.targetState = !isManager && !profile.allowSu && !profile.nonRootUseDefault
+                WearRefreshItem(spec, Modifier.testTag("app-profile-umount")) {
+                    AnimatedVisibility(
+                        visibleState = visibility,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
+                    ) {
+                        WearSettingsSwitchWidget(
+                            spec,
+                            stringResource(R.string.profile_umount_modules),
+                            profile.umountModules,
+                            { save(profile.copy(umountModules = it, nonRootUseDefault = false)) },
+                            secondaryLabel = stringResource(R.string.profile_umount_modules_summary),
+                            icon = Icons.Rounded.Extension,
+                            transformed = false,
+                        )
+                    }
                 }
             }
             item { WearSectionHeader(spec, stringResource(R.string.wear_app_operations)) }

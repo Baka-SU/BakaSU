@@ -38,9 +38,10 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
     largeIcon: Boolean = false,
     iconContent: (@Composable BoxScope.() -> Unit)? = null,
     secondaryLabelMaxLines: Int = 2,
+    transformed: Boolean = true,
 ) {
     SwitchButton(
-        modifier = Modifier.wearRefreshOffset().fillMaxWidth().transformedHeight(this, transformationSpec)
+        modifier = (if (transformed) Modifier.wearRefreshOffset().transformedHeight(this, transformationSpec) else Modifier).fillMaxWidth()
             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)
             .wearCompactRow(compact),
         // A compact switch uses the button's 6dp vertical padding instead of its own 8dp.

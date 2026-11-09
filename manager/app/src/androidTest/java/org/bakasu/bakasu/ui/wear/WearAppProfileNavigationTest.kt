@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
@@ -99,6 +100,36 @@ class WearAppProfileNavigationTest(private val round: Boolean, private val defau
         compose.runOnIdle { navigator.open(appRoute) }
         compose.waitForIdle()
         assertUmount(!defaultUmount)
+    }
+
+    @Test
+    fun customUmountRowExpandsAndShrinksAcrossFrames() {
+        show()
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
+        compose.mainClock.autoAdvance = false
+        compose.runOnIdle {
+            stored = stored.copy(nonRootUseDefault = false)
+            detail.dispatch(AppProfileUiAction.Load)
+        }
+        compose.mainClock.advanceTimeBy(48)
+        val row = compose.onNodeWithTag("app-profile-umount")
+        val entering = row.fetchSemanticsNode().boundsInRoot.height
+        compose.mainClock.advanceTimeBy(500)
+        val full = row.fetchSemanticsNode().boundsInRoot.height
+        assertTrue("The custom row must expand over several frames: $entering -> $full", entering < full)
+        compose.runOnIdle {
+            stored = stored.copy(nonRootUseDefault = true)
+            detail.dispatch(AppProfileUiAction.Load)
+        }
+        val exitHeights = mutableListOf<Float>()
+        repeat(30) {
+            compose.mainClock.advanceTimeBy(16)
+            exitHeights += row.fetchSemanticsNode().boundsInRoot.height
+        }
+        assertTrue("The custom row must shrink over several frames: $full -> $exitHeights", exitHeights.any { it > 0f && it < full })
+        compose.mainClock.advanceTimeBy(500)
+        compose.onNodeWithText(text(R.string.profile_umount_modules)).assertDoesNotExist()
+        compose.mainClock.autoAdvance = true
     }
 
     @Test
@@ -220,7 +251,7 @@ class WearAppProfileNavigationTest(private val round: Boolean, private val defau
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
         compose.onNodeWithText(text(R.string.wear_profile_mode)).assertIsNotEnabled()
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(4)
-        compose.onNodeWithText(text(R.string.profile_umount_modules)).assertIsNotEnabled()
+        compose.onNodeWithText(text(R.string.profile_umount_modules)).assertDoesNotExist()
         assertEquals(0, saves)
     }
 
