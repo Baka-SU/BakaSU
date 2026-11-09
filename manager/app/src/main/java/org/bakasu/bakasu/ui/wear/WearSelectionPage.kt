@@ -13,6 +13,7 @@ import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Square
 import androidx.compose.material.icons.rounded.Translate
+import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -183,7 +184,7 @@ internal fun WearLanguagePage(selected: Locale?, system: List<Locale>, onBack: (
     }
 }
 
-private fun selectionIcon(selection: WearSelection, value: String): ImageVector = when (selection) {
+internal fun selectionIcon(selection: WearSelection, value: String): ImageVector = when (selection) {
     WearSelection.TimeDisplay -> Icons.Rounded.Schedule
 
     WearSelection.ScreenShape -> when (value) {
@@ -197,7 +198,7 @@ private fun selectionIcon(selection: WearSelection, value: String): ImageVector 
     WearSelection.SuCompat -> Icons.Rounded.RemoveModerator
 
     WearSelection.LinkMode -> when (value) {
-        "webview" -> Icons.Rounded.Language
+        "webview" -> Icons.Rounded.Watch
         "phone" -> Icons.Rounded.Smartphone
         else -> Icons.Rounded.AutoAwesome
     }
