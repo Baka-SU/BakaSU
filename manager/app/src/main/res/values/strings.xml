@@ -989,4 +989,5 @@
     <string name="wear_download_clear_all">Clear all</string>
     <string name="wear_download_clear_message">Cancel and remove all module download tasks? Completed ZIP files will be kept.</string>
     <string name="wear_download_url_blocked">Download URL blocked</string>
+    <string name="wear_search_repositories">Search repositories</string>
 </resources>

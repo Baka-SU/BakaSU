@@ -963,4 +963,5 @@
     <string name="wear_download_clear_all">全部清除</string>
     <string name="wear_download_clear_message">取消并移除所有模块下载任务？已完成的 ZIP 文件将保留。</string>
     <string name="wear_download_url_blocked">下载地址被阻止</string>
+    <string name="wear_search_repositories">搜索仓库</string>
 </resources>

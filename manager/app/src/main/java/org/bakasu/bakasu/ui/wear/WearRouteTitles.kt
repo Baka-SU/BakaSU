@@ -24,6 +24,8 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     WearRoute.RepositorySources -> R.string.repo_manage
 
+    WearRoute.RepositorySourceSearch, is WearRoute.RepositorySourceSearchResults -> R.string.wear_search_repositories
+
     WearRoute.AddRepository -> R.string.repo_add_repository
 
     is WearRoute.RepositorySource -> R.string.repo_configure
@@ -86,6 +88,8 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
     WearRoute.TemplateSearch, WearRoute.TemplateSearchResults -> R.string.wear_template_search
 
     WearRoute.OnlineTemplates, is WearRoute.OnlineTemplateDetail -> R.string.wear_template_online
+
+    WearRoute.OnlineTemplateSearch, WearRoute.OnlineTemplateSearchResults -> R.string.wear_template_search
 
     WearRoute.SuSFS -> R.string.susfs_config_title
 

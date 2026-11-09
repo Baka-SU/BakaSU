@@ -194,14 +194,13 @@ internal fun WearOnlineTemplatePage(
     menuOpen: Boolean,
     menuActive: Boolean,
     onClosePanel: () -> Unit,
+    onSearch: () -> Unit = {},
+    searchResults: Boolean = false,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val failure = state.loadFailure
-    var retryLoading by remember(viewModel) { mutableStateOf(false) }
-    LaunchedEffect(state.loading) {
-        if (!state.loading) retryLoading = false
-    }
-    val loading = state.isLoading || (retryLoading && state.loading)
+    val loading = state.isLoading
+    val templates = if (searchResults) state.searchResults else state.templates
     val failed = !state.loading && failure != null
     WearOperationsHost(
         menuKey = WearOperationsPage.OnlineTemplates,
@@ -212,7 +211,7 @@ internal fun WearOnlineTemplatePage(
                 page = WearOperationsPage.OnlineTemplates,
                 onBack = onClosePanel,
                 onOpen = {},
-                onSearch = {},
+                onSearch = onSearch,
                 onInstall = {},
                 rootAvailable = false,
                 fullFeatured = false,
@@ -233,8 +232,7 @@ internal fun WearOnlineTemplatePage(
             panelLabel = stringResource(R.string.wear_operations),
             onConfirm = if (failed) {
                 {
-                    retryLoading = true
-                    viewModel.dispatch(OnlineTemplateUiAction.Load)
+                    viewModel.dispatch(OnlineTemplateUiAction.Retry)
                 }
             } else {
                 null
@@ -255,10 +253,10 @@ internal fun WearOnlineTemplatePage(
                         ),
                     )
                 }
-            } else if (state.hasLoaded && !state.loading && state.templates.isEmpty()) {
-                item { WearEmptyState(spec, Icons.Rounded.Cloud, stringResource(R.string.wear_template_online_empty)) }
+            } else if (state.hasLoaded && !state.loading && templates.isEmpty()) {
+                item { WearEmptyState(spec, Icons.Rounded.Cloud, stringResource(if (searchResults) R.string.wear_template_no_matches else R.string.wear_template_online_empty)) }
             }
-            LazySegmentedColumn(if (failed) emptyList() else state.templates, { it.id }) { template ->
+            LazySegmentedColumn(if (failed) emptyList() else templates, { it.id }) { template ->
                 WearSettingsJumpPageWidget(
                     spec,
                     template.name.ifBlank { template.id },
@@ -293,7 +291,7 @@ internal fun WearOnlineTemplateFeedback(viewModel: OnlineTemplateViewModel) {
 @Composable
 internal fun WearOnlineTemplateDetail(viewModel: OnlineTemplateViewModel, id: String, onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    WearOnlineTemplateDetail(state, id, onBack, { viewModel.dispatch(OnlineTemplateUiAction.Add(it)) }, { viewModel.dispatch(OnlineTemplateUiAction.Load) })
+    WearOnlineTemplateDetail(state, id, onBack, { viewModel.dispatch(OnlineTemplateUiAction.Add(it)) }, { viewModel.dispatch(OnlineTemplateUiAction.Retry) })
 }
 
 @Composable

@@ -59,8 +59,10 @@ class WearOnlineTemplateNavigationTest {
     fun failuresAndRetriesStayInThePageAndHideStaleTemplates() {
         val application = compose.activity.application as Application
         val mode = AtomicInteger(1)
+        val requests = AtomicInteger()
         val releaseRetry = CountDownLatch(1)
         val client = OkHttpClient.Builder().addInterceptor { chain ->
+            requests.incrementAndGet()
             val responseMode = mode.get()
             if (responseMode == 3) releaseRetry.await(15, TimeUnit.SECONDS)
             val body = when {
@@ -94,7 +96,10 @@ class WearOnlineTemplateNavigationTest {
         }
         fun retry() {
             compose.onNode(hasScrollToIndexAction()).performTouchInput { swipeUp() }
+            compose.waitForIdle()
+            val before = requests.get()
             compose.onNodeWithText(retry).assertIsDisplayed().performClick()
+            compose.waitUntil(5_000) { requests.get() > before }
         }
         assertFailure()
         mode.set(2)

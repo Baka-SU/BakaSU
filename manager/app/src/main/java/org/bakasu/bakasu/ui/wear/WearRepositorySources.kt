@@ -31,6 +31,7 @@ import org.bakasu.bakasu.domain.model.RepositoryFailure
 import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
@@ -54,14 +55,15 @@ private fun wearRepositoryError(failure: RepositoryFailure?): String? {
 
 /** The same source repository and validation as the phone, presented with Wear settings rows. */
 @Composable
-internal fun WearRepositorySourcesPage(onBack: () -> Unit, onAdd: () -> Unit, onSource: (String) -> Unit) {
+internal fun WearRepositorySourcesPage(onBack: () -> Unit, onOpenPanel: () -> Unit, query: String = "", onSource: (String) -> Unit) {
     val viewModel = koinViewModel<RepositorySourcesViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     WearErrorDialog(wearRepositoryError(state.error), viewModel::clearError)
-    WearList(onBack = onBack, isBusy = state.busy) { spec ->
+    val sources = state.sources.filter { it.displayName.contains(query.trim(), true) || it.url.contains(query.trim(), true) }
+    WearList(onBack = onBack, isBusy = state.busy, onOpenPanel = onOpenPanel, hasOperationsPanel = true, panelLabel = stringResource(R.string.wear_operations)) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.repo_manage)) }
-        item { WearActionButton(spec, Icons.Rounded.Add, stringResource(R.string.repo_add_repository), onAdd, enabled = !state.busy) }
-        LazySegmentedColumn(state.sources, { it.url }) { source ->
+        if (sources.isEmpty()) item { WearEmptyState(spec, Icons.Rounded.Cloud, stringResource(R.string.search_no_any_match)) }
+        LazySegmentedColumn(sources, { it.url }) { source ->
             WearSettingsJumpPageWidget(
                 spec,
                 source.displayName,

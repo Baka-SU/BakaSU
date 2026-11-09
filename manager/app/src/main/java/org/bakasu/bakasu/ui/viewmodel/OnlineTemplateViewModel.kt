@@ -29,13 +29,19 @@ data class OnlineTemplateUiState(
     /** IDs of the local templates, which App Profile can select. */
     val addedIds: Set<String> = emptySet(),
     val adding: Boolean = false,
+    val manualRefresh: Boolean = false,
+    val search: String = "",
 ) {
-    val isLoading: Boolean get() = loading && !hasLoaded
-    val isRefreshing: Boolean get() = loading && hasLoaded
+    val isLoading: Boolean get() = loading && !manualRefresh
+    val isRefreshing: Boolean get() = loading && manualRefresh
+    val searchResults: List<ProfileTemplate>
+        get() = templates.filter { it.name.contains(search.trim(), true) || it.id.contains(search.trim(), true) || it.description.contains(search.trim(), true) }
 }
 
 sealed interface OnlineTemplateUiAction {
     data object Load : OnlineTemplateUiAction
+    data object Retry : OnlineTemplateUiAction
+    data class Search(val query: String) : OnlineTemplateUiAction
     data class Add(val template: ProfileTemplate) : OnlineTemplateUiAction
 }
 
@@ -71,14 +77,16 @@ class OnlineTemplateViewModel(
 
     fun dispatch(action: OnlineTemplateUiAction) {
         when (action) {
-            OnlineTemplateUiAction.Load -> load()
+            OnlineTemplateUiAction.Load -> load(manual = true)
+            OnlineTemplateUiAction.Retry -> load()
+            is OnlineTemplateUiAction.Search -> online.update { it.copy(search = action.query) }
             is OnlineTemplateUiAction.Add -> add(action.template)
         }
     }
 
-    private fun load() {
+    private fun load(manual: Boolean = false) {
         if (loadJob?.isActive == true) return
-        online.update { it.copy(loading = true, loadFailure = null) }
+        online.update { it.copy(loading = true, loadFailure = null, manualRefresh = manual) }
         loadJob = viewModelScope.launch {
             try {
                 fetchOnlineTemplates().fold(

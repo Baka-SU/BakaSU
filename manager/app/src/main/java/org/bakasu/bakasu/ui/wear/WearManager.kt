@@ -86,6 +86,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
+import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiAction
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiEvent
@@ -300,7 +301,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val dynamicManagerCleared = stringResource(R.string.dynamic_manager_disabled_success)
     LaunchedEffect(dynamicManagerActive, dynamicManagerViewModel) {
         if (dynamicManagerActive) {
-            dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Refresh)
+            dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Load)
             dynamicManagerViewModel.events.collect { event ->
                 if (event is DynamicManagerUiEvent.OperationCompleted) {
                     dynamicManagerResult = when {
@@ -520,10 +521,22 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     WearDownloadsPage(::back, installer::confirm)
                                 }
                                 entry<WearRoute.RepositorySources> {
-                                    WearRepositorySourcesPage(::back, { open(WearRoute.AddRepository) }) { open(WearRoute.RepositorySource(it)) }
+                                    WearRepositorySourcesPage(::back, { open(WearRoute.Operations(WearOperationsPage.RepositorySources)) }) { open(WearRoute.RepositorySource(it)) }
                                 }
                                 entry<WearRoute.AddRepository> {
                                     WearAddRepositoryPage(::back)
+                                }
+                                entry<WearRoute.RepositorySourceSearch> {
+                                    val query = navigator.backStack.filterIsInstance<WearRoute.RepositorySourceSearchResults>().lastOrNull()?.query.orEmpty()
+                                    WearSearchPage(stringResource(R.string.wear_search_repositories), "repository-sources", query, ::back) { input ->
+                                        back()
+                                        if (navigator.top is WearRoute.Operations) back()
+                                        if (navigator.top is WearRoute.RepositorySourceSearchResults) back()
+                                        if (input.isNotBlank()) open(WearRoute.RepositorySourceSearchResults(input.trim()))
+                                    }
+                                }
+                                entry<WearRoute.RepositorySourceSearchResults> { route ->
+                                    WearRepositorySourcesPage(::back, { open(WearRoute.Operations(WearOperationsPage.RepositorySources)) }, route.query) { open(WearRoute.RepositorySource(it)) }
                                 }
                                 entry<WearRoute.RepositorySource> { route ->
                                     val catalog by moduleRepoViewModel.state.collectAsStateWithLifecycle()
@@ -789,6 +802,35 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         menuOpen = menu != null,
                                         menuActive = menu != null && navigator.top == menu,
                                         onClosePanel = { if (menu != null && navigator.top == menu) back() },
+                                        onSearch = { open(WearRoute.OnlineTemplateSearch) },
+                                    )
+                                }
+                                entry<WearRoute.OnlineTemplateSearch> {
+                                    val viewModel = onlineTemplateViewModel(viewModelStores)
+                                    val state by viewModel.state.collectAsStateWithLifecycle()
+                                    WearSearchPage(stringResource(R.string.wear_template_search), "online-templates", state.search, ::back) { query ->
+                                        back()
+                                        if (navigator.top is WearRoute.Operations) back()
+                                        viewModel.dispatch(OnlineTemplateUiAction.Search(query.trim()))
+                                        if (query.isBlank()) {
+                                            if (navigator.top == WearRoute.OnlineTemplateSearchResults) back()
+                                        } else if (navigator.top != WearRoute.OnlineTemplateSearchResults) {
+                                            open(WearRoute.OnlineTemplateSearchResults)
+                                        }
+                                    }
+                                }
+                                entry<WearRoute.OnlineTemplateSearchResults> {
+                                    val menu = navigator.operationsFor(WearRoute.OnlineTemplateSearchResults)
+                                    WearOnlineTemplatePage(
+                                        viewModel = onlineTemplateViewModel(viewModelStores),
+                                        onOpenTemplate = { open(WearRoute.OnlineTemplateDetail(it)) },
+                                        onBack = ::back,
+                                        onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.OnlineTemplates)) },
+                                        menuOpen = menu != null,
+                                        menuActive = menu != null && navigator.top == menu,
+                                        onClosePanel = { if (menu != null && navigator.top == menu) back() },
+                                        onSearch = { open(WearRoute.OnlineTemplateSearch) },
+                                        searchResults = true,
                                     )
                                 }
                                 entry<WearRoute.OnlineTemplateDetail> { route ->
@@ -811,7 +853,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     }
                                 }
                                 entry<WearRoute.DynamicManagerApps>(metadata = DynamicManagerTransitions) {
-                                    WearDynamicManagerAppsPage(dynamicManager, ::back, { open(WearRoute.DynamicManagerSearch) }, { dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Refresh) }) {
+                                    WearDynamicManagerAppsPage(dynamicManager, ::back, { open(WearRoute.Operations(WearOperationsPage.DynamicManagerApps)) }, { dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Retry) }) {
                                         dynamicManagerViewModel.dispatch(DynamicManagerUiAction.SelectApp(it))
                                     }
                                 }
@@ -831,6 +873,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     WearSearchPage(stringResource(R.string.search_apps), "dynamic-manager", dynamicManager.search, ::back) {
                                         dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Search(it))
                                         back()
+                                        if (navigator.top == WearRoute.Operations(WearOperationsPage.DynamicManagerApps)) back()
                                     }
                                 }
                                 entry<WearRoute.AddUmount> { WearAddUmountPage(::back, umountViewModel) }
@@ -911,7 +954,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                             pageContent = page@{ key, content ->
                                 val route = key as WearRoute
                                 // The cloud entry owns its ViewModel and refresh menu, so opening a local menu never loads it.
-                                if (route == WearRoute.OnlineTemplates) {
+                                if (route == WearRoute.OnlineTemplates || route == WearRoute.OnlineTemplateSearchResults) {
                                     content()
                                     return@page
                                 }
@@ -929,6 +972,10 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     WearRoute.Umount, is WearRoute.UmountSearchResults -> WearOperationsPage.Umount
 
                                     WearRoute.ModuleRepo, WearRoute.ModuleRepoSearchResults -> WearOperationsPage.Repository
+
+                                    WearRoute.RepositorySources, is WearRoute.RepositorySourceSearchResults -> WearOperationsPage.RepositorySources
+
+                                    WearRoute.DynamicManagerApps -> WearOperationsPage.DynamicManagerApps
 
                                     WearRoute.Templates, WearRoute.TemplateSearchResults -> WearOperationsPage.Templates
 
@@ -950,12 +997,14 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                 onOpen = ::open,
                                                 onImportTemplates = importTemplates,
                                                 onExportTemplates = { templateViewModel.dispatch(TemplateUiAction.Export) },
-                                                onRefresh = if (operationsPage in listOf(WearOperationsPage.Home, WearOperationsPage.Templates)) {
+                                                onRefresh = if (operationsPage in listOf(WearOperationsPage.Home, WearOperationsPage.Templates, WearOperationsPage.RepositorySources)) {
                                                     null
                                                 } else {
                                                     {
                                                         when (operationsPage) {
-                                                            WearOperationsPage.Home, WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates -> Unit
+                                                            WearOperationsPage.Home, WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates, WearOperationsPage.RepositorySources -> Unit
+
+                                                            WearOperationsPage.DynamicManagerApps -> dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Refresh)
 
                                                             WearOperationsPage.SuperUser -> superUserViewModel.dispatch(SuperUserUiAction.Refresh)
 
@@ -978,7 +1027,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                     }
                                                 },
                                                 isRefreshing = when (operationsPage) {
-                                                    WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates -> false
+                                                    WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates, WearOperationsPage.RepositorySources -> false
+                                                    WearOperationsPage.DynamicManagerApps -> dynamicManager.isLoading || dynamicManager.isRefreshing || dynamicManager.isSubmitting
                                                     WearOperationsPage.TemplateChoice -> templateChoiceLoading.loading || templateChoiceLoading.refreshing
                                                     WearOperationsPage.Home -> home.isRefreshing
                                                     WearOperationsPage.SuperUser -> superuser.isRefreshing
@@ -1002,6 +1052,10 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                         }
 
                                                         WearOperationsPage.Templates -> open(WearRoute.TemplateSearch)
+
+                                                        WearOperationsPage.RepositorySources -> open(WearRoute.RepositorySourceSearch)
+
+                                                        WearOperationsPage.DynamicManagerApps -> open(WearRoute.DynamicManagerSearch)
 
                                                         WearOperationsPage.Repository -> open(WearRoute.ModuleRepoSearch)
 

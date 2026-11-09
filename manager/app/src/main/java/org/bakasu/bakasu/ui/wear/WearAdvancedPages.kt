@@ -53,6 +53,7 @@ import org.bakasu.bakasu.ui.viewmodel.UmountManagerScreenViewModel
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerUiAction
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerUiEvent
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerUiState
+import org.bakasu.bakasu.ui.viewmodel.managerSourceLabel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
@@ -189,7 +190,7 @@ internal fun WearDynamicManagerManualPage(
 internal fun WearDynamicManagerAppsPage(
     state: DynamicManagerUiState,
     onBack: () -> Unit,
-    onSearch: () -> Unit,
+    onOpenPanel: () -> Unit,
     onRetry: () -> Unit,
     onSelect: (DynamicManagerApp) -> Unit,
 ) {
@@ -204,14 +205,16 @@ internal fun WearDynamicManagerAppsPage(
     val needsRetry = state.loadFailed || state.apps.isEmpty()
     WearList(
         isLoading = state.isLoading || state.isSubmitting,
-        isRefreshing = state.isRefreshing,
+        isRefreshing = state.isRefreshing && !state.isLoading,
+        onOpenPanel = onOpenPanel,
+        hasOperationsPanel = true,
+        panelLabel = stringResource(R.string.wear_operations),
         onBack = onBack,
         onConfirm = onRetry.takeIf { needsRetry },
         confirmLabel = stringResource(R.string.network_retry),
         confirmEnabled = !state.isRefreshing,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.search_apps)) }
-        item { WearActionButton(spec, Icons.Rounded.Search, stringResource(R.string.search_apps), onSearch, largeIcon = true) }
         if (needsRetry) {
             item {
                 WearEmptyState(
@@ -236,17 +239,7 @@ internal fun WearDynamicManagerAppsPage(
             }
         }
         LazySegmentedColumn(if (state.loadFailed) emptyList() else state.apps, { it.packageName }) { app ->
-            val source = if (!app.isChangeable) {
-                stringResource(
-                    when (app.managerSignatureIndex) {
-                        254 -> R.string.dynamic_manager_source_debug
-                        253 -> R.string.dynamic_manager_source_toolkit
-                        else -> R.string.dynamic_manager_source_kernel
-                    },
-                )
-            } else {
-                null
-            }
+            val source = app.managerSourceLabel()?.let { stringResource(it) }
             WearSettingsSwitchWidget(
                 spec,
                 label = app.label,

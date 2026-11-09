@@ -40,7 +40,7 @@ class WearDynamicManagerAppsTest {
         )) {
             compose.runOnIdle { state.value = state.value.copy(search = query, loadFailed = failed) }
             val text = compose.activity.getString(message)
-            compose.onNode(hasScrollToIndexAction()).performScrollToIndex(2)
+            compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
             compose.onNodeWithText(text).assertIsDisplayed()
             compose.onNodeWithText(compose.activity.getString(R.string.network_retry)).assertIsDisplayed().performClick()
             compose.runOnIdle { assertEquals(query, state.value.search) }

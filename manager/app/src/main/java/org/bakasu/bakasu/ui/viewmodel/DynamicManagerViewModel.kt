@@ -35,6 +35,8 @@ data class DynamicManagerUiState(
 )
 
 sealed interface DynamicManagerUiAction {
+    data object Load : DynamicManagerUiAction
+    data object Retry : DynamicManagerUiAction
     data object Refresh : DynamicManagerUiAction
     data class Search(val query: String) : DynamicManagerUiAction
     data class SelectApp(val app: DynamicManagerApp) : DynamicManagerUiAction
@@ -61,11 +63,12 @@ class DynamicManagerViewModel(
     private var submitJob: Job? = null
     private var refreshJob: Job? = null
     private val loadFailed = MutableStateFlow(false)
+    private val pageLoading = MutableStateFlow(false)
     private val search = MutableStateFlow("")
     private val mutableEvents = MutableSharedFlow<DynamicManagerUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<DynamicManagerUiEvent> = mutableEvents.asSharedFlow()
 
-    val state: StateFlow<DynamicManagerUiState> = combine(observeState(), search, loadFailed) { source, query, failed ->
+    val state: StateFlow<DynamicManagerUiState> = combine(observeState(), search, loadFailed, pageLoading) { source, query, failed, loading ->
         val normalized = query.trim()
         DynamicManagerUiState(
             loadFailed = failed,
@@ -79,8 +82,8 @@ class DynamicManagerViewModel(
                 }
             },
             search = query,
-            isLoading = source.isLoading,
-            isRefreshing = source.isRefreshing,
+            isLoading = source.isLoading || loading,
+            isRefreshing = source.isRefreshing && !loading,
             isSubmitting = source.isSubmitting,
         )
     }.stateIn(
@@ -92,8 +95,15 @@ class DynamicManagerViewModel(
 
     fun dispatch(action: DynamicManagerUiAction) {
         when (action) {
-            DynamicManagerUiAction.Refresh -> if (refreshJob?.isActive != true) {
-                refreshJob = viewModelScope.launch { refresh() }
+            DynamicManagerUiAction.Load, DynamicManagerUiAction.Retry, DynamicManagerUiAction.Refresh -> if (refreshJob?.isActive != true) {
+                pageLoading.value = action != DynamicManagerUiAction.Refresh
+                refreshJob = viewModelScope.launch {
+                    try {
+                        refresh()
+                    } finally {
+                        pageLoading.value = false
+                    }
+                }
             }
 
             is DynamicManagerUiAction.Search -> search.value = action.query

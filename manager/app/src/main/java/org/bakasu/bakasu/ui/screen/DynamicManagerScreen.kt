@@ -72,6 +72,7 @@ import org.bakasu.bakasu.ui.viewmodel.DynamicManagerOperation
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerUiAction
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerUiEvent
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerViewModel
+import org.bakasu.bakasu.ui.viewmodel.managerSourceLabel
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -345,21 +346,9 @@ private fun DynamicManagerAppItem(
             onClick()
         },
         title = app.label,
-        description = if (!app.isChangeable) {
-            stringResource(
-                R.string.dynamic_manager_fixed_manager_summary,
-                app.packageName,
-                if ((app.managerSignatureIndex ?: 0) == 254) {
-                    "Debug"
-                } else if ((app.managerSignatureIndex ?: 0) == 253) {
-                    "KernelSU Toolkit"
-                } else {
-                    "Kernel"
-                },
-            )
-        } else {
-            app.packageName
-        },
+        description = app.managerSourceLabel()?.let {
+            stringResource(R.string.dynamic_manager_fixed_manager_summary, app.packageName, stringResource(it))
+        } ?: app.packageName,
         leadingContent = {
             PackageIcon(
                 packageName = app.packageName,

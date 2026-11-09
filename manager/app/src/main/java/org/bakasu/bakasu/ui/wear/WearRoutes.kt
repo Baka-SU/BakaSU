@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 enum class WearSettingsCategory { General, Security, Advanced, Display }
 
 @Serializable
-enum class WearOperationsPage { Home, SuperUser, Modules, Logs, Repository, Umount, Templates, OnlineTemplates, TemplateChoice }
+enum class WearOperationsPage { Home, SuperUser, Modules, Logs, Repository, RepositorySources, DynamicManagerApps, Umount, Templates, OnlineTemplates, TemplateChoice }
 
 /** The settings that are chosen from a single list of options. */
 @Serializable
@@ -68,6 +68,14 @@ sealed interface WearRoute : NavKey {
 
     @Serializable
     data object RepositorySources : WearRoute, NeedsRoot
+
+    @Serializable
+    data object RepositorySourceSearch : WearRoute, NeedsRoot
+
+    @Serializable
+    data class RepositorySourceSearchResults(val query: String) :
+        WearRoute,
+        NeedsRoot
 
     @Serializable
     data object AddRepository : WearRoute, NeedsRoot
@@ -211,6 +219,12 @@ sealed interface WearRoute : NavKey {
 
     @Serializable
     data object OnlineTemplates : WearRoute, NeedsRoot
+
+    @Serializable
+    data object OnlineTemplateSearch : WearRoute, NeedsRoot
+
+    @Serializable
+    data object OnlineTemplateSearchResults : WearRoute, NeedsRoot
 
     @Serializable
     data class OnlineTemplateDetail(val id: String) :
