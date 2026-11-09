@@ -91,7 +91,14 @@ class WearTemplateChoiceLoadingTest {
             indicator.assertIsDisplayed()
             compose.runOnIdle { pending.complete(Unit) }
             indicator.assertDoesNotExist()
+            compose.mainClock.autoAdvance = false
             compose.runOnIdle { stack.removeAt(stack.lastIndex) }
+            repeat(20) {
+                compose.mainClock.advanceTimeBy(16)
+                indicator.assertDoesNotExist()
+                compose.runOnIdle { assertEquals(visit * 2 + 2, requests) }
+            }
+            compose.mainClock.autoAdvance = true
         }
     }
 }

@@ -43,7 +43,13 @@ internal class WearTemplateChoiceLoading(private val scope: CoroutineScope, priv
 internal fun rememberWearTemplateChoiceLoading(route: WearRoute.AppProfileTemplateChoice?, fetch: suspend () -> Unit): WearTemplateChoiceLoading {
     val scope = rememberCoroutineScope()
     val currentFetch by rememberUpdatedState(fetch)
-    val state = remember(route) { WearTemplateChoiceLoading(scope) { currentFetch() } }
+    var lastRoute by remember { mutableStateOf<WearRoute.AppProfileTemplateChoice?>(null) }
+    var state by remember { mutableStateOf(WearTemplateChoiceLoading(scope) { currentFetch() }) }
+    if (route != lastRoute) {
+        lastRoute = route
+        // Removing the route leaves its last state available throughout the outgoing animation.
+        if (route != null) state = WearTemplateChoiceLoading(scope) { currentFetch() }
+    }
     LaunchedEffect(route) { if (route != null) state.enter() }
     return state
 }
