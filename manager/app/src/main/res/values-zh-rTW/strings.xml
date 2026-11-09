@@ -532,4 +532,11 @@
     <string name="enable_adb_summary">強制開啟 USB 偵錯並停用 adb 驗證，非必要請勿啟用</string>
     <string name="install_force_backup">備份為原廠映像</string>
     <string name="install_force_backup_summary">請確保你選擇的 boot 映像是原廠映像</string>
+    <string name="script_run">執行</string>
+    <string name="sort_name">名稱</string>
+    <string name="repo_save_name">儲存</string>
+    <string name="repo_download">下載</string>
+    <string name="repo_support">支援</string>
+    <string name="repo_homepage">首頁</string>
+    <string name="module_flash_complete">模組刷寫完成</string>
 </resources>
