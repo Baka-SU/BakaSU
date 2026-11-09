@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -91,6 +92,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.formatFileSize
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearBadge
+import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
@@ -184,7 +186,7 @@ internal fun WearModuleRepoPage(
                 spec,
                 module.moduleName,
                 { onOpen(module) },
-                icon = Icons.Rounded.Extension,
+                iconContent = { WearCatalogModuleIcon(module) },
                 description = module.summary.ifBlank { module.moduleId },
                 titleBadge = if (module.metamodule) stringResource(R.string.module_meta_label) else null,
             )
@@ -271,7 +273,7 @@ internal fun WearOnlineModulePage(
         )
         return
     }
-    WearList(isLoading = state.loading && module == null, isRefreshing = state.loading && module != null, onBack = onBack) { spec ->
+    WearList(isLoading = state.loading, onBack = onBack) { spec ->
         if (module == null) item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
         if (module != null) {
             // As in the design: the module icon, name and authors, then its main actions. As the
@@ -280,7 +282,7 @@ internal fun WearOnlineModulePage(
             item {
                 WearScaledItem(spec, Modifier.fillMaxWidth().minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)) {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        WearModuleIcon(52.dp)
+                        WearCatalogModuleIcon(module, 52.dp)
                         // The bold name leads; authors and version follow in smaller, neutral styles.
                         Text(
                             module.moduleName,
@@ -464,31 +466,16 @@ internal fun WearModuleDownloadPage(route: WearRoute.OnlineModuleDownload, onDow
         download,
         // Read through the state when the ring draws, not captured once.
         fraction = { downloadState.value.fraction ?: 1f.takeIf { downloadState.value.phase == ModuleDownloadPhase.VERIFYING } ?: 0f },
-    ) { viewModel.start(asset, DownloadModuleInfo(route.name, route.iconUrl, route.iconOrigin)) }
-}
-
-/** The default module icon on a rounded tonal tile, standing in for a module's own icon. */
-@Composable
-private fun WearModuleIcon(size: Dp) {
-    val glyph = size * 0.55f
-    Box(
-        Modifier.size(size).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.primaryContainer),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            Icons.Rounded.Extension,
-            contentDescription = null,
-            modifier = Modifier.size(glyph),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-    }
+        iconUrl = route.iconUrl,
+        iconOrigin = route.iconOrigin,
+    )
 }
 
 /**
  * Download identity stays fixed; progress and compact failure feedback share the remaining space.
  */
 @Composable
-internal fun WearModuleDownloadScreen(name: String, version: String, state: ModuleDownloadUiState, fraction: () -> Float, onRetry: () -> Unit) {
+internal fun WearModuleDownloadScreen(name: String, version: String, state: ModuleDownloadUiState, fraction: () -> Float, iconUrl: String? = null, iconOrigin: String? = null) {
     val failed = state.phase == ModuleDownloadPhase.FAILED || state.phase == ModuleDownloadPhase.VERIFY_FAILED
     val sizeKnown = state.totalBytes > 0L
     val reduceMotion = LocalReduceMotion.current
@@ -506,17 +493,20 @@ internal fun WearModuleDownloadScreen(name: String, version: String, state: Modu
         ScreenScaffold(contentPadding = PaddingValues(0.dp), timeText = {}, overscrollEffect = null) {
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 val density = LocalDensity.current
-                val showVersion = version.isNotBlank() && density.fontScale <= 1.1f
+                val statusHeight = with(density) { MaterialTheme.typography.bodyExtraSmall.lineHeight.toDp() * 2 }
                 Column(
-                    Modifier.fillMaxSize().padding(start = maxWidth * 0.14f, end = maxWidth * 0.14f, top = maxHeight * 0.04f, bottom = maxHeight * 0.065f),
+                    Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = maxWidth * 0.14f),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Box(Modifier.testTag("module-download-icon")) { WearModuleIcon(48.dp) }
+                    Box(Modifier.testTag("module-download-icon")) {
+                        WearCatalogModuleIcon(iconUrl, iconOrigin, if (density.fontScale > 1.1f) 40.dp else 48.dp)
+                    }
                     Text(name, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    if (showVersion) {
+                    if (version.isNotBlank()) {
                         Text(version, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().height(statusHeight), contentAlignment = Alignment.Center) {
                         if (failed) {
                             Text(
                                 moduleDownloadFailureText(state),
@@ -529,27 +519,23 @@ internal fun WearModuleDownloadScreen(name: String, version: String, state: Modu
                         } else {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    when {
-                                        state.phase == ModuleDownloadPhase.VERIFYING -> stringResource(R.string.wear_verifying_download)
-                                        state.fraction != null -> stringResource(R.string.wear_download_percent, ((state.fraction ?: 0f) * 100).toInt())
-                                        else -> stringResource(R.string.wear_downloading)
-                                    },
+                                    stringResource(if (state.phase == ModuleDownloadPhase.VERIFYING) R.string.wear_verifying_download else R.string.wear_downloading),
                                     style = MaterialTheme.typography.bodyExtraSmall,
                                     maxLines = 1,
                                 )
                                 Text(
-                                    if (sizeKnown) stringResource(R.string.wear_download_size, formatFileSize(state.downloadedBytes), formatFileSize(state.totalBytes)) else formatFileSize(state.downloadedBytes),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    if (state.fraction != null) {
+                                        stringResource(R.string.wear_download_percent, ((state.fraction ?: 0f) * 100).toInt())
+                                    } else if (sizeKnown) {
+                                        stringResource(R.string.wear_download_size, formatFileSize(state.downloadedBytes), formatFileSize(state.totalBytes))
+                                    } else {
+                                        formatFileSize(state.downloadedBytes)
+                                    },
+                                    style = MaterialTheme.typography.bodyExtraSmall,
+                                    color = MaterialTheme.colorScheme.primary,
                                     maxLines = 1,
                                 )
                             }
-                        }
-                    }
-                    // Reserve the same footer in every state so identity never jumps on failure.
-                    Box(Modifier.height(CompactButtonDefaults.Height), contentAlignment = Alignment.Center) {
-                        if (failed) {
-                            CompactButton(onClick = onRetry, icon = { Icon(Icons.Rounded.Refresh, null, Modifier.size(CompactButtonDefaults.ExtraSmallIconSize)) }, label = { Text(stringResource(R.string.network_retry)) })
                         }
                     }
                 }
@@ -558,7 +544,7 @@ internal fun WearModuleDownloadScreen(name: String, version: String, state: Modu
         val ringColors = ProgressIndicatorDefaults.colors(indicatorColor = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
         val ringStroke = CircularProgressIndicatorDefaults.largeStrokeWidth
         // Use the M3 custom-animation API: its animated wrapper retains the first progress lambda
-        // and adds its own animation, which would hide this attempt's failure/retry transition.
+        // and adds its own animation, which would hide this attempt's failure transition.
         Spacer(
             Modifier.fillMaxSize().padding(CircularProgressIndicatorDefaults.FullScreenPadding)
                 .testTag("module-download-ring").semantics {

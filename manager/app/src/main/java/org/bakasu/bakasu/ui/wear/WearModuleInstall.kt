@@ -83,7 +83,7 @@ class WearModuleInstaller internal constructor(
             asset.expected?.sha256.orEmpty(),
             release.name.ifBlank { release.tagName },
             verificationRequired = asset.verificationRequired,
-            iconUrl = module.iconUrl ?: module.registryMetadata?.iconUrl,
+            iconUrl = module.iconUrl?.takeIf { it.isNotBlank() } ?: module.registryMetadata?.iconUrl,
             iconOrigin = module.repositoryUrl.takeIf { module.registryMetadata != null },
         ),
     )

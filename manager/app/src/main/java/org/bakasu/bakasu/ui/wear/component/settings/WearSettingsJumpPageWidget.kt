@@ -1,10 +1,12 @@
 package org.bakasu.bakasu.ui.wear.component.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -41,6 +43,7 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
     descriptionMaxLines: Int = 1,
     isLoading: Boolean = false,
     titleBadge: String? = null,
+    iconContent: (@Composable BoxScope.() -> Unit)? = null,
 ) {
     val loadingDescription = stringResource(R.string.wear_loading)
     val button: @Composable () -> Unit = {
@@ -50,7 +53,7 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
             modifier = Modifier.fillMaxWidth(),
             transformation = if (transformed) SurfaceTransformation(spec) else null,
             contentPadding = if (largeIcon) ButtonDefaults.ButtonWithLargeIconContentPadding else ButtonDefaults.ContentPadding,
-            icon = icon?.let {
+            icon = iconContent ?: icon?.let {
                 {
                     val iconModifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)
                     if (isLoading) {
@@ -65,8 +68,8 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
             if (titleBadge == null) {
                 Text(title, maxLines = if (description == null) 3 else 2, overflow = TextOverflow.Ellipsis)
             } else {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+                    Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     WearBadge(titleBadge)
                 }
             }

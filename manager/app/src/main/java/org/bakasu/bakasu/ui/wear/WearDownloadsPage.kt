@@ -32,6 +32,7 @@ import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
 import org.bakasu.bakasu.ui.viewmodel.WearDownloadsEvent
 import org.bakasu.bakasu.ui.viewmodel.WearDownloadsViewModel
+import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -128,17 +129,5 @@ internal fun WearDownloadsPage(
 
 @Composable
 private fun DownloadModuleIcon(task: DownloadState) {
-    val url = task.module?.iconUrl
-    val origin = task.module?.iconOrigin
-    val loadIcon = koinInject<LoadModuleIconUseCase>()
-    val bitmap by produceState(initialValue = url?.let { loadIcon.cached(it, origin) }, url, origin) {
-        value = if (url.isNullOrBlank()) null else loadIcon.cached(url, origin) ?: loadIcon(url, origin)
-    }
-    val modifier = Modifier.size(ButtonDefaults.IconSize)
-    val loaded = bitmap
-    if (loaded == null) {
-        Icon(Icons.Rounded.Extension, contentDescription = null, modifier = modifier)
-    } else {
-        Image(loaded.asImageBitmap(), contentDescription = null, modifier = modifier.clip(MaterialTheme.shapes.small))
-    }
+    WearCatalogModuleIcon(task.module?.iconUrl, task.module?.iconOrigin, ButtonDefaults.IconSize)
 }

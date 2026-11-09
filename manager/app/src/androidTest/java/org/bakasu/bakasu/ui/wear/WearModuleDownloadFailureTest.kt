@@ -48,10 +48,9 @@ import org.junit.runners.Parameterized
 class WearModuleDownloadFailureTest(private val round: Boolean, private val fontScale: Float) {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val download = mutableStateOf(ModuleDownloadUiState(phase = ModuleDownloadPhase.DOWNLOADING, downloadedBytes = 25, totalBytes = 100))
-    private var retries = 0
 
     @Test
-    fun failureKeepsIdentityFillsRedRingAndRetriesWithoutLoading() {
+    fun failureKeepsIdentityFillsRedRingAndHasNoRetryButton() {
         show()
         compose.mainClock.autoAdvance = false
         compose.mainClock.advanceTimeBy(500)
@@ -86,13 +85,10 @@ class WearModuleDownloadFailureTest(private val round: Boolean, private val font
         compose.onNodeWithText(reason).assertIsDisplayed()
         val retry = compose.activity.getString(R.string.network_retry)
 
-        compose.onNodeWithText(retry).assertIsDisplayed().performClick()
-        compose.runOnIdle { assertEquals(1, retries) }
-        compose.onNodeWithText(reason).assertDoesNotExist()
+        compose.onNodeWithText(retry).assertDoesNotExist()
         compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).assertDoesNotExist()
-
         compose.onNodeWithTag("module-download-icon").assertIsDisplayed()
-        save("retry")
+        compose.onNodeWithText("v1").assertIsDisplayed()
     }
 
     private fun show() {
@@ -105,10 +101,7 @@ class WearModuleDownloadFailureTest(private val round: Boolean, private val font
                 MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(error = Color.Red)) {
                     Box(Modifier.requiredSize(192.dp).background(MaterialTheme.colorScheme.background).testTag("download-page")) {
                         AppScaffold(timeText = {}) {
-                            WearModuleDownloadScreen("A long module name", "v1", download.value, { download.value.fraction ?: 0f }) {
-                                retries++
-                                download.value = ModuleDownloadUiState(phase = ModuleDownloadPhase.DOWNLOADING)
-                            }
+                            WearModuleDownloadScreen("A long module name", "v1", download.value, { download.value.fraction ?: 0f })
                         }
                     }
                 }

@@ -73,7 +73,8 @@ class WearRepositoryEntryTest {
         assertTrue(badgeBounds.bottom <= summaryBounds.top)
         compose.runOnIdle { state = state.copy(modules = listOf(module.copy(moduleName = "Meta"))) }
         val shortName = compose.onNodeWithText("Meta", useUnmergedTree = true).getUnclippedBoundsInRoot()
-        assertEquals(shortName.top.value, badge.getUnclippedBoundsInRoot().top.value, 1f)
+        val inlineBadge = badge.getUnclippedBoundsInRoot()
+        assertEquals((shortName.top + shortName.bottom).value / 2, (inlineBadge.top + inlineBadge.bottom).value / 2, 1f)
         compose.runOnIdle { state = state.copy(modules = listOf(module.copy(metamodule = false))) }
         badge.assertDoesNotExist()
     }
