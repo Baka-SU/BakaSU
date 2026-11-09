@@ -9,6 +9,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
@@ -98,7 +99,7 @@ class WearWebViewTest(private val round: Boolean) {
                 clickTool(compose.activity.getString(R.string.wear_web_reset))
                 val dx = if (id.endsWith("l")) 1f else -1f
                 val dy = if (id.startsWith("t")) 1f else -1f
-                compose.onNodeWithTag("web-host").performTouchInput { swipe(center, center + Offset(width * 0.3f * dx, height * 0.3f * dy), 600) }
+                peekCorner(dx, dy)
             }
             clickPageButton(id)
         }
@@ -143,7 +144,7 @@ class WearWebViewTest(private val round: Boolean) {
                 openTools()
                 clickTool(compose.activity.getString(R.string.wear_web_reset))
                 val direction = if (id == "status") 1f else -1f
-                compose.onNodeWithTag("web-host").performTouchInput { swipe(center, center + Offset(width * 0.25f * direction, height * 0.25f), 600) }
+                peekCorner(direction, 1f)
             }
             clickPageButton(id)
         }
@@ -420,7 +421,7 @@ class WearWebViewTest(private val round: Boolean) {
     fun pannedAndScaledOverflowContentKeepsScrollingAndMenuDoesNotResetIt() {
         showOverflowPage()
         if (round) {
-            compose.onNodeWithTag("web-host").performTouchInput { swipe(center, center + Offset(width * 0.22f, height * 0.22f), 600) }
+            peekCorner(1f, 1f)
         }
         val pan = compose.runOnIdle { Offset(webView.translationX, webView.translationY) }
         compose.onNodeWithTag("web-host").performTouchInput {
@@ -450,6 +451,73 @@ class WearWebViewTest(private val round: Boolean) {
             assertEquals(0f, webView.translationX, 1f)
             assertEquals(0f, webView.translationY, 1f)
             assertEquals(1f, webView.scaleX, 0.001f)
+        }
+    }
+
+    @Test
+    fun cornersSnapAndReverseToDefaultWithoutFreeDragging() {
+        showPage("wear-webview-navigation.html")
+        listOf(1f to 1f, -1f to 1f, 1f to -1f, -1f to -1f).forEach { (dx, dy) ->
+            peekCorner(dx, dy)
+            val viewport = compose.runOnIdle { webView.parent as View }
+            val expectedX = if (round) viewport.width / 4f * dx else 0f
+            val expectedY = if (round) viewport.height / 4f * dy else 0f
+            compose.runOnIdle {
+                assertEquals(expectedX, webView.translationX, 1f)
+                assertEquals(expectedY, webView.translationY, 1f)
+            }
+            openTools()
+            closeTools()
+            compose.runOnIdle {
+                assertEquals(expectedX, webView.translationX, 1f)
+                assertEquals(expectedY, webView.translationY, 1f)
+            }
+            compose.onNodeWithTag("web-host").performTouchInput {
+                swipe(center, center - Offset(width * 0.3f * dx, height * 0.3f * dy), 600)
+            }
+            awaitPosition(0f, 0f)
+        }
+        // A diagonal starting in the middle, horizontal drag, and short corner pull stay on-page.
+        compose.onNodeWithTag("web-host").performTouchInput {
+            swipe(center, center + Offset(width * 0.25f, height * 0.25f), 500)
+            swipe(center, center + Offset(width * 0.3f, 0f), 500)
+            swipe(Offset(width * 0.18f, height * 0.18f), Offset(width * 0.24f, height * 0.24f), 500)
+        }
+        awaitPosition(0f, 0f)
+        control(R.string.wear_web_tools).assertDoesNotExist()
+    }
+
+    @Test
+    fun nestedDownwardAndDiagonalScrollingDoesNotOpenTools() {
+        showOverflowPage()
+        js("document.querySelector('main').scrollTop = 400")
+        awaitWebFrame()
+        compose.onNodeWithTag("web-host").performTouchInput { down(Offset(width * 0.4f, height * 0.3f)) }
+        awaitWebFrame()
+        compose.onNodeWithTag("web-host").performTouchInput {
+            moveTo(Offset(width * 0.4f, height * 0.7f), delayMillis = 500)
+            up()
+        }
+        control(R.string.wear_web_tools).assertDoesNotExist()
+        compose.waitUntil(5_000) { js("document.querySelector('main').scrollTop").toDouble() < 400 }
+        compose.onNodeWithTag("web-host").performTouchInput {
+            swipe(center, center - Offset(width * 0.22f, height * 0.22f), 500)
+        }
+        awaitPosition(0f, 0f)
+        control(R.string.wear_web_tools).assertDoesNotExist()
+    }
+
+    private fun peekCorner(dx: Float, dy: Float) {
+        compose.onNodeWithTag("web-host").performTouchInput {
+            swipe(center - Offset(width * 0.32f * dx, height * 0.32f * dy), center, 600)
+        }
+        val viewport = compose.runOnIdle { webView.parent as View }
+        awaitPosition(if (round) viewport.width / 4f * dx else 0f, if (round) viewport.height / 4f * dy else 0f)
+    }
+
+    private fun awaitPosition(x: Float, y: Float) {
+        compose.waitUntil(5_000) {
+            compose.runOnIdle { kotlin.math.abs(webView.translationX - x) < 1f && kotlin.math.abs(webView.translationY - y) < 1f }
         }
     }
 
@@ -483,6 +551,8 @@ class WearWebViewTest(private val round: Boolean) {
     @SuppressLint("SetJavaScriptEnabled")
     private fun showPage(asset: String = "wear-webview.html") {
         compose.runOnUiThread {
+            compose.activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            compose.activity.setTurnScreenOn(true)
             WindowCompat.setDecorFitsSystemWindows(compose.activity.window, false)
             WindowCompat.getInsetsController(compose.activity.window, compose.activity.window.decorView)
                 .hide(WindowInsetsCompat.Type.systemBars())
@@ -517,7 +587,8 @@ class WearWebViewTest(private val round: Boolean) {
         compose.runOnIdle { webView.loadDataWithBaseURL("https://mui.kernelsu.org/", html, "text/html", "UTF-8", null) }
         compose.waitUntil(15_000) { js("typeof clicks").contains("object") }
         awaitWebFrame()
-        compose.waitUntil(10_000) { compose.runOnIdle { webView.hasWindowFocus() && (asset != "wear-webview.html" || webView.canScrollVertically(1)) } }
+        compose.waitUntil(15_000) { compose.runOnIdle { webView.hasWindowFocus() } }
+        compose.waitUntil(10_000) { compose.runOnIdle { asset != "wear-webview.html" || webView.canScrollVertically(1) } }
     }
 
     private fun control(resource: Int) = compose.onNodeWithText(compose.activity.getString(resource))

@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear.component
 
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.SystemClock
@@ -49,7 +50,7 @@ import kotlin.math.hypot
 import org.bakasu.bakasu.R
 import org.json.JSONObject
 
-/** Uses the full display; diagonal drags bring clipped round-screen corners within reach. */
+/** Uses the full display; inward drags from the round edge reveal one fixed page corner. */
 @Composable
 internal fun WearWebView(webView: WebView, onBack: () -> Unit, modifier: Modifier = Modifier) {
     val round = LocalConfiguration.current.isScreenRound
@@ -206,11 +207,16 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
     private var lastX = 0f
     private var lastY = 0f
     private var panning = false
+    private var corner = WebCorner.Default
+    private var cornerTarget = WebCorner.Default
+    private var cornerCandidate: WebCorner? = null
+    private var cornerProgress = 0f
+    private var restoring: ValueAnimator? = null
+    private var hostCanceled = false
     private var pullingTools = false
     private var gestureDecided = false
     private var gesture = 0
     private var atTop: Boolean? = null
-    private var diagonalCandidate = false
     private var pull = 0f
     private var interactionEnabled = true
     private var haptic: (HapticFeedbackType) -> Unit = {}
@@ -219,6 +225,11 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
     private var onEnd: (Boolean) -> Unit = {}
     private var crown = 0f
     private var lastCrown = 0L
+    private val crownTimeout = Runnable {
+        crown = 0f
+        onPull(0f)
+        onEnd(false)
+    }
     private var rotaryTarget: Pair<Float, Float>? = null
     private val configuration = ViewConfiguration.get(context)
     private val touchSlop = configuration.scaledTouchSlop
@@ -249,6 +260,8 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
         if (interactionEnabled && !enabled) {
             gesture++
             crown = 0f
+            removeCallbacks(crownTimeout)
+            finishCorner(false)
         }
         interactionEnabled = enabled
         this.haptic = haptic
@@ -257,11 +270,17 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
         this.onEnd = onEnd
         if (pageScale != scale || round != isRound || resetPosition != reset) {
             if (resetPosition != reset) {
+                restoring?.cancel()
+                restoring = null
+                corner = WebCorner.Default
                 offsetX = 0f
                 offsetY = 0f
             }
             pageScale = scale
             round = isRound
+            if (!round) corner = WebCorner.Default
+            offsetX = corner.x * width / 4f
+            offsetY = corner.y * height / 4f
             resetPosition = reset
             rotaryTarget = null
             gesture++
@@ -283,6 +302,10 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         webView.layout(0, 0, webView.measuredWidth, webView.measuredHeight)
+        if (!panning && restoring == null) {
+            offsetX = corner.x * width / 4f
+            offsetY = corner.y * height / 4f
+        }
         positionPage()
     }
 
@@ -337,11 +360,13 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
     }
 
     fun rotate(pixels: Float) {
+        removeCallbacks(crownTimeout)
         val point = rotaryTarget ?: pagePoint(width / 2f, height / 2f)
         val now = SystemClock.uptimeMillis()
         if (pixels >= 0f || now - lastCrown > 600) crown = 0f
         lastCrown = now
         queryScroll(point) { top, _ ->
+            removeCallbacks(crownTimeout)
             if (top && pixels < 0f) {
                 if (crown == 0f) haptic(HapticFeedbackType.SegmentTick)
                 crown += -pixels
@@ -351,6 +376,7 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
                     onEnd(true)
                 } else {
                     onPull(crown / 3)
+                    postDelayed(crownTimeout, 600)
                 }
             } else {
                 crown = 0f
@@ -383,12 +409,22 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
                 downY = event.y
                 lastX = event.x
                 lastY = event.y
+                // A new finger starts from the last committed position, even when the native
+                // settle animation has not delivered its final frame yet.
+                restoring?.cancel()
+                restoring = null
+                offsetX = corner.x * width / 4f
+                offsetY = corner.y * height / 4f
+                positionPage()
                 panning = false
                 pullingTools = false
                 gestureDecided = false
-                diagonalCandidate = false
+                hostCanceled = false
+                cornerCandidate = if (round && restoring == null) cornerCandidate(event.x, event.y) else null
                 atTop = null
                 crown = 0f
+                removeCallbacks(crownTimeout)
+                onPull(0f)
                 val point = pagePoint(event.x, event.y)
                 queryScroll(point) { top, scrollable ->
                     if (!gestureDecided) atTop = top
@@ -409,6 +445,8 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
 
             MotionEvent.ACTION_POINTER_DOWN -> {
                 gestureDecided = true
+                hostCanceled = true
+                finishCorner(false)
                 if (pullingTools) {
                     pull = 0f
                     onEnd(false)
@@ -429,17 +467,12 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
         val dy = event.y - downY
         if (hypot(dx, dy) <= touchSlop) return
         val diagonal = abs(dx) > abs(dy) * 0.65f && abs(dy) > abs(dx) * 0.65f
-        if (round && diagonal) {
-            // Require both axes and two consistent movements, not a vertical swipe's first jitter.
-            if (!diagonalCandidate) {
-                diagonalCandidate = true
-                lastX = event.x
-                lastY = event.y
-                return
-            }
-            panning = abs(dx) > touchSlop * 2 && abs(dy) > touchSlop * 2 &&
-                (event.x - lastX) * dx > 0 && (event.y - lastY) * dy > 0
-            if (!panning) return
+        val candidate = cornerCandidate
+        if (diagonal && candidate != null && dx * (candidate.x - corner.x) > 0f && dy * (candidate.y - corner.y) > 0f) {
+            if (abs(dx) <= touchSlop * 2 || abs(dy) <= touchSlop * 2) return
+            cornerTarget = candidate
+            cornerProgress = 0f
+            panning = true
         } else {
             pullingTools = dy > 0f && abs(dx) < abs(dy) * 0.5f && atTop == true
             if (pullingTools) pull = onStart()
@@ -451,10 +484,13 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
     override fun onInterceptTouchEvent(event: MotionEvent): Boolean = panning || pullingTools
 
     private fun moveHost(event: MotionEvent) {
-        if (event.actionMasked == MotionEvent.ACTION_MOVE && event.pointerCount == 1) {
+        if (!hostCanceled && event.actionMasked == MotionEvent.ACTION_MOVE && event.pointerCount == 1) {
             if (panning) {
-                offsetX += event.x - lastX
-                offsetY += event.y - lastY
+                val targetX = (cornerTarget.x - corner.x) * width / 4f
+                val targetY = (cornerTarget.y - corner.y) * height / 4f
+                cornerProgress = minOf((event.x - downX) / targetX, (event.y - downY) / targetY).coerceIn(0f, 1f)
+                offsetX = corner.x * width / 4f + targetX * cornerProgress
+                offsetY = corner.y * height / 4f + targetY * cornerProgress
                 positionPage()
             } else if (pullingTools) {
                 val before = pull
@@ -469,9 +505,62 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (pullingTools && (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL)) {
-            onEnd(event.actionMasked == MotionEvent.ACTION_UP && pull >= pullThreshold)
+        if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            val commit = event.actionMasked == MotionEvent.ACTION_UP && !hostCanceled
+            if (pullingTools) onEnd(commit && pull >= pullThreshold)
+            finishCorner(commit && cornerProgress >= 0.5f)
         }
         return true
     }
+
+    private fun cornerCandidate(x: Float, y: Float): WebCorner? {
+        val nx = x / width - 0.5f
+        val ny = y / height - 0.5f
+        val atCornerEdge = abs(nx) in 0.2f..0.43f && abs(ny) in 0.2f..0.43f && hypot(nx, ny) <= 0.5f
+        if (corner == WebCorner.Default) {
+            return if (atCornerEdge) WebCorner.entries.firstOrNull { it.x * nx < 0f && it.y * ny < 0f } else null
+        }
+        val atCenter = abs(nx) <= 0.23f && abs(ny) <= 0.23f
+        val atOppositeEdge = atCornerEdge && nx * corner.x > 0f && ny * corner.y > 0f
+        return if (atCenter || atOppositeEdge) WebCorner.Default else null
+    }
+
+    /** A release always settles on one of five positions; another corner requires returning first. */
+    private fun finishCorner(commit: Boolean) {
+        if (!panning) return
+        panning = false
+        if (commit) corner = cornerTarget
+        rotaryTarget = null
+        val startX = offsetX
+        val startY = offsetY
+        restoring?.cancel()
+        restoring = null
+        if (startX == corner.x * width / 4f && startY == corner.y * height / 4f) return
+        restoring = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 160
+            addUpdateListener {
+                val fraction = it.animatedValue as Float
+                offsetX = startX + (corner.x * width / 4f - startX) * fraction
+                offsetY = startY + (corner.y * height / 4f - startY) * fraction
+                positionPage()
+                if (fraction == 1f) restoring = null
+            }
+            start()
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        removeCallbacks(crownTimeout)
+        restoring?.cancel()
+        restoring = null
+        super.onDetachedFromWindow()
+    }
+}
+
+private enum class WebCorner(val x: Int, val y: Int) {
+    Default(0, 0),
+    TopLeft(1, 1),
+    TopRight(-1, 1),
+    BottomLeft(1, -1),
+    BottomRight(-1, -1),
 }
