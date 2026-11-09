@@ -29,10 +29,15 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.InstalledApp
+import org.bakasu.bakasu.domain.model.InstalledAppGroup
+import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.SulogEntry
 import org.bakasu.bakasu.domain.model.SulogEventType
+import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
 import org.bakasu.bakasu.ui.viewmodel.SulogLoading
 import org.bakasu.bakasu.ui.viewmodel.SulogUiState
+import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.wear.component.LocalWearTimeOptions
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -47,13 +52,14 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 @RunWith(Parameterized::class)
-class WearRefreshPageTest(private val round: Boolean, private val mode: String) {
+class WearRefreshPageTest(private val round: Boolean, private val mode: String, private val page: String) {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun logMenuRefreshKeepsTheIndicatorAtItsViewportAnchorDuringEveryScrollFrame() {
+    fun realPageMenuRefreshKeepsTheIndicatorAtItsViewportAnchorDuringEveryScrollFrame() {
         var loading by mutableStateOf(SulogLoading.NONE)
         var menu by mutableStateOf(false)
+        var timeMode by mutableStateOf(mode)
         val records = (1..100).map { SulogEntry("$it", SulogEventType.RootExecve, "seq=$it comm=Record-$it", null, mapOf("comm" to "Record-$it")) }
         val state = SulogUiState(isLoading = false, isSulogEnabled = true, sulogStatus = "supported", visibleEntries = records)
         compose.setContent {
@@ -62,7 +68,7 @@ class WearRefreshPageTest(private val round: Boolean, private val mode: String) 
                 screenWidthDp = 192
                 screenHeightDp = 192
             }
-            CompositionLocalProvider(LocalConfiguration provides config, LocalWearTimeOptions provides WearTimeOptions(mode)) {
+            CompositionLocalProvider(LocalConfiguration provides config, LocalWearTimeOptions provides WearTimeOptions(timeMode)) {
                 MaterialTheme {
                     Box(Modifier.requiredSize(192.dp).testTag("viewport")) {
                         WearTimeTitleLayout(R.string.sulog) {
@@ -72,7 +78,39 @@ class WearRefreshPageTest(private val round: Boolean, private val mode: String) 
                                         item { WearChip(spec, compose.activity.getString(R.string.wear_refresh), onClick = { loading = SulogLoading.REFRESH }) }
                                     }
                                 }) {
-                                    WearLogsPage(state, {}, {}, { loading = SulogLoading.REFRESH }, { menu = true }, {}, hasOperationsPanel = true, loading = loading)
+                                    when (page) {
+                                        "superuser" -> WearSuperUserPage(
+                                            SuperUserUiState(
+                                                appGroupList = (1..30).map { i ->
+                                                    val app = InstalledApp("test.$i", "App $i", 10000 + i)
+                                                    InstalledAppGroup(app.uid, app.packageName, listOf(app))
+                                                },
+                                                isRefreshing = loading == SulogLoading.REFRESH,
+                                            ),
+                                            null,
+                                            {},
+                                            { _, _ -> },
+                                            {},
+                                            { menu = true },
+                                            hasOperationsPanel = true,
+                                        )
+
+                                        "modules" -> WearModulesPage(
+                                            ModuleUiState(
+                                                moduleList = (1..30).map { i ->
+                                                    InstalledModule("$i", "Module $i", "Author", "v1", 1, "Description", true, false, false, "", false, false, false, null, null, "$i", null)
+                                                },
+                                                isRefreshing = loading == SulogLoading.REFRESH,
+                                            ),
+                                            null,
+                                            {},
+                                            {},
+                                            { menu = true },
+                                            hasOperationsPanel = true,
+                                        )
+
+                                        else -> WearLogsPage(state, {}, {}, { loading = SulogLoading.REFRESH }, { menu = true }, {}, hasOperationsPanel = true, loading = loading)
+                                    }
                                 }
                             }
                         }
@@ -81,9 +119,21 @@ class WearRefreshPageTest(private val round: Boolean, private val mode: String) 
             }
         }
         compose.runOnIdle { menu = true }
+        compose.waitForIdle()
+        compose.mainClock.autoAdvance = false
         compose.onNodeWithText(compose.activity.getString(R.string.wear_refresh)).performClick()
+        compose.mainClock.advanceTimeByFrame()
         val indicator = compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading))
         val top = indicator.getUnclippedBoundsInRoot().top.value
+        repeat(24) {
+            compose.mainClock.advanceTimeBy(16)
+            assertEquals("Menu closing frame $it", top, indicator.getUnclippedBoundsInRoot().top.value, 1f)
+        }
+        compose.runOnIdle { timeMode = if (mode == "title") "time" else "title" }
+        repeat(8) {
+            compose.mainClock.advanceTimeBy(16)
+            assertEquals("Title change frame $it", top, indicator.getUnclippedBoundsInRoot().top.value, 1f)
+        }
         // Accessibility/instant scrolling may update the layout without isScrollInProgress=true.
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
         assertEquals("Refresh must not follow a newly measured title", top, indicator.getUnclippedBoundsInRoot().top.value, 1f)
@@ -117,7 +167,7 @@ class WearRefreshPageTest(private val round: Boolean, private val mode: String) 
 
     companion object {
         @JvmStatic
-        @Parameterized.Parameters(name = "round={0}, mode={1}")
-        fun configurations() = listOf(true, false).flatMap { round -> listOf("time", "title", "hidden").map { arrayOf<Any>(round, it) } }
+        @Parameterized.Parameters(name = "round={0}, mode={1}, page={2}")
+        fun configurations() = listOf(true, false).flatMap { round -> listOf("time", "title", "hidden").flatMap { mode -> listOf("superuser", "modules", "logs").map { arrayOf<Any>(round, mode, it) } } }
     }
 }

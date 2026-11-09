@@ -270,17 +270,13 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         checkTimeTitle()
         assertEquals(before.top.value, compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot().top.value, 1f)
         compose.runOnIdle { titleId = R.string.umount_path_manager }
-        checkTimeTitle()
+        assertEquals(before.top.value, compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot().top.value, 1f)
         compose.runOnIdle { titleId = R.string.module_repo }
-        checkTimeTitle()
-        for (newMode in listOf("time", "hidden")) {
+        for (newMode in listOf("time", "hidden", "title")) {
             compose.runOnIdle { mode = newMode }
-            val title = compose.onNodeWithText(compose.activity.getString(titleId)).assertIsDisplayed().getUnclippedBoundsInRoot()
             val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
-            assertTrue("The $newMode title must stay above refresh: title=$title indicator=$indicator", indicator.top >= title.bottom + 7.dp)
+            assertEquals("This request keeps its root anchor when the title mode changes", before.top.value, indicator.top.value, 1f)
         }
-        compose.runOnIdle { mode = "title" }
-        checkTimeTitle()
         compose.mainClock.autoAdvance = false
         val fixed = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot().top
         compose.runOnIdle { refreshing = false }
@@ -388,11 +384,14 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         compose.waitForIdle()
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { refreshing = true }
+        compose.mainClock.advanceTimeByFrame()
+        val requestAnchor = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot().top
         compose.mainClock.advanceTimeBy(400)
         assertRowsPainted("refresh")
         val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
         val row = compose.onNodeWithTag("painted-row").getUnclippedBoundsInRoot()
-        assertEquals("Closing the menu must not capture the shrunken page's title position", 8f, (row.top - indicator.bottom).value, 1f)
+        assertEquals("Closing the menu must preserve the request root anchor", requestAnchor.value, indicator.top.value, 1f)
+        assertTrue("Refresh space must keep the first row clear of the indicator", row.top >= indicator.bottom)
         compose.runOnIdle { refreshing = false }
         compose.mainClock.advanceTimeBy(80)
         assertRowsPainted("exit")

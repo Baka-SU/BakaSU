@@ -1,12 +1,14 @@
 package org.bakasu.bakasu.ui.wear.component
 
-import android.os.SystemClock
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -22,6 +24,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import kotlin.math.abs
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 
 internal val WearPullThreshold = 48.dp
@@ -79,39 +84,71 @@ internal fun Modifier.wearRefreshGesture(
     // pause of the crown resetting it.
     val crownTarget = threshold * 3
     val crown = remember { CrownPull() }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(enabled, listState, onClosePanel != null) {
+        crown.timeout?.cancel()
+        crown.accumulated = 0f
+        crown.committed = false
+        displacement.floatValue = 0f
+        pullProgress.floatValue = 0f
+        pullEnd()
+    }
+    DisposableEffect(crown) {
+        onDispose { crown.timeout?.cancel() }
+    }
     return this.onPreRotaryScrollEvent { event ->
+        // Once committed, let the reveal finish and hand focus to the destination. More crown
+        // events in the same burst must not catch and cancel that opening/closing animation.
+        if (crown.committed && active) return@onPreRotaryScrollEvent true
         // A panel closes past its end with the crown turned down; a page opens its panel past the
         // top with the crown turned up. Touch dismissal may instead use a downward pull at the top.
         val closing = closePanel != null
         val action = closePanel ?: panel
-        val now = SystemClock.uptimeMillis()
         val atBoundary = if (closing) !listState.canScrollForward else listState.isAtWearListStart(topTolerance)
         val delta = if (closing) event.verticalScrollPixels else -event.verticalScrollPixels
         val sign = if (closing && !closePanelOnPullDown) -1f else 1f
-        if (action == null || !active || !atBoundary || delta <= 0f || now - crown.lastEvent > 600) crown.accumulated = 0f
-        crown.lastEvent = now
+        crown.timeout?.cancel()
+        if (action == null || !active || !atBoundary || delta <= 0f) crown.accumulated = 0f
         if (action != null && active && atBoundary && delta > 0f) {
-            if (crown.accumulated == 0f) haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+            if (crown.accumulated == 0f) {
+                pullStart()
+                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+            }
             crown.accumulated += delta
             if (crown.accumulated >= crownTarget) {
+                crown.committed = true
                 crown.accumulated = 0f
                 displacement.floatValue = 0f
                 pullProgress.floatValue = 0f
                 haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                pullEnd()
                 action()
             } else {
                 pullProgress.floatValue = sign * crown.accumulated / crownTarget
                 displacement.floatValue = pullProgress.floatValue * threshold
+                crown.timeout = scope.launch {
+                    delay(600)
+                    crown.accumulated = 0f
+                    displacement.floatValue = 0f
+                    pullProgress.floatValue = 0f
+                    pullEnd()
+                }
             }
         } else {
             displacement.floatValue = 0f
             pullProgress.floatValue = 0f
+            pullEnd()
         }
-        // The list still receives the event; past its top it has nothing left to scroll.
-        false
+        // An owned boundary event must not also start a snap animation in the covered list.
+        action != null && active && atBoundary && delta > 0f
     }.pointerInput(listState, threshold, topTolerance) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            crown.timeout?.cancel()
+            crown.accumulated = 0f
+            crown.committed = false
+            displacement.floatValue = 0f
+            pullProgress.floatValue = 0f
             var pullDown = 0f
             var pullUp = 0f
             var crossed = false
@@ -210,8 +247,9 @@ internal fun Modifier.wearRefreshGesture(
     }
 }
 
-/** Crown rotation collected past the list top, and when it last arrived. */
+/** Crown rotation collected past a list boundary, released even if no further event arrives. */
 private class CrownPull {
     var accumulated = 0f
-    var lastEvent = 0L
+    var committed = false
+    var timeout: Job? = null
 }

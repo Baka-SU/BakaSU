@@ -152,7 +152,8 @@ fun WearList(
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val rotaryBehavior = if (snap) {
-        RotaryScrollableDefaults.snapBehavior(listState)
+        val behavior = RotaryScrollableDefaults.snapBehavior(listState)
+        remember(listState, density, configuration) { behavior }
     } else {
         val flingBehavior = ScrollableDefaults.flingBehavior()
         val behavior = RotaryScrollableDefaults.behavior(listState, flingBehavior)
@@ -162,6 +163,18 @@ fun WearList(
     }
     val headerBottom = remember(timeMode, configuration, density) { mutableStateOf<Float?>(null) }
     var viewportTop by remember { mutableFloatStateOf(0f) }
+    var viewportReady by remember { mutableStateOf(false) }
+    var refreshFallback by remember { mutableStateOf(0.dp) }
+    var refreshAnchor by remember(isRefreshing) {
+        mutableStateOf(
+            if (isRefreshing && viewportReady) {
+                (if (timeMode == "title") timeTitleBottom?.value else headerBottom.value)
+                    ?: (viewportTop + with(density) { refreshFallback.toPx() })
+            } else {
+                null
+            },
+        )
+    }
     // Round screens scale and fade items at the edges; square screens (including the screen shape
     // setting) keep items at full size, as nothing is cut off there.
     val transformationSpec = if (LocalConfiguration.current.isScreenRound) {
@@ -331,13 +344,14 @@ fun WearList(
             // Keep the final menu button inside the straight moving edge, including on round screens.
             bottom = maxOf(scaffoldPadding.calculateBottomPadding(), if (onClosePanel != null) 24.dp else 0.dp) + refreshOffset,
         )
+        SideEffect { refreshFallback = contentPadding.calculateTopPadding() }
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 WearLoadingIndicator(Modifier.semantics { contentDescription = loadingDescription })
             }
         } else {
             CompositionLocalProvider(LocalWearRefreshOffset provides refreshOffset, LocalWearRefreshHeaderBottom provides headerBottom) {
-                Box(Modifier.fillMaxSize().onGloballyPositioned { viewportTop = it.positionInRoot().y }) {
+                Box(Modifier.fillMaxSize()) {
                     Column(Modifier.fillMaxSize()) {
                         if (fixedHeader != null) {
                             Box(
@@ -392,31 +406,6 @@ fun WearList(
                             }
                         }
                     }
-                    if (isRefreshing) {
-                        val measuredBottom = if (timeMode == "title") timeTitleBottom?.value else headerBottom.value
-                        val measuredTop = with(density) {
-                            measuredBottom?.let {
-                                // The list title and viewport share the menu's page scale. Convert
-                                // their root-space distance back to the page's layout coordinates.
-                                // The scaffold's time title is outside that scaled page.
-                                val scale = if (timeMode == "title") 1f else pageScale
-                                ((it - viewportTop) / scale).toDp()
-                            }
-                        }?.coerceAtLeast(contentPadding.calculateTopPadding())
-                        var indicatorTop by remember(timeMode, configuration, density, timeTitleBottom, viewportHeight) {
-                            mutableStateOf<Dp?>(null)
-                        }
-                        // Capture the request's first layout; display changes create a new anchor.
-                        SideEffect {
-                            if (measuredTop != null && indicatorTop == null) indicatorTop = measuredTop
-                        }
-                        val top = indicatorTop ?: measuredTop ?: contentPadding.calculateTopPadding()
-                        WearLoadingIndicator(
-                            Modifier.align(Alignment.TopCenter).padding(top = top + WearRefreshSpacing)
-                                .semantics { contentDescription = loadingDescription },
-                            contained = true,
-                        )
-                    }
                 }
             }
         }
@@ -430,7 +419,12 @@ fun WearList(
             scaleY = pageScale
         }
     }
-    Box(Modifier.fillMaxSize().then(gestureModifier).onSizeChanged { viewportHeight = it.height.toFloat().coerceAtLeast(1f) }) {
+    Box(
+        Modifier.fillMaxSize().then(gestureModifier).onGloballyPositioned {
+            viewportTop = it.positionInRoot().y
+            viewportReady = true
+        }.onSizeChanged { viewportHeight = it.height.toFloat().coerceAtLeast(1f) },
+    ) {
         // The edge button and the room it takes stay hidden until loading ends.
         if (!isLoading && (onBack != null || onConfirm != null || backToTop)) {
             ScreenScaffold(
@@ -499,6 +493,21 @@ fun WearList(
                 timeText = timeText,
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
             ) { listContent(it) }
+        }
+        if (isRefreshing && !isLoading) {
+            val measuredBottom = if (timeMode == "title") timeTitleBottom?.value else headerBottom.value
+            val fallback = viewportTop + with(density) { refreshFallback.toPx() }
+            // The request owns a root-space anchor. Menu scaling, scrolling and title changes
+            // never move this unscaled sibling of the page's scaffold.
+            SideEffect {
+                if (refreshAnchor == null && viewportReady) refreshAnchor = (measuredBottom ?: fallback).coerceAtLeast(fallback)
+            }
+            val top = with(density) { ((refreshAnchor ?: measuredBottom ?: fallback) - viewportTop).toDp() }
+            WearLoadingIndicator(
+                Modifier.align(Alignment.TopCenter).offset(y = top + WearRefreshSpacing)
+                    .semantics { contentDescription = loadingDescription },
+                contained = true,
+            )
         }
     }
 }

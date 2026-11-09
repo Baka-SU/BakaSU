@@ -143,7 +143,7 @@ internal fun WearLogsPage(
                         CompactButton(
                             onClick = onEnable,
                             label = { Text(stringResource(R.string.sulog_enable_action)) },
-                            enabled = !state.isLoading && !state.isRefreshing && !state.isEnabling,
+                            enabled = !state.isLoading && !state.isEnabling,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error,
                                 contentColor = MaterialTheme.colorScheme.onError,

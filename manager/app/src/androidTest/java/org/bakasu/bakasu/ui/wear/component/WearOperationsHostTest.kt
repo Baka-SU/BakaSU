@@ -122,7 +122,7 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
     fun nearTopResidualDoesNotBlockTheNextPull() {
         showHost()
         // Reproduce the small residual offset left by the transforming list after returning.
-        compose.runOnIdle { pageState.dispatchRawDelta(compose.activity.resources.displayMetrics.density) }
+        compose.runOnIdle { pageState.dispatchRawDelta(2f * compose.activity.resources.displayMetrics.density) }
         compose.runOnIdle {
             assertTrue("The reproduction must exercise canScrollBackward=true", pageState.canScrollBackward)
         }
@@ -298,6 +298,27 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
         repeat(16) { rotateCrown(96f) }
         repeat(3) { compose.onNodeWithTag("filter").performTouchInput { swipeUp() } }
         compose.runOnIdle { assertEquals(0, backs) }
+    }
+
+    @Test
+    fun stoppingTheCrownReleasesBothOpeningAndClosingPreviews() {
+        showHost()
+        compose.mainClock.autoAdvance = false
+        compose.runOnUiThread { dispatchCrown(-48f) }
+        compose.mainClock.advanceTimeBy(32)
+        compose.mainClock.advanceTimeBy(800)
+        compose.runOnIdle { assertFalse(menuOpen) }
+        compose.onNodeWithTag("menu").assertDoesNotExist()
+        compose.mainClock.autoAdvance = true
+        openWithCrown()
+        menuList().performScrollToIndex(7)
+        compose.mainClock.autoAdvance = false
+        compose.runOnUiThread { dispatchCrown(48f) }
+        compose.mainClock.advanceTimeBy(32)
+        compose.mainClock.advanceTimeBy(800)
+        assertFullMenu()
+        compose.mainClock.autoAdvance = true
+        closeWithCrown()
     }
 
     private fun menuList() = compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(hasTestTag("menu")), useUnmergedTree = true)
