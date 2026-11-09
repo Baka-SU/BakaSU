@@ -124,7 +124,6 @@ import top.yukonga.miuix.kmp.blur.textureBlurEffect
 class ThemeConfig(
     private val defaultSeedColor: () -> Int,
 ) {
-    // 主题状态
     var customBackgroundUri by mutableStateOf<Uri?>(null)
     var backgroundDim by mutableFloatStateOf(0f)
     var forceDarkMode by mutableStateOf<Boolean?>(null)
@@ -135,7 +134,6 @@ class ThemeConfig(
     var dynamicColorSpec by mutableStateOf(ColorSpec.SpecVersion.SPEC_2021)
     var dynamicPaletteStyle by mutableStateOf(PaletteStyle.TonalSpot)
 
-    // 背景状态
     var backgroundImageLoaded by mutableStateOf(false)
     var isThemeChanging by mutableStateOf(false)
     var isHighContrastMode by mutableStateOf(false)
@@ -359,7 +357,6 @@ fun KernelSUTheme(
     val context = LocalContext.current
     val systemIsDark = isSystemInDarkTheme()
 
-    // 初始化主题
     ThemeInitializer(
         context = context,
         systemIsDark = systemIsDark,
@@ -370,7 +367,6 @@ fun KernelSUTheme(
         settings = settings,
     )
 
-    // 创建颜色方案
     val colorScheme = createColorScheme(
         resolvedDarkTheme,
         resolvedDynamicColor,
@@ -378,7 +374,6 @@ fun KernelSUTheme(
         backgroundRenderState,
     )
 
-    // 系统栏样式
     SystemBarController(resolvedDarkTheme)
 
     val systemDensity = LocalDensity.current
@@ -443,7 +438,6 @@ private fun ThemeInitializer(
     cardConfig: CardConfig,
     settings: AppSettingsRepository,
 ) {
-    // 处理系统主题变化
     LaunchedEffect(systemIsDark) {
         if (themeConfig.forceDarkMode == null) {
             cardConfig.apply {
@@ -454,7 +448,6 @@ private fun ThemeInitializer(
         }
     }
 
-    // 初始加载配置
     LaunchedEffect(Unit) {
         // Composition can start before application startup has finished preloading
         // DataStore. Read it here first so the persisted background URI is never
@@ -543,7 +536,6 @@ private fun BackgroundLayer(
         }
     }
 
-    // 默认背景
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -622,7 +614,6 @@ fun Modifier.blurEffect(
     var coordinates by remember {
         mutableStateOf<LayoutCoordinates?>(null)
     }
-    // 表面自身伸缩/位移时同样要让 backdrop 效果块重新录制，理由见 PanelLayoutBounds。
     val panelBounds = remember { PanelLayoutBounds() }
 
     return LocalBlurState.current?.let { backdrop ->
@@ -857,16 +848,6 @@ private fun Rect.mapToBitmapBounds(
     )
 }
 
-/**
- * 透明面板自身在窗口中的位置与尺寸。
- *
- * `onGloballyPositioned` 每次布局回调拿到的都是同一个 [LayoutCoordinates] 实例，把它存进
- * `mutableStateOf` 时按相等性比较不会产生变化通知，于是只依赖该坐标的绘制块不会因面板移动/
- * 伸缩而重新录制，模糊贴图会停留在动画开始前的采样位置上。
- *
- * 因此这里保存真正变化的几何边界，让读取它的绘制块在面板边界改变的那一帧失效并重新录制。
- * 只在绘制中读取、在布局回调中写入，不会反过来触发新的布局。
- */
 private class PanelLayoutBounds {
     var bounds: Rect? by mutableStateOf<Rect?>(null)
         private set
@@ -875,7 +856,6 @@ private class PanelLayoutBounds {
         val attached = coordinates?.takeIf { it.isAttached } ?: return
         if (attached.size.width <= 0 || attached.size.height <= 0) return
 
-        // 用四角换算出的窗口矩形而不是尺寸，缩放类变换（左上角不动）也能反映出来。
         val newBounds = attached.localBoundsInWindowNow() ?: return
         if (bounds != newBounds) bounds = newBounds
     }
@@ -896,8 +876,6 @@ fun Modifier.renderBackgroundBlur(
         mutableStateOf<LayoutCoordinates?>(null)
     }
 
-    // 面板自身的几何变化（展开/折叠、行增减导致的伸缩与位移）也要触发重绘，否则模糊贴图
-    // 会沿用动画开始时的采样坐标，表现为背景错位。
     val panelBounds = remember { PanelLayoutBounds() }
 
     val tintColor = (tintColor ?: MaterialTheme.colorScheme.surfaceBright).copy(
