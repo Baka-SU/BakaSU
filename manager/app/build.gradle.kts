@@ -8,7 +8,7 @@ plugins {
     alias(libs.plugins.lsplugin.apksign)
     alias(libs.plugins.aboutLibraries)
     id("kotlin-parcelize")
-    id("cc.star0.wear.lib.cnwearoverlay")
+    id("cc.star0.wear.lib.cnwearoverlay") version "1.2.2"
 }
 
 val androidCompileSdkVersion = rootProject.extra["androidCompileSdkVersion"] as Int

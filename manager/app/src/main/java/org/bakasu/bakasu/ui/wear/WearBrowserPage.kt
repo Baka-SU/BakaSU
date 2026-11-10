@@ -67,7 +67,7 @@ internal fun WearBrowserPage(url: String, onBack: () -> Unit, onOpened: () -> Un
         LaunchedEffect(url) { onBack() }
         return
     }
-    WearWebView(webView, onBack)
+    WearWebView(webView)
 }
 
 internal class WearBrowserClient(private val onOpened: () -> Unit, private val onUnavailable: () -> Unit, private val onRendererGone: () -> Unit) : WebViewClient() {

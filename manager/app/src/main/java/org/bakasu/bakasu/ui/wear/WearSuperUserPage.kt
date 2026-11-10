@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,8 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
@@ -24,7 +23,6 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.LocalTextStyle
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
@@ -85,7 +83,7 @@ internal fun WearSuperUserPage(
 
 /**
  * One app group, as in the design: its icon, the app name as the title (wrapping to three
- * balanced lines when long) and, below it, the phone's status labels: ROOT, UMOUNT, CUSTOM, DEFAULT
+ * a single scrolling line when long) and, below it, the phone's status labels: ROOT, UMOUNT, CUSTOM, DEFAULT
  * and MANAGER. A granted app takes the primary container, the others the neutral tonal surface. The
  * large app icon uses the large icon content padding, so it sits centered in the rounded container.
  */
@@ -151,8 +149,9 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
         ) {
             Text(
                 group.mainApp.label,
-                style = LocalTextStyle.current.merge(TextStyle(lineBreak = LineBreak.Heading)),
-                maxLines = 3,
+                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
+                softWrap = false,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }

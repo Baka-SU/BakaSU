@@ -60,6 +60,18 @@ class ModuleCatalogRepository(
     val sources: StateFlow<List<RepositorySource>> = mutableSources.asStateFlow()
     val failures: StateFlow<Map<String, RepositoryFailure>> = mutableFailures.asStateFlow()
 
+    /** An update icon must belong to both this module ID and its release source. */
+    suspend fun findUpdateSource(moduleId: String, updateJson: String, zipUrl: String): CatalogModule? {
+        val owner = registry.sourceForUpdate(updateJson)
+        val candidates = if (owner != null) {
+            val result = get(moduleId, owner)
+            listOfNotNull((result as? ModuleCatalogResult.Success)?.value)
+        } else {
+            modules.value
+        }
+        return selectModuleUpdateSource(candidates, moduleId, zipUrl)
+    }
+
     fun isCurrent(module: CatalogModule): Boolean {
         if (mutableSources.value.none { it.url == module.repositoryUrl } || module.repositoryUrl in mutableFailures.value) return false
         return if (module.registryMetadata != null) {
@@ -395,4 +407,13 @@ class ModuleCatalogRepository(
     } catch (e: Exception) {
         Result.failure(e)
     }
+}
+
+internal fun selectModuleUpdateSource(modules: List<CatalogModule>, moduleId: String, zipUrl: String): CatalogModule? {
+    val url = zipUrl.toHttpUrlOrNull() ?: return null
+    return modules.filter { module ->
+        module.moduleId == moduleId && (module.releases + listOfNotNull(module.latestAsset)).any { release ->
+            release.assets.any { it.downloadUrl.toHttpUrlOrNull() == url }
+        }
+    }.singleOrNull()
 }

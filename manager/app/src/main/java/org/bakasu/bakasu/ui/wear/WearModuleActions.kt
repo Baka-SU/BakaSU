@@ -13,16 +13,22 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.ModuleUpdateMetadata
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiAction
@@ -54,9 +60,22 @@ import org.koin.core.parameter.parametersOf
 internal fun WearModuleUpdatePage(
     module: InstalledModule?,
     onBack: () -> Unit,
-    onDownload: (InstalledModule, ModuleUpdateMetadata) -> Unit,
+    onDownload: (InstalledModule, ModuleUpdateMetadata, CatalogModule?) -> Unit,
     onChangelog: () -> Unit,
+    findSource: suspend (InstalledModule) -> CatalogModule? = { null },
 ) {
+    val scope = rememberCoroutineScope()
+    val active by rememberUpdatedState(LocalScreenIsActive.current)
+    val currentModule by rememberUpdatedState(module)
+    val currentDownload by rememberUpdatedState(onDownload)
+    val source = remember(module) { CompletableDeferred<CatalogModule?>() }
+    LaunchedEffect(module) {
+        try {
+            source.complete(module?.let { findSource(it) })
+        } finally {
+            source.cancel()
+        }
+    }
     val update = module?.moduleUpdate
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_update)) }
@@ -88,7 +107,12 @@ internal fun WearModuleUpdatePage(
                     spec,
                     Icons.Rounded.Download,
                     stringResource(R.string.wear_update_download),
-                    { onDownload(module, update) },
+                    {
+                        scope.launch {
+                            val artwork = source.await()
+                            if (active && currentModule == module) currentDownload(module, update, artwork)
+                        }
+                    },
                     enabled = !module.remove && update.zipUrl.isNotBlank(),
                     secondaryText = stringResource(R.string.wear_update_to, update.version),
                 )

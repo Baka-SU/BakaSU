@@ -1,8 +1,10 @@
 package org.bakasu.bakasu.ui.wear.component.settings
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -41,6 +43,7 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
     transformed: Boolean = true,
     largeIcon: Boolean = false,
     descriptionMaxLines: Int = 1,
+    marquee: Boolean = false,
     isLoading: Boolean = false,
     titleBadge: String? = null,
     iconContent: (@Composable BoxScope.() -> Unit)? = null,
@@ -63,10 +66,27 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
                     }
                 }
             },
-            secondaryLabel = description?.let { text -> { Text(text, maxLines = descriptionMaxLines, overflow = TextOverflow.Ellipsis) } },
+            secondaryLabel = description?.let { text -> { Text(text, modifier = if (marquee) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier, maxLines = if (marquee) 1 else descriptionMaxLines, softWrap = !marquee, overflow = TextOverflow.Ellipsis) } },
         ) {
             if (titleBadge == null) {
-                Text(title, maxLines = if (description == null) 3 else 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    title,
+                    modifier = if (marquee) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier,
+                    maxLines = if (marquee) {
+                        1
+                    } else if (description == null) {
+                        3
+                    } else {
+                        2
+                    },
+                    softWrap = !marquee,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else if (marquee) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, Modifier.weight(1f, fill = false).basicMarquee(iterations = Int.MAX_VALUE), maxLines = 1, softWrap = false)
+                    WearBadge(titleBadge)
+                }
             } else {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp), itemVerticalAlignment = Alignment.CenterVertically) {
                     Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis)

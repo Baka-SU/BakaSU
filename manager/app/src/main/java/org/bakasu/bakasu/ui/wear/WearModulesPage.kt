@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,8 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -26,7 +25,6 @@ import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.LocalContentColor
-import androidx.wear.compose.material3.LocalTextStyle
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
@@ -154,9 +152,12 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                 else -> ButtonDefaults.filledTonalButtonColors()
             },
             icon = { Icon(Icons.Rounded.Extension, contentDescription = null) },
-            secondaryLabel = if (pendingState != null || module.version.isNotBlank() || module.metamodule) {
+            secondaryLabel = if (module.description.isNotBlank() || pendingState != null || module.version.isNotBlank() || module.metamodule) {
                 {
                     Column {
+                        if (module.description.isNotBlank()) {
+                            Text(module.description, Modifier.basicMarquee(iterations = Int.MAX_VALUE), maxLines = 1, softWrap = false)
+                        }
                         if (module.remove && pendingState != null) {
                             Text(pendingState, color = LocalContentColor.current)
                         }
@@ -190,12 +191,12 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                 null
             },
         ) {
-            // Long names wrap with balanced lines rather than leaving one character on the last line.
             Text(
                 module.name,
-                style = LocalTextStyle.current.merge(TextStyle(lineBreak = LineBreak.Heading)),
+                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
+                softWrap = false,
                 textDecoration = if (module.remove) TextDecoration.LineThrough else TextDecoration.None,
-                maxLines = 3,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }

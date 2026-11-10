@@ -135,6 +135,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                         { onAction(SettingsUiAction.SetDynamicColor(it)) },
                         icon = Icons.Rounded.Palette,
                         secondaryLabel = stringResource(R.string.dynamic_color_summary),
+                        marquee = true,
                     )
                 }
                 SegmentedColumn(listOf(WearSelection.Palette, WearSelection.ColorSpec), { it.name }) { selection ->
@@ -144,6 +145,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                         { onOpen(WearRoute.Selection(selection)) },
                         icon = Icons.Rounded.Palette,
                         description = if (selection == WearSelection.Palette) paletteLabel(state.dynamicPaletteStyle) else colorSpecLabel(state.dynamicColorSpec),
+                        marquee = true,
                     )
                 }
                 if (android.os.Build.VERSION.SDK_INT >= 31) {
@@ -155,6 +157,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                                 config.isUseBackgroundSeedColor,
                                 backgrounds::saveUseBackgroundSeedColor,
                                 icon = Icons.Rounded.Image,
+                                marquee = true,
                             )
                         }
                     }
@@ -166,6 +169,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                             backgrounds::saveEnableHighContrastMode,
                             icon = Icons.Rounded.Contrast,
                             secondaryLabel = stringResource(R.string.settings_custom_enable_high_contrast_summary),
+                            marquee = true,
                         )
                     }
                 }
@@ -216,6 +220,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                                 config.isEnableBlur,
                                 backgrounds::saveEnableBlur,
                                 icon = Icons.Rounded.Image,
+                                marquee = true,
                             )
                         }
                     }
@@ -339,6 +344,7 @@ internal fun WearDpiPage(
                 { onOpen(WearRoute.Selection(if (label == R.string.wear_time_display) WearSelection.TimeDisplay else WearSelection.Language)) },
                 icon = if (label == R.string.wear_time_display) Icons.Rounded.Schedule else Icons.Rounded.Translate,
                 description = if (label == R.string.wear_time_display) timeDisplayLabel(preferences.timeDisplay) else state.currentAppLocale?.let { it.getDisplayName(it) } ?: stringResource(R.string.language_system_default),
+                marquee = true,
             )
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_display_screen_layout)) }
@@ -383,6 +389,7 @@ internal fun WearDpiPage(
                 { onOpen(WearRoute.Selection(WearSelection.ScreenShape)) },
                 icon = Icons.Rounded.AspectRatio,
                 description = screenShapeLabel(preferences.shape),
+                marquee = true,
             )
         }
         item {
@@ -393,6 +400,7 @@ internal fun WearDpiPage(
                 { onAction(SettingsUiAction.SetAlternateIcon(it)) },
                 icon = Icons.Rounded.Apps,
                 secondaryLabel = stringResource(R.string.icon_switch_summary),
+                marquee = true,
             )
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_display_interaction)) }
@@ -433,6 +441,7 @@ internal fun WearDpiPage(
                     R.string.simple_mode -> stringResource(R.string.simple_mode_summary)
                     else -> null
                 },
+                marquee = true,
             )
         }
     }

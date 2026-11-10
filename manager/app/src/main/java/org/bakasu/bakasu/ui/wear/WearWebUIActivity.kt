@@ -131,7 +131,7 @@ internal fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
                     else -> Box(Modifier.fillMaxSize()) {
                         // Keep the WebView attached while a prompt is open, including its history,
                         // file result launcher and lifecycle observer.
-                        WearModuleWebView(state, back)
+                        WearModuleWebView(state)
                         // Pages over the WebView take the opaque app backdrop so it does not show through.
                         if (!state.pageLoaded) {
                             WearBackground {
@@ -154,7 +154,7 @@ internal fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
 
 /** Keep module loading and its JS/file/lifecycle handlers on the shared full-window watch surface. */
 @Composable
-private fun WearModuleWebView(state: WebUIState, onBack: () -> Unit) {
+private fun WearModuleWebView(state: WebUIState) {
     val webView = state.webView ?: return
     DisposableEffect(webView) {
         val listener = View.OnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
@@ -166,7 +166,7 @@ private fun WearModuleWebView(state: WebUIState, onBack: () -> Unit) {
         webView.addOnLayoutChangeListener(listener)
         onDispose { webView.removeOnLayoutChangeListener(listener) }
     }
-    WearWebView(webView, onBack)
+    WearWebView(webView)
     HandleWearWebUIEvent(state)
     HandleWebViewLifecycle(state)
     HandleConfigurationChanges(state)

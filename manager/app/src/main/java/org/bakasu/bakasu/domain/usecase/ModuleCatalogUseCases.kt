@@ -32,6 +32,17 @@ class GetCatalogModuleUseCase(private val repository: ModuleCatalogRepository) {
     suspend operator fun invoke(moduleId: String, sourceUrl: String, forceDetail: Boolean = false) = repository.get(moduleId, sourceUrl, forceDetail)
 }
 
+class FindModuleUpdateSourceUseCase(private val repository: ModuleCatalogRepository) {
+    suspend operator fun invoke(moduleId: String, updateJson: String, zipUrl: String): CatalogModule? = try {
+        repository.findUpdateSource(moduleId, updateJson, zipUrl)
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: Exception) {
+        // Optional artwork never prevents a module update.
+        null
+    }
+}
+
 class IsCatalogModuleCurrentUseCase(private val repository: ModuleCatalogRepository) {
     operator fun invoke(module: CatalogModule): Boolean = repository.isCurrent(module)
 }

@@ -494,7 +494,7 @@ fun WearList(
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
             ) { listContent(it) }
         }
-        if (isRefreshing && !isLoading && showRefreshGap) {
+        if (isRefreshing && !isLoading) {
             val measuredBottom = if (timeMode == "title") timeTitleBottom?.value else headerBottom.value
             val fallback = viewportTop + with(density) { refreshFallback.toPx() }
             // The request owns a root-space anchor. Menu scaling, scrolling and title changes

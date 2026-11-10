@@ -89,6 +89,7 @@ import org.bakasu.bakasu.domain.usecase.ExtractModuleIdUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleNameUseCase
 import org.bakasu.bakasu.domain.usecase.FetchOnlineProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
+import org.bakasu.bakasu.domain.usecase.FindModuleUpdateSourceUseCase
 import org.bakasu.bakasu.domain.usecase.GenerateBugreportUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppProfileUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppSepolicyUseCase
@@ -400,6 +401,7 @@ val useCaseModule = module {
     factoryOf(::ObserveModuleCatalogRefreshingUseCase)
     factoryOf(::RefreshModuleCatalogUseCase)
     factoryOf(::GetCatalogModuleUseCase)
+    factoryOf(::FindModuleUpdateSourceUseCase)
     factoryOf(::IsCatalogModuleCurrentUseCase)
     factoryOf(::GetModuleReadmeUseCase)
     factoryOf(::GetModuleReleaseDetailsUseCase)

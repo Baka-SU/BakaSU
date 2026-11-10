@@ -40,10 +40,10 @@ internal class WearTemplateChoiceLoading(private val scope: CoroutineScope, priv
 }
 
 @Composable
-internal fun rememberWearTemplateChoiceLoading(route: WearRoute.AppProfileTemplateChoice?, fetch: suspend () -> Unit): WearTemplateChoiceLoading {
+internal fun rememberWearTemplateLoading(route: WearRoute?, fetch: suspend () -> Unit): WearTemplateChoiceLoading {
     val scope = rememberCoroutineScope()
     val currentFetch by rememberUpdatedState(fetch)
-    var lastRoute by remember { mutableStateOf<WearRoute.AppProfileTemplateChoice?>(null) }
+    var lastRoute by remember { mutableStateOf<WearRoute?>(null) }
     var state by remember { mutableStateOf(WearTemplateChoiceLoading(scope) { currentFetch() }) }
     if (route != lastRoute) {
         lastRoute = route

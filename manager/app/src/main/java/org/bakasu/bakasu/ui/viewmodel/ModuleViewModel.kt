@@ -19,6 +19,7 @@ import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.MetaModuleStatus
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
 import org.bakasu.bakasu.domain.usecase.CalculateInstalledModuleSizeUseCase
+import org.bakasu.bakasu.domain.usecase.FindModuleUpdateSourceUseCase
 import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetModuleUpdateChangelogUseCase
 import org.bakasu.bakasu.domain.usecase.IsSoftRebootPreferredUseCase
@@ -95,6 +96,7 @@ class ModuleViewModel(
     private val isSoftRebootPreferred: IsSoftRebootPreferredUseCase,
     private val resolveModuleUpdate: ResolveModuleUpdateUseCase,
     private val getModuleUpdateChangelog: GetModuleUpdateChangelogUseCase,
+    private val findModuleUpdateSource: FindModuleUpdateSourceUseCase,
 ) : ViewModel() {
     private val controls = MutableStateFlow(ModuleControls())
     private val mutableEvents = MutableSharedFlow<ModuleUiEvent>(extraBufferCapacity = 1)
@@ -125,6 +127,10 @@ class ModuleViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ModuleUiState())
     val uiState: StateFlow<ModuleUiState> = state
+
+    suspend fun findUpdateSource(module: InstalledModule) = module.moduleUpdate?.let {
+        findModuleUpdateSource(module.id, module.updateJson, it.zipUrl)
+    }
 
     suspend fun resolveUpdate(module: InstalledModule): ModuleUpdateVerification {
         val update = module.moduleUpdate ?: return ModuleUpdateVerification.Rejected

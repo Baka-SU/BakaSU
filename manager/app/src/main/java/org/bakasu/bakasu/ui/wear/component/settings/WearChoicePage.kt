@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear.component.settings
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -32,6 +33,7 @@ fun WearChoicePage(
     onOpenPanel: (() -> Unit)? = null,
     hasOperationsPanel: Boolean = false,
     labelMaxLines: Int = 3,
+    marquee: Boolean = false,
     extraContent: TransformingLazyColumnScope.(TransformationSpec) -> Unit = {},
     onChoose: (String) -> Unit,
 ) {
@@ -55,7 +57,7 @@ fun WearChoicePage(
                     enabled = enabled,
                     transformation = SurfaceTransformation(spec),
                     icon = icon?.let { { Icon(it(value), contentDescription = null) } },
-                    label = { Text(label, maxLines = labelMaxLines, overflow = TextOverflow.Ellipsis) },
+                    label = { Text(label, modifier = if (marquee) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier, maxLines = if (marquee) 1 else labelMaxLines, softWrap = !marquee, overflow = TextOverflow.Ellipsis) },
                 )
             }
         }

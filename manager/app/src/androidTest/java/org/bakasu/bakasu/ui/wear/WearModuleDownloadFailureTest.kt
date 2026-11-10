@@ -13,7 +13,9 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasScrollToIndexAction
@@ -25,13 +27,16 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import java.io.File
+import java.util.Locale
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.DownloadFailure
 import org.bakasu.bakasu.domain.model.DownloadFailureReason
@@ -49,6 +54,7 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 class WearModuleDownloadFailureTest(private val round: Boolean, private val fontScale: Float) {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    private var chinese = false
     private val name = mutableStateOf("A long module name")
     private val clockMode = mutableStateOf("time")
     private val download = mutableStateOf(ModuleDownloadUiState(phase = ModuleDownloadPhase.DOWNLOADING, downloadedBytes = 25, totalBytes = 100))
@@ -120,13 +126,40 @@ class WearModuleDownloadFailureTest(private val round: Boolean, private val font
         save("verifying")
     }
 
+    @Test
+    fun chineseDefaultDpiPercentageAndFailureGlyphsAreNotClipped() {
+        chinese = true
+        name.value = "Hybrid Mount"
+        download.value = ModuleDownloadUiState(phase = ModuleDownloadPhase.DOWNLOADING, downloadedBytes = 89, totalBytes = 100)
+        show()
+        val resources = compose.activity.createConfigurationContext(Configuration(compose.activity.resources.configuration).apply { setLocale(Locale.SIMPLIFIED_CHINESE) }).resources
+        fun check(text: String) {
+            val layouts = mutableListOf<TextLayoutResult>()
+            compose.onNodeWithText(text, useUnmergedTree = true).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            assertTrue(layouts.isNotEmpty())
+            layouts.forEach {
+                assertTrue("Text must have its complete measured height: $text", !it.didOverflowHeight)
+                assertTrue("Last line must fit: $text", it.getLineBottom(it.lineCount - 1) <= it.size.height)
+            }
+        }
+        check(resources.getString(R.string.wear_downloading))
+        check(resources.getString(R.string.wear_download_percent, 89))
+        save("chinese-89")
+        compose.runOnIdle { download.value = download.value.copy(phase = ModuleDownloadPhase.VERIFYING) }
+        check(resources.getString(R.string.wear_verifying_download))
+        compose.runOnIdle { download.value = download.value.copy(phase = ModuleDownloadPhase.FAILED, failure = DownloadFailure(DownloadFailureReason.TIMEOUT)) }
+        check(resources.getString(R.string.wear_download_error_timeout))
+        save("chinese-failure")
+    }
+
     private fun show() {
         compose.setContent {
             val configuration = Configuration(LocalConfiguration.current).apply {
+                if (chinese) setLocale(Locale.SIMPLIFIED_CHINESE)
                 screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
                     if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
             }
-            CompositionLocalProvider(LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, fontScale), LocalWearTimeOptions provides WearTimeOptions(clockMode.value)) {
+            CompositionLocalProvider(LocalResources provides compose.activity.createConfigurationContext(configuration).resources, LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, fontScale), LocalWearTimeOptions provides WearTimeOptions(clockMode.value)) {
                 MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(error = Color.Red)) {
                     Box(Modifier.requiredSize(192.dp).background(MaterialTheme.colorScheme.background).testTag("download-page")) {
                         AppScaffold(timeText = {}) {

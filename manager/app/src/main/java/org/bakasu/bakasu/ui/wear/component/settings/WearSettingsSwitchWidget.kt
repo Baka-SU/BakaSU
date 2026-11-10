@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear.component.settings
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -24,7 +25,7 @@ import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
  * @date 2026/10/1.
  */
 
-/** A settings switch; labels take up to 3 lines and summaries default to 2, with room for longer details when needed. */
+/** Settings lists can scroll each label in one line; detail pages retain their multiline text. */
 @Composable
 fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
     transformationSpec: TransformationSpec,
@@ -38,6 +39,7 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
     largeIcon: Boolean = false,
     iconContent: (@Composable BoxScope.() -> Unit)? = null,
     secondaryLabelMaxLines: Int = 2,
+    marquee: Boolean = false,
     transformed: Boolean = true,
     transformSurface: Boolean = true,
 ) {
@@ -52,7 +54,7 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
         onCheckedChange = onCheckedChange,
         enabled = enabled,
         icon = iconContent ?: icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
-        secondaryLabel = secondaryLabel?.let { text -> { Text(text, maxLines = secondaryLabelMaxLines, overflow = TextOverflow.Ellipsis) } },
-        label = { Text(label, maxLines = 3, overflow = TextOverflow.Ellipsis) },
+        secondaryLabel = secondaryLabel?.let { text -> { Text(text, modifier = if (marquee) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier, maxLines = if (marquee) 1 else secondaryLabelMaxLines, softWrap = !marquee, overflow = TextOverflow.Ellipsis) } },
+        label = { Text(label, modifier = if (marquee) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier, maxLines = if (marquee) 1 else 3, softWrap = !marquee, overflow = TextOverflow.Ellipsis) },
     )
 }

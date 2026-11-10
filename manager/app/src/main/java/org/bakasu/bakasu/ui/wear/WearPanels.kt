@@ -148,7 +148,6 @@ internal fun WearOperationsPanel(
             WearIconAction(Icons.Rounded.Sort, stringResource(R.string.wear_sort), { onOpen(WearRoute.ModuleRepoSort) }),
             WearIconAction(Icons.Rounded.Download, stringResource(R.string.wear_downloads), { onOpen(WearRoute.Downloads) }),
             WearIconAction(Icons.Rounded.Cloud, stringResource(R.string.repo_manage), { onOpen(WearRoute.RepositorySources) }),
-            WearIconAction(Icons.Rounded.Add, stringResource(R.string.repo_add_repository), { onOpen(WearRoute.AddRepository) }),
         )
     }
     val menuActions = actions + listOfNotNull(

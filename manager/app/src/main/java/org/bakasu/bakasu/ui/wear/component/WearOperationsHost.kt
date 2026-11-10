@@ -8,6 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -19,13 +22,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.hierarchicalFocusGroup
@@ -89,6 +95,12 @@ internal fun WearOperationsHost(
             // A preview must leave crown focus on its page until the menu finishes opening.
             Box(Modifier.fillMaxSize().hierarchicalFocusGroup(active = screenActive && !menuOpen)) {
                 content()
+            }
+            if (menuKey != null && !menuOpen && screenActive) {
+                Box(
+                    Modifier.align(Alignment.TopCenter).padding(top = 4.dp).size(20.dp, 3.dp)
+                        .background(Color.White, RoundedCornerShape(50)).testTag("wear-menu-hint"),
+                )
             }
             if (!menuClosed && menuKey != null && (menuOpen || pull.floatValue > 0f)) {
                 // Keep position while a child page covers the menu, but discard it when the reveal ends.

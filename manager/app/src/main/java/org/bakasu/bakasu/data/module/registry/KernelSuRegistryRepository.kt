@@ -81,6 +81,8 @@ class KernelSuRegistryRepository private constructor(
         return candidates.filter { normalized.startsWith(it) }.maxByOrNull { it.length } ?: candidates.singleOrNull()
     }
 
+    fun sourceForUpdate(url: String): String? = ownerForUrl(url)
+
     @Volatile
     private var publishedCatalog: RegistryCatalog? = null
 

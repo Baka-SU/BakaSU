@@ -215,8 +215,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                 WearRoute.DynamicManagerApps -> dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Search(""))
 
-                WearRoute.Templates -> templateViewModel.dispatch(TemplateUiAction.Refresh())
-
                 else -> Unit
             }
         }
@@ -224,8 +222,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     }
     fun back() = navigator.back()
     val repositoryPageLoading = rememberWearRepositoryLoading(WearRoute.ModuleRepo in navigator.backStack, catalog.repositoryUrl) { moduleRepoViewModel.refresh() }
+    val templateManagementLoading = rememberWearTemplateLoading(WearRoute.Templates.takeIf { it in navigator.backStack }) { templateViewModel.fetchTemplates() }
     val templateChoice = navigator.backStack.filterIsInstance<WearRoute.AppProfileTemplateChoice>().lastOrNull()
-    val templateChoiceLoading = rememberWearTemplateChoiceLoading(templateChoice) { templateViewModel.fetchTemplates() }
+    val templateChoiceLoading = rememberWearTemplateLoading(templateChoice) { templateViewModel.fetchTemplates() }
     val umountOpen = WearRoute.Umount in navigator.backStack
     LaunchedEffect(umountOpen) {
         if (umountOpen) umountViewModel.dispatch(UmountManagerUiAction.Refresh())
@@ -458,11 +457,13 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     WearExecuteModulePage(route.id, ::back) { moduleViewModel.dispatch(ModuleUiAction.Refresh()) }
                                 }
                                 entry<WearRoute.ModuleUpdate> { route ->
+                                    val module = modules.moduleList.firstOrNull { it.id == route.id }
                                     WearModuleUpdatePage(
-                                        modules.moduleList.firstOrNull { it.id == route.id },
+                                        module,
                                         ::back,
                                         installer::update,
                                         onChangelog = { open(WearRoute.ModuleChangelog(route.id)) },
+                                        findSource = moduleViewModel::findUpdateSource,
                                     )
                                 }
                                 entry<WearRoute.ModuleChangelog> { route ->
@@ -770,7 +771,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 }
                                 entry<WearRoute.Templates> {
                                     WearTemplatePage(
-                                        templates,
+                                        templates.copy(isLoading = templateManagementLoading.loading, isRefreshing = false),
                                         ::back,
                                         { open(WearRoute.Operations(WearOperationsPage.Templates)) },
                                         { id, readOnly, creation -> open(WearRoute.TemplateEditor(id, readOnly, creation)) },
@@ -784,7 +785,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 }
                                 entry<WearRoute.TemplateSearchResults> {
                                     WearTemplatePage(
-                                        templates,
+                                        templates.copy(isLoading = templateManagementLoading.loading, isRefreshing = false),
                                         ::back,
                                         { open(WearRoute.Operations(WearOperationsPage.Templates)) },
                                         { id, readOnly, creation -> open(WearRoute.TemplateEditor(id, readOnly, creation)) },

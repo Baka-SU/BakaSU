@@ -49,8 +49,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
@@ -59,6 +61,7 @@ import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
+import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.CompactButton
@@ -187,7 +190,14 @@ internal fun WearModuleRepoPage(
                 spec,
                 module.moduleName,
                 { onOpen(module) },
-                iconContent = { WearCatalogModuleIcon(module) },
+                iconContent = {
+                    val iconSize = with(LocalDensity.current) {
+                        MaterialTheme.typography.labelMedium.lineHeight.toDp() + MaterialTheme.typography.labelSmall.lineHeight.toDp()
+                    }.coerceAtLeast(ButtonDefaults.LargeIconSize)
+                    WearCatalogModuleIcon(module, iconSize)
+                },
+                largeIcon = true,
+                marquee = true,
                 description = module.summary.ifBlank { module.moduleId },
                 titleBadge = if (module.metamodule) stringResource(R.string.module_meta_label) else null,
             )
@@ -496,9 +506,38 @@ internal fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState
                 val nameStyle = MaterialTheme.typography.titleMedium
                 val statusStyle = MaterialTheme.typography.bodyMedium
                 val percentStyle = MaterialTheme.typography.titleMedium
-                val statusHeight = with(density) { statusStyle.lineHeight.toDp() + percentStyle.lineHeight.toDp() } + 2.dp
-                // Keep the demo's 32% icon at normal size; leave space for two name lines at large fonts.
-                val textHeight = with(density) { nameStyle.lineHeight.toDp() * 2 } + statusHeight + 12.dp
+                val textMeasurer = rememberTextMeasurer()
+                val textWidth = with(density) { (maxWidth * 0.72f).roundToPx() }
+                val constraints = Constraints(maxWidth = textWidth)
+                val downloading = stringResource(R.string.wear_downloading)
+                val verifying = stringResource(R.string.wear_verifying_download)
+                val progressText = if (state.fraction != null) {
+                    stringResource(R.string.wear_download_percent, ((state.fraction ?: 0f) * 100).toInt())
+                } else if (sizeKnown) {
+                    stringResource(R.string.wear_download_size, formatFileSize(state.downloadedBytes), formatFileSize(state.totalBytes))
+                } else {
+                    formatFileSize(state.downloadedBytes)
+                }
+                // Measure the actual fonts (including fallback glyphs and bold) rather than treating
+                // the declared line heights as hard bounds. Both outcomes retain one shared slot.
+                val statusPixels = maxOf(
+                    textMeasurer.measure(downloading, statusStyle, constraints = constraints).size.height,
+                    textMeasurer.measure(verifying, statusStyle, constraints = constraints).size.height,
+                )
+                val percentPixels = textMeasurer.measure(
+                    progressText,
+                    percentStyle.copy(fontWeight = FontWeight.Bold),
+                    constraints = constraints,
+                ).size.height
+                val failurePixels = textMeasurer.measure(
+                    "$downloading\n$verifying",
+                    statusStyle,
+                    constraints = constraints,
+                    maxLines = 2,
+                ).size.height
+                val statusHeight = with(density) { maxOf(statusPixels + percentPixels + 2.dp.roundToPx(), failurePixels).toDp() }
+                val nameHeight = textMeasurer.measure(name, nameStyle.copy(fontWeight = FontWeight.Bold), maxLines = 2, constraints = constraints).size.height
+                val textHeight = with(density) { nameHeight.toDp() } + statusHeight + 12.dp
                 val iconSize = minOf(maxWidth * 0.32f, (maxHeight * 0.78f - textHeight).coerceAtLeast(32.dp))
                 Column(
                     Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = maxWidth * 0.14f),
@@ -527,13 +566,7 @@ internal fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState
                                     maxLines = 1,
                                 )
                                 Text(
-                                    if (state.fraction != null) {
-                                        stringResource(R.string.wear_download_percent, ((state.fraction ?: 0f) * 100).toInt())
-                                    } else if (sizeKnown) {
-                                        stringResource(R.string.wear_download_size, formatFileSize(state.downloadedBytes), formatFileSize(state.totalBytes))
-                                    } else {
-                                        formatFileSize(state.downloadedBytes)
-                                    },
+                                    progressText,
                                     style = percentStyle,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,

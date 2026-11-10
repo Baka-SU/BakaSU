@@ -10,9 +10,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -25,6 +27,7 @@ import androidx.compose.ui.test.swipe
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
+import java.io.File
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.InstalledApp
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
@@ -52,7 +55,7 @@ class WearRefreshPageTest(private val round: Boolean, private val mode: String, 
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun realPageMenuRefreshHidesTheIndicatorAfterScrollingAwayFromTheTop() {
+    fun realPageMenuRefreshKeepsTheIndicatorWhileScrolling() {
         var loading by mutableStateOf(SulogLoading.NONE)
         var menu by mutableStateOf(false)
         val records = (1..100).map { SulogEntry("$it", SulogEventType.RootExecve, "seq=$it comm=Record-$it", null, mapOf("comm" to "Record-$it")) }
@@ -120,9 +123,11 @@ class WearRefreshPageTest(private val round: Boolean, private val mode: String, 
         compose.onNodeWithTag("viewport").performTouchInput {
             swipe(Offset(centerX, height * 0.75f), Offset(centerX, height * 0.25f), 500)
         }
-        indicator.assertDoesNotExist()
+        indicator.assertIsDisplayed()
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(if (page == "logs") 100 else 30)
-        indicator.assertDoesNotExist()
+        indicator.assertIsDisplayed()
+        val bitmap = compose.onNodeWithTag("viewport").captureToImage().asAndroidBitmap()
+        File(compose.activity.getExternalFilesDir(null), "refresh-scrolled-$page-$round-$mode.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
         compose.runOnIdle { loading = SulogLoading.NONE }
         indicator.assertDoesNotExist()
     }

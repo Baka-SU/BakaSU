@@ -57,7 +57,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun refreshFollowsTheTitleButDoesNotAppearOverScrolledContent() {
+    fun refreshKeepsItsAnchorWhenStartedOverScrolledContent() {
         val resources = compose.activity.resources
         var refreshing by mutableStateOf(false)
         var titleInTime by mutableStateOf(false)
@@ -124,7 +124,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         val anchor = compose.runOnIdle { state.anchorItemIndex }
         val beforeScrolledRefresh = compose.runOnIdle { state.anchorItemScrollOffset }
         compose.runOnIdle { refreshing = true }
-        compose.onNodeWithContentDescription(loading).assertDoesNotExist()
+        compose.onNodeWithContentDescription(loading).assertIsDisplayed()
         compose.runOnIdle {
             assertEquals(anchor, state.anchorItemIndex)
             assertEquals(beforeScrolledRefresh, state.anchorItemScrollOffset)
@@ -294,7 +294,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
     }
 
     @Test
-    fun refreshIndicatorIsNotVisibleAtTheBottomDuringRefresh() {
+    fun refreshIndicatorRemainsVisibleAtTheBottomDuringRefresh() {
         var refreshing by mutableStateOf(false)
         lateinit var listState: TransformingLazyColumnState
         compose.setContent {
@@ -323,10 +323,10 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         compose.onNode(hasScrollToIndexAction()).performTouchInput {
             swipe(Offset(centerX, height * 0.7f), Offset(centerX, height * 0.4f), 500)
         }
-        compose.onNodeWithContentDescription(loading).assertDoesNotExist()
+        compose.onNodeWithContentDescription(loading).assertIsDisplayed()
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(20)
         compose.runOnIdle { assertTrue("The reproduction must reach the bottom", !listState.canScrollForward) }
-        compose.onNodeWithContentDescription(loading).assertDoesNotExist()
+        compose.onNodeWithContentDescription(loading).assertIsDisplayed()
     }
 
     @Test

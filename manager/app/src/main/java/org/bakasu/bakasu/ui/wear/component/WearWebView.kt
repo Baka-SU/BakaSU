@@ -9,6 +9,9 @@ import android.view.MotionEvent
 import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.webkit.WebView
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,8 +19,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CenterFocusStrong
+import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.ZoomIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,12 +33,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -44,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.requestFocusOnHierarchyActive
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -52,15 +61,18 @@ import org.json.JSONObject
 
 /** Uses the full display; inward drags from the round edge reveal one fixed page corner. */
 @Composable
-internal fun WearWebView(webView: WebView, onBack: () -> Unit, modifier: Modifier = Modifier) {
+internal fun WearWebView(webView: WebView, modifier: Modifier = Modifier) {
     val round = LocalConfiguration.current.isScreenRound
     val screenActive = LocalScreenIsActive.current
-    var scalePercent by remember(webView) { mutableIntStateOf(100) }
+    var scaleIndex by remember(webView) { mutableIntStateOf(0) }
+    var textPercent by remember(webView) { mutableIntStateOf(webView.settings.textZoom) }
     var resetPosition by remember(webView) { mutableIntStateOf(0) }
     var toolsOpen by remember(webView) { mutableStateOf(false) }
-    val scale = scalePercent / 100f
+    val scale = listOf(0.6f, 0.8f, 1f)[scaleIndex]
+    val scalePercent = listOf(100, 133, 167)[scaleIndex]
+    SideEffect { webView.settings.textZoom = textPercent }
     val toolsLabel = stringResource(R.string.wear_web_tools)
-    WearOperationsBackHandler(toolsOpen) { toolsOpen = false }
+    WearOperationsBackHandler(toolsOpen && screenActive) { toolsOpen = false }
     ScreenScaffold(
         modifier = modifier.imePadding(),
         contentPadding = PaddingValues(0.dp),
@@ -73,30 +85,24 @@ internal fun WearWebView(webView: WebView, onBack: () -> Unit, modifier: Modifie
                 menuOpen = toolsOpen,
                 menuActive = toolsOpen,
                 menuContent = { onClosing ->
-                    WearList(
-                        onClosePanel = { toolsOpen = false },
-                        onPanelClosing = onClosing,
-                        onConfirm = { toolsOpen = false },
-                        confirmLabel = stringResource(R.string.close),
-                    ) { spec ->
+                    WearList(onClosePanel = { toolsOpen = false }, onPanelClosing = onClosing) { spec ->
                         item { WearPageHeader(spec, toolsLabel) }
-                        item {
-                            WearActionButton(spec, Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), {
-                                toolsOpen = false
-                                onBack()
-                            })
-                        }
                         item {
                             WearActionButton(spec, Icons.Rounded.CenterFocusStrong, stringResource(R.string.wear_web_reset), {
                                 resetPosition++
-                                scalePercent = 100
+                                scaleIndex = 0
                                 toolsOpen = false
-                            })
+                            }, colors = ButtonDefaults.filledTonalButtonColors())
                         }
                         item {
                             WearActionButton(spec, Icons.Rounded.ZoomIn, stringResource(R.string.wear_web_scale, scalePercent), {
-                                scalePercent = if (scalePercent >= 100) 60 else scalePercent + 20
-                            })
+                                scaleIndex = (scaleIndex + 1) % 3
+                            }, colors = ButtonDefaults.filledTonalButtonColors())
+                        }
+                        item {
+                            WearActionButton(spec, Icons.Rounded.TextFields, stringResource(R.string.wear_web_text_scale, textPercent), {
+                                textPercent = if (textPercent >= 150) 100 else textPercent + 25
+                            }, colors = ButtonDefaults.filledTonalButtonColors())
                         }
                     }
                 },
@@ -119,6 +125,14 @@ private fun WearWebViewContent(
     onOpen: () -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
+    var cornerFeedback by remember(webView) { mutableIntStateOf(0) }
+    val edgeAlpha = remember(webView) { Animatable(0f) }
+    LaunchedEffect(cornerFeedback) {
+        if (cornerFeedback > 0) {
+            edgeAlpha.snapTo(1f)
+            edgeAlpha.animateTo(0f, tween(350))
+        }
+    }
     var viewport by remember(webView) { mutableStateOf<WearWebViewViewport?>(null) }
     var height by remember { mutableFloatStateOf(1f) }
     var pull by remember { mutableFloatStateOf(0f) }
@@ -154,6 +168,7 @@ private fun WearWebViewContent(
                 reset,
                 active && !toolsOpen,
                 haptic = { feedback -> haptic.performHapticFeedback(feedback) },
+                onCornerLimit = { cornerFeedback++ },
                 onStart = {
                     val held = progress * height
                     opening = false
@@ -192,6 +207,23 @@ private fun WearWebViewContent(
             }
             .requestFocusOnHierarchyActive().focusable(active && !toolsOpen),
     )
+    val edgeColor = MaterialTheme.colorScheme.primary
+    if (active && !toolsOpen && edgeAlpha.value > 0f) {
+        Canvas(Modifier.fillMaxSize().testTag("web-corner-feedback")) {
+            val inset = 3.dp.toPx()
+            listOf(150f, 330f).forEach { start ->
+                drawArc(
+                    edgeColor.copy(alpha = edgeAlpha.value),
+                    start,
+                    60f,
+                    false,
+                    Offset(inset, inset),
+                    Size(size.width - inset * 2, size.height - inset * 2),
+                    style = Stroke(3.dp.toPx()),
+                )
+            }
+        }
+    }
 }
 
 /** A full, exactly measured responsive viewport with native child touch-coordinate transforms. */
@@ -223,13 +255,8 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
     private var onStart: () -> Float = { 0f }
     private var onPull: (Float) -> Unit = {}
     private var onEnd: (Boolean) -> Unit = {}
-    private var crown = 0f
-    private var lastCrown = 0L
-    private val crownTimeout = Runnable {
-        crown = 0f
-        onPull(0f)
-        onEnd(false)
-    }
+    private var onCornerLimit: () -> Unit = {}
+    private var cornerAtLimit = false
     private var rotaryTarget: Pair<Float, Float>? = null
     private val configuration = ViewConfiguration.get(context)
     private val touchSlop = configuration.scaledTouchSlop
@@ -253,18 +280,18 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
         reset: Int,
         enabled: Boolean,
         haptic: (HapticFeedbackType) -> Unit,
+        onCornerLimit: () -> Unit,
         onStart: () -> Float,
         onPull: (Float) -> Unit,
         onEnd: (Boolean) -> Unit,
     ) {
         if (interactionEnabled && !enabled) {
             gesture++
-            crown = 0f
-            removeCallbacks(crownTimeout)
             finishCorner(false)
         }
         interactionEnabled = enabled
         this.haptic = haptic
+        this.onCornerLimit = onCornerLimit
         this.onStart = onStart
         this.onPull = onPull
         this.onEnd = onEnd
@@ -334,7 +361,8 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
                 const v = window.visualViewport;
                 const x = ${point.first} * (v ? v.width : innerWidth) + (v ? v.offsetLeft : 0);
                 const y = ${point.second} * (v ? v.height : innerHeight) + (v ? v.offsetTop : 0);
-                let e = document.elementFromPoint(x, y), top = true, scrollable = false;
+                let e = document.elementFromPoint(x, y), top = !v || v.offsetTop <= 1;
+                let scrollable = !!v && v.height < innerHeight - 1;
                 if (!e) return null;
                 while (e) {
                     const s = getComputedStyle(e);
@@ -360,43 +388,22 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
     }
 
     fun rotate(pixels: Float) {
-        removeCallbacks(crownTimeout)
         val point = rotaryTarget ?: pagePoint(width / 2f, height / 2f)
         val now = SystemClock.uptimeMillis()
-        if (pixels >= 0f || now - lastCrown > 600) crown = 0f
-        lastCrown = now
-        queryScroll(point) { top, _ ->
-            removeCallbacks(crownTimeout)
-            if (top && pixels < 0f) {
-                if (crown == 0f) haptic(HapticFeedbackType.SegmentTick)
-                crown += -pixels
-                if (crown >= pullThreshold * 3) {
-                    crown = 0f
-                    haptic(HapticFeedbackType.Confirm)
-                    onEnd(true)
-                } else {
-                    onPull(crown / 3)
-                    postDelayed(crownTimeout, 600)
-                }
-            } else {
-                crown = 0f
-                onPull(0f)
-                val coords = MotionEvent.PointerCoords().apply {
-                    x = point.first * webView.width
-                    y = point.second * webView.height
-                    setAxisValue(MotionEvent.AXIS_VSCROLL, -pixels / pageScale / configuration.scaledVerticalScrollFactor)
-                }
-                val props = MotionEvent.PointerProperties().apply {
-                    id = 0
-                    toolType = MotionEvent.TOOL_TYPE_MOUSE
-                }
-                val event = MotionEvent.obtain(now, now, MotionEvent.ACTION_SCROLL, 1, arrayOf(props), arrayOf(coords), 0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_MOUSE, 0)
-                try {
-                    webView.dispatchGenericMotionEvent(event)
-                } finally {
-                    event.recycle()
-                }
-            }
+        val coords = MotionEvent.PointerCoords().apply {
+            x = point.first * webView.width
+            y = point.second * webView.height
+            setAxisValue(MotionEvent.AXIS_VSCROLL, -pixels / pageScale / configuration.scaledVerticalScrollFactor)
+        }
+        val props = MotionEvent.PointerProperties().apply {
+            id = 0
+            toolType = MotionEvent.TOOL_TYPE_MOUSE
+        }
+        val event = MotionEvent.obtain(now, now, MotionEvent.ACTION_SCROLL, 1, arrayOf(props), arrayOf(coords), 0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_MOUSE, 0)
+        try {
+            webView.dispatchGenericMotionEvent(event)
+        } finally {
+            event.recycle()
         }
     }
 
@@ -417,13 +424,12 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
                 offsetY = corner.y * height / 4f
                 positionPage()
                 panning = false
+                cornerAtLimit = false
                 pullingTools = false
                 gestureDecided = false
                 hostCanceled = false
                 cornerCandidate = if (round && restoring == null) cornerCandidate(event.x, event.y) else null
                 atTop = null
-                crown = 0f
-                removeCallbacks(crownTimeout)
                 onPull(0f)
                 val point = pagePoint(event.x, event.y)
                 queryScroll(point) { top, scrollable ->
@@ -431,7 +437,9 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
                     // Tapping a fixed footer does not replace the last scrollable target.
                     if (scrollable) rotaryTarget = point
                 }
-                parent.requestDisallowInterceptTouchEvent(true)
+                // Keep the platform/outer page's left-edge back gesture available. Interior
+                // drags still belong to the webpage and its nested scrolling elements.
+                parent.requestDisallowInterceptTouchEvent(event.x > configuration.scaledEdgeSlop)
             }
 
             MotionEvent.ACTION_MOVE -> {
@@ -466,6 +474,11 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
         val dx = event.x - downX
         val dy = event.y - downY
         if (hypot(dx, dy) <= touchSlop) return
+        if (downX <= configuration.scaledEdgeSlop && dx > touchSlop && abs(dx) > abs(dy) * 1.5f) {
+            gestureDecided = true
+            parent.requestDisallowInterceptTouchEvent(false)
+            return
+        }
         val diagonal = abs(dx) > abs(dy) * 0.65f && abs(dy) > abs(dx) * 0.65f
         val candidate = cornerCandidate
         if (diagonal && candidate != null && dx * (candidate.x - corner.x) > 0f && dy * (candidate.y - corner.y) > 0f) {
@@ -488,7 +501,12 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
             if (panning) {
                 val targetX = (cornerTarget.x - corner.x) * width / 4f
                 val targetY = (cornerTarget.y - corner.y) * height / 4f
-                cornerProgress = minOf((event.x - downX) / targetX, (event.y - downY) / targetY).coerceIn(0f, 1f)
+                cornerProgress = (minOf((event.x - downX) / targetX, (event.y - downY) / targetY) * 0.6f).coerceIn(0f, 1f)
+                if (cornerProgress == 1f && !cornerAtLimit) {
+                    haptic(HapticFeedbackType.GestureThresholdActivate)
+                    onCornerLimit()
+                }
+                cornerAtLimit = cornerProgress == 1f
                 offsetX = corner.x * width / 4f + targetX * cornerProgress
                 offsetY = corner.y * height / 4f + targetY * cornerProgress
                 positionPage()
@@ -543,14 +561,20 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
                 offsetX = startX + (corner.x * width / 4f - startX) * fraction
                 offsetY = startY + (corner.y * height / 4f - startY) * fraction
                 positionPage()
-                if (fraction == 1f) restoring = null
+                if (fraction == 1f) {
+                    restoring = null
+                    if (commit && !cornerAtLimit) {
+                        cornerAtLimit = true
+                        haptic(HapticFeedbackType.GestureThresholdActivate)
+                        onCornerLimit()
+                    }
+                }
             }
             start()
         }
     }
 
     override fun onDetachedFromWindow() {
-        removeCallbacks(crownTimeout)
         restoring?.cancel()
         restoring = null
         super.onDetachedFromWindow()

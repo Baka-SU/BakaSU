@@ -65,11 +65,12 @@ class WearSearchMenusTest(private val page: WearOperationsPage) {
                 bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
             }
         }
-        if (page == WearOperationsPage.Repository || page == WearOperationsPage.RepositorySources) {
+        if (page == WearOperationsPage.RepositorySources) {
             click(R.string.repo_add_repository)
             assertEquals(WearRoute.AddRepository, opened)
         }
         if (page == WearOperationsPage.Repository) {
+            compose.onNodeWithText(compose.activity.getString(R.string.repo_add_repository)).assertDoesNotExist()
             compose.onNodeWithText(compose.activity.getString(R.string.wear_search_repositories)).assertDoesNotExist()
             assertEquals(1, searches)
         }

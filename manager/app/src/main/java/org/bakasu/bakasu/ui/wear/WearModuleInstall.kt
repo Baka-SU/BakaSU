@@ -88,7 +88,7 @@ class WearModuleInstaller internal constructor(
         ),
     )
 
-    fun update(module: InstalledModule, update: ModuleUpdateMetadata) = navigator.open(
+    fun update(module: InstalledModule, update: ModuleUpdateMetadata, source: CatalogModule? = null) = navigator.open(
         WearRoute.OnlineModuleDownload(
             module.name,
             "${module.name}-${update.version}.zip",
@@ -97,6 +97,8 @@ class WearModuleInstaller internal constructor(
             sha256 = "",
             version = update.version,
             update = true,
+            iconUrl = source?.iconUrl?.takeIf { it.isNotBlank() } ?: source?.registryMetadata?.iconUrl,
+            iconOrigin = source?.repositoryUrl?.takeIf { source.registryMetadata != null },
         ),
     )
 
