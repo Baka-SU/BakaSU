@@ -37,6 +37,8 @@ import org.bakasu.bakasu.domain.model.DownloadFailure
 import org.bakasu.bakasu.domain.model.DownloadFailureReason
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadUiState
+import org.bakasu.bakasu.ui.wear.component.LocalWearTimeOptions
+import org.bakasu.bakasu.ui.wear.component.WearTimeOptions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -47,6 +49,8 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 class WearModuleDownloadFailureTest(private val round: Boolean, private val fontScale: Float) {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    private val name = mutableStateOf("A long module name")
+    private val clockMode = mutableStateOf("time")
     private val download = mutableStateOf(ModuleDownloadUiState(phase = ModuleDownloadPhase.DOWNLOADING, downloadedBytes = 25, totalBytes = 100))
 
     @Test
@@ -73,7 +77,7 @@ class WearModuleDownloadFailureTest(private val round: Boolean, private val font
                 if (pixel.red > 0.8f && pixel.green < 0.2f && pixel.blue < 0.2f) red++
             }
         }
-        assertTrue("The failed progress ring must fill the whole arc, not retain the old percentage: $red", red > pixels.width * pixels.height * 0.08f)
+        assertTrue("The failed progress ring must fill the whole arc, not retain the old percentage: $red", red > pixels.width * pixels.height * 0.055f)
         save("failed")
         compose.onNodeWithTag("download-page").performTouchInput { swipeUp() }
         compose.mainClock.advanceTimeBy(300)
@@ -88,7 +92,32 @@ class WearModuleDownloadFailureTest(private val round: Boolean, private val font
         compose.onNodeWithText(retry).assertDoesNotExist()
         compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).assertDoesNotExist()
         compose.onNodeWithTag("module-download-icon").assertIsDisplayed()
-        compose.onNodeWithText("v1").assertIsDisplayed()
+        compose.onNodeWithText("v1").assertDoesNotExist()
+        compose.onNodeWithTag("module-download-clock").assertExists()
+    }
+
+    @Test
+    fun demoOrderKeepsClockForHiddenAndTitlePreferencesAndAllProgressStates() {
+        name.value = "microG"
+        clockMode.value = "hidden"
+        show()
+        compose.onNodeWithTag("module-download-clock").assertExists()
+        val icon = compose.onNodeWithTag("module-download-icon").fetchSemanticsNode().boundsInRoot
+        val label = compose.onNodeWithText(name.value).fetchSemanticsNode().boundsInRoot
+        val status = compose.onNodeWithText(compose.activity.getString(R.string.wear_downloading)).fetchSemanticsNode().boundsInRoot
+        val percent = compose.onNodeWithText(compose.activity.getString(R.string.wear_download_percent, 25)).fetchSemanticsNode().boundsInRoot
+        assertTrue(icon.bottom < label.top && label.bottom < status.top && status.bottom <= percent.top)
+        save("demo")
+        compose.runOnIdle {
+            clockMode.value = "title"
+            download.value = download.value.copy(totalBytes = 0)
+        }
+        compose.onNodeWithTag("module-download-clock").assertExists()
+        save("unknown")
+        compose.runOnIdle { download.value = download.value.copy(phase = ModuleDownloadPhase.VERIFYING) }
+        compose.onNodeWithText(compose.activity.getString(R.string.wear_verifying_download)).assertIsDisplayed()
+        compose.onNodeWithTag("module-download-clock").assertExists()
+        save("verifying")
     }
 
     private fun show() {
@@ -97,11 +126,11 @@ class WearModuleDownloadFailureTest(private val round: Boolean, private val font
                 screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
                     if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
             }
-            CompositionLocalProvider(LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, fontScale)) {
+            CompositionLocalProvider(LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, fontScale), LocalWearTimeOptions provides WearTimeOptions(clockMode.value)) {
                 MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(error = Color.Red)) {
                     Box(Modifier.requiredSize(192.dp).background(MaterialTheme.colorScheme.background).testTag("download-page")) {
                         AppScaffold(timeText = {}) {
-                            WearModuleDownloadScreen("A long module name", "v1", download.value, { download.value.fraction ?: 0f })
+                            WearModuleDownloadScreen(name.value, download.value, { download.value.fraction ?: 0f })
                         }
                     }
                 }

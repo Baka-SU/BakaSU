@@ -90,8 +90,8 @@ internal fun WearTimeTitleLayout(pageKey: Any?, content: @Composable () -> Unit)
 
 /** M3 chrome is curved; rectangular screens use the same scaffold slots and time source. */
 @Composable
-fun WearTimeText(title: String = stringResource(R.string.home)) {
-    val options = LocalWearTimeOptions.current
+fun WearTimeText(title: String = stringResource(R.string.home), forceTime: Boolean = false) {
+    val options = LocalWearTimeOptions.current.let { if (forceTime) it.copy(mode = "time") else it }
     val titleBottom = LocalWearTimeTitleBottom.current
     DisposableEffect(titleBottom, title, options.mode) {
         onDispose { titleBottom?.value = null }

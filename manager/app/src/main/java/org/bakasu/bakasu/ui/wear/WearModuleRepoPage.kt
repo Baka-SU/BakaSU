@@ -105,6 +105,7 @@ import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
+import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
@@ -462,7 +463,6 @@ internal fun WearModuleDownloadPage(route: WearRoute.OnlineModuleDownload, onDow
     }
     WearModuleDownloadScreen(
         route.name,
-        route.version,
         download,
         // Read through the state when the ring draws, not captured once.
         fraction = { downloadState.value.fraction ?: 1f.takeIf { downloadState.value.phase == ModuleDownloadPhase.VERIFYING } ?: 0f },
@@ -475,7 +475,7 @@ internal fun WearModuleDownloadPage(route: WearRoute.OnlineModuleDownload, onDow
  * Download identity stays fixed; progress and compact failure feedback share the remaining space.
  */
 @Composable
-internal fun WearModuleDownloadScreen(name: String, version: String, state: ModuleDownloadUiState, fraction: () -> Float, iconUrl: String? = null, iconOrigin: String? = null) {
+internal fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState, fraction: () -> Float, iconUrl: String? = null, iconOrigin: String? = null) {
     val failed = state.phase == ModuleDownloadPhase.FAILED || state.phase == ModuleDownloadPhase.VERIFY_FAILED
     val sizeKnown = state.totalBytes > 0L
     val reduceMotion = LocalReduceMotion.current
@@ -490,37 +490,40 @@ internal fun WearModuleDownloadScreen(name: String, version: String, state: Modu
     }
     val failureTitle = stringResource(R.string.download_failed_title)
     Box(Modifier.fillMaxSize()) {
-        ScreenScaffold(contentPadding = PaddingValues(0.dp), timeText = {}, overscrollEffect = null) {
+        ScreenScaffold(contentPadding = PaddingValues(0.dp), timeText = { Box(Modifier.testTag("module-download-clock")) { WearTimeText(forceTime = true) } }, overscrollEffect = null) {
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 val density = LocalDensity.current
-                val statusHeight = with(density) { MaterialTheme.typography.bodyExtraSmall.lineHeight.toDp() * 2 }
+                val nameStyle = MaterialTheme.typography.titleMedium
+                val statusStyle = MaterialTheme.typography.bodyMedium
+                val percentStyle = MaterialTheme.typography.titleMedium
+                val statusHeight = with(density) { statusStyle.lineHeight.toDp() + percentStyle.lineHeight.toDp() } + 2.dp
+                // Keep the demo's 32% icon at normal size; leave space for two name lines at large fonts.
+                val textHeight = with(density) { nameStyle.lineHeight.toDp() * 2 } + statusHeight + 12.dp
+                val iconSize = minOf(maxWidth * 0.32f, (maxHeight * 0.78f - textHeight).coerceAtLeast(32.dp))
                 Column(
                     Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = maxWidth * 0.14f),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Box(Modifier.testTag("module-download-icon")) {
-                        WearCatalogModuleIcon(iconUrl, iconOrigin, if (density.fontScale > 1.1f) 40.dp else 48.dp)
+                        WearCatalogModuleIcon(iconUrl, iconOrigin, iconSize)
                     }
-                    Text(name, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    if (version.isNotBlank()) {
-                        Text(version, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
+                    Text(name, modifier = Modifier.fillMaxWidth(), style = nameStyle, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Box(Modifier.fillMaxWidth().height(statusHeight), contentAlignment = Alignment.Center) {
                         if (failed) {
                             Text(
                                 moduleDownloadFailureText(state),
-                                style = MaterialTheme.typography.bodyExtraSmall,
+                                style = statusStyle,
                                 color = MaterialTheme.colorScheme.error,
                                 textAlign = TextAlign.Center,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                             )
                         } else {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
                                     stringResource(if (state.phase == ModuleDownloadPhase.VERIFYING) R.string.wear_verifying_download else R.string.wear_downloading),
-                                    style = MaterialTheme.typography.bodyExtraSmall,
+                                    style = statusStyle,
                                     maxLines = 1,
                                 )
                                 Text(
@@ -531,7 +534,8 @@ internal fun WearModuleDownloadScreen(name: String, version: String, state: Modu
                                     } else {
                                         formatFileSize(state.downloadedBytes)
                                     },
-                                    style = MaterialTheme.typography.bodyExtraSmall,
+                                    style = percentStyle,
+                                    fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
                                     maxLines = 1,
                                 )
@@ -542,7 +546,7 @@ internal fun WearModuleDownloadScreen(name: String, version: String, state: Modu
             }
         }
         val ringColors = ProgressIndicatorDefaults.colors(indicatorColor = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-        val ringStroke = CircularProgressIndicatorDefaults.largeStrokeWidth
+        val ringStroke = CircularProgressIndicatorDefaults.smallStrokeWidth
         // Use the M3 custom-animation API: its animated wrapper retains the first progress lambda
         // and adds its own animation, which would hide this attempt's failure transition.
         Spacer(
