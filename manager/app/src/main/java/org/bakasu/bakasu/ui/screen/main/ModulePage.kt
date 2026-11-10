@@ -28,11 +28,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -65,7 +69,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
@@ -137,8 +140,12 @@ import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
 import org.bakasu.bakasu.domain.usecase.TakeModuleUriPermissionUseCase
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.InstallConfirmationDialog
+import org.bakasu.bakasu.ui.component.LocalTopBarSlot
+import org.bakasu.bakasu.ui.component.ProvideTopBar
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarIconEdgeInset
+import org.bakasu.bakasu.ui.component.TopBarIconPill
 import org.bakasu.bakasu.ui.component.WarningCard
 import org.bakasu.bakasu.ui.component.ZipFileDetector
 import org.bakasu.bakasu.ui.component.ZipFileInfo
@@ -146,6 +153,7 @@ import org.bakasu.bakasu.ui.component.ZipType
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberLoadingDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
+import org.bakasu.bakasu.ui.component.rememberSearchFieldVisibleFraction
 import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
 import org.bakasu.bakasu.ui.component.settings.SettingsJumpPageWidget
@@ -154,11 +162,15 @@ import org.bakasu.bakasu.ui.navigation.LocalNavigator
 import org.bakasu.bakasu.ui.navigation.Route
 import org.bakasu.bakasu.ui.screen.LabelText
 import org.bakasu.bakasu.ui.theme.CardConfig
+import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
+import org.bakasu.bakasu.ui.util.LocalPagerPage
 import org.bakasu.bakasu.ui.util.LocalPermissionRequestInterface
+import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
+import org.bakasu.bakasu.ui.util.LocalTopBarOwner
 import org.bakasu.bakasu.ui.util.Shortcut
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.downloader.download
@@ -325,50 +337,56 @@ fun ModulePage(bottomPadding: Dp) {
 
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState),
+        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState),
     )
 
-    Scaffold(
-        topBar = {
-            SearchAppBar(
-                title = stringResource(R.string.module),
-                searchText = uiState.search,
-                onSearchTextChange = { query ->
-                    viewModel.dispatch(ModuleUiAction.Search(query))
-                },
-                dropdownContent = {
-                    IconButton(
-                        onClick = { showDropdown = true },
-                    ) {
-                        Icon(
-                            imageVector = Icons.TwoTone.MoreVert,
-                            contentDescription = stringResource(id = R.string.settings),
-                        )
+    val topBarHeight = LocalTopBarSlot.current?.heightFor(LocalPagerPage.current) ?: 0.dp
 
-                        ModuleDropdown(
-                            expanded = showDropdown,
-                            onDismissRequest = { showDropdown = false },
-                            viewModel = viewModel,
-                            uiState = uiState,
-                        )
-                    }
-                },
-                navigationContent = {
-                    IconButton(
-                        onClick = {
-                            navigator.push(Route.ModuleRepo)
-                        },
-                    ) {
-                        Icon(
-                            imageVector = Icons.TwoTone.Cloud,
-                            contentDescription = stringResource(id = R.string.module_repo),
-                        )
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                searchBarPlaceHolderText = stringResource(R.string.search_modules),
-            )
-        },
+    // Carries the field from the height it has here to the height it has on the page being
+    // swiped towards, so it runs up when that page's list is already scrolled.
+    val fieldVisibleFraction = rememberSearchFieldVisibleFraction(scrollBehavior)
+
+    ProvideTopBar(active = LocalPagerPage.current == LocalTopBarOwner.current) {
+        SearchAppBar(
+            title = stringResource(R.string.module),
+            searchText = uiState.search,
+            onSearchTextChange = { query ->
+                viewModel.dispatch(ModuleUiAction.Search(query))
+            },
+            dropdownContent = {
+                TopBarIconPill(onClick = { navigator.push(Route.ModuleRepo) }) {
+                    Icon(
+                        imageVector = Icons.TwoTone.Cloud,
+                        contentDescription = stringResource(id = R.string.module_repo),
+                    )
+                }
+                TopBarIconPill(
+                    onClick = { showDropdown = true },
+                ) {
+                    Icon(
+                        imageVector = Icons.TwoTone.MoreVert,
+                        contentDescription = stringResource(id = R.string.settings),
+                    )
+
+                    ModuleDropdown(
+                        expanded = showDropdown,
+                        onDismissRequest = { showDropdown = false },
+                        viewModel = viewModel,
+                        uiState = uiState,
+                    )
+                }
+            },
+            scrollBehavior = scrollBehavior,
+            searchBarPlaceHolderText = stringResource(R.string.search_modules),
+            visibleFraction = fieldVisibleFraction,
+            contentScrolled = {
+                listState.firstVisibleItemIndex > 0 ||
+                    listState.firstVisibleItemScrollOffset > 0
+            },
+        )
+    }
+
+    Scaffold(
         floatingActionButton = {
             if (hideInstallButton) return@Scaffold
 
@@ -394,7 +412,7 @@ fun ModulePage(bottomPadding: Dp) {
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        contentWindowInsets = adaptiveScaffoldWindowInsets(includeBottom = false),
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
         snackbarHost = {
             SwipeableSnackbarHost(
                 hostState = snackBarHost,
@@ -502,7 +520,7 @@ fun ModulePage(bottomPadding: Dp) {
                     context = context,
                     snackBarHost = snackBarHost,
                     bottomPadding = bottomPadding + innerPadding.calculateBottomPadding(),
-                    topPadding = innerPadding.calculateTopPadding(),
+                    topPadding = topBarHeight,
                 )
             }
         }
@@ -939,9 +957,9 @@ private fun ModuleList(
             modifier = modifier,
             contentPadding = remember {
                 PaddingValues(
-                    start = 16.dp,
+                    start = ScreenEdgePadding,
                     top = 0.dp,
-                    end = 16.dp,
+                    end = ScreenEdgePadding,
                     bottom = 72.dp + 5.dp + 5.dp, // FAB + bottom padding of FAB
                 )
             },
@@ -1274,7 +1292,7 @@ fun ModuleItem(
                         this
                     }
                 }
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = ScreenEdgePadding)
                 .padding(top = 12.dp),
         ) {
             Row(

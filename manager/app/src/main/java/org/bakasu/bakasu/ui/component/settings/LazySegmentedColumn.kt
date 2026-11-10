@@ -14,6 +14,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.koin.compose.koinInject
 
@@ -78,7 +79,7 @@ inline fun <T> LazyListScope.lazySegmentColumn(
 
         val topPadding = if (isFirst || continuous) 0.dp else itemSpacing
 
-        val horizontalPadding = if (noHorizontalPadding) 0.dp else 16.dp
+        val horizontalPadding = if (noHorizontalPadding) 0.dp else ScreenEdgePadding
 
         Box(
             modifier = Modifier

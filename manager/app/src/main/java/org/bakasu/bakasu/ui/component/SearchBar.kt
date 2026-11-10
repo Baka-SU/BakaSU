@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -41,20 +40,19 @@ import androidx.compose.material.icons.twotone.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SearchBarDefaults.inputFieldColors
 import androidx.compose.material3.SearchBarDefaults.inputFieldShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -64,8 +62,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithCache
@@ -78,6 +76,7 @@ import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.layout.layout
@@ -87,21 +86,27 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.theme.CardConfig
+import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.blurEffect
 import org.bakasu.bakasu.ui.theme.renderBackgroundBlur
 import org.bakasu.bakasu.ui.util.LocalPagerPage
+import org.bakasu.bakasu.ui.util.LocalPagerPages
+import org.bakasu.bakasu.ui.util.LocalPagerState
 import org.bakasu.bakasu.ui.util.LocalSelectedPage
+import org.bakasu.bakasu.ui.util.LocalTopBarSwipeDelta
 import org.koin.compose.koinInject
 
 private val SearchBarInitialHeight = 77.dp
@@ -152,9 +157,20 @@ class SearchAppBarScrollBehavior internal constructor(
 
     fun reset() {
         searchBarHeightOffset = 0f
+        endGesture()
+    }
+
+    /** Forgets a gesture in flight without changing how far the field is open. */
+    fun endGesture() {
         lastSearchBarScrollDelta = 0f
         isUserScrollInProgress = false
         ignoreCurrentScroll = false
+    }
+
+    /** Runs the field up out of the way, the way scrolling would, instead of cutting it. */
+    suspend fun animateCollapse() {
+        endGesture()
+        animateSearchBarTo(-searchBarHeight)
     }
 
     private fun consumeSearchBarScroll(delta: Float): Float {
@@ -308,10 +324,15 @@ private fun Modifier.textFieldBackground(color: ColorProducer, shape: Shape): Mo
     onDrawBehind { drawOutline(outline, color = color()) }
 }
 
-private fun Modifier.collapseWithTopAppBar(scrollBehavior: SearchAppBarScrollBehavior?): Modifier = clipToBounds().layout { measurable, constraints ->
+// Takes a lambda rather than a value so the fraction is read in the layout phase. Read during
+// composition it would recompose the whole shared top bar on every frame of a swipe.
+private fun Modifier.collapseWithTopAppBar(
+    scrollBehavior: SearchAppBarScrollBehavior?,
+    expandedFraction: () -> Float,
+): Modifier = clipToBounds().layout { measurable, constraints ->
     val placeable = measurable.measure(constraints.copy(minHeight = 0))
     scrollBehavior?.updateSearchBarHeight(placeable.height.toFloat())
-    val fraction = scrollBehavior?.searchBarExpandedFraction ?: 1f
+    val fraction = expandedFraction().coerceIn(0f, 1f)
     val visibleHeight = (placeable.height * fraction).roundToInt()
 
     layout(placeable.width, visibleHeight) {
@@ -332,6 +353,7 @@ private fun CompactSearchBar(
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     interactionSource: MutableInteractionSource? = null,
+    hintAlpha: () -> Float = { 1f },
     shape: Shape = inputFieldShape,
     requestFocus: Boolean = false,
     onFocusRequestHandled: () -> Unit = {},
@@ -435,7 +457,9 @@ private fun CompactSearchBar(
         lineLimits = TextFieldLineLimits.SingleLine,
         decorator = TextFieldDefaults.decorator(
             state = textFieldState,
-            placeholder = placeholder,
+            placeholder = placeholder?.let { hint ->
+                { Box(Modifier.graphicsLayer { alpha = hintAlpha() }) { hint() } }
+            },
             leadingIcon =
                 leadingIcon?.let { leading ->
                     { Box(Modifier.offset(x = 4.dp)) { leading() } }
@@ -467,6 +491,62 @@ private fun CompactSearchBar(
     )
 }
 
+/**
+ * How much of this page's search field to show while the pager is between pages.
+ *
+ * The field travels from the height it has on this page to the height it has on the page being
+ * swiped towards, reaching it at the half way point where the bar changes hands. A page with no
+ * field counts as zero, so leaving for one folds the field away as before; two pages that are
+ * both at the top of their lists count as equal, so nothing moves between them; and arriving at a
+ * list that is already scrolled runs the field up over the first half of the swipe instead of
+ * having it gone the moment the bar is handed over.
+ *
+ * Returned as a lambda and published through the slot rather than read here: reading either side
+ * in composition would recompose the page, and with it the shared bar, on every frame of a swipe.
+ */
+@Composable
+fun rememberSearchFieldVisibleFraction(
+    scrollBehavior: SearchAppBarScrollBehavior,
+): () -> Float {
+    val slot = LocalTopBarSlot.current
+    val pageIndex = LocalPagerPage.current
+    val pagerPages = LocalPagerPages.current
+    val pagerState = LocalPagerState.current
+
+    LaunchedEffect(slot, scrollBehavior, pageIndex) {
+        snapshotFlow { scrollBehavior.searchBarExpandedFraction }
+            .collect { slot?.recordFieldExpansion(pageIndex, it) }
+    }
+
+    val fraction = remember(slot, scrollBehavior, pageIndex, pagerPages, pagerState) {
+        derivedStateOf {
+            val mine = scrollBehavior.searchBarExpandedFraction
+            if (mine <= 0f) return@derivedStateOf 1f
+
+            // Measured from this page's own distance from the pager, never from the shared
+            // delta: that one is measured from whichever page owns the bar, and around a
+            // handover the owner and the pager's current page disagree for a frame or two.
+            // The delta's sign flips there, which pointed this at the page on the other side -
+            // one with no field at all - and folded the field away for those frames, leaving
+            // the arriving page to draw it again at full height.
+            val home = pageIndex ?: 0
+            val distance = pagerState.currentPage + pagerState.currentPageOffsetFraction - home
+            if (distance == 0f) return@derivedStateOf 1f
+
+            val towards = home + if (distance > 0f) 1 else -1
+            val theirs = if (pagerPages.getOrNull(towards)?.hasSearchBar == true) {
+                slot?.fieldExpansionFor(towards) ?: mine
+            } else {
+                0f
+            }
+
+            val travelled = (abs(distance) * 2f).coerceIn(0f, 1f)
+            (lerp(mine, theirs, travelled) / mine).coerceIn(0f, 1f)
+        }
+    }
+    return { fraction.value }
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SearchAppBar(
@@ -478,11 +558,11 @@ fun SearchAppBar(
     navigationContent: @Composable (() -> Unit)? = null,
     scrollBehavior: TopAppBarScrollBehavior? = null,
     searchBarPlaceHolderText: String,
+    visibleFraction: () -> Float = { 1f },
+    contentScrolled: () -> Boolean = { false },
     preserveStateOnNavigation: Boolean = false,
     searchContext: String? = null,
 ) {
-    val themeConfig: ThemeConfig = koinInject()
-    val cardConfig: CardConfig = koinInject()
     val textFieldState = key(searchContext) { rememberTextFieldState(initialText = searchText) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -493,10 +573,25 @@ fun SearchAppBar(
     val currentIsCurrentPage by rememberUpdatedState(isCurrentPage)
     val isPageActive = isCurrentPage && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
     val searchAppBarScrollBehavior = scrollBehavior as? SearchAppBarScrollBehavior
+    val swipeDelta = LocalTopBarSwipeDelta.current
     val searchBarExpansionFraction =
         searchAppBarScrollBehavior?.searchBarExpandedFraction ?: 1f
     val isSearchBarCollapsing = searchBarExpansionFraction < 0.99f
     val isSearchBarCollapsed = searchBarExpansionFraction <= 0.01f
+    // The pager hands the shared top bar over at the halfway point, so fold the field away as the
+    // page is swiped off rather than letting it pop at the handover. Scroll collapse still drives
+    // the search icon on its own, so swiping does not make the icon flash in.
+    //
+    // Deferred: both factors are sampled in the layout and draw phases, so a swipe resizes the
+    // field without recomposing anything.
+    val collapseFraction: () -> Float = {
+        val expanded = searchAppBarScrollBehavior?.searchBarExpandedFraction ?: 1f
+        expanded * visibleFraction().coerceIn(0f, 1f)
+    }
+    // The hint is the only thing in the field that differs from one page's to the next's, so it
+    // is the only thing that crosses over. The capsule and the icons around it are identical on
+    // both, and fading those would be a blink of something that never changed.
+    val hintAlpha: () -> Float = { topBarSwipeAlpha(swipeDelta()) }
     var requestSearchFocus by remember { mutableStateOf(false) }
     val currentOnSearchTextChange by rememberUpdatedState(onSearchTextChange)
     val resetSearch by rememberUpdatedState {
@@ -511,10 +606,12 @@ fun SearchAppBar(
         currentOnSearchTextChange(textFieldState.text.toString())
     }
 
-    LaunchedEffect(isCurrentPage, preserveStateOnNavigation) {
-        if (!preserveStateOnNavigation && !isCurrentPage && scrollBehavior?.state?.collapsedFraction?.toDouble() == 1.0) {
-            searchAppBarScrollBehavior?.collapseSearchBar()
-        }
+    // A collapsing field belongs to the top of its list, so a page left part way down should
+    // not get it back on arrival. The check this replaces asked the top app bar for its collapsed
+    // fraction, which told the truth while the bar collapsed on scroll but is always zero now
+    // that the pill bars are pinned - so the field came back expanded over a scrolled list.
+    LaunchedEffect(searchAppBarScrollBehavior) {
+        if (contentScrolled()) searchAppBarScrollBehavior?.animateCollapse()
     }
 
     LaunchedEffect(isSearchBarCollapsing, isPageActive) {
@@ -535,7 +632,9 @@ fun SearchAppBar(
     // Only switching pager pages should reset the search bar's expansion.
     DisposableEffect(isCurrentPage, searchAppBarScrollBehavior, preserveStateOnNavigation) {
         onDispose {
-            if (isCurrentPage && !preserveStateOnNavigation) searchAppBarScrollBehavior?.reset()
+            // Only the gesture is forgotten. Reopening the field here is what left a page that
+            // had been scrolled showing it again on the way back in.
+            if (isPageActive) searchAppBarScrollBehavior?.endGesture()
         }
     }
 
@@ -552,11 +651,14 @@ fun SearchAppBar(
     }
 
     Column {
-        LargeFlexibleTopAppBar(
-            modifier = Modifier.blurEffect(),
+        TopAppBar(
             scrollBehavior = scrollBehavior,
             title = {
-                Text(text = title)
+                TopBarTitlePill {
+                    Text(
+                        text = title,
+                    )
+                }
             },
             navigationIcon = {
                 if (onBackClick != null) {
@@ -575,7 +677,7 @@ fun SearchAppBar(
                     enter = fadeIn(),
                     exit = fadeOut(),
                 ) {
-                    IconButton(
+                    TopBarIconPill(
                         onClick = {
                             searchAppBarScrollBehavior?.expandSearchBar()
                             requestSearchFocus = true
@@ -589,21 +691,8 @@ fun SearchAppBar(
                 }
                 dropdownContent?.invoke()
             },
-            windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor =
-                    if (themeConfig.isEnableBlur) {
-                        Color.Transparent
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = cardConfig.cardAlpha)
-                    },
-                scrolledContainerColor =
-                    if (themeConfig.isEnableBlur) {
-                        Color.Transparent
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = cardConfig.cardAlpha)
-                    },
-            ),
+            windowInsets = pillTopAppBarWindowInsets(),
+            colors = transparentTopAppBarColors(),
         )
 
         AnimatedVisibility(
@@ -612,21 +701,22 @@ fun SearchAppBar(
             exit = ExitTransition.None,
             modifier = Modifier
                 .fillMaxWidth()
-                .alpha(searchBarExpansionFraction)
-                .collapseWithTopAppBar(searchAppBarScrollBehavior),
+                .graphicsLayer { alpha = collapseFraction() }
+                .collapseWithTopAppBar(searchAppBarScrollBehavior, collapseFraction),
         ) {
             Column {
                 CompactSearchBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 16.dp)
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = ScreenEdgePadding)
                         .clip(CircleShape)
                         .renderBackgroundBlur(MaterialTheme.colorScheme.surfaceContainerHighest),
                     textFieldState = textFieldState,
                     onSearch = {
                         keyboardController?.hide()
                     },
+                    hintAlpha = hintAlpha,
                     placeholder = {
                         Text(
                             text = searchBarPlaceHolderText,

@@ -44,6 +44,7 @@ import org.bakasu.bakasu.ui.component.settings.SettingsJumpPageWidget
 import org.bakasu.bakasu.ui.component.settings.SettingsSwitchWidget
 import org.bakasu.bakasu.ui.screen.susfs.RegisterSuSFSRefresh
 import org.bakasu.bakasu.ui.screen.susfs.SuSFSRefreshRegistrar
+import org.bakasu.bakasu.ui.theme.ScreenEdgePadding
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
 import org.bakasu.bakasu.ui.viewmodel.SuSFSUiAction
@@ -85,7 +86,7 @@ fun StatusTab(
                 visible = configEnabledLoaded && !configEnabled,
             ) {
                 WarningCard(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = ScreenEdgePadding, vertical = 8.dp),
                     message = stringResource(R.string.susfs_config_disable_warning),
                 )
             }
