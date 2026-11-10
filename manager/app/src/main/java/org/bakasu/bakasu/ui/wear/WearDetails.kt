@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -73,9 +74,9 @@ import org.bakasu.bakasu.ui.wear.component.WearInfoRow
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
 import org.bakasu.bakasu.ui.wear.component.WearResult
 import org.bakasu.bakasu.ui.wear.component.WearResultDialog
+import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
@@ -527,6 +528,20 @@ internal fun WearAppDetail(
 ) {
     var error by remember { mutableStateOf<String?>(null) }
     var hasResumed by rememberSaveable { mutableStateOf(false) }
+    var umountShown by rememberSaveable {
+        mutableStateOf(state.profile?.let { !isManager && !it.allowSu && !it.nonRootUseDefault })
+    }
+    // The route retains its last target across navigation; lazy-item recycling must not replay entry.
+    val umountVisibility = remember(umountShown != null) { MutableTransitionState(umountShown == true) }
+    LaunchedEffect(state.profile, state.isLoading, isManager) {
+        if (!state.isLoading) {
+            state.profile?.let {
+                val visible = !isManager && !it.allowSu && !it.nonRootUseDefault
+                umountShown = visible
+                umountVisibility.targetState = visible
+            }
+        }
+    }
     val failed = stringResource(R.string.failed_to_update_app_profile, group.mainApp.label)
     val failedSepolicy = stringResource(R.string.failed_to_update_sepolicy, group.mainApp.label)
     val suNotAllowed = stringResource(R.string.su_not_allowed, group.mainApp.label)
@@ -613,13 +628,13 @@ internal fun WearAppDetail(
                 )
             }
             item(key = "umount-modules") {
-                val visibility = remember { MutableTransitionState(false) }
-                visibility.targetState = !isManager && !profile.allowSu && !profile.nonRootUseDefault
-                WearRefreshItem(spec, Modifier.testTag("app-profile-umount")) {
+                WearScaledItem(spec, Modifier.testTag("app-profile-umount")) {
                     AnimatedVisibility(
-                        visibleState = visibility,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
+                        visibleState = umountVisibility,
+                        // Reserve the full row before revealing its contents; hide it before
+                        // collapsing the slot so the next item never covers a visible switch.
+                        enter = fadeIn(tween(120, delayMillis = 180)) + expandVertically(tween(180), expandFrom = Alignment.Top, clip = false),
+                        exit = fadeOut(tween(120)) + shrinkVertically(tween(180, delayMillis = 120), shrinkTowards = Alignment.Top, clip = false),
                     ) {
                         WearSettingsSwitchWidget(
                             spec,
@@ -629,6 +644,7 @@ internal fun WearAppDetail(
                             secondaryLabel = stringResource(R.string.profile_umount_modules_summary),
                             icon = Icons.Rounded.Extension,
                             transformed = false,
+                            transformSurface = false,
                         )
                     }
                 }

@@ -1,22 +1,27 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.unit.dp
@@ -30,6 +35,7 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.navigation3.rememberSwipeDismissableSceneStrategy
+import java.io.File
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.bakasu.bakasu.R
@@ -298,6 +304,57 @@ class WearAppProfileNavigationTest(private val round: Boolean, private val defau
     }
 
     private fun text(id: Int) = compose.activity.getString(id)
+
+    @Test
+    fun returningToCustomKeepsTheRowExpandedAcrossFrames() {
+        stored = stored.copy(nonRootUseDefault = false)
+        show()
+        assertUmount(!defaultUmount)
+        openMode()
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(2)
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithText(text(R.string.profile_custom)).performClick()
+        val heights = recordReturnFrames("repeat-custom")
+        assertTrue("Returning to unchanged custom must not replay expansion: $heights", heights.all { it > 0f && kotlin.math.abs(it - heights.last()) < 1f })
+        assertEquals(0, saves)
+    }
+
+    @Test
+    fun returningToDefaultOnlyShrinksThePreviouslyVisibleRow() {
+        stored = stored.copy(nonRootUseDefault = false)
+        show()
+        assertUmount(!defaultUmount)
+        openMode()
+        choose(R.string.profile_default, 1)
+        compose.mainClock.autoAdvance = false
+        compose.runOnIdle { mode.completeSave(true) }
+        val heights = recordReturnFrames("return-default")
+        assertTrue("Returning to default must start with the existing row: $heights", heights.first() > 0f)
+        assertTrue("Returning to default must never expand again: $heights", heights.zipWithNext().all { (before, after) -> after <= before + 1f })
+        assertEquals(0f, heights.last(), 0.5f)
+        assertEquals(!defaultUmount, stored.umountModules)
+    }
+
+    private fun recordReturnFrames(stage: String): List<Float> {
+        val heights = mutableListOf<Float>()
+        repeat(50) { frame ->
+            compose.mainClock.advanceTimeBy(16)
+            val nodes = compose.onAllNodes(androidx.compose.ui.test.hasTestTag("app-profile-umount")).fetchSemanticsNodes()
+            // Layout size excludes the navigation scene's uniform 0.9 -> 1 scale.
+            val height = nodes.firstOrNull()?.size?.height?.toFloat()
+            if (height != null) heights += height
+            Log.i("Wear1110Fixed", "profile $stage round=$round default=$defaultUmount t=${(frame + 1) * 16} height=$height")
+            if (round && !defaultUmount && frame in listOf(3, 15, 23, 31, 49)) {
+                val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+                File(compose.activity.getExternalFilesDir(null), "fixed-profile-$stage-${(frame + 1) * 16}.png").outputStream().use {
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                }
+            }
+        }
+        compose.mainClock.autoAdvance = true
+        assertTrue(heights.isNotEmpty())
+        return heights
+    }
 
     private fun show() {
         detail = PageState()
