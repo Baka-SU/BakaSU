@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasScrollToIndexAction
@@ -306,7 +308,7 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
         compose.mainClock.autoAdvance = false
         compose.runOnUiThread { dispatchCrown(-48f) }
         compose.mainClock.advanceTimeBy(32)
-        compose.mainClock.advanceTimeBy(800)
+        compose.mainClock.advanceTimeBy(420)
         compose.runOnIdle { assertFalse(menuOpen) }
         compose.onNodeWithTag("menu").assertDoesNotExist()
         compose.mainClock.autoAdvance = true
@@ -315,10 +317,36 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
         compose.mainClock.autoAdvance = false
         compose.runOnUiThread { dispatchCrown(48f) }
         compose.mainClock.advanceTimeBy(32)
-        compose.mainClock.advanceTimeBy(800)
+        compose.mainClock.advanceTimeBy(420)
         assertFullMenu()
         compose.mainClock.autoAdvance = true
         closeWithCrown()
+    }
+
+    @Test
+    fun crownPauseRestoresTheMovingListWithin420Milliseconds() {
+        showHost(initiallyOpen = true)
+        menuList().performScrollToIndex(7)
+        val fullBottom = menuList().getUnclippedBoundsInRoot().bottom.value
+        compose.mainClock.autoAdvance = false
+        compose.runOnUiThread { dispatchCrown(48f) }
+        var firstRestored: Int? = null
+        repeat(27) { frame ->
+            compose.mainClock.advanceTimeBy(16)
+            val bottom = menuList().getUnclippedBoundsInRoot().bottom.value
+            if (frame == 1) assertTrue(bottom < fullBottom - 1f)
+            if (frame > 1 && kotlin.math.abs(bottom - fullBottom) < 0.5f && firstRestored == null) firstRestored = (frame + 1) * 16
+            android.util.Log.i("Wear1110Fixed", "rotary round=$round pager=$inPager t=${(frame + 1) * 16} bottom=$bottom")
+            if (round && inPager && frame in listOf(1, 11, 19, 26)) {
+                val bitmap = compose.onNodeWithTag("viewport").captureToImage().asAndroidBitmap()
+                java.io.File(compose.activity.getExternalFilesDir(null), "fixed-rotary-${(frame + 1) * 16}.png").outputStream().use {
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+                }
+            }
+        }
+        assertTrue("The actual moving list must settle promptly: $firstRestored", firstRestored != null && firstRestored!! <= 420)
+        assertFullMenu()
+        compose.mainClock.autoAdvance = true
     }
 
     private fun menuList() = compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(hasTestTag("menu")), useUnmergedTree = true)
@@ -411,7 +439,7 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
     private fun assertFullMenu() {
         compose.runOnIdle { assertTrue(menuOpen) }
         val viewport = compose.onNodeWithTag("viewport").getUnclippedBoundsInRoot()
-        val menu = compose.onNodeWithTag("menu").getUnclippedBoundsInRoot()
+        val menu = menuList().getUnclippedBoundsInRoot()
         assertEquals(viewport.top.value, menu.top.value, 0.5f)
         assertEquals(viewport.bottom.value, menu.bottom.value, 0.5f)
     }

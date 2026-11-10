@@ -127,7 +127,7 @@ internal fun Modifier.wearRefreshGesture(
                 pullProgress.floatValue = sign * crown.accumulated / crownTarget
                 displacement.floatValue = pullProgress.floatValue * threshold
                 crown.timeout = scope.launch {
-                    delay(600)
+                    delay(180)
                     crown.accumulated = 0f
                     displacement.floatValue = 0f
                     pullProgress.floatValue = 0f
