@@ -5,10 +5,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Watch
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.wear.compose.material3.AppScaffold
@@ -57,12 +60,17 @@ class WearSearchMenusTest(private val page: WearOperationsPage) {
         )
         assertEquals(1, searches)
         if (page == WearOperationsPage.Repository || page == WearOperationsPage.RepositorySources) {
+            val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+            java.io.File(compose.activity.getExternalFilesDir(null), "fixed-menu-$page.png").outputStream().use {
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+            }
+        }
+        if (page == WearOperationsPage.Repository || page == WearOperationsPage.RepositorySources) {
             click(R.string.repo_add_repository)
             assertEquals(WearRoute.AddRepository, opened)
         }
         if (page == WearOperationsPage.Repository) {
-            click(R.string.wear_search_repositories)
-            assertEquals(WearRoute.RepositorySourceSearch, opened)
+            compose.onNodeWithText(compose.activity.getString(R.string.wear_search_repositories)).assertDoesNotExist()
             assertEquals(1, searches)
         }
     }
