@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.rounded.Wysiwyg
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
@@ -161,11 +162,11 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                         }
                         if (module.version.isNotBlank() || module.metamodule) {
                             // Keep META whole even when the version must be ellipsized.
-                            Row {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (module.version.isNotBlank()) {
                                     Text(
                                         module.version,
-                                        Modifier.weight(1f, fill = false).alignByBaseline(),
+                                        Modifier.weight(1f, fill = false),
                                         color = LocalContentColor.current,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -174,7 +175,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                                 if (module.metamodule) {
                                     WearBadge(
                                         stringResource(R.string.wear_meta_badge),
-                                        Modifier.padding(start = if (module.version.isNotBlank()) 4.dp else 0.dp).alignByBaseline(),
+                                        Modifier.padding(start = if (module.version.isNotBlank()) 4.dp else 0.dp),
                                     )
                                 }
                             }

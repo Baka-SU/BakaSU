@@ -8,21 +8,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
@@ -65,10 +73,28 @@ class WearModuleStateTest(private val round: Boolean) {
         val statusBounds = compose.onNodeWithText(status, useUnmergedTree = true).getUnclippedBoundsInRoot()
         assertFalse("The version must precede the reboot warning", versionBounds.bottom > statusBounds.top)
         compose.onNodeWithText(compose.activity.getString(R.string.wear_meta_badge), useUnmergedTree = true).assertIsDisplayed()
+        val metaBounds = compose.onNodeWithText(compose.activity.getString(R.string.wear_meta_badge), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertEquals("META and version must share the text center", (versionBounds.top.value + versionBounds.bottom.value) / 2, (metaBounds.top.value + metaBounds.bottom.value) / 2, 0.5f)
+        val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+        java.io.File(compose.activity.getExternalFilesDir(null), "fixed-meta-list-$round.png").outputStream().use {
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
         compose.onNodeWithText(module.name).assertIsEnabled().performClick()
         assertEquals(module.id, opened)
         compose.runOnIdle { installed.value = installed.value.copy(update = false) }
         compose.onNodeWithText(status, useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun detailVersionAndMetaShareTheTextCenter() {
+        show { Detail(module.copy(version = "v1.2", metamodule = true)) }
+        val version = compose.onNodeWithText("v1.2", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val badge = compose.onNodeWithText(compose.activity.getString(R.string.wear_meta_badge), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertEquals((version.top.value + version.bottom.value) / 2, (badge.top.value + badge.bottom.value) / 2, 0.5f)
+        val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+        java.io.File(compose.activity.getExternalFilesDir(null), "fixed-meta-detail-$round.png").outputStream().use {
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
     }
 
     @Test
@@ -132,7 +158,7 @@ class WearModuleStateTest(private val round: Boolean) {
                     if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
                 fontScale = 1.15f
             }
-            CompositionLocalProvider(LocalConfiguration provides configuration) {
+            CompositionLocalProvider(LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, 1.15f)) {
                 MaterialTheme {
                     AppScaffold(timeText = {}) { Box(Modifier.requiredSize(216.dp)) { content() } }
                 }
