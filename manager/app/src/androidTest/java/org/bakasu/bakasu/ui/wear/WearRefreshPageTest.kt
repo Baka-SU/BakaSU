@@ -1,10 +1,6 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.content.res.Configuration
-import android.os.SystemClock
-import android.view.InputDevice
-import android.view.MotionEvent
-import android.view.ViewConfiguration
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
@@ -16,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -25,6 +21,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
@@ -45,7 +42,6 @@ import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.bakasu.bakasu.ui.wear.component.WearTimeOptions
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.bakasu.bakasu.ui.wear.component.WearTimeTitleLayout
-import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,10 +52,9 @@ class WearRefreshPageTest(private val round: Boolean, private val mode: String, 
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun realPageMenuRefreshKeepsTheIndicatorAtItsViewportAnchorDuringEveryScrollFrame() {
+    fun realPageMenuRefreshHidesTheIndicatorAfterScrollingAwayFromTheTop() {
         var loading by mutableStateOf(SulogLoading.NONE)
         var menu by mutableStateOf(false)
-        var timeMode by mutableStateOf(mode)
         val records = (1..100).map { SulogEntry("$it", SulogEventType.RootExecve, "seq=$it comm=Record-$it", null, mapOf("comm" to "Record-$it")) }
         val state = SulogUiState(isLoading = false, isSulogEnabled = true, sulogStatus = "supported", visibleEntries = records)
         compose.setContent {
@@ -68,7 +63,7 @@ class WearRefreshPageTest(private val round: Boolean, private val mode: String, 
                 screenWidthDp = 192
                 screenHeightDp = 192
             }
-            CompositionLocalProvider(LocalConfiguration provides config, LocalWearTimeOptions provides WearTimeOptions(timeMode)) {
+            CompositionLocalProvider(LocalConfiguration provides config, LocalWearTimeOptions provides WearTimeOptions(mode)) {
                 MaterialTheme {
                     Box(Modifier.requiredSize(192.dp).testTag("viewport")) {
                         WearTimeTitleLayout(R.string.sulog) {
@@ -119,50 +114,17 @@ class WearRefreshPageTest(private val round: Boolean, private val mode: String, 
             }
         }
         compose.runOnIdle { menu = true }
-        compose.waitForIdle()
-        compose.mainClock.autoAdvance = false
         compose.onNodeWithText(compose.activity.getString(R.string.wear_refresh)).performClick()
-        compose.mainClock.advanceTimeByFrame()
         val indicator = compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading))
-        val top = indicator.getUnclippedBoundsInRoot().top.value
-        repeat(24) {
-            compose.mainClock.advanceTimeBy(16)
-            assertEquals("Menu closing frame $it", top, indicator.getUnclippedBoundsInRoot().top.value, 1f)
+        indicator.assertIsDisplayed()
+        compose.onNodeWithTag("viewport").performTouchInput {
+            swipe(Offset(centerX, height * 0.75f), Offset(centerX, height * 0.25f), 500)
         }
-        compose.runOnIdle { timeMode = if (mode == "title") "time" else "title" }
-        repeat(8) {
-            compose.mainClock.advanceTimeBy(16)
-            assertEquals("Title change frame $it", top, indicator.getUnclippedBoundsInRoot().top.value, 1f)
-        }
-        // Accessibility/instant scrolling may update the layout without isScrollInProgress=true.
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
-        assertEquals("Refresh must not follow a newly measured title", top, indicator.getUnclippedBoundsInRoot().top.value, 1f)
-        compose.mainClock.autoAdvance = false
-        repeat(12) {
-            compose.runOnIdle {
-                val now = SystemClock.uptimeMillis()
-                val coords = MotionEvent.PointerCoords().apply { setAxisValue(MotionEvent.AXIS_SCROLL, -4f * compose.activity.resources.displayMetrics.density / ViewConfiguration.get(compose.activity).scaledVerticalScrollFactor) }
-                val event = MotionEvent.obtain(now, now, MotionEvent.ACTION_SCROLL, 1, arrayOf(MotionEvent.PointerProperties().apply { id = 0 }), arrayOf(coords), 0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_ROTARY_ENCODER, 0)
-                try {
-                    compose.activity.dispatchGenericMotionEvent(event)
-                } finally {
-                    event.recycle()
-                }
-            }
-            compose.mainClock.advanceTimeBy(32)
-            assertEquals("Crown frame $it", top, indicator.getUnclippedBoundsInRoot().top.value, 1f)
-        }
-        compose.onNodeWithTag("viewport").performTouchInput { down(Offset(centerX, height * 0.75f)) }
-        repeat(8) {
-            compose.onNodeWithTag("viewport").performTouchInput { moveBy(Offset(0f, -4f), 16) }
-            compose.mainClock.advanceTimeByFrame()
-            assertEquals("Touch frame $it", top, indicator.getUnclippedBoundsInRoot().top.value, 1f)
-        }
-        compose.onNodeWithTag("viewport").performTouchInput { up() }
-        compose.runOnIdle { loading = SulogLoading.NONE }
-        compose.mainClock.advanceTimeBy(400)
         indicator.assertDoesNotExist()
-        compose.mainClock.autoAdvance = true
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(if (page == "logs") 100 else 30)
+        indicator.assertDoesNotExist()
+        compose.runOnIdle { loading = SulogLoading.NONE }
+        indicator.assertDoesNotExist()
     }
 
     companion object {

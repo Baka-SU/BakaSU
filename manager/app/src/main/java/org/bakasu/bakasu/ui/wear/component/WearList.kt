@@ -185,8 +185,8 @@ fun WearList(
     val pullOffset = remember { mutableFloatStateOf(0f) }
     val pullProgress = remember { mutableFloatStateOf(0f) }
     val reduceMotion = LocalReduceMotion.current
-    // Open space beneath the title at the list start. A user's scroll dismisses it for this
-    // request, so removing bottom padding cannot immediately reopen it and move the hit target.
+    // Open space beneath the title at the list start. Scrolling away dismisses both the gap and its
+    // indicator for this request, so refresh feedback cannot hover over content farther down.
     var showRefreshGap by remember(isRefreshing, isLoading, listState) {
         val atStart = listState.isAtWearListStart(with(density) { 2.dp.roundToPx() })
         mutableStateOf(isRefreshing && !isLoading && atStart)
@@ -494,7 +494,7 @@ fun WearList(
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
             ) { listContent(it) }
         }
-        if (isRefreshing && !isLoading) {
+        if (isRefreshing && !isLoading && showRefreshGap) {
             val measuredBottom = if (timeMode == "title") timeTitleBottom?.value else headerBottom.value
             val fallback = viewportTop + with(density) { refreshFallback.toPx() }
             // The request owns a root-space anchor. Menu scaling, scrolling and title changes

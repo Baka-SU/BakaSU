@@ -57,7 +57,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun refreshFollowsTheTitleAndStaysVisibleWithoutChangingTheScrolledItem() {
+    fun refreshFollowsTheTitleButDoesNotAppearOverScrolledContent() {
         val resources = compose.activity.resources
         var refreshing by mutableStateOf(false)
         var titleInTime by mutableStateOf(false)
@@ -124,7 +124,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         val anchor = compose.runOnIdle { state.anchorItemIndex }
         val beforeScrolledRefresh = compose.runOnIdle { state.anchorItemScrollOffset }
         compose.runOnIdle { refreshing = true }
-        compose.onNodeWithContentDescription(loading).assertIsDisplayed()
+        compose.onNodeWithContentDescription(loading).assertDoesNotExist()
         compose.runOnIdle {
             assertEquals(anchor, state.anchorItemIndex)
             assertEquals(beforeScrolledRefresh, state.anchorItemScrollOffset)
@@ -294,8 +294,9 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
     }
 
     @Test
-    fun refreshIndicatorDoesNotFollowScrollingContent() {
+    fun refreshIndicatorIsNotVisibleAtTheBottomDuringRefresh() {
         var refreshing by mutableStateOf(false)
+        lateinit var listState: TransformingLazyColumnState
         compose.setContent {
             val configuration = Configuration(LocalConfiguration.current).apply {
                 screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
@@ -307,7 +308,8 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
             ) {
                 MaterialTheme {
                     AppScaffold(timeText = {}) {
-                        WearList(isRefreshing = refreshing) { spec ->
+                        listState = rememberTransformingLazyColumnState()
+                        WearList(isRefreshing = refreshing, listState = listState) { spec ->
                             item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
                             items(20) { WearChip(spec, stringResource(R.string.readme)) }
                         }
@@ -317,12 +319,14 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         }
         val loading = compose.activity.getString(R.string.wear_loading)
         compose.runOnIdle { refreshing = true }
-        val before = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
+        compose.onNodeWithContentDescription(loading).assertIsDisplayed()
         compose.onNode(hasScrollToIndexAction()).performTouchInput {
-            swipe(Offset(centerX, height * 0.7f), Offset(centerX, height * 0.6f), 500)
+            swipe(Offset(centerX, height * 0.7f), Offset(centerX, height * 0.4f), 500)
         }
-        val after = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
-        assertEquals("Refresh feedback must stay where it appeared", before.top.value, after.top.value, 1f)
+        compose.onNodeWithContentDescription(loading).assertDoesNotExist()
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(20)
+        compose.runOnIdle { assertTrue("The reproduction must reach the bottom", !listState.canScrollForward) }
+        compose.onNodeWithContentDescription(loading).assertDoesNotExist()
     }
 
     @Test
