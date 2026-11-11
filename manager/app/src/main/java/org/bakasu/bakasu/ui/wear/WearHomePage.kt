@@ -51,6 +51,7 @@ import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearNoticeDialog
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
@@ -131,7 +132,7 @@ internal fun WearHomePage(
     }
     var shownWarning by remember { mutableStateOf<WearHomeWarning?>(null) }
     // The notice is read in a scrolling AlertDialog: a notice with a follow-up action offers it with
-    // Cancel, the others close with the edge button.
+    // Cancel, the others close with a single acknowledgement button.
     val warningDialog = rememberCustomDialog { dismiss ->
         val warning = shownWarning ?: return@rememberCustomDialog
         val action = warning.onAction
@@ -159,13 +160,12 @@ internal fun WearHomePage(
                 dismissButton = { AlertDialogDefaults.DismissButton(onClick = dismiss) },
             )
         } else {
-            AlertDialog(
+            WearNoticeDialog(
                 visible = true,
                 onDismissRequest = dismiss,
                 icon = icon,
                 title = { Text(stringResource(warning.title)) },
                 text = { Text(warning.message) },
-                edgeButton = { AlertDialogDefaults.EdgeButton(onClick = dismiss) },
             )
         }
     }

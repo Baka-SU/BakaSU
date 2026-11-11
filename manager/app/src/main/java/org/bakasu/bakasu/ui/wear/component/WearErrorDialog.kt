@@ -7,8 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.wear.compose.material3.AlertDialog
-import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
@@ -24,7 +22,7 @@ fun WearErrorDialog(message: String?, onDismiss: () -> Unit = {}) {
             dismiss()
             onDismiss()
         }
-        AlertDialog(
+        WearNoticeDialog(
             visible = true,
             onDismissRequest = close,
             icon = {
@@ -32,7 +30,6 @@ fun WearErrorDialog(message: String?, onDismiss: () -> Unit = {}) {
             },
             title = { Text(stringResource(R.string.operation_failed)) },
             text = { Text(message.orEmpty()) },
-            edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
         )
     }
     LaunchedEffect(message) {
