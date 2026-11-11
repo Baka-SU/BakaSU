@@ -54,7 +54,6 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.rememberPagerState
-import androidx.wear.compose.material3.AnimatedPage
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.HorizontalPagerScaffold
 import androidx.wear.compose.material3.MaterialTheme
@@ -106,6 +105,7 @@ import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearPanelPull
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
+import org.bakasu.bakasu.ui.wear.component.WearAnimatedPage
 import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
@@ -1247,7 +1247,7 @@ private fun WearMainPages(
                     flingBehavior = PagerScaffoldDefaults.snapWithSpringFlingBehavior(pagerState),
                     key = { pages[it] },
                 ) { page ->
-                    AnimatedPage(pageIndex = page, pagerState = pagerState) {
+                    WearAnimatedPage(pageIndex = page, pagerState = pagerState) {
                         when (pages.getOrNull(page)) {
                             HOME -> WearHomePage(
                                 home,
