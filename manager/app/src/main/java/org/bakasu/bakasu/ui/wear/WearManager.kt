@@ -54,8 +54,6 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.rememberPagerState
-import androidx.wear.compose.material3.AlertDialog
-import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AnimatedPage
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.HorizontalPagerScaffold
@@ -115,6 +113,7 @@ import org.bakasu.bakasu.ui.wear.component.WearHorizontalPageIndicator
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPager
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
 import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
+import org.bakasu.bakasu.ui.wear.component.WearNoticeDialog
 import org.bakasu.bakasu.ui.wear.component.WearOperationsBackHandler
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.bakasu.bakasu.ui.wear.component.WearResult
@@ -256,13 +255,12 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
             dismiss()
             clearSettingsFeedback()
         }
-        AlertDialog(
+        WearNoticeDialog(
             visible = true,
             onDismissRequest = close,
             icon = { WearDialogIcon(Icons.Rounded.Info) },
             title = { Text(stringResource(R.string.settings)) },
             text = { Text(settingsNotice.orEmpty()) },
-            edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
         )
     }
     LaunchedEffect(settingsNotice) {

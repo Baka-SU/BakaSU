@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
@@ -129,6 +130,7 @@ fun WearList(
     onBack: (() -> Unit)? = null,
     onConfirm: (() -> Unit)? = null,
     confirmLabel: String? = null,
+    confirmIcon: ImageVector = Icons.Rounded.Check,
     confirmEnabled: Boolean = true,
     backToTop: Boolean = false,
     onOpenPanel: (() -> Unit)? = null,
@@ -177,11 +179,7 @@ fun WearList(
     }
     // Round screens scale and fade items at the edges; square screens (including the screen shape
     // setting) keep items at full size, as nothing is cut off there.
-    val transformationSpec = if (LocalConfiguration.current.isScreenRound) {
-        rememberTransformationSpec()
-    } else {
-        rememberTransformationSpec(SquareSmallScreenSpec, SquareLargeScreenSpec)
-    }
+    val transformationSpec = rememberWearTransformationSpec()
     val pullOffset = remember { mutableFloatStateOf(0f) }
     val pullProgress = remember { mutableFloatStateOf(0f) }
     val reduceMotion = LocalReduceMotion.current
@@ -329,6 +327,34 @@ fun WearList(
     // Loading shows the indeterminate indicator at the screen center instead of the content, as the
     // phone does; the branded loading screen is only for the manager's first load.
     val loadingDescription = stringResource(R.string.wear_loading)
+    val hasFooterButton = !isLoading && (onBack != null || onConfirm != null || backToTop)
+    val footerEnabled = !isRefreshing && (onConfirm == null || confirmEnabled)
+    val footerIcon = when {
+        onClosePanel != null -> Icons.Rounded.KeyboardArrowDown
+        onConfirm != null -> confirmIcon
+        backToTop -> Icons.Rounded.VerticalAlignTop
+        else -> Icons.Rounded.ArrowBack
+    }
+    val footerDescription = stringResource(
+        when {
+            onClosePanel != null -> R.string.wear_close_panel
+            onConfirm != null -> R.string.confirm
+            backToTop -> R.string.scroll_to_top
+            else -> R.string.back
+        },
+    )
+    val onFooterClick: () -> Unit = {
+        if (onClosePanel != null) {
+            onPanelClosing?.invoke()
+            onClosePanel()
+        } else if (onConfirm != null) {
+            onConfirm()
+        } else if (backToTop) {
+            scope.launch { listState.animateScrollToItem(0) }
+        } else {
+            onBack?.invoke()
+        }
+    }
     val listContent: @Composable (PaddingValues) -> Unit = { scaffoldPadding ->
         val layoutDirection = LocalLayoutDirection.current
         val timeSpace = if (LocalWearTimeOptions.current.mode == "hidden") {
@@ -395,6 +421,18 @@ fun WearList(
                                 rotaryScrollableBehavior = rotaryBehavior,
                             ) {
                                 content(transformationSpec)
+                                if (!configuration.isScreenRound && hasFooterButton) {
+                                    item {
+                                        WearPageFooterButton(
+                                            onClick = onFooterClick,
+                                            modifier = Modifier.wearRefreshOffset(),
+                                            enabled = footerEnabled,
+                                            icon = footerIcon,
+                                            contentDescription = if (onConfirm != null) confirmLabel ?: footerDescription else footerDescription,
+                                            label = confirmLabel.takeIf { onConfirm != null },
+                                        )
+                                    }
+                                }
                             }
                             // Pulling down at the top shows the panel indicator in the room the list makes for it.
                             if ((onOpenPanel != null && !hasOperationsPanel) || (onClosePanel != null && closePanelOnPullDown)) {
@@ -426,7 +464,7 @@ fun WearList(
         }.onSizeChanged { viewportHeight = it.height.toFloat().coerceAtLeast(1f) },
     ) {
         // The edge button and the room it takes stay hidden until loading ends.
-        if (!isLoading && (onBack != null || onConfirm != null || backToTop)) {
+        if (configuration.isScreenRound && hasFooterButton) {
             ScreenScaffold(
                 scrollState = listState,
                 modifier = pageModifier,
@@ -434,19 +472,8 @@ fun WearList(
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
                 edgeButton = {
                     EdgeButton(
-                        enabled = !isRefreshing && (onConfirm == null || confirmEnabled),
-                        onClick = {
-                            if (onClosePanel != null) {
-                                onPanelClosing?.invoke()
-                                onClosePanel()
-                            } else if (onConfirm != null) {
-                                onConfirm()
-                            } else if (backToTop) {
-                                scope.launch { listState.animateScrollToItem(0) }
-                            } else {
-                                onBack?.invoke()
-                            }
-                        },
+                        enabled = footerEnabled,
+                        onClick = onFooterClick,
                         // Dragging on the edge button keeps scrolling the list, as in the M3 list guidance.
                         modifier = Modifier.offset { IntOffset(0, refreshOffset.roundToPx()) }.scrollable(
                             listState,
@@ -461,26 +488,8 @@ fun WearList(
                             Text(confirmLabel)
                         } else {
                             Icon(
-                                if (onClosePanel != null) {
-                                    Icons.Rounded.KeyboardArrowDown
-                                } else if (onConfirm != null) {
-                                    Icons.Rounded.Check
-                                } else if (backToTop) {
-                                    Icons.Rounded.VerticalAlignTop
-                                } else {
-                                    Icons.Rounded.ArrowBack
-                                },
-                                contentDescription = stringResource(
-                                    if (onClosePanel != null) {
-                                        R.string.wear_close_panel
-                                    } else if (onConfirm != null) {
-                                        R.string.confirm
-                                    } else if (backToTop) {
-                                        R.string.scroll_to_top
-                                    } else {
-                                        R.string.back
-                                    },
-                                ),
+                                footerIcon,
+                                contentDescription = footerDescription,
                             )
                         }
                     }
@@ -528,6 +537,13 @@ val WearItemSpacing = 4.dp
 
 /** A slightly tighter gap for pages made of full-width rows, such as the module details. */
 val WearCompactItemSpacing = 2.dp
+
+@Composable
+internal fun rememberWearTransformationSpec(): TransformationSpec = if (LocalConfiguration.current.isScreenRound) {
+    rememberTransformationSpec()
+} else {
+    rememberTransformationSpec(SquareSmallScreenSpec, SquareLargeScreenSpec)
+}
 
 private val SquareItemSpec = TransformationVariableSpec(1f)
 private val SquareSmallScreenSpec = ResponsiveTransformationSpec.smallScreen(containerAlpha = SquareItemSpec, contentAlpha = SquareItemSpec, scale = SquareItemSpec)
