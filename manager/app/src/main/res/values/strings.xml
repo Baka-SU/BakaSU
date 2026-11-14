@@ -998,4 +998,6 @@
     <string name="wear_round_toast_summary">Show short messages along the bottom arc.</string>
     <string name="wear_round_toast_square">Available only with a round screen layout.</string>
     <string name="wear_theme_color_applied">Theme color applied.</string>
+    <string name="wear_webui_exit_again">Go back again to close WebUI.</string>
+    <string name="wear_browser_load_failed">Could not load this page.</string>
 </resources>

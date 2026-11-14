@@ -972,4 +972,6 @@
     <string name="wear_round_toast_summary">沿屏幕底部弧线显示简短消息。</string>
     <string name="wear_round_toast_square">仅圆屏布局可用。</string>
     <string name="wear_theme_color_applied">主题颜色已应用。</string>
+    <string name="wear_webui_exit_again">再次返回以关闭 WebUI。</string>
+    <string name="wear_browser_load_failed">无法加载此页面。</string>
 </resources>

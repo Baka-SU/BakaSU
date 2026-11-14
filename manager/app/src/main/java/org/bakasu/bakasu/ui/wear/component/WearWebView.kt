@@ -9,7 +9,9 @@ import android.view.MotionEvent
 import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.webkit.WebView
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.focusable
@@ -35,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -49,6 +52,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.requestFocusOnHierarchyActive
 import androidx.wear.compose.material3.ButtonDefaults
@@ -56,6 +60,7 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import kotlin.math.abs
 import kotlin.math.hypot
+import kotlinx.coroutines.delay
 import org.bakasu.bakasu.R
 import org.json.JSONObject
 
@@ -64,6 +69,30 @@ import org.json.JSONObject
 internal fun WearWebView(webView: WebView, modifier: Modifier = Modifier) {
     val round = LocalConfiguration.current.isScreenRound
     val screenActive = LocalScreenIsActive.current
+    val colors = MaterialTheme.colorScheme
+    var lightBackground by remember(webView) { mutableStateOf(false) }
+    LaunchedEffect(webView, screenActive) {
+        while (screenActive) {
+            webView.evaluateJavascript(
+                """(() => {
+                    const nodes = [document.documentElement, document.body].filter(Boolean);
+                    const luminance = nodes.map(node => {
+                        const rgba = getComputedStyle(node).backgroundColor.match(/[\d.]+/g)?.map(Number);
+                        if (!rgba || (rgba[3] ?? 1) === 0) return null;
+                        return (rgba[0] * .2126 + rgba[1] * .7152 + rgba[2] * .0722) / 255;
+                    }).filter(value => value !== null);
+                    return luminance.length ? luminance.reduce((a,b) => a+b) / luminance.length : 0;
+                })()
+                """.trimIndent(),
+            ) { lightBackground = (it.toFloatOrNull() ?: 0f) > 0.5f }
+            delay(1000)
+        }
+    }
+    val hintColor by animateColorAsState(
+        if (lightBackground) colors.background else colors.onSurface,
+        animationSpec = if (LocalReduceMotion.current) snap() else tween(200),
+        label = "web-menu-hint-color",
+    )
     var scaleIndex by remember(webView) { mutableIntStateOf(0) }
     var textPercent by remember(webView) { mutableIntStateOf(webView.settings.textZoom) }
     var resetPosition by remember(webView) { mutableIntStateOf(0) }
@@ -82,10 +111,13 @@ internal fun WearWebView(webView: WebView, modifier: Modifier = Modifier) {
         Box(Modifier.fillMaxSize().padding(padding).clipToBounds()) {
             WearOperationsHost(
                 menuKey = "web-tools",
+                hintColor = hintColor,
+                showHint = true,
+                revealFromBottom = true,
                 menuOpen = toolsOpen,
                 menuActive = toolsOpen,
                 menuContent = { onClosing ->
-                    WearList(onClosePanel = { toolsOpen = false }, onPanelClosing = onClosing) { spec ->
+                    WearList(onClosePanel = { toolsOpen = false }, onPanelClosing = onClosing, closePanelOnPullDown = true) { spec ->
                         item { WearPageHeader(spec, toolsLabel) }
                         item {
                             WearActionButton(spec, Icons.Rounded.CenterFocusStrong, stringResource(R.string.wear_web_reset), {
@@ -126,6 +158,7 @@ private fun WearWebViewContent(
 ) {
     val haptic = LocalHapticFeedback.current
     var cornerFeedback by remember(webView) { mutableIntStateOf(0) }
+    var feedbackCorner by remember(webView) { mutableStateOf(WebCorner.Default) }
     val edgeAlpha = remember(webView) { Animatable(0f) }
     LaunchedEffect(cornerFeedback) {
         if (cornerFeedback > 0) {
@@ -168,7 +201,10 @@ private fun WearWebViewContent(
                 reset,
                 active && !toolsOpen,
                 haptic = { feedback -> haptic.performHapticFeedback(feedback) },
-                onCornerLimit = { cornerFeedback++ },
+                onCornerLimit = {
+                    feedbackCorner = it
+                    cornerFeedback++
+                },
                 onStart = {
                     val held = progress * height
                     opening = false
@@ -211,7 +247,7 @@ private fun WearWebViewContent(
     if (active && !toolsOpen && edgeAlpha.value > 0f) {
         Canvas(Modifier.fillMaxSize().testTag("web-corner-feedback")) {
             val inset = 3.dp.toPx()
-            listOf(150f, 330f).forEach { start ->
+            listOf(if (feedbackCorner.x > 0) 150f else -30f, if (feedbackCorner.y > 0) 240f else 60f).forEach { start ->
                 drawArc(
                     edgeColor.copy(alpha = edgeAlpha.value),
                     start,
@@ -255,7 +291,7 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
     private var onStart: () -> Float = { 0f }
     private var onPull: (Float) -> Unit = {}
     private var onEnd: (Boolean) -> Unit = {}
-    private var onCornerLimit: () -> Unit = {}
+    private var onCornerLimit: (WebCorner) -> Unit = {}
     private var cornerAtLimit = false
     private var rotaryTarget: Pair<Float, Float>? = null
     private val configuration = ViewConfiguration.get(context)
@@ -280,7 +316,7 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
         reset: Int,
         enabled: Boolean,
         haptic: (HapticFeedbackType) -> Unit,
-        onCornerLimit: () -> Unit,
+        onCornerLimit: (WebCorner) -> Unit,
         onStart: () -> Float,
         onPull: (Float) -> Unit,
         onEnd: (Boolean) -> Unit,
@@ -504,7 +540,7 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
                 cornerProgress = (minOf((event.x - downX) / targetX, (event.y - downY) / targetY) * 0.6f).coerceIn(0f, 1f)
                 if (cornerProgress == 1f && !cornerAtLimit) {
                     haptic(HapticFeedbackType.GestureThresholdActivate)
-                    onCornerLimit()
+                    onCornerLimit(if (cornerTarget == WebCorner.Default) corner else cornerTarget)
                 }
                 cornerAtLimit = cornerProgress == 1f
                 offsetX = corner.x * width / 4f + targetX * cornerProgress
@@ -534,7 +570,8 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
     private fun cornerCandidate(x: Float, y: Float): WebCorner? {
         val nx = x / width - 0.5f
         val ny = y / height - 0.5f
-        val atCornerEdge = abs(nx) in 0.2f..0.43f && abs(ny) in 0.2f..0.43f && hypot(nx, ny) <= 0.5f
+        val expansion = minOf(0.03f, configuration.scaledEdgeSlop.toFloat() / minOf(width, height).coerceAtLeast(1) / 2)
+        val atCornerEdge = abs(nx) in (0.2f - expansion)..(0.43f + expansion) && abs(ny) in (0.2f - expansion)..(0.43f + expansion) && hypot(nx, ny) <= 0.5f
         if (corner == WebCorner.Default) {
             return if (atCornerEdge) WebCorner.entries.firstOrNull { it.x * nx < 0f && it.y * ny < 0f } else null
         }
@@ -566,7 +603,7 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
                     if (commit && !cornerAtLimit) {
                         cornerAtLimit = true
                         haptic(HapticFeedbackType.GestureThresholdActivate)
-                        onCornerLimit()
+                        onCornerLimit(if (cornerTarget == WebCorner.Default) corner else cornerTarget)
                     }
                 }
             }

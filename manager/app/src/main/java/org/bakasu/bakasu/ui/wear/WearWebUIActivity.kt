@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -18,8 +19,11 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,6 +41,7 @@ import org.bakasu.bakasu.data.packageinfo.InstalledPackageRepository
 import org.bakasu.bakasu.data.webui.WebUiRepository
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
+import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
@@ -115,7 +120,23 @@ private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) 
 
 @Composable
 internal fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
-    val back: () -> Unit = { if (state.webCanGoBack) state.webView?.goBack() else onFinish() }
+    var lastExit by remember { mutableLongStateOf(0L) }
+    val toast = LocalWearToast.current
+    val exitAgain = stringResource(R.string.wear_webui_exit_again)
+    val back: () -> Unit = {
+        if (state.webCanGoBack) {
+            state.webView?.goBack()
+            lastExit = 0L
+        } else {
+            val now = SystemClock.elapsedRealtime()
+            if (lastExit != 0L && now - lastExit <= 2000L) {
+                onFinish()
+            } else {
+                lastExit = now
+                toast.show(exitAgain)
+            }
+        }
+    }
     BackHandler { back() }
     AppScaffold(timeText = {}, containerColor = Color.Transparent) {
         WearSwipeToDismissBox(onDismissed = back) { background ->

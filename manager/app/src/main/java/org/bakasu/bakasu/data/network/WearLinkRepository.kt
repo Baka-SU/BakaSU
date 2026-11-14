@@ -69,6 +69,18 @@ class WearLinkRepository(private val application: Application, private val bridg
         return WearLinkTarget.BROWSER
     }
 
+    fun openExternal(url: String): Result<Unit> = runCatching {
+        val uri = Uri.parse(url)
+        require(uri.scheme !in setOf(null, "javascript", "data", "file", "content"))
+        val intent = if (uri.scheme == "intent") Intent.parseUri(url, Intent.URI_INTENT_SCHEME) else Intent(Intent.ACTION_VIEW, uri)
+        intent.action = Intent.ACTION_VIEW
+        intent.component = null
+        intent.selector = null
+        intent.addCategory(Intent.CATEGORY_BROWSABLE)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        application.startActivity(intent)
+    }
+
     fun hasWebView(): Boolean = application.packageManager.hasSystemFeature(PackageManager.FEATURE_WEBVIEW) &&
         runCatching { WebViewCompat.getCurrentWebViewPackage(application) != null }.getOrDefault(false)
 

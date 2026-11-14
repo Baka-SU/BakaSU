@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.foundation.hierarchicalFocusGroup
+import androidx.wear.compose.material3.MaterialTheme
 
 /** The list and native WebView use the same finger-following reveal and release animation. */
 @Composable
@@ -70,6 +72,9 @@ internal fun WearOperationsHost(
     menuOpen: Boolean,
     menuActive: Boolean,
     menuContent: @Composable (onClosing: () -> Unit) -> Unit,
+    hintColor: Color = MaterialTheme.colorScheme.onSurface,
+    showHint: Boolean = false,
+    revealFromBottom: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val pull = remember { mutableFloatStateOf(if (menuOpen) 1f else 0f) }
@@ -96,10 +101,10 @@ internal fun WearOperationsHost(
             Box(Modifier.fillMaxSize().hierarchicalFocusGroup(active = screenActive && !menuOpen)) {
                 content()
             }
-            if (menuKey != null && !menuOpen && screenActive) {
+            if (showHint && menuKey != null && !menuOpen && screenActive) {
                 Box(
                     Modifier.align(Alignment.TopCenter).padding(top = 4.dp).size(20.dp, 3.dp)
-                        .background(Color.White, RoundedCornerShape(50)).testTag("wear-menu-hint"),
+                        .background(hintColor, RoundedCornerShape(50)).border(0.5.dp, MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(50)).testTag("wear-menu-hint"),
                 )
             }
             if (!menuClosed && menuKey != null && (menuOpen || pull.floatValue > 0f)) {
@@ -120,7 +125,9 @@ internal fun WearOperationsHost(
                             },
                         )
                         .onSizeChanged { height = it.height.toFloat() }
-                        .graphicsLayer { translationY = if (menuOpen) 0f else (pull.floatValue - 1f) * height }
+                        .graphicsLayer {
+                            translationY = if (menuOpen) 0f else (pull.floatValue - 1f) * height * if (revealFromBottom) -1f else 1f
+                        }
                         .clipToBounds().then(if (menuActive) Modifier else Modifier.clearAndSetSemantics {}),
                 ) {
                     CompositionLocalProvider(LocalScreenIsActive provides (menuActive && screenActive)) {

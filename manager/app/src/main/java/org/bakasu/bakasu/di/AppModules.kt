@@ -142,6 +142,7 @@ import org.bakasu.bakasu.domain.usecase.ObserveStartupStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveSulogStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveSuperUserStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveUmountStateUseCase
+import org.bakasu.bakasu.domain.usecase.OpenWearExternalLinkUseCase
 import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
 import org.bakasu.bakasu.domain.usecase.PrepareScriptUseCase
 import org.bakasu.bakasu.domain.usecase.RebootUseCase
@@ -407,6 +408,7 @@ val useCaseModule = module {
     factoryOf(::GetModuleReadmeUseCase)
     factoryOf(::GetModuleReleaseDetailsUseCase)
     factoryOf(::ResolveInstalledModuleIconUseCase)
+    factoryOf(::OpenWearExternalLinkUseCase)
     factoryOf(::LoadModuleIconUseCase)
     factoryOf(::ResolveModuleUpdateUseCase)
     factoryOf(::GetModuleUpdateChangelogUseCase)

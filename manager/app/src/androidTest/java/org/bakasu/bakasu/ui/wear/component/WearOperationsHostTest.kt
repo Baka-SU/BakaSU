@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -22,6 +23,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
@@ -66,6 +70,7 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
     private var pageLoading by mutableStateOf(false)
     private var pageHasEdgeButton = false
     private var pageRevision by mutableIntStateOf(0)
+    private var showMenuHint by mutableStateOf(false)
     private lateinit var pageState: TransformingLazyColumnState
     private lateinit var menuState: TransformingLazyColumnState
     private lateinit var composeView: View
@@ -74,6 +79,73 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
         override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
             hapticEvents += hapticFeedbackType
         }
+    }
+
+    @Test
+    fun menuHintOnlyAppearsWhenTheWebViewOptsIn() {
+        showHost()
+        compose.onNodeWithTag("wear-menu-hint").assertDoesNotExist()
+        compose.runOnIdle { showMenuHint = true }
+        compose.onNodeWithTag("wear-menu-hint").assertExists()
+        openWithCrown()
+        compose.onNodeWithTag("wear-menu-hint").assertDoesNotExist()
+        closeWithCrown()
+        compose.onNodeWithTag("wear-menu-hint").assertExists()
+    }
+
+    @Test
+    fun bottomRevealEntersFromBelowAndClosesDownward() {
+        var opened by mutableStateOf(false)
+        lateinit var pull: MutableFloatState
+        var top = 0f
+        lateinit var menuCoordinates: LayoutCoordinates
+        var height = 1f
+        compose.setContent {
+            val configuration = Configuration(LocalConfiguration.current).apply {
+                screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
+                    if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
+            }
+            CompositionLocalProvider(LocalConfiguration provides configuration) {
+                MaterialTheme {
+                    AppScaffold(timeText = {}) {
+                        Box(
+                            Modifier.fillMaxSize().onGloballyPositioned {
+                                top = it.positionInRoot().y
+                                height = it.size.height.toFloat()
+                            },
+                        ) {
+                            WearOperationsHost(
+                                menuKey = "web-tools",
+                                menuOpen = opened,
+                                menuActive = opened,
+                                revealFromBottom = true,
+                                menuContent = { onClosing ->
+                                    Box(Modifier.fillMaxSize().testTag("bottom-menu").onGloballyPositioned { menuCoordinates = it }) {
+                                        WearList(onClosePanel = { opened = false }, onPanelClosing = onClosing, closePanelOnPullDown = true) { spec ->
+                                            items(8) { WearChip(spec, stringResource(R.string.wear_web_tools)) }
+                                        }
+                                    }
+                                },
+                            ) {
+                                pull = LocalWearPanelPull.current
+                                Box(Modifier.fillMaxSize())
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        compose.runOnIdle { pull.floatValue = 0.25f }
+        compose.runOnIdle { assertEquals("The preview starts below the viewport", top + height * 0.75f, menuCoordinates.positionInRoot().y, 1f) }
+        compose.runOnIdle { pull.floatValue = 0.75f }
+        compose.runOnIdle { assertEquals("The shared reveal moves upward toward the viewport", top + height * 0.25f, menuCoordinates.positionInRoot().y, 1f) }
+        compose.runOnIdle { opened = true }
+        compose.runOnIdle { assertEquals(top, menuCoordinates.positionInRoot().y, 1f) }
+        compose.onNodeWithTag("bottom-menu").performTouchInput {
+            swipe(Offset(centerX, height * 0.25f), Offset(centerX, height * 0.85f), 300)
+        }
+        compose.runOnIdle { assertFalse("A downward pull returns the menu to the bottom", opened) }
+        compose.onNodeWithTag("bottom-menu").assertDoesNotExist()
     }
 
     @Test
@@ -365,6 +437,7 @@ class WearOperationsHostTest(private val round: Boolean, private val inPager: Bo
                         Box(Modifier.fillMaxSize().testTag("viewport")) {
                             WearOperationsHost(
                                 menuKey = "operations",
+                                showHint = showMenuHint,
                                 menuOpen = menuOpen,
                                 menuActive = menuOpen,
                                 menuContent = { onClosing ->
