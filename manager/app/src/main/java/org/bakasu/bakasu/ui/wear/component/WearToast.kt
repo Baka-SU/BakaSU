@@ -76,11 +76,11 @@ val LocalWearToast = staticCompositionLocalOf<WearToastState> { error("WearToast
 
 /** Short non-modal feedback, with an optional curved presentation on round screens. */
 @Composable
-fun WearToastHost(style: String = "standard", content: @Composable () -> Unit) {
+fun WearToastHost(style: String = "auto", content: @Composable () -> Unit) {
     val state = remember { WearToastState() }
     val accessibility = LocalAccessibilityManager.current
     val reduceMotion = LocalReduceMotion.current
-    val round = style == "round" && LocalConfiguration.current.isScreenRound
+    val round = style == "round" || (style == "auto" && LocalConfiguration.current.isScreenRound)
     var displayedMessage by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(state.message) {
         state.message?.let { displayedMessage = it }

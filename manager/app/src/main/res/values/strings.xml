@@ -990,7 +990,6 @@
     <string name="wear_download_clear_all">Clear all</string>
     <string name="wear_download_clear_message">Cancel and remove all module download tasks? Completed ZIP files will be kept.</string>
     <string name="wear_download_url_blocked">Download URL blocked</string>
-    <string name="wear_search_repositories">Search repositories</string>
     <string name="wear_download_record_missing">This download record is no longer available.</string>
     <string name="wear_download_file">File</string>
     <string name="wear_download_started">Started</string>
@@ -1000,4 +999,12 @@
     <string name="wear_theme_color_applied">Theme color applied.</string>
     <string name="wear_webui_exit_again">Go back again to close WebUI.</string>
     <string name="wear_browser_load_failed">Could not load this page.</string>
+    <string name="wear_toast_display">Toast display</string>
+    <string name="wear_toast_standard">Standard</string>
+    <string name="wear_toast_curved">Curved</string>
+    <string name="wear_toast_square_warning">Curved messages may not fit a square screen. Use this style anyway?</string>
+    <string name="wear_color_hue">Hue</string>
+    <string name="wear_color_saturation">Saturation</string>
+    <string name="wear_color_brightness">Brightness</string>
+    <string name="wear_color_hex">Hex color</string>
 </resources>

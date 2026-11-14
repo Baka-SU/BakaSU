@@ -20,7 +20,7 @@ import org.bakasu.bakasu.domain.usecase.SetStringPreferenceUseCase
 enum class WearPreference(val key: String, val default: String, val options: List<String> = emptyList()) {
     Picker("wear_file_picker", "auto", listOf("auto", "builtin", "system")),
     Link("wear_link_mode", "auto", listOf("auto", "webview", "phone")),
-    ToastStyle("wear_toast_style", "standard", listOf("standard", "round")),
+    ToastStyle("wear_toast_style", "auto", listOf("auto", "standard", "round")),
     Shape("wear_screen_shape", "auto", listOf("auto", "round", "square")),
     TimeDisplay("wear_time_display", "time", listOf("time", "title", "hidden")),
     ImmersiveTime("wear_immersive_time", "false"),
@@ -70,4 +70,11 @@ class WearPreferencesViewModel(
     }
 
     fun set(preference: WearPreference, enabled: Boolean) = set(preference, enabled.toString())
+}
+
+/** Unset toast preferences follow the effective screen shape; explicit choices stay selected. */
+fun WearPreferences.resolvedToastStyle(round: Boolean): String = if (toastStyle == "auto") {
+    if (round) "round" else "standard"
+} else {
+    toastStyle
 }

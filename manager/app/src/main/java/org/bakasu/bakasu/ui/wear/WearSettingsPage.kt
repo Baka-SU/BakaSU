@@ -8,6 +8,7 @@ import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.ChatBubble
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.ElectricalServices
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Update
+import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -87,6 +89,7 @@ private data class SettingsToggle(
     val summary: Int?,
     val checked: Boolean,
     val action: SettingsUiAction,
+    val enabled: Boolean = true,
 )
 
 private data class SettingsPageLink(
@@ -107,6 +110,7 @@ private fun settingsToggleIcon(label: Int): ImageVector = when (label) {
     R.string.settings_sulog -> Icons.Rounded.Article
     R.string.settings_selinux_hide -> Icons.Rounded.Policy
     R.string.settings_adb_root -> Icons.Rounded.Adb
+    R.string.settings_shell_su_adb_only -> Icons.Rounded.VerifiedUser
     R.string.settings_auto_jailbreak -> Icons.Rounded.ElectricalServices
     else -> Icons.Rounded.Settings
 }
@@ -137,6 +141,7 @@ private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
 
     is WearRoute.Selection -> when (route.selection) {
         WearSelection.TimeDisplay -> Icons.Rounded.Schedule
+        WearSelection.ToastDisplay -> Icons.Rounded.ChatBubble
         WearSelection.ScreenShape -> Icons.Rounded.AspectRatio
         WearSelection.Language -> Icons.Rounded.Translate
         WearSelection.LinkMode -> Icons.Rounded.Language
@@ -306,6 +311,21 @@ internal fun WearSettingsPage(
                     }
                     add(
                         SettingsToggle(
+                            SettingsSection.PrivilegesStartup,
+                            R.string.settings_shell_su_adb_only,
+                            when (state.shellSuAdbOnlyStatus) {
+                                "unsupported" -> R.string.feature_status_unsupported_summary
+                                "managed" -> R.string.feature_status_managed_summary
+                                "forced" -> R.string.feature_status_forced_summary
+                                else -> R.string.settings_shell_su_adb_only_summary
+                            },
+                            state.isShellSuAdbOnlyEnabled,
+                            SettingsUiAction.SetShellSuAdbOnly(!state.isShellSuAdbOnlyEnabled),
+                            enabled = state.shellSuAdbOnlyStatus == "supported",
+                        ),
+                    )
+                    add(
+                        SettingsToggle(
                             SettingsSection.MountIsolation,
                             R.string.settings_kernel_umount,
                             R.string.settings_kernel_umount_summary,
@@ -420,6 +440,7 @@ internal fun WearSettingsPage(
                             stringResource(toggle.label),
                             toggle.checked,
                             { onAction(toggle.action) },
+                            enabled = toggle.enabled,
                             icon = settingsToggleIcon(toggle.label),
                             secondaryLabel = toggle.summary?.let { stringResource(it) },
                         )

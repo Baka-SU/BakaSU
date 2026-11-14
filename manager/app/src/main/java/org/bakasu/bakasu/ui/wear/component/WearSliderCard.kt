@@ -226,7 +226,10 @@ private fun DrawScope.drawStepTrack(step: Int, segments: Int, active: Color, onA
         )
     }
     val stopRadius = StopRadius.toPx()
-    for (index in 0..segments) {
+    // Fine color adjustments have more steps than can fit visibly on a watch. Keep their
+    // precision, but only draw stops when adjacent dots have enough room to remain distinct.
+    val visibleStops = if (usable / segments >= stopRadius * 4) 0..segments else listOf(0, segments)
+    for (index in visibleStops) {
         val x = stopX(index)
         // Stops next to the thumb would sit in its gap.
         if (index == step || kotlin.math.abs(x - thumbX) < gap + stopRadius) continue

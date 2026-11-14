@@ -70,6 +70,7 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.WearPreference
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
+import org.bakasu.bakasu.ui.viewmodel.resolvedToastStyle
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
@@ -97,7 +98,7 @@ private fun Int.toHex() = "#%06X".format(this and 0xFFFFFF)
 
 /**
  * One scrolling page in three sections: accent color (follow-system switch and swatches), custom
- * color (hex value and its apply action, the screen's single high-emphasis button) and background
+ * color (preview and HSV editor) and background
  * (image, removal and dimming).
  */
 @Composable
@@ -184,11 +185,6 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
             }
             item { WearSectionHeader(spec, stringResource(R.string.wear_custom_color)) }
             item { HexColorButton(spec, hex, valid) { onOpen(WearRoute.CustomColor(hex)) } }
-            item {
-                WearActionButton(spec, Icons.Rounded.Check, stringResource(R.string.background_crop_apply), {
-                    onAction(SettingsUiAction.ApplyWearThemeColor(hex))
-                }, enabled = valid && !state.applyingThemeColor, colors = ButtonDefaults.buttonColors())
-            }
             item { WearSectionHeader(spec, stringResource(R.string.settings_custom_background)) }
             item {
                 WearActionButton(
@@ -301,7 +297,7 @@ private fun TransformingLazyColumnItemScope.HexColorButton(spec: TransformationS
         icon = {
             Box(Modifier.size(ButtonDefaults.IconSize).background(if (valid) Color(hex.toColorInt()) else Color.Transparent, CircleShape))
         },
-        secondaryLabel = { WearAutoMarqueeText(stringResource(R.string.wear_invalid_color), maxLines = 2) },
+        secondaryLabel = { WearAutoMarqueeText(stringResource(if (valid) R.string.wear_color_hex else R.string.wear_invalid_color), maxLines = 2) },
     ) { WearAutoMarqueeText(hex) }
 }
 
@@ -325,13 +321,23 @@ internal fun WearDpiPage(
     val pending = (state.tempDpi.toFloat() / systemDpi).coerceIn(0.75f, 1.5f)
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_display_touch)) }
-        SegmentedColumn(listOf(R.string.wear_time_display, R.string.settings_language), { it }) { label ->
+        SegmentedColumn(listOf(WearSelection.TimeDisplay, WearSelection.ToastDisplay, WearSelection.Language), { it }) { selection ->
             WearSettingsJumpPageWidget(
                 spec,
-                stringResource(label),
-                { onOpen(WearRoute.Selection(if (label == R.string.wear_time_display) WearSelection.TimeDisplay else WearSelection.Language)) },
-                icon = if (label == R.string.wear_time_display) Icons.Rounded.Schedule else Icons.Rounded.Translate,
-                description = if (label == R.string.wear_time_display) timeDisplayLabel(preferences.timeDisplay) else state.currentAppLocale?.let { it.getDisplayName(it) } ?: stringResource(R.string.language_system_default),
+                stringResource(
+                    when (selection) {
+                        WearSelection.TimeDisplay -> R.string.wear_time_display
+                        WearSelection.ToastDisplay -> R.string.wear_toast_display
+                        else -> R.string.settings_language
+                    },
+                ),
+                { onOpen(WearRoute.Selection(selection)) },
+                icon = selectionIcon(selection, ""),
+                description = when (selection) {
+                    WearSelection.TimeDisplay -> timeDisplayLabel(preferences.timeDisplay)
+                    WearSelection.ToastDisplay -> toastDisplayLabel(preferences.resolvedToastStyle(LocalConfiguration.current.isScreenRound))
+                    else -> state.currentAppLocale?.let { it.getDisplayName(it) } ?: stringResource(R.string.language_system_default)
+                },
             )
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_display_screen_layout)) }
@@ -389,18 +395,6 @@ internal fun WearDpiPage(
             )
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_display_interaction)) }
-        item {
-            val round = LocalConfiguration.current.isScreenRound
-            WearSettingsSwitchWidget(
-                spec,
-                stringResource(R.string.wear_round_toast),
-                preferences.toastStyle == "round",
-                { preferenceViewModel.set(WearPreference.ToastStyle, if (it) "round" else "standard") },
-                enabled = round,
-                icon = Icons.Rounded.ChatBubble,
-                secondaryLabel = stringResource(if (round) R.string.wear_round_toast_summary else R.string.wear_round_toast_square),
-            )
-        }
         SegmentedColumn(
             listOf(R.string.wear_keep_screen_on, R.string.simple_mode, R.string.wear_long_press_haptics, R.string.wear_block_back_key, R.string.wear_disable_swipe_back),
             { it },
@@ -443,18 +437,44 @@ internal fun WearDpiPage(
     }
 }
 
+/** The phone's HSV picker adapted to a scrolling Wear page with one edge confirmation. */
 @Composable
-internal fun WearCustomColorPage(initial: String, state: SettingsUiState, onAction: (SettingsUiAction) -> Unit) {
-    val toast = org.bakasu.bakasu.ui.wear.component.LocalWearToast.current
-    val invalid = stringResource(R.string.wear_invalid_color)
-    WearTextInputPage(
-        stringResource(R.string.wear_custom_color),
-        initial,
-        enabled = !state.applyingThemeColor,
-        canSubmit = { it.trim().removePrefix("#").matches(Regex("[0-9a-fA-F]{6}")) },
-        onValueChanged = {
-            val hex = it.trim().removePrefix("#")
-            if (hex.length >= 6 && !hex.matches(Regex("[0-9a-fA-F]{6}"))) toast.show(invalid)
-        },
-    ) { onAction(SettingsUiAction.ApplyWearThemeColor(it)) }
+internal fun WearCustomColorPage(initial: String, state: SettingsUiState, onAction: (SettingsUiAction) -> Unit, onBack: () -> Unit = {}) {
+    val initialColor = remember(initial) { runCatching { initial.toColorInt() }.getOrDefault(android.graphics.Color.WHITE) }
+    val hsv = remember(initialColor) { FloatArray(3).also { android.graphics.Color.colorToHSV(initialColor, it) } }
+    var hue by rememberSaveable(initial) { mutableStateOf(hsv[0]) }
+    var saturation by rememberSaveable(initial) { mutableStateOf(hsv[1]) }
+    var brightness by rememberSaveable(initial) { mutableStateOf(hsv[2]) }
+    var editingHex by rememberSaveable { mutableStateOf(false) }
+    val selected = android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation, brightness))
+    val hex = selected.toHex()
+    if (editingHex) {
+        WearSubPage({ editingHex = false }) {
+            WearTextInputPage(
+                stringResource(R.string.wear_color_hex),
+                hex,
+                canSubmit = { it.trim().removePrefix("#").matches(Regex("[0-9a-fA-F]{6}")) },
+            ) {
+                val next = FloatArray(3)
+                android.graphics.Color.colorToHSV(("#" + it.trim().removePrefix("#")).toColorInt(), next)
+                hue = next[0]
+                saturation = next[1]
+                brightness = next[2]
+                editingHex = false
+            }
+        }
+        return
+    }
+    WearList(
+        onBack = onBack,
+        onConfirm = { onAction(SettingsUiAction.ApplyWearThemeColor(hex)) },
+        confirmLabel = stringResource(R.string.confirm),
+        confirmEnabled = !state.applyingThemeColor,
+    ) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.wear_custom_color)) }
+        item { HexColorButton(spec, hex, true) { editingHex = true } }
+        item { WearSliderCard(spec, Icons.Rounded.Palette, stringResource(R.string.wear_color_hue), "${hue.roundToInt()}°", hue, { hue = it }, 0f..360f, 359) }
+        item { WearSliderCard(spec, Icons.Rounded.Opacity, stringResource(R.string.wear_color_saturation), "${(saturation * 100).roundToInt()}%", saturation, { saturation = it }, 0f..1f, 99) }
+        item { WearSliderCard(spec, Icons.Rounded.LightMode, stringResource(R.string.wear_color_brightness), "${(brightness * 100).roundToInt()}%", brightness, { brightness = it }, 0f..1f, 99) }
+    }
 }

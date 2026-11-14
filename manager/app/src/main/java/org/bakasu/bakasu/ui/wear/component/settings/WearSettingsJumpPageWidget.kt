@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.wear.component.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,6 +51,7 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
     secondaryLabelContent: (@Composable RowScope.() -> Unit)? = null,
     titleContent: (@Composable () -> Unit)? = null,
     transformSurface: Boolean = transformed,
+    contentPadding: PaddingValues = if (largeIcon) ButtonDefaults.ButtonWithLargeIconContentPadding else ButtonDefaults.ContentPadding,
 ) {
     val loadingDescription = stringResource(R.string.wear_loading)
     val button: @Composable () -> Unit = {
@@ -59,7 +61,7 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
             colors = colors,
             modifier = Modifier.fillMaxWidth(),
             transformation = if (transformSurface) SurfaceTransformation(spec) else null,
-            contentPadding = if (largeIcon) ButtonDefaults.ButtonWithLargeIconContentPadding else ButtonDefaults.ContentPadding,
+            contentPadding = contentPadding,
             icon = iconContent ?: icon?.let {
                 {
                     val iconModifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)

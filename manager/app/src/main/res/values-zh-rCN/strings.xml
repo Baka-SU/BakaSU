@@ -964,7 +964,6 @@
     <string name="wear_download_clear_all">全部清除</string>
     <string name="wear_download_clear_message">取消并移除所有模块下载任务？已完成的 ZIP 文件将保留。</string>
     <string name="wear_download_url_blocked">下载地址被阻止</string>
-    <string name="wear_search_repositories">搜索仓库</string>
     <string name="wear_download_record_missing">下载记录已丢失。</string>
     <string name="wear_download_file">文件</string>
     <string name="wear_download_started">开始时间</string>
@@ -974,4 +973,12 @@
     <string name="wear_theme_color_applied">主题颜色已应用。</string>
     <string name="wear_webui_exit_again">再次返回以关闭 WebUI。</string>
     <string name="wear_browser_load_failed">无法加载此页面。</string>
+    <string name="wear_toast_display">Toast 显示</string>
+    <string name="wear_toast_standard">标准</string>
+    <string name="wear_toast_curved">弧形</string>
+    <string name="wear_toast_square_warning">弧形消息可能不适合当前方形屏幕布局，仍要使用此渲染方式吗？</string>
+    <string name="wear_color_hue">色相</string>
+    <string name="wear_color_saturation">饱和度</string>
+    <string name="wear_color_brightness">明度</string>
+    <string name="wear_color_hex">十六进制颜色</string>
 </resources>

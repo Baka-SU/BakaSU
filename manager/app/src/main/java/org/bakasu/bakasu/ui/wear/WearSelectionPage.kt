@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.ChatBubble
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Info
@@ -39,11 +40,13 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.WearPreference
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
+import org.bakasu.bakasu.ui.viewmodel.resolvedToastStyle
 import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
+import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearChoicePage
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
@@ -63,6 +66,10 @@ internal fun WearSelectionPage(
     onAction: (SettingsUiAction) -> Unit,
 ) {
     when (selection) {
+        WearSelection.ToastDisplay -> WearToastSelectionPage(preferences.resolvedToastStyle(LocalConfiguration.current.isScreenRound), onBack) {
+            preferenceViewModel.set(WearPreference.ToastStyle, it)
+        }
+
         WearSelection.TimeDisplay -> WearChoicePage(
             stringResource(R.string.wear_time_display),
             WearPreference.TimeDisplay.options.map { it to timeDisplayLabel(it) },
@@ -188,6 +195,8 @@ internal fun WearLanguagePage(selected: Locale?, system: List<Locale>, onBack: (
 internal fun selectionIcon(selection: WearSelection, value: String): ImageVector = when (selection) {
     WearSelection.TimeDisplay -> Icons.Rounded.Schedule
 
+    WearSelection.ToastDisplay -> Icons.Rounded.ChatBubble
+
     WearSelection.ScreenShape -> when (value) {
         "round" -> Icons.Rounded.Circle
         "square" -> Icons.Rounded.Square
@@ -279,3 +288,23 @@ internal fun colorSpecLabel(spec: ColorSpec.SpecVersion) = stringResource(
         ColorSpec.SpecVersion.SPEC_2025 -> R.string.wear_color_spec_2025
     },
 )
+
+@Composable
+internal fun WearToastSelectionPage(selected: String, onBack: () -> Unit, onChoose: (String) -> Unit) {
+    val round = LocalConfiguration.current.isScreenRound
+    val warning = rememberWearConfirmDialog(
+        stringResource(R.string.wear_toast_curved),
+        stringResource(R.string.wear_toast_square_warning),
+    ) { onChoose("round") }
+    WearChoicePage(
+        stringResource(R.string.wear_toast_display),
+        listOf("standard", "round").map { it to toastDisplayLabel(it) },
+        selected,
+        onBack,
+    ) {
+        if (it == "round" && !round) warning.show() else onChoose(it)
+    }
+}
+
+@Composable
+internal fun toastDisplayLabel(style: String) = stringResource(if (style == "round") R.string.wear_toast_curved else R.string.wear_toast_standard)
