@@ -533,7 +533,7 @@
     <string name="settings_soft_reboot">Redémarrage logiciel plutôt que complet</string>
     <string name="settings_soft_reboot_summary">Redémarre en mode logiciel plutôt qu\'un redémarrage complet de l\'appareil après l\'installation, la mise à jour ou l\'activation de modules</string>
     <string name="advanced_options">Options avancées</string>
-    <string name="allow_shell">Toujours accorder les droits root au shell</string>
+    <string name="allow_shell">Toujours accorder les privilèges root au shell</string>
     <string name="allow_shell_summary">Autorise systématiquement l\'exécution de la commande SU au shell adb. N\'activer cette option qu\'en cas d\'absolue nécessité.</string>
     <string name="enable_adb">Activation forcée d\'adb au démarrage</string>
     <string name="enable_adb_summary">Force l\'activation du débogage USB et désactive l\'authentification d\'adb. N\'activer cette option qu\'en cas d\'absolue nécessité.</string>
@@ -664,4 +664,12 @@
     <string name="superuser_root_access_required">Accès superutilisateur requis pour charger les applications.</string>
     <string name="superuser_service_start_failed">Échec du démarrage de RootService. Charger de nouveau les applications.</string>
     <string name="superuser_packages_load_failed">Échec du chargement des applications par RootService. Essayer de nouveau.</string>
+    <string name="settings_shell_su_adb_only_summary">Active des vérifications supplémentaires pour les shells : seuls les processus shell initiés par adbd ou par un processus root de KernelSU peuvent obtenir un accès root</string>
+    <string name="settings_shell_su_adb_only">Restreindre le shell root à ADB</string>
+    <string name="module_flash_complete">Module flashé</string>
+    <string name="kernel_flash_complete">Noyau flashé</string>
+    <string name="patch_complete">Correctif appliqué</string>
+    <string name="settings_flash_card_background">Arrière-plan de la carte sur l\'écran de flashage</string>
+    <string name="settings_flash_card_background_summary">Affiche un arrière-plan derrière le journal de flashage. Toujours appliqué lorsqu\'un arrière-plan personnalisé est configuré</string>
+    <string name="feature_status_forced_summary">Cette fonctionnalité est imposée par la configuration de démarrage et ne peut être modifiée</string>
 </resources>
