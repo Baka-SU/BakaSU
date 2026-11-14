@@ -272,7 +272,8 @@ fun WearList(
         listState,
         pullOffset,
         pullProgress,
-        enabled = screenActive && (!panelHosted || onClosePanel != null) && !isBusy,
+        // Once closing is committed, another touch or crown event must not cancel its callback.
+        enabled = screenActive && (!panelHosted || onClosePanel != null) && !isBusy && !closingPanel && !closePanelRequested,
         closePanelOnPullDown = closePanelOnPullDown,
         onOpenPanel = onOpenPanel?.let { open ->
             {
@@ -476,29 +477,33 @@ fun WearList(
         Modifier.fillMaxSize().then(gestureModifier).onGloballyPositioned { viewportTop = it.positionInRoot().y }.onSizeChanged { viewportHeight = it.height.toFloat().coerceAtLeast(1f) },
     ) {
         // Round edge actions stay hidden until loading and the refresh transition end.
-        if (configuration.isScreenRound && hasFooterButton && !isRefreshing && refreshOffset == 0.dp) {
+        if (configuration.isScreenRound && hasFooterButton) {
             ScreenScaffold(
                 scrollState = listState,
                 modifier = pageModifier,
                 timeText = timeText,
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
                 edgeButton = {
-                    EdgeButton(
-                        enabled = footerEnabled,
-                        onClick = onFooterClick,
-                        // Dragging on the edge button keeps scrolling the list, as in the M3 list guidance.
-                        modifier = Modifier.scrollable(
-                            listState,
-                            enabled = !isRefreshing,
-                            orientation = Orientation.Vertical,
-                            reverseDirection = true,
-                            overscrollEffect = rememberOverscrollEffect(),
-                        ),
-                    ) {
-                        if (onConfirm != null && confirmLabel != null) {
-                            WearAutoMarqueeText(confirmLabel)
-                        } else {
-                            Icon(footerIcon, contentDescription = footerDescription)
+                    // Keep this scaffold and its list alive throughout refresh. Hiding only the
+                    // edge action preserves item transformation nodes and their scroll progress.
+                    if (!isRefreshing && refreshOffset == 0.dp) {
+                        EdgeButton(
+                            enabled = footerEnabled,
+                            onClick = onFooterClick,
+                            // Dragging on the edge button keeps scrolling the list, as in the M3 list guidance.
+                            modifier = Modifier.scrollable(
+                                listState,
+                                enabled = !isRefreshing,
+                                orientation = Orientation.Vertical,
+                                reverseDirection = true,
+                                overscrollEffect = rememberOverscrollEffect(),
+                            ),
+                        ) {
+                            if (onConfirm != null && confirmLabel != null) {
+                                WearAutoMarqueeText(confirmLabel)
+                            } else {
+                                Icon(footerIcon, contentDescription = footerDescription)
+                            }
                         }
                     }
                 },

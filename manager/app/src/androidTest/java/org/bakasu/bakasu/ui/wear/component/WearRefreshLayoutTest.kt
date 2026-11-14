@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +56,44 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: Float) {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun refreshWithAnEdgeButtonKeepsTheVisibleItemComposition() {
+        var refreshing by mutableStateOf(false)
+        var mounts = 0
+        var disposals = 0
+        compose.setContent {
+            val configuration = Configuration(LocalConfiguration.current).apply {
+                screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
+                    if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
+            }
+            CompositionLocalProvider(LocalConfiguration provides configuration) {
+                MaterialTheme {
+                    AppScaffold(timeText = {}) {
+                        WearList(onBack = {}, isRefreshing = refreshing) { spec ->
+                            item {
+                                DisposableEffect(Unit) {
+                                    mounts++
+                                    onDispose { disposals++ }
+                                }
+                                WearChip(spec, stringResource(R.string.readme))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        compose.runOnIdle {
+            assertEquals(1, mounts)
+            refreshing = true
+        }
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).assertIsDisplayed()
+        compose.runOnIdle { refreshing = false }
+        compose.runOnIdle {
+            assertEquals(1, mounts)
+            assertEquals(0, disposals)
+        }
+    }
 
     @Test
     fun refreshKeepsItsAnchorWhenStartedOverScrolledContent() {
@@ -170,7 +209,6 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         val original = firstRowTop()
         val titleNode = compose.onNodeWithText(compose.activity.getString(R.string.module_repo))
         val titleBefore = titleNode.getUnclippedBoundsInRoot()
-        val action = compose.onNodeWithContentDescription(compose.activity.getString(R.string.about))
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { refreshing = true }
         compose.mainClock.advanceTimeBy(80)
@@ -183,7 +221,8 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         assertTrue("The refresh region remains below the title during entry", indicatorBefore.top >= titleNode.getUnclippedBoundsInRoot().bottom)
         assertTrue("The settled refresh region remains below the title", indicatorAfter.top >= titleNode.getUnclippedBoundsInRoot().bottom)
         assertEquals(titleBefore.top.value, titleNode.getUnclippedBoundsInRoot().top.value, 4f)
-        assertTrue("Actions remain in the list region below refresh", action.fetchSemanticsNode().boundsInRoot.top >= compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).fetchSemanticsNode().boundsInRoot.bottom)
+        // The second action can leave the lazy viewport while refresh occupies the top region.
+        assertTrue("Visible rows remain below refresh", compose.onNodeWithTag("first-row").fetchSemanticsNode().boundsInRoot.top >= compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).fetchSemanticsNode().boundsInRoot.bottom)
         assertTrue("The bars must move down over multiple frames", original < entering && entering < settled)
         compose.runOnIdle { refreshing = false }
         compose.mainClock.advanceTimeBy(80)
@@ -333,7 +372,8 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         compose.onRoot().performTouchInput {
             swipe(Offset(centerX, height * 0.7f), Offset(centerX, height * 0.4f), 500)
         }
-        compose.runOnIdle { listState.requestScrollToItem(20) }
+        compose.runOnIdle { listState.requestScrollToItem(20, 10_000) }
+        compose.waitUntil(5_000) { !listState.canScrollForward }
         compose.runOnIdle { assertTrue("The reproduction must reach the bottom", !listState.canScrollForward) }
         compose.onNodeWithContentDescription(loading).assertIsDisplayed()
         assertEquals("Scrolling to the bottom must retain the refresh node", indicatorId, compose.onNodeWithContentDescription(loading).fetchSemanticsNode().id)
