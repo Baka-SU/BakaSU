@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { box-sizing: border-box; }
+        html, body { margin: 0; background: #eef4ff; color: #162840; font: 16px sans-serif; }
+        #app { height: 100vh; display: flex; flex-direction: column; }
+        main { flex: 1; min-height: 0; overflow: auto; padding: 8px; }
+        h1 { font-size: 18px; margin: 0 0 8px; }
+        nav { flex-shrink: 0; display: flex; background: white; padding: 8px; }
+        button { min-height: 32px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <main><h1>Module status</h1><button id="status">Show status</button></main>
+    <nav><button id="config">Configuration</button></nav>
+</div>
+<script>
+    window.clicks = [];
+    document.querySelectorAll('button').forEach(button => {
+        button.onclick = () => clicks.push(button.id);
+    });
+</script>
+</body>
+</html>

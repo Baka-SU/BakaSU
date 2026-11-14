@@ -38,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -74,6 +73,7 @@ import org.bakasu.bakasu.domain.model.SulogEventFilter
 import org.bakasu.bakasu.domain.model.SulogEventType
 import org.bakasu.bakasu.domain.model.SulogFile
 import org.bakasu.bakasu.domain.model.toSulogDisplayName
+import org.bakasu.bakasu.ui.component.CenteredRefreshIndicator
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.WarningCard
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
@@ -239,12 +239,10 @@ private fun SulogScreenContent(
                 actions.onRefresh()
             },
             indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
-                    modifier = Modifier
-                        .padding(top = innerPadding.calculateTopPadding())
-                        .align(Alignment.TopCenter),
+                CenteredRefreshIndicator(
                     state = pullToRefreshState,
                     isRefreshing = state.isRefreshing,
+                    contentPadding = innerPadding,
                 )
             },
         ) {

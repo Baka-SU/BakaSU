@@ -15,16 +15,19 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.data.module.ModulePreferencesRepository
+import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.MetaModuleStatus
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
 import org.bakasu.bakasu.domain.usecase.CalculateInstalledModuleSizeUseCase
+import org.bakasu.bakasu.domain.usecase.FindModuleUpdateSourceUseCase
 import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetModuleUpdateChangelogUseCase
 import org.bakasu.bakasu.domain.usecase.IsSoftRebootPreferredUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveInstalledModulesUseCase
 import org.bakasu.bakasu.domain.usecase.RebootUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshInstalledModulesUseCase
+import org.bakasu.bakasu.domain.usecase.ResolveInstalledModuleIconUseCase
 import org.bakasu.bakasu.domain.usecase.ResolveModuleUpdateUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleRemovedUseCase
@@ -33,6 +36,7 @@ import org.bakasu.bakasu.domain.usecase.UpdateCachedModuleEnabledUseCase
 
 data class ModuleUiState(
     val moduleList: List<InstalledModule> = emptyList(),
+    val moduleIcons: Map<String, CatalogModule> = emptyMap(),
     val moduleSizes: Map<String, String> = emptyMap(),
     val isRefreshing: Boolean = false,
     val search: String = "",
@@ -43,6 +47,7 @@ data class ModuleUiState(
     val metaModuleStatus: MetaModuleStatus = MetaModuleStatus.MISSING,
     val isNeedRefresh: Boolean = false,
     val showMoreModuleInfo: Boolean = false,
+    val pendingRemovals: Set<String> = emptySet(),
 )
 
 sealed interface ModuleUiAction {
@@ -79,6 +84,7 @@ private data class ModuleControls(
     val search: String = "",
     val isNeedRefresh: Boolean = false,
     val moduleSizes: Map<String, String> = emptyMap(),
+    val pendingRemovals: Set<String> = emptySet(),
 )
 
 class ModuleViewModel(
@@ -95,6 +101,8 @@ class ModuleViewModel(
     private val isSoftRebootPreferred: IsSoftRebootPreferredUseCase,
     private val resolveModuleUpdate: ResolveModuleUpdateUseCase,
     private val getModuleUpdateChangelog: GetModuleUpdateChangelogUseCase,
+    private val findModuleUpdateSource: FindModuleUpdateSourceUseCase,
+    resolveIcons: ResolveInstalledModuleIconUseCase,
 ) : ViewModel() {
     private val controls = MutableStateFlow(ModuleControls())
     private val mutableEvents = MutableSharedFlow<ModuleUiEvent>(extraBufferCapacity = 1)
@@ -104,7 +112,8 @@ class ModuleViewModel(
         observeInstalledModules(),
         controls,
         modulePreferences.preferences,
-    ) { source, local, preferences ->
+        resolveIcons(),
+    ) { source, local, preferences, icons ->
         ModuleUiState(
             moduleList = buildModuleList(
                 modules = source.modules,
@@ -113,6 +122,7 @@ class ModuleViewModel(
                 sortActionFirst = preferences.sortActionFirst,
             ),
             moduleSizes = local.moduleSizes,
+            moduleIcons = icons,
             isRefreshing = source.refreshing,
             search = local.search,
             sortEnabledFirst = preferences.sortEnabledFirst,
@@ -122,9 +132,14 @@ class ModuleViewModel(
             metaModuleStatus = source.metaModuleStatus,
             isNeedRefresh = local.isNeedRefresh,
             showMoreModuleInfo = preferences.showMoreModuleInfo,
+            pendingRemovals = local.pendingRemovals,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ModuleUiState())
     val uiState: StateFlow<ModuleUiState> = state
+
+    suspend fun findUpdateSource(module: InstalledModule) = module.moduleUpdate?.let {
+        findModuleUpdateSource(module.id, module.updateJson, it.zipUrl)
+    }
 
     suspend fun resolveUpdate(module: InstalledModule): ModuleUpdateVerification {
         val update = module.moduleUpdate ?: return ModuleUpdateVerification.Rejected
@@ -173,11 +188,17 @@ class ModuleViewModel(
                 )
             }
 
-            is ModuleUiAction.SetRemoved -> viewModelScope.launch {
-                val successful = setModuleRemoved(action.moduleId, action.removed).isSuccess
-                mutableEvents.emit(
-                    ModuleUiEvent.RemovedChanged(action.moduleId, action.removed, successful),
-                )
+            is ModuleUiAction.SetRemoved -> {
+                if (action.moduleId in controls.value.pendingRemovals) return
+                controls.update { it.copy(pendingRemovals = it.pendingRemovals + action.moduleId) }
+                viewModelScope.launch {
+                    try {
+                        val successful = setModuleRemoved(action.moduleId, action.removed).isSuccess
+                        mutableEvents.emit(ModuleUiEvent.RemovedChanged(action.moduleId, action.removed, successful))
+                    } finally {
+                        controls.update { it.copy(pendingRemovals = it.pendingRemovals - action.moduleId) }
+                    }
+                }
             }
 
             ModuleUiAction.Reboot -> viewModelScope.launch {
@@ -215,7 +236,7 @@ class ModuleViewModel(
             {
                 val executable = it.hasWebUi || it.hasActionScript
                 when {
-                    it.metamodule && it.enabled -> 0
+                    it.metamodule -> 0
 
                     sortEnabledFirst && sortActionFirst -> when {
                         it.enabled && executable -> 1

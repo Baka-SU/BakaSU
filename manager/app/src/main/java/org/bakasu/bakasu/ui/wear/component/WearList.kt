@@ -1,0 +1,548 @@
+package org.bakasu.bakasu.ui.wear.component
+
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.ScrollableDefaults
+import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberOverscrollEffect
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.VerticalAlignTop
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalScrollCaptureInProgress
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.LocalReduceMotion
+import androidx.wear.compose.foundation.LocalScreenIsActive
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnDefaults
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
+import androidx.wear.compose.material3.EdgeButton
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.ListHeaderDefaults
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.lazy.ResponsiveTransformationSpec
+import androidx.wear.compose.material3.lazy.TransformationSpec
+import androidx.wear.compose.material3.lazy.TransformationVariableSpec
+import androidx.wear.compose.material3.lazy.rememberTransformationSpec
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
+import org.bakasu.bakasu.R
+
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/** Signals that a menu has closed so its page can release the held reveal. */
+val LocalWearPanelDismissals = compositionLocalOf { 0 }
+
+/** Whether the shared operations host currently owns the reveal. */
+val LocalWearPanelHosted = compositionLocalOf { false }
+
+/**
+ * How far the panel of the page on screen has been pulled, from 0 (closed) to 1 (landed). The page
+ * publishes it so the surfaces drawn above the page, such as the pager indicator, can step aside
+ * with the pull instead of sitting on top of the panel.
+ */
+val LocalWearPanelPull = compositionLocalOf { mutableFloatStateOf(0f) }
+
+internal val LocalWearRefreshOffset = compositionLocalOf { 0.dp }
+
+/**
+ * Move the complete row, including its hit target, while keeping the title and scroll anchor still.
+ * Apply outside the surface: Material Card/Button prepend an offscreen layer to their modifier.
+ */
+@Composable
+internal fun Modifier.wearRefreshOffset(): Modifier {
+    val offset = LocalWearRefreshOffset.current
+    return this.offset { IntOffset(0, offset.roundToPx()) }
+}
+
+/**
+ * A Wear screen whose crown and vertical touch gestures scroll only its own content.
+ *
+ * The list uses the [ScreenScaffold] content padding (5.2% side and 10% vertical margins); items
+ * raise the top and bottom padding with `minimumVerticalContentPadding` when they sit at an edge.
+ * [snap] centers items after a fling or crown rotation, for lists of similarly sized items.
+ * [fixedHeader] stays above the list and reserves its measured height without covering list items.
+ */
+@Composable
+fun WearList(
+    isLoading: Boolean = false,
+    isRefreshing: Boolean = false,
+    isBusy: Boolean = false,
+    // Kept source-compatible for callers migrating to operations menus.
+    @Suppress("UNUSED_PARAMETER") onRefresh: (() -> Unit)? = null,
+    onBack: (() -> Unit)? = null,
+    onConfirm: (() -> Unit)? = null,
+    confirmLabel: String? = null,
+    confirmIcon: ImageVector = Icons.Rounded.Check,
+    confirmEnabled: Boolean = true,
+    backToTop: Boolean = false,
+    onOpenPanel: (() -> Unit)? = null,
+    hasOperationsPanel: Boolean = false,
+    onClosePanel: (() -> Unit)? = null,
+    closePanelOnPullDown: Boolean = false,
+    onPanelClosing: (() -> Unit)? = null,
+    closePanelRequested: Boolean = false,
+    panelLabel: String? = null,
+    snap: Boolean = false,
+    itemSpacing: Dp = WearItemSpacing,
+    topContentPadding: Dp = 0.dp,
+    listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
+    fixedHeader: (@Composable () -> Unit)? = null,
+    timeText: (@Composable () -> Unit)? = null,
+    pageTitle: String? = null,
+    content: TransformingLazyColumnScope.(TransformationSpec) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val timeMode = LocalWearTimeOptions.current.mode
+    val timeTitleBottom = LocalWearTimeTitleBottom.current
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val rotaryBehavior = if (snap) {
+        val behavior = RotaryScrollableDefaults.snapBehavior(listState)
+        remember(listState, density, configuration) { behavior }
+    } else {
+        val flingBehavior = ScrollableDefaults.flingBehavior()
+        val behavior = RotaryScrollableDefaults.behavior(listState, flingBehavior)
+        // In Wear Compose 1.7.1 the default factory creates a new scroll accumulator on every call.
+        // Keep it across recompositions so a stream of crown events can finish its scroll animation.
+        remember(listState, flingBehavior, density, configuration) { behavior }
+    }
+    var viewportTop by remember { mutableFloatStateOf(0f) }
+    // Round screens scale and fade items at the edges; square screens (including the screen shape
+    // setting) keep items at full size, as nothing is cut off there.
+    val transformationSpec = rememberWearTransformationSpec()
+    val pullOffset = remember { mutableFloatStateOf(0f) }
+    val pullProgress = remember { mutableFloatStateOf(0f) }
+    val reduceMotion = LocalReduceMotion.current
+    // Keep the refresh gap stable while the list scrolls, including at its bottom boundary.
+    val showRefreshGap = isRefreshing && !isLoading
+    val titleBottomPadding = if (timeMode == "title") 0.dp else ListHeaderDefaults.ContentPadding.calculateBottomPadding()
+    val refreshHeight = WearLoadingIndicatorSize + WearRefreshSpacing * 2 - if (pageTitle != null) itemSpacing else 0.dp
+    // A display change starts with its own geometry instead of animating from the old title gap.
+    val refreshOffset by key(timeMode, configuration, density) {
+        animateDpAsState(
+            targetValue = if (showRefreshGap) refreshHeight else 0.dp,
+            animationSpec = if (reduceMotion) snap() else tween(180),
+            label = "wear-refresh-content-offset",
+        )
+    }
+    val screenActive = LocalScreenIsActive.current
+    // The page yields gestures and reveal updates while the shared menu is active.
+    val panelHosted = LocalWearPanelHosted.current
+    var viewportHeight by remember { mutableFloatStateOf(1f) }
+    var openingPanel by remember { mutableStateOf(false) }
+    var closingPanel by remember { mutableStateOf(false) }
+    var draggingPanel by remember { mutableStateOf(false) }
+    val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
+    val closeDirection = if (closePanelOnPullDown) 1f else -1f
+    val closeProgress by animateFloatAsState(
+        if (closingPanel) 1f else (closeDirection * pullProgress.floatValue * threshold / viewportHeight).coerceIn(0f, 1f),
+        animationSpec = if (reduceMotion || draggingPanel || (closeDirection * pullProgress.floatValue > 0f && !closingPanel)) snap() else tween(180),
+        label = "wear-panel-close",
+        finishedListener = { if (closingPanel && it == 1f && screenActive) onClosePanel?.invoke() },
+    )
+    LaunchedEffect(closePanelRequested, screenActive) {
+        if (closePanelRequested && screenActive && onClosePanel != null) {
+            onPanelClosing?.invoke()
+            closingPanel = true
+        }
+    }
+    val panelDismissals = LocalWearPanelDismissals.current
+    var lastDismissal by remember { mutableIntStateOf(panelDismissals) }
+    val panelWasDismissed = lastDismissal != panelDismissals
+    val panelProgress = wearPanelReveal(
+        pullPixels = pullProgress.floatValue * threshold,
+        height = viewportHeight,
+        opening = openingPanel,
+        dragging = draggingPanel,
+        hosted = panelHosted,
+        dismissed = panelWasDismissed,
+        active = screenActive,
+        onOpen = { onOpenPanel?.invoke() },
+    )
+    // Movement, scale and scrim share the reveal, including the destination's closing animation.
+    val panelPull = LocalWearPanelPull.current
+    val revealProgress = when {
+        panelWasDismissed && !panelHosted -> 0f
+        panelHosted && hasOperationsPanel -> panelPull.floatValue
+        else -> panelProgress
+    }.coerceAtLeast(0f)
+    val pageRecess = revealProgress.coerceIn(0f, WearPageRecessLimit)
+    val pageScale = wearPanelPageScale(pageRecess)
+    // The destination has started closing or has left; the held preview goes away at once, so the
+    // closing panel uncovers the page rather than a copy of itself.
+    LaunchedEffect(panelDismissals) {
+        if (panelWasDismissed) {
+            lastDismissal = panelDismissals
+            openingPanel = false
+            pullOffset.floatValue = 0f
+            pullProgress.floatValue = 0f
+        }
+    }
+    // The opening page publishes its reveal; the hosted menu publishes the reverse on closing.
+    // Observe closing frames here, so they recompose and republish even after the finger lifts.
+    val closingPull = 1f - closeProgress
+    SideEffect {
+        if (hasOperationsPanel && screenActive && !panelHosted) {
+            panelPull.floatValue = pageRecess.coerceIn(0f, 1f)
+        } else if (onClosePanel != null && screenActive && panelHosted) {
+            panelPull.floatValue = closingPull
+        }
+    }
+    // A page that leaves the screen gives up a pull in progress, unless the panel it handed over to
+    // is the reason the page is not active: that panel is still showing the same content.
+    LaunchedEffect(screenActive, panelHosted) {
+        // An outgoing menu must not complete a delayed Back against the newly opened page.
+        if (!screenActive && onClosePanel != null) {
+            closingPanel = false
+            draggingPanel = false
+            pullOffset.floatValue = 0f
+            pullProgress.floatValue = 0f
+        }
+        if (!screenActive && !panelHosted) {
+            openingPanel = false
+            pullOffset.floatValue = 0f
+            pullProgress.floatValue = 0f
+        }
+    }
+    // Boundary drags follow the finger without resistance; release returns without a spring.
+    val animatedOffset by animateFloatAsState(
+        pullOffset.floatValue,
+        animationSpec = if (reduceMotion || pullOffset.floatValue != 0f) snap() else tween(180),
+        label = "wear-boundary-pull",
+    )
+    val currentPanelPull = { if (onClosePanel != null) closeDirection * closeProgress * viewportHeight else panelProgress * viewportHeight }
+    // Keep the gesture on the stationary viewport while its pages move underneath it.
+    val gestureModifier = Modifier.wearRefreshGesture(
+        listState,
+        pullOffset,
+        pullProgress,
+        // Once closing is committed, another touch or crown event must not cancel its callback.
+        enabled = screenActive && (!panelHosted || onClosePanel != null) && !isBusy && !closingPanel && !closePanelRequested,
+        closePanelOnPullDown = closePanelOnPullDown,
+        onOpenPanel = onOpenPanel?.let { open ->
+            {
+                if (!hasOperationsPanel) {
+                    open()
+                } else {
+                    // The preview finishes the reveal itself, then hands the panel to its destination.
+                    openingPanel = true
+                }
+            }
+        },
+        onClosePanel = if (onClosePanel != null) {
+            {
+                onPanelClosing?.invoke()
+                closingPanel = true
+            }
+        } else {
+            null
+        },
+        panelLabel = panelLabel,
+        currentPanelPull = currentPanelPull,
+        onPullStart = {
+            val currentPull = currentPanelPull()
+            openingPanel = false
+            closingPanel = false
+            draggingPanel = true
+            currentPull
+        },
+        onPullEnd = { draggingPanel = false },
+    )
+    // Loading shows the indeterminate indicator at the screen center instead of the content, as the
+    // phone does; the branded loading screen is only for the manager's first load.
+    val loadingDescription = stringResource(R.string.wear_loading)
+    val hasFooterButton = !isLoading && (onBack != null || onConfirm != null || backToTop)
+    val footerEnabled = !isRefreshing && (onConfirm == null || confirmEnabled) &&
+        (onClosePanel != null || onConfirm != null || !backToTop || listState.canScrollBackward)
+    val footerIcon = when {
+        onClosePanel != null -> Icons.Rounded.KeyboardArrowDown
+        onConfirm != null -> confirmIcon
+        backToTop -> Icons.Rounded.VerticalAlignTop
+        else -> Icons.Rounded.ArrowBack
+    }
+    val footerDescription = stringResource(
+        when {
+            onClosePanel != null -> R.string.wear_close_panel
+            onConfirm != null -> R.string.confirm
+            backToTop -> R.string.scroll_to_top
+            else -> R.string.back
+        },
+    )
+    val onFooterClick: () -> Unit = {
+        if (onClosePanel != null) {
+            onPanelClosing?.invoke()
+            onClosePanel()
+        } else if (onConfirm != null) {
+            onConfirm()
+        } else if (backToTop) {
+            scope.launch { if (reduceMotion) listState.scrollToItem(0) else listState.animateScrollToItem(0) }
+        } else {
+            onBack?.invoke()
+        }
+    }
+    val listContent: @Composable (PaddingValues) -> Unit = { scaffoldPadding ->
+        val layoutDirection = LocalLayoutDirection.current
+        val timeSpace = if (LocalWearTimeOptions.current.mode == "hidden") {
+            0.dp
+        } else {
+            with(LocalDensity.current) { MaterialTheme.typography.labelMedium.lineHeight.toDp() } +
+                if (LocalConfiguration.current.isScreenRound) 20.dp else 12.dp
+        }
+        val contentPadding = PaddingValues(
+            start = scaffoldPadding.calculateStartPadding(layoutDirection),
+            end = scaffoldPadding.calculateEndPadding(layoutDirection),
+            top = maxOf(scaffoldPadding.calculateTopPadding(), timeSpace) + topContentPadding,
+            // Keep the final menu button inside the bottom edge, including on round screens.
+            bottom = maxOf(scaffoldPadding.calculateBottomPadding(), if (onClosePanel != null) 24.dp else 0.dp),
+        )
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                WearLoadingIndicator(Modifier.semantics { contentDescription = loadingDescription })
+            }
+        } else {
+            // Header, refresh and list occupy separate layout regions on the same moving surface.
+            val keepRefreshSpace = showRefreshGap || refreshOffset > 0.dp
+            val pinTitle = keepRefreshSpace && pageTitle != null && fixedHeader == null
+            val refreshBoundary = remember(pinTitle) {
+                when {
+                    listState.isAtWearListStart(with(density) { 2.dp.roundToPx() }) -> -1
+                    !listState.canScrollForward -> 1
+                    else -> 0
+                }
+            }
+            LaunchedEffect(pinTitle, refreshOffset) {
+                if (!keepRefreshSpace || pageTitle == null) return@LaunchedEffect
+                // A resizing viewport must retain its top/bottom boundary rather than an old
+                // header-relative offset. Middle-of-list anchors remain untouched.
+                when (refreshBoundary) {
+                    -1 -> listState.requestScrollToItem(0)
+                    1 -> listState.requestScrollToItem((listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0))
+                }
+            }
+            val timeBottom = timeTitleBottom?.value
+            val pinnedTopPadding = if (timeMode == "title" && timeBottom != null) {
+                with(density) { ((timeBottom - viewportTop) / pageScale.coerceAtLeast(0.01f)).toDp().coerceAtLeast(0.dp) }
+            } else {
+                contentPadding.calculateTopPadding()
+            }
+            CompositionLocalProvider(LocalWearRefreshOffset provides 0.dp) {
+                Column(
+                    Modifier.fillMaxSize().graphicsLayer {
+                        translationY = if (panelHosted && onClosePanel != null) {
+                            0f
+                        } else if (!hasOperationsPanel || pullProgress.floatValue < 0f) {
+                            animatedOffset
+                        } else {
+                            0f
+                        }
+                    },
+                ) {
+                    if (fixedHeader != null || keepRefreshSpace) {
+                        Box(
+                            Modifier.fillMaxWidth().padding(
+                                start = contentPadding.calculateStartPadding(layoutDirection),
+                                end = contentPadding.calculateEndPadding(layoutDirection),
+                                top = if (keepRefreshSpace) pinnedTopPadding else contentPadding.calculateTopPadding(),
+                                bottom = if (fixedHeader != null && !keepRefreshSpace) itemSpacing else 0.dp,
+                            ),
+                        ) {
+                            if (fixedHeader != null) {
+                                fixedHeader()
+                            } else if (pinTitle) {
+                                val progress = (refreshOffset / refreshHeight).coerceIn(0f, 1f)
+                                WearPageHeader(pageTitle!!, bottomPadding = titleBottomPadding * (1f - progress))
+                            }
+                        }
+                    }
+                    if (keepRefreshSpace) {
+                        Box(Modifier.fillMaxWidth().height(refreshOffset).clipToBounds(), contentAlignment = Alignment.TopCenter) {
+                            WearLoadingIndicator(
+                                Modifier.padding(top = WearRefreshSpacing).semantics { contentDescription = loadingDescription },
+                                contained = true,
+                            )
+                        }
+                    }
+                    Box(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
+                        TransformingLazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            userScrollEnabled = !isRefreshing,
+                            state = listState,
+                            contentPadding = if (fixedHeader == null && !keepRefreshSpace) {
+                                contentPadding
+                            } else {
+                                PaddingValues(
+                                    start = contentPadding.calculateStartPadding(layoutDirection),
+                                    end = contentPadding.calculateEndPadding(layoutDirection),
+                                    bottom = contentPadding.calculateBottomPadding(),
+                                )
+                            },
+                            verticalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.Top),
+                            flingBehavior = if (snap) {
+                                TransformingLazyColumnDefaults.snapFlingBehavior(listState)
+                            } else {
+                                ScrollableDefaults.flingBehavior()
+                            },
+                            rotaryScrollableBehavior = rotaryBehavior,
+                        ) {
+                            if (pageTitle != null) {
+                                item {
+                                    // Retain index zero while refreshing so existing item anchors stay valid.
+                                    if (!pinTitle) WearPageHeader(transformationSpec, pageTitle) else Spacer(Modifier.height(with(density) { 1.toDp() }))
+                                }
+                            }
+                            content(transformationSpec)
+                            if (!configuration.isScreenRound && hasFooterButton) {
+                                item {
+                                    WearPageFooterButton(
+                                        onClick = onFooterClick,
+                                        enabled = footerEnabled,
+                                        icon = footerIcon,
+                                        contentDescription = if (onConfirm != null) confirmLabel ?: footerDescription else footerDescription,
+                                        label = confirmLabel.takeIf { onConfirm != null },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // The main page stays stationary; the menu is a separate surface above it. Behind an opening
+    // panel the page also scales down, so the panel appears to land on a receding page.
+    val pageModifier = Modifier.graphicsLayer {
+        translationY = if (onClosePanel != null) closeDirection * closeProgress * viewportHeight else 0f
+        if (hasOperationsPanel) {
+            scaleX = pageScale
+            scaleY = pageScale
+        }
+    }
+    Box(
+        Modifier.fillMaxSize().then(gestureModifier).onGloballyPositioned { viewportTop = it.positionInRoot().y }.onSizeChanged { viewportHeight = it.height.toFloat().coerceAtLeast(1f) },
+    ) {
+        // Round edge actions stay hidden until loading and the refresh transition end.
+        if (configuration.isScreenRound && hasFooterButton) {
+            ScreenScaffold(
+                scrollState = listState,
+                modifier = pageModifier,
+                timeText = timeText,
+                scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
+                edgeButton = {
+                    // Keep this scaffold and its list alive throughout refresh. Hiding only the
+                    // edge action preserves item transformation nodes and their scroll progress.
+                    if (!isRefreshing && refreshOffset == 0.dp) {
+                        EdgeButton(
+                            enabled = footerEnabled,
+                            onClick = onFooterClick,
+                            // Dragging on the edge button keeps scrolling the list, as in the M3 list guidance.
+                            modifier = Modifier.scrollable(
+                                listState,
+                                enabled = !isRefreshing,
+                                orientation = Orientation.Vertical,
+                                reverseDirection = true,
+                                overscrollEffect = rememberOverscrollEffect(),
+                            ),
+                        ) {
+                            if (onConfirm != null && confirmLabel != null) {
+                                WearAutoMarqueeText(confirmLabel)
+                            } else {
+                                Icon(footerIcon, contentDescription = footerDescription)
+                            }
+                        }
+                    }
+                },
+            ) { listContent(it) }
+        } else {
+            ScreenScaffold(
+                scrollState = listState,
+                modifier = pageModifier,
+                timeText = timeText,
+                scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
+            ) { listContent(it) }
+        }
+    }
+}
+
+/** Dimming follows the complete reveal, so the page remains visible while it recedes. */
+internal const val WearPanelDimReach = 1f
+
+internal const val WearPanelMaxDim = 1f
+
+/** A bound on the page overshoot, so a long pull cannot shrink it far out of shape. */
+private const val WearPageRecessLimit = 1.2f
+
+/** Equal space above and below the refresh indicator. */
+private val WearRefreshSpacing = 8.dp
+
+/** The gap between list items, the TransformingLazyColumn default. */
+val WearItemSpacing = 4.dp
+
+/** A slightly tighter gap for pages made of full-width rows, such as the module details. */
+val WearCompactItemSpacing = 2.dp
+
+@Composable
+internal fun rememberWearTransformationSpec(): TransformationSpec = if (LocalConfiguration.current.isScreenRound) {
+    rememberTransformationSpec()
+} else {
+    rememberTransformationSpec(SquareSmallScreenSpec, SquareLargeScreenSpec)
+}
+
+private val SquareItemSpec = TransformationVariableSpec(1f)
+private val SquareSmallScreenSpec = ResponsiveTransformationSpec.smallScreen(containerAlpha = SquareItemSpec, contentAlpha = SquareItemSpec, scale = SquareItemSpec)
+private val SquareLargeScreenSpec = ResponsiveTransformationSpec.largeScreen(containerAlpha = SquareItemSpec, contentAlpha = SquareItemSpec, scale = SquareItemSpec)

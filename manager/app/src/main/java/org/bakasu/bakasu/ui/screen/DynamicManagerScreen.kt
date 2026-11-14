@@ -27,7 +27,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -49,6 +48,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.DynamicManagerConfig
+import org.bakasu.bakasu.ui.component.CenteredRefreshIndicator
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.DialogHandle
 import org.bakasu.bakasu.ui.component.PackageIcon
@@ -72,6 +72,7 @@ import org.bakasu.bakasu.ui.viewmodel.DynamicManagerOperation
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerUiAction
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerUiEvent
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerViewModel
+import org.bakasu.bakasu.ui.viewmodel.managerSourceLabel
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -191,12 +192,10 @@ fun DynamicManagerScreen() {
                     }
                 },
                 indicator = {
-                    PullToRefreshDefaults.LoadingIndicator(
+                    CenteredRefreshIndicator(
                         state = pullToRefreshState,
                         isRefreshing = isUserRefreshing,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = paddingValues.calculateTopPadding()),
+                        contentPadding = paddingValues,
                     )
                 },
                 modifier = Modifier
@@ -347,21 +346,9 @@ private fun DynamicManagerAppItem(
             onClick()
         },
         title = app.label,
-        description = if (!app.isChangeable) {
-            stringResource(
-                R.string.dynamic_manager_fixed_manager_summary,
-                app.packageName,
-                if ((app.managerSignatureIndex ?: 0) == 254) {
-                    "Debug"
-                } else if ((app.managerSignatureIndex ?: 0) == 253) {
-                    "KernelSU Toolkit"
-                } else {
-                    "Kernel"
-                },
-            )
-        } else {
-            app.packageName
-        },
+        description = app.managerSourceLabel()?.let {
+            stringResource(R.string.dynamic_manager_fixed_manager_summary, app.packageName, stringResource(it))
+        } ?: app.packageName,
         leadingContent = {
             PackageIcon(
                 packageName = app.packageName,

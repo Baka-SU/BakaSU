@@ -22,9 +22,14 @@ data class NetworkResponse(
 }
 
 class NetworkRequestRepository(
-    private val networkStatusRepository: NetworkStatusRepository,
     private val httpClient: OkHttpClient,
 ) {
+    suspend fun cached(url: String): String? = withContext(Dispatchers.IO) {
+        httpClient.newCall(Request.Builder().url(url).cacheControl(CacheControl.FORCE_CACHE).build()).execute().use { response ->
+            if (response.isSuccessful) response.body?.string() else null
+        }
+    }
+
     suspend fun fetch(
         url: String,
         headers: Map<String, String> = emptyMap(),
@@ -47,10 +52,6 @@ class NetworkRequestRepository(
         maxResponseBytes: Long? = null,
         documentPolicy: DocumentPolicy? = null,
     ): Result<NetworkResponse> = withContext(Dispatchers.IO) {
-        if (!networkStatusRepository.isAvailable()) {
-            return@withContext Result.failure(IllegalStateException("offline"))
-        }
-
         runCatching {
             val request = Request.Builder()
                 .url(url)

@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import org.bakasu.bakasu.data.module.registry.RegistryUrls
 import org.bakasu.bakasu.data.module.registry.canShareDownload
+import org.bakasu.bakasu.domain.model.DownloadFailure
+import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
@@ -26,12 +28,15 @@ class DownloadRepository(
     private val _downloads = MutableStateFlow<Map<Int, DownloadState>>(emptyMap())
     val downloads: StateFlow<Map<Int, DownloadState>> = _downloads.asStateFlow()
 
-    fun enqueue(url: String, fileName: String, expected: ExpectedFile? = null): Int {
+    fun enqueue(url: String, fileName: String, expected: ExpectedFile? = null, module: DownloadModuleInfo? = null): Int {
         synchronized(enqueueLock) {
             val existing = _downloads.value.values.find {
                 canShareDownload(url, expected, it.url, it.expected) && (it.status == DownloadStatus.PENDING || it.status == DownloadStatus.DOWNLOADING)
             }
-            if (existing != null) return existing.id
+            if (existing != null) {
+                if (module != null) _downloads.update { tasks -> tasks[existing.id]?.let { tasks + (existing.id to it.copy(module = module)) } ?: tasks }
+                return existing.id
+            }
 
             val id = idCounter.incrementAndGet()
             _downloads.update {
@@ -41,6 +46,7 @@ class DownloadRepository(
                         fileName = fileName,
                         url = url,
                         expected = expected,
+                        module = module,
                     )
                     )
             }
@@ -106,10 +112,41 @@ class DownloadRepository(
         }
     }
 
-    fun updateProgress(id: Int, progress: Int) {
+    /** Stops a running download; the service marks it failed as cancelled. */
+    fun cancel(id: Int) {
+        val intent = Intent(application, DownloadService::class.java).apply {
+            action = DownloadService.ACTION_CANCEL
+            putExtra(DownloadService.EXTRA_DOWNLOAD_ID, id)
+        }
+        application.startService(intent)
+    }
+
+    /** The service waits for active transfer cleanup before removing the task and notifications. */
+    fun remove(id: Int) {
+        if (id !in downloads.value) return
+        application.startService(
+            Intent(application, DownloadService::class.java).apply {
+                action = DownloadService.ACTION_REMOVE
+                putExtra(DownloadService.EXTRA_DOWNLOAD_ID, id)
+            },
+        )
+    }
+
+    internal fun removeRecord(id: Int) {
+        _downloads.update { it - id }
+    }
+
+    fun updateProgress(id: Int, progress: Int, downloadedBytes: Long = 0L, totalBytes: Long = -1L) {
         _downloads.update { map ->
             val state = map[id] ?: return@update map
-            map + (id to state.copy(progress = progress, status = DownloadStatus.DOWNLOADING))
+            map + (
+                id to state.copy(
+                    progress = progress,
+                    downloadedBytes = downloadedBytes,
+                    totalBytes = totalBytes,
+                    status = DownloadStatus.DOWNLOADING,
+                )
+                )
         }
     }
 
@@ -126,10 +163,10 @@ class DownloadRepository(
         }
     }
 
-    fun markFailed(id: Int, error: String, verificationFailure: DownloadVerificationFailure? = null) {
+    fun markFailed(id: Int, error: String, verificationFailure: DownloadVerificationFailure? = null, failure: DownloadFailure? = null) {
         _downloads.update { map ->
             val state = map[id] ?: return@update map
-            map + (id to state.copy(status = DownloadStatus.FAILED, error = error, verificationFailure = verificationFailure))
+            map + (id to state.copy(status = DownloadStatus.FAILED, error = error, verificationFailure = verificationFailure, failure = failure))
         }
     }
 }

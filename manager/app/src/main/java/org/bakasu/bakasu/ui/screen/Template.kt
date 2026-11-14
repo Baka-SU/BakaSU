@@ -40,7 +40,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -66,6 +65,7 @@ import androidx.lifecycle.compose.dropUnlessResumed
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.ProfileTemplate
+import org.bakasu.bakasu.ui.component.CenteredRefreshIndicator
 import org.bakasu.bakasu.ui.component.NetworkRefreshContent
 import org.bakasu.bakasu.ui.component.settings.AppBackButton
 import org.bakasu.bakasu.ui.component.settings.SettingsJumpPageWidget
@@ -247,12 +247,10 @@ fun AppProfileTemplateScreen() {
                     }
                 },
                 indicator = {
-                    PullToRefreshDefaults.LoadingIndicator(
+                    CenteredRefreshIndicator(
                         state = pullRefreshState,
                         isRefreshing = isUserRefreshing,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = innerPadding.calculateTopPadding()),
+                        contentPadding = innerPadding,
                     )
                 },
             ) {

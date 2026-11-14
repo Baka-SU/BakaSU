@@ -28,6 +28,8 @@ data class TemplateEditorUiState(
     val loadFailure: ProfileTemplateFailure? = null,
     val readOnly: Boolean = true,
     val isCreation: Boolean = false,
+    val dirty: Boolean = false,
+    val saving: Boolean = false,
 )
 
 sealed interface TemplateEditorUiAction {
@@ -61,6 +63,7 @@ class TemplateEditorViewModel(
     val events: SharedFlow<TemplateEditorUiEvent> = mutableEvents.asSharedFlow()
     private val saveMutex = Mutex()
     private var autoSaveJob: Job? = null
+    private var savedTemplate: ProfileTemplate? = null
 
     init {
         dispatch(TemplateEditorUiAction.Load)
@@ -71,8 +74,8 @@ class TemplateEditorViewModel(
             TemplateEditorUiAction.Load -> load()
 
             is TemplateEditorUiAction.Update -> {
-                mutableState.update { it.copy(template = action.template) }
-                if (action.autoSave && !readOnly) scheduleAutoSave()
+                mutableState.update { it.copy(template = action.template, dirty = action.template != savedTemplate) }
+                if (action.autoSave && !readOnly && !isCreation) scheduleAutoSave()
             }
 
             TemplateEditorUiAction.Save -> {
@@ -105,8 +108,9 @@ class TemplateEditorViewModel(
             mutableState.update { it.copy(loading = true, loadFailure = null) }
             getTemplate(templateId).fold(
                 onSuccess = { template ->
+                    savedTemplate = template
                     mutableState.update {
-                        it.copy(template = template, loading = false, loadFailure = null)
+                        it.copy(template = template, loading = false, loadFailure = null, dirty = false)
                     }
                 },
                 onFailure = { error ->
@@ -134,12 +138,20 @@ class TemplateEditorViewModel(
 
     private suspend fun persist(create: Boolean, emitSuccess: Boolean) {
         saveMutex.withLock {
-            saveTemplate(mutableState.value.template, create).fold(
-                onSuccess = {
-                    if (emitSuccess) mutableEvents.tryEmit(TemplateEditorUiEvent.Saved)
-                },
-                onFailure = { mutableEvents.tryEmit(TemplateEditorUiEvent.Error(it.toFailure())) },
-            )
+            val template = mutableState.value.template
+            mutableState.update { it.copy(saving = true) }
+            try {
+                saveTemplate(template, create).fold(
+                    onSuccess = {
+                        savedTemplate = template
+                        mutableState.update { it.copy(dirty = it.template != template) }
+                        if (emitSuccess) mutableEvents.tryEmit(TemplateEditorUiEvent.Saved)
+                    },
+                    onFailure = { mutableEvents.tryEmit(TemplateEditorUiEvent.Error(it.toFailure())) },
+                )
+            } finally {
+                mutableState.update { it.copy(saving = false) }
+            }
         }
     }
 

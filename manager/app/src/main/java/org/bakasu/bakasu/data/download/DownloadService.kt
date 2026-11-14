@@ -23,9 +23,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -54,6 +57,7 @@ class DownloadService : Service() {
         const val CHANNEL_ID = "download_channel"
         const val ACTION_DOWNLOAD = "org.bakasu.bakasu.action.DOWNLOAD"
         const val ACTION_DOWNLOAD_MANAGER_APK = "org.bakasu.bakasu.action.DOWNLOAD_MANAGER_APK"
+        const val ACTION_REMOVE = "org.bakasu.bakasu.action.REMOVE_DOWNLOAD"
         const val ACTION_CANCEL = "org.bakasu.bakasu.action.CANCEL_DOWNLOAD"
         const val ACTION_DISMISS_DOWNLOAD = "org.bakasu.bakasu.action.DISMISS_DOWNLOAD"
         const val ACTION_INSTALL_MODULE = "org.bakasu.bakasu.action.INSTALL_MODULE"
@@ -73,10 +77,12 @@ class DownloadService : Service() {
         const val SOURCE_NIGHTLY_ARTIFACT = "nightly_artifact"
 
         private const val COMPLETION_NOTIFICATION_ID_BASE = 100000
+        private const val PROGRESS_STEP_BYTES = 64L * 1024L
     }
 
+    private val removingIds = ConcurrentHashMap.newKeySet<Int>()
     private val activeJobs = ConcurrentHashMap<Int, Job>()
-    private val activeRegistryCalls = ConcurrentHashMap<Int, Call>()
+    private val activeCalls = ConcurrentHashMap<Int, Call>()
     private val registryClient by lazy {
         httpClient.newBuilder().followSslRedirects(true).addNetworkInterceptor { chain ->
             if (!RegistryUrls.isAllowedDownloadHop(chain.request().url.toString())) {
@@ -95,6 +101,7 @@ class DownloadService : Service() {
     private val lastNotifiedProgress = ConcurrentHashMap<Int, Int>()
     private val serviceScope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
     private lateinit var notificationManager: NotificationManager
+    private var foregroundDownloadId: Int? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -110,7 +117,7 @@ class DownloadService : Service() {
                 val url = intent.getStringExtra(EXTRA_URL) ?: return START_NOT_STICKY
                 val fileName = intent.getStringExtra(EXTRA_FILE_NAME) ?: return START_NOT_STICKY
                 val downloadId = intent.getIntExtra(EXTRA_DOWNLOAD_ID, -1)
-                if (downloadId == -1) return START_NOT_STICKY
+                if (downloadId == -1 || downloadId !in downloadRepository.downloads.value) return START_NOT_STICKY
 
                 val expected = if (intent.hasExtra(EXTRA_EXPECTED_SIZE) || intent.hasExtra(EXTRA_EXPECTED_SHA256)) {
                     ExpectedFile(intent.getLongExtra(EXTRA_EXPECTED_SIZE, -1L), intent.getStringExtra(EXTRA_EXPECTED_SHA256).orEmpty())
@@ -136,7 +143,7 @@ class DownloadService : Service() {
                     -1,
                 )
                 val downloadId = intent.getIntExtra(EXTRA_DOWNLOAD_ID, -1)
-                if (downloadId == -1) return START_NOT_STICKY
+                if (downloadId == -1 || downloadId !in downloadRepository.downloads.value) return START_NOT_STICKY
                 if (source == SOURCE_NIGHTLY_ARTIFACT &&
                     (preferredAbi.isNullOrBlank() || expectedVersionCode <= 0)
                 ) {
@@ -157,13 +164,43 @@ class DownloadService : Service() {
             ACTION_CANCEL -> {
                 val downloadId = intent.getIntExtra(EXTRA_DOWNLOAD_ID, -1)
                 if (downloadId != -1) {
-                    activeRegistryCalls.remove(downloadId)?.cancel()
+                    activeCalls.remove(downloadId)?.cancel()
                     activeJobs[downloadId]?.cancel()
                     activeJobs.remove(downloadId)
                     lastNotifiedProgress.remove(downloadId)
                     notificationManager.cancel(downloadId)
                     downloadRepository.markFailed(downloadId, "Cancelled")
                     stopForegroundIfIdle()
+                }
+            }
+
+            ACTION_REMOVE -> {
+                val downloadId = intent.getIntExtra(EXTRA_DOWNLOAD_ID, -1)
+                if (downloadId != -1 && removingIds.add(downloadId)) {
+                    serviceScope.launch {
+                        try {
+                            activeCalls[downloadId]?.cancel()
+                            activeJobs[downloadId]?.cancelAndJoin()
+                            withContext(Dispatchers.Main.immediate) {
+                                // A foreground notification cannot be cancelled until its service role ends.
+                                if (foregroundDownloadId == downloadId) {
+                                    stopForeground(STOP_FOREGROUND_REMOVE)
+                                    foregroundDownloadId = null
+                                    activeJobs.entries.firstOrNull { it.value.isActive && it.key !in removingIds }
+                                        ?.key?.let { nextId ->
+                                            downloadRepository.downloads.value[nextId]?.let { startForegroundDownload(nextId, it.fileName, it.progress) }
+                                        }
+                                }
+                                lastNotifiedProgress.remove(downloadId)
+                                notificationManager.cancel(downloadId)
+                                notificationManager.cancel(COMPLETION_NOTIFICATION_ID_BASE + downloadId)
+                                downloadRepository.removeRecord(downloadId)
+                            }
+                        } finally {
+                            removingIds.remove(downloadId)
+                            stopForegroundIfIdle()
+                        }
+                    }
                 }
             }
 
@@ -191,13 +228,14 @@ class DownloadService : Service() {
             startRegistryDownload(id, url, fileName, expected)
             return
         }
-        val job = serviceScope.launch {
+        val job = serviceScope.launch(start = CoroutineStart.LAZY) {
             val target = resolveAvailableTarget(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 fileName,
             )
             try {
                 downloadUrlToTarget(id, url, target)
+                ensureActive()
 
                 val uri = Uri.fromFile(target)
                 downloadRepository.markCompleted(id, uri.toString())
@@ -210,7 +248,8 @@ class DownloadService : Service() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                downloadRepository.markFailed(id, e.message ?: "Unknown error")
+                ensureActive()
+                downloadRepository.markFailed(id, e.message ?: "Unknown error", failure = downloadFailure(e))
 
                 notificationManager.cancel(id)
                 notificationManager.notify(
@@ -224,6 +263,7 @@ class DownloadService : Service() {
             }
         }
         activeJobs[id] = job
+        job.start()
     }
 
     private fun registryStoreRoot() = File(filesDir, RegistryDownloadStore.DIR_NAME)
@@ -238,17 +278,17 @@ class DownloadService : Service() {
                 val root = registryStoreRoot()
                 runCatching { RegistryDownloadStore.cleanup(root, 7L * 24 * 60 * 60 * 1000) }
                 val call = registryClient.newCall(Request.Builder().url(url).build())
-                activeRegistryCalls[id] = call
+                activeCalls[id] = call
                 ensureActive()
                 val file = call.execute().use { response ->
-                    if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+                    if (!response.isSuccessful) throw DownloadHttpException(response.code)
                     val body = response.body ?: throw IOException("Empty body")
                     RegistryDownloadStore.download(
                         input = body.byteStream(),
                         root = root,
                         expected = expected,
                         fileName = fileName,
-                        onProgress = { bytes -> reportProgress(id, fileName, ((bytes * 100L) / expected.size).toInt().coerceIn(0, 100)) },
+                        onProgress = { bytes -> reportProgress(id, fileName, ((bytes * 100L) / expected.size).toInt().coerceIn(0, 100), bytes, expected.size) },
                         checkActive = { ensureActive() },
                     )
                 }
@@ -263,7 +303,7 @@ class DownloadService : Service() {
             } catch (error: Exception) {
                 if (!isActive) throw CancellationException("Registry download cancelled", error)
                 val reason = (error as? DownloadVerificationException)?.reason?.let { DownloadVerificationFailure.valueOf(it.name) }
-                downloadRepository.markFailed(id, "Download failed", reason)
+                downloadRepository.markFailed(id, error.message.orEmpty(), reason, downloadFailure(error))
                 notificationManager.cancel(id)
                 notificationManager.notify(COMPLETION_NOTIFICATION_ID_BASE + id, buildFailureNotification(fileName, reason))
             } finally {
@@ -272,7 +312,7 @@ class DownloadService : Service() {
                     if (downloadRepository.downloads.value[id]?.status != DownloadStatus.FAILED) downloadRepository.markFailed(id, "Cancelled")
                     notificationManager.cancel(id)
                 }
-                activeRegistryCalls.remove(id)?.cancel()
+                activeCalls.remove(id)?.cancel()
                 activeJobs.remove(id)
                 lastNotifiedProgress.remove(id)
                 stopForegroundIfIdle()
@@ -290,7 +330,7 @@ class DownloadService : Service() {
         preferredAbi: String?,
         expectedVersionCode: Int,
     ) {
-        val job = serviceScope.launch {
+        val job = serviceScope.launch(start = CoroutineStart.LAZY) {
             val target = resolveAvailableTarget(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 fileName,
@@ -325,6 +365,7 @@ class DownloadService : Service() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                ensureActive()
                 downloadRepository.markFailed(id, e.message ?: "Unknown error")
 
                 notificationManager.cancel(id)
@@ -339,10 +380,12 @@ class DownloadService : Service() {
             }
         }
         activeJobs[id] = job
+        job.start()
     }
 
-    private fun startForegroundDownload(downloadId: Int, fileName: String) {
-        val notification = buildProgressNotification(downloadId, fileName, 0)
+    private fun startForegroundDownload(downloadId: Int, fileName: String, progress: Int = 0) {
+        foregroundDownloadId = downloadId
+        val notification = buildProgressNotification(downloadId, fileName, progress)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 downloadId,
@@ -354,37 +397,51 @@ class DownloadService : Service() {
         }
     }
 
-    private fun downloadUrlToTarget(id: Int, url: String, target: File) {
-        httpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            val body = response.body ?: throw IOException("Empty body")
-            val total = body.contentLength()
-
-            body.byteStream().use { source ->
-                FileOutputStream(target).use { output ->
-                    val buffer = ByteArray(8 * 1024)
-                    var copied = 0L
-                    while (true) {
-                        val read = source.read(buffer)
-                        if (read == -1) break
-                        output.write(buffer, 0, read)
-                        copied += read
-                        if (total > 0L) {
-                            reportProgress(
-                                id,
-                                target.name,
-                                ((copied * 100L) / total).toInt().coerceIn(0, 100),
-                            )
+    private suspend fun downloadUrlToTarget(id: Int, url: String, target: File) {
+        val call = httpClient.newCall(Request.Builder().url(url).build())
+        activeCalls[id] = call
+        var completed = false
+        try {
+            currentCoroutineContext().ensureActive()
+            call.execute().use { response ->
+                if (!response.isSuccessful) throw DownloadHttpException(response.code)
+                val body = response.body ?: throw IOException("Empty body")
+                val total = body.contentLength()
+                body.byteStream().use { source ->
+                    FileOutputStream(target).use { output ->
+                        val buffer = ByteArray(8 * 1024)
+                        var copied = 0L
+                        var reported = 0L
+                        reportProgress(id, target.name, 0, copied, total)
+                        while (true) {
+                            currentCoroutineContext().ensureActive()
+                            val read = source.read(buffer)
+                            if (read == -1) break
+                            output.write(buffer, 0, read)
+                            copied += read
+                            if (copied - reported >= PROGRESS_STEP_BYTES) {
+                                reported = copied
+                                reportProgress(id, target.name, percentOf(copied, total), copied, total)
+                            }
                         }
+                        output.flush()
+                        currentCoroutineContext().ensureActive()
+                        reportProgress(id, target.name, percentOf(copied, total), copied, total)
+                        completed = true
                     }
-                    output.flush()
                 }
             }
+        } finally {
+            activeCalls.remove(id)?.cancel()
+            if (!completed) target.delete()
         }
     }
 
-    private fun reportProgress(id: Int, fileName: String, progress: Int) {
-        downloadRepository.updateProgress(id, progress)
+    private fun percentOf(copied: Long, total: Long) = if (total > 0L) ((copied * 100L) / total).toInt().coerceIn(0, 100) else 0
+
+    private fun reportProgress(id: Int, fileName: String, progress: Int, downloadedBytes: Long = 0L, totalBytes: Long = -1L) {
+        if (id !in downloadRepository.downloads.value || id in removingIds) return
+        downloadRepository.updateProgress(id, progress, downloadedBytes, totalBytes)
         val previous = lastNotifiedProgress[id] ?: -1
         if (progress - previous >= 2 || progress == 100) {
             notificationManager.notify(id, buildProgressNotification(id, fileName, progress))
@@ -569,14 +626,14 @@ class DownloadService : Service() {
     }
 
     private fun stopForegroundIfIdle() {
-        if (activeJobs.isEmpty() || activeJobs.values.none { it.isActive }) {
+        if (removingIds.isEmpty() && (activeJobs.isEmpty() || activeJobs.values.none { it.isActive })) {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
     }
 
     override fun onDestroy() {
-        activeRegistryCalls.values.forEach { it.cancel() }
+        activeCalls.values.forEach { it.cancel() }
         serviceScope.cancel()
         super.onDestroy()
     }

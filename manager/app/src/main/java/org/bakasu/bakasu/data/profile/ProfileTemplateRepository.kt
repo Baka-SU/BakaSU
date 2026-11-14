@@ -2,6 +2,7 @@ package org.bakasu.bakasu.data.profile
 
 import java.text.Collator
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,9 +29,9 @@ class ProfileTemplateRepository(
     private val networkRequestRepository: NetworkRequestRepository,
     private val ksuCliRepository: KsuCliRepository,
 ) {
-    private companion object {
-        const val TEMPLATE_INDEX_URL = "https://kernelsu.org/templates/index.json"
-        const val TEMPLATE_URL = "https://kernelsu.org/templates/%s"
+    companion object {
+        private const val TEMPLATE_INDEX_URL = "https://kernelsu.org/templates/index.json"
+        private const val TEMPLATE_URL = "https://kernelsu.org/templates/%s"
     }
 
     private val refreshMutex = Mutex()
@@ -47,11 +48,9 @@ class ProfileTemplateRepository(
         try {
             withContext(Dispatchers.IO) {
                 runCatching {
-                    val localIds = ksuCliRepository.listAppProfileTemplates()
-                    val shouldSynchronize = localIds.isEmpty() || synchronize
-                    val synchronized = !shouldSynchronize ||
-                        networkStatusRepository.isAvailable() && fetchRemoteTemplates()
-                    mutableOffline.value = shouldSynchronize && !synchronized
+                    // Online templates are stored only when the user asks for it, never on a plain refresh.
+                    val synchronized = !synchronize || fetchRemoteTemplates()
+                    mutableOffline.value = synchronize && !synchronized
                     mutableTemplates.value = ksuCliRepository.listAppProfileTemplates()
                         .mapNotNull(::readTemplate)
                         .sortedWith(
@@ -67,6 +66,54 @@ class ProfileTemplateRepository(
         } finally {
             mutableRefreshing.value = false
         }
+    }
+
+    /** Partial downloads remain browsable; a nonempty index with no downloaded bodies is a failure. */
+    private suspend fun fetchRemoteBodies(): Map<String, String>? {
+        val indexBody = networkRequestRepository.fetch(TEMPLATE_INDEX_URL).getOrNull() ?: return null
+        val ids = runCatching { JSONArray(indexBody) }.getOrElse {
+            throw ProfileTemplateException(ProfileTemplateFailure.Invalid)
+        }
+        val bodies = (0 until ids.length()).mapNotNull { index ->
+            val id = ids.optString(index)
+            networkRequestRepository.fetch(TEMPLATE_URL.format(id)).getOrNull()?.let { id to it }
+        }.toMap()
+        return bodies.takeUnless { ids.length() > 0 && it.isEmpty() }
+    }
+
+    /** Browses the official source on this device; only [addOnline] stores a chosen template. */
+    suspend fun fetchOnline(): Result<List<ProfileTemplate>> = withContext(Dispatchers.IO) {
+        val online = networkStatusRepository.isAvailable()
+        val bodies = try {
+            fetchRemoteBodies()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            return@withContext Result.failure(error)
+        } ?: return@withContext Result.failure(ProfileTemplateException(if (online) ProfileTemplateFailure.RequestFailed else ProfileTemplateFailure.Offline))
+        val templates = bodies.values.mapNotNull { body ->
+            runCatching { JSONObject(body).toTemplate() }.getOrNull()?.copy(local = false)
+        }
+        if (templates.isEmpty() && bodies.isNotEmpty()) {
+            Result.failure(ProfileTemplateException(ProfileTemplateFailure.Invalid))
+        } else {
+            Result.success(templates.sortedWith(compareBy(Collator.getInstance(Locale.getDefault()), ProfileTemplate::name)))
+        }
+    }
+
+    /**
+     * Stores an online template as a local one, which App Profile can select. A local template
+     * with the same ID is kept, not overwritten; a copy saved by an earlier synchronization is.
+     */
+    suspend fun addOnline(template: ProfileTemplate): Result<Unit> = withContext(Dispatchers.IO) {
+        if (readTemplate(template.id)?.local == true) {
+            return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.Conflict))
+        }
+        if (!ksuCliRepository.setAppProfileTemplate(template.id, template.copy(local = true).toJson().toString())) {
+            return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.Command("add failed")))
+        }
+        refreshLocalCache()
+        Result.success(Unit)
     }
 
     suspend fun get(id: String): Result<ProfileTemplate> = withContext(Dispatchers.IO) {
@@ -146,15 +193,12 @@ class ProfileTemplateRepository(
                 )
     }
 
+    /** Preserves the phone UI's explicit synchronization using this device's network. */
     private suspend fun fetchRemoteTemplates(): Boolean = runCatching {
-        val ids = networkRequestRepository.fetch(TEMPLATE_INDEX_URL)
-            .mapCatching { JSONArray(it) }
-            .getOrElse { return false }
-        var fetchedAny = ids.length() == 0
-        (0 until ids.length()).forEach { index ->
-            val id = ids.optString(index)
-            val body = networkRequestRepository.fetch(TEMPLATE_URL.format(id)).getOrNull()
-                ?: return@forEach
+        val bodies = fetchRemoteBodies()
+            ?: return false
+        var fetchedAny = bodies.isEmpty()
+        bodies.forEach { (id, body) ->
             val template =
                 runCatching { JSONObject(body).toTemplate() }.getOrNull() ?: return@forEach
             if (ksuCliRepository.setAppProfileTemplate(

@@ -1,0 +1,461 @@
+package org.bakasu.bakasu.ui.wear
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Article
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Tag
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.core.text.HtmlCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.foundation.lazy.items
+import androidx.wear.compose.material3.AlertDialog
+import androidx.wear.compose.material3.AlertDialogDefaults
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.CardDefaults
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.Text
+import kotlinx.coroutines.launch
+import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.DocumentFormat
+import org.bakasu.bakasu.domain.model.DownloadModuleInfo
+import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
+import org.bakasu.bakasu.domain.model.ModuleRelease
+import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
+import org.bakasu.bakasu.ui.component.rememberCustomDialog
+import org.bakasu.bakasu.ui.viewmodel.CatalogContent
+import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
+import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
+import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
+import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadViewModel
+import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
+import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiState
+import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
+import org.bakasu.bakasu.ui.viewmodel.formatFileSize
+import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearBadge
+import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
+import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
+import org.bakasu.bakasu.ui.wear.component.WearIconAction
+import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
+import org.bakasu.bakasu.ui.wear.component.WearInfoCard
+import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearLoadFailureContent
+import org.bakasu.bakasu.ui.wear.component.WearLoadFailureScreen
+import org.bakasu.bakasu.ui.wear.component.WearModuleDownloadScreen
+import org.bakasu.bakasu.ui.wear.component.WearPageHeader
+import org.bakasu.bakasu.ui.wear.component.WearScaledItem
+import org.bakasu.bakasu.ui.wear.component.WearSearchPage
+import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
+import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
+import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
+import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
+import org.bakasu.bakasu.ui.wear.component.wearRepositoryFailureText
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
+
+@Composable
+internal fun WearModuleRepoPage(
+    viewModel: ModuleRepoViewModel,
+    onBack: () -> Unit,
+    onOpenPanel: () -> Unit,
+    hasOperationsPanel: Boolean = false,
+    isPageLoading: Boolean = false,
+    onOpen: (CatalogModule) -> Unit,
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    var retryLoading by remember(viewModel) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    WearModuleRepoPage(
+        state,
+        { viewModel.refresh(fromPull = true) },
+        onBack,
+        onOpenPanel,
+        hasOperationsPanel,
+        isPageLoading = isPageLoading || retryLoading,
+        onRetry = {
+            retryLoading = true
+            scope.launch {
+                try {
+                    viewModel.refresh().join()
+                } finally {
+                    retryLoading = false
+                }
+            }
+        },
+        onOpen = onOpen,
+    )
+}
+
+@Composable
+internal fun WearModuleRepoPage(
+    state: ModuleRepoUiState,
+    onRefresh: () -> Unit,
+    onBack: () -> Unit,
+    onOpenPanel: () -> Unit,
+    hasOperationsPanel: Boolean = false,
+    isPageLoading: Boolean = false,
+    onRetry: () -> Unit = onRefresh,
+    onOpen: (CatalogModule) -> Unit,
+) {
+    val loading = isPageLoading || (state.isRefreshing && !state.isPullRefreshing)
+    val failed = !loading && !state.isRefreshing && state.content == CatalogContent.FAILED
+    WearList(
+        pageTitle = stringResource(R.string.module_repo),
+        isLoading = loading,
+        isRefreshing = state.isRefreshing && state.isPullRefreshing && !loading,
+        onRefresh = onRefresh,
+        onBack = onBack,
+        onConfirm = if (failed) onRetry else null,
+        confirmLabel = if (failed) stringResource(R.string.network_retry) else null,
+        backToTop = !failed,
+        onOpenPanel = onOpenPanel,
+        hasOperationsPanel = hasOperationsPanel,
+        panelLabel = stringResource(R.string.wear_operations),
+    ) { spec ->
+        if (failed) {
+            item {
+                WearLoadFailureContent(spec, wearRepositoryFailureText(state.failures[state.repositoryUrl]))
+            }
+        } else if (state.modules.isEmpty() && !state.isRefreshing) {
+            item {
+                WearEmptyState(spec, Icons.Rounded.Cloud, stringResource(state.content.resId ?: R.string.wear_catalog_empty))
+            }
+        }
+        LazySegmentedColumn(if (failed) emptyList() else state.modules, { it.catalogId }) { module ->
+            WearSettingsJumpPageWidget(
+                spec,
+                module.moduleName,
+                { onOpen(module) },
+                iconContent = {
+                    val iconSize = with(LocalDensity.current) {
+                        MaterialTheme.typography.labelMedium.lineHeight.toDp() + MaterialTheme.typography.labelSmall.lineHeight.toDp()
+                    }.coerceAtLeast(ButtonDefaults.LargeIconSize)
+                    WearCatalogModuleIcon(module, iconSize)
+                },
+                largeIcon = true,
+
+                description = module.summary.ifBlank { module.moduleId },
+                titleBadge = if (module.metamodule) stringResource(R.string.module_meta_label) else null,
+            )
+        }
+    }
+}
+
+/** The repository search input, a route of its own; it searches the list it was opened from. */
+@Composable
+internal fun WearModuleRepoSearchPage(viewModel: ModuleRepoViewModel, onBack: () -> Unit, onSubmit: () -> Unit, onAdvanced: () -> Unit) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    WearSearchPage(stringResource(R.string.search_modules), "repository:${state.repositoryUrl}", state.search, onBack, onAdvanced) {
+        viewModel.dispatch(ModuleRepoUiAction.Search(it.trim()))
+        onSubmit()
+    }
+}
+
+/** Each detail route loads from the server; closing it releases its document state. */
+@Composable
+private fun catalogModuleViewModel(moduleId: String, repositoryUrl: String): ModuleDetailViewModel {
+    val viewModel = koinViewModel<ModuleDetailViewModel>(
+        key = "wear-catalog-$repositoryUrl#$moduleId",
+        parameters = { parametersOf(moduleId, repositoryUrl) },
+    )
+    return viewModel
+}
+
+/** The download confirmation; confirming opens the download route for the chosen file. */
+@Composable
+private fun rememberModuleDownload(module: CatalogModule?, installer: WearModuleInstaller): (ModuleRelease, ModuleReleaseAsset) -> Unit {
+    var pendingRelease by remember { mutableStateOf<ModuleRelease?>(null) }
+    var pendingAsset by remember { mutableStateOf<ModuleReleaseAsset?>(null) }
+    val thenInstall = stringResource(R.string.wear_download_then_install)
+    val confirmDialog = rememberCustomDialog { dismiss ->
+        val asset = pendingAsset
+        AlertDialog(
+            verticalArrangement = WearDialogVerticalArrangement,
+            contentPadding = wearDialogContentPadding(),
+            visible = true,
+            onDismissRequest = dismiss,
+            icon = { WearDialogIcon(Icons.Rounded.Download) },
+            title = { Text(stringResource(R.string.wear_download_confirm_title)) },
+            text = {
+                if (asset != null) {
+                    Text(stringResource(R.string.wear_catalog_summary, asset.name, formatFileSize(asset.size ?: 0L)) + "\n" + thenInstall)
+                }
+            },
+            confirmButton = {
+                AlertDialogDefaults.ConfirmButton(
+                    onClick = {
+                        dismiss()
+                        val release = pendingRelease
+                        if (module != null && release != null && asset != null) installer.download(module, release, asset)
+                    },
+                )
+            },
+            dismissButton = { AlertDialogDefaults.DismissButton(onClick = dismiss) },
+        )
+    }
+    return { release, asset ->
+        pendingRelease = release
+        pendingAsset = asset
+        confirmDialog.show()
+    }
+}
+
+@Composable
+internal fun WearOnlineModulePage(
+    moduleId: String,
+    repositoryUrl: String,
+    onBack: () -> Unit,
+    onLink: (String) -> Unit,
+    onSection: (String) -> Unit,
+    installer: WearModuleInstaller,
+) {
+    val viewModel = catalogModuleViewModel(moduleId, repositoryUrl)
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val module = state.module
+    val requestDownload = rememberModuleDownload(module, installer)
+    if (!state.loading && (state.error != null || state.repositoryFailure != null)) {
+        WearLoadFailureScreen(
+            if (state.error == ModuleCatalogFailure.NotFound) stringResource(R.string.repo_module_unavailable) else wearRepositoryFailureText(state.repositoryFailure),
+            onBack,
+            { viewModel.dispatch(ModuleDetailUiAction.Retry) },
+            retryInEdgeButton = true,
+        )
+        return
+    }
+    WearList(isLoading = state.loading, onBack = onBack, backToTop = true) { spec ->
+        if (module == null) item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
+        if (module != null) {
+            // As in the design: the module icon, name and authors, then its main actions. As the
+            // first item the icon takes the card's minimum list padding, a share of the screen
+            // height, so it stays below the time text on any screen size.
+            item {
+                WearScaledItem(spec, Modifier.fillMaxWidth().minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)) {
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        WearCatalogModuleIcon(module, 52.dp)
+                        // The bold name leads; authors and version follow in smaller, neutral styles.
+                        Text(
+                            module.moduleName,
+                            modifier = Modifier.padding(top = 8.dp),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (module.metamodule) {
+                            WearBadge(stringResource(R.string.module_meta_label), Modifier.padding(top = 4.dp))
+                        }
+                        if (module.authors.isNotBlank()) {
+                            Text(
+                                module.authors,
+                                modifier = Modifier.padding(top = 2.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        if (module.latestRelease.isNotBlank()) {
+                            Text(
+                                module.latestRelease,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+            val latestRelease = module.releases.firstOrNull { it.assets.isNotEmpty() }
+            val latest = latestRelease?.assets?.firstOrNull()
+            item {
+                WearIconButtonGroup(
+                    spec,
+                    listOfNotNull(
+                        WearIconAction(Icons.Rounded.Download, stringResource(R.string.wear_download), { if (latestRelease != null && latest != null) requestDownload(latestRelease, latest) }, latest != null, primary = true),
+                        module.sourceUrl.takeIf { it.isNotBlank() }?.let { url ->
+                            WearIconAction(Icons.Rounded.Code, stringResource(R.string.source_code), { onLink(url) })
+                        },
+                    ),
+                )
+            }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_module_data)) }
+            val sections = listOf(
+                Triple("readme", R.string.readme, R.string.wear_readme_summary) to Icons.Rounded.Article,
+                Triple("releases", R.string.release, R.string.wear_release_summary) to Icons.Rounded.Tag,
+                Triple("info", R.string.info, R.string.wear_info_summary) to Icons.Rounded.Info,
+            )
+            SegmentedColumn(sections, { it.first.first }) { (section, icon) ->
+                val (target, label, summary) = section
+                WearSettingsJumpPageWidget(spec, stringResource(label), { onSection(target) }, icon = icon, description = stringResource(summary))
+            }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_authors_source)) }
+            LazySegmentedColumn(module.authorList.filter { it.link.isNotBlank() }, { it.link }) { author ->
+                WearSettingsJumpPageWidget(
+                    spec,
+                    author.name,
+                    { onLink(author.link) },
+                    icon = Icons.Rounded.Person,
+                    description = stringResource(R.string.wear_author_link_summary),
+                )
+            }
+        }
+    }
+}
+
+/** The README, releases or information of a repository module, each opened as its own route. */
+@Composable
+internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String, section: String, onBack: () -> Unit, installer: WearModuleInstaller) {
+    val viewModel = catalogModuleViewModel(moduleId, repositoryUrl)
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val module = state.module
+    val requestDownload = rememberModuleDownload(module, installer)
+    // The README is its own document, loaded once the module details are.
+    val readme = module?.let { state.documents[it.readmeUrl.ifBlank { it.sourceUrl }] }
+    LaunchedEffect(module?.catalogId, module?.detailLoaded, module?.registryMetadata?.buildId, state.loading) {
+        if (section == "readme" && !state.loading && module?.detailLoaded == true) viewModel.loadReadme()
+    }
+    val readmeLoading = section == "readme" && module != null && (!module.detailLoaded || readme == null || readme.loading) && state.error == null
+    if (!state.loading && (state.error != null || state.repositoryFailure != null || (section == "readme" && readme?.failed == true))) {
+        val detailFailed = state.error != null || state.repositoryFailure != null
+        WearLoadFailureScreen(
+            if (state.error == ModuleCatalogFailure.NotFound) stringResource(R.string.repo_module_unavailable) else wearRepositoryFailureText(if (detailFailed) state.repositoryFailure else readme?.failure),
+            onBack,
+            { if (detailFailed) viewModel.dispatch(ModuleDetailUiAction.Retry) else viewModel.loadReadme(retry = true) },
+            retryInEdgeButton = true,
+        )
+        return
+    }
+    val loading = state.loading || readmeLoading
+    val hasContent = module != null && (section != "readme" || readme?.document != null)
+    WearList(pageTitle = module?.moduleName ?: stringResource(R.string.module_repo), isLoading = loading && !hasContent, isRefreshing = loading && hasContent, onBack = onBack) { spec ->
+        if (module != null) {
+            when (section) {
+                "readme" -> when {
+                    readmeLoading && readme?.document == null -> Unit
+
+                    else -> {
+                        val document = readme?.document
+                        val text = when {
+                            document == null || document.content.isBlank() -> null
+                            document.format == DocumentFormat.HTML -> HtmlCompat.fromHtml(document.content, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
+                            else -> document.content.trim()
+                        }
+                        // The whole README reads as one card, like a license text.
+                        item {
+                            WearInfoCard(spec) {
+                                Text(
+                                    text ?: stringResource(R.string.repo_no_readme),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                "releases" -> {
+                    // Each release keeps its own files, so an earlier version can still be downloaded.
+                    module.releases.forEach { release ->
+                        item { WearSectionHeader(spec, release.name.ifBlank { release.tagName }) }
+                        item {
+                            WearInfoCard(spec) {
+                                Text(release.publishedAt, style = MaterialTheme.typography.labelSmall)
+                                Text(HtmlCompat.fromHtml(release.descriptionHTML, HtmlCompat.FROM_HTML_MODE_COMPACT).toString(), style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                        items(release.assets, key = { it.downloadUrl }) { asset ->
+                            WearActionButton(
+                                spec,
+                                Icons.Rounded.Download,
+                                asset.name,
+                                { requestDownload(release, asset) },
+                                secondaryText = asset.size?.let(::formatFileSize),
+                            )
+                        }
+                    }
+                }
+
+                else -> item {
+                    WearInfoCard(spec) {
+                        Text(module.moduleId, style = MaterialTheme.typography.titleSmall)
+                        Text(module.summary, style = MaterialTheme.typography.bodySmall)
+                        Text(module.authors, style = MaterialTheme.typography.bodySmall)
+                        Text(module.latestRelease, style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * One service-owned module download, observed while this route is open. Closing the route keeps
+ * the transfer running; a verified file completed here goes to [onDownloaded].
+ */
+@Composable
+internal fun WearModuleDownloadPage(route: WearRoute.OnlineModuleDownload, onDownloaded: (String) -> Unit) {
+    val viewModel = koinViewModel<ModuleDownloadViewModel>()
+    val downloadState = viewModel.state.collectAsStateWithLifecycle()
+    val download by downloadState
+    val asset = remember(route) { route.asset() }
+    LaunchedEffect(viewModel) {
+        if (viewModel.state.value.phase == null) viewModel.start(asset, DownloadModuleInfo(route.name, route.iconUrl, route.iconOrigin, route.moduleId))
+    }
+    LaunchedEffect(download.resultUri) {
+        download.resultUri?.let(onDownloaded)
+    }
+    WearModuleDownloadScreen(
+        route.name,
+        download,
+        // Read through the state when the ring draws, not captured once.
+        fraction = { downloadState.value.fraction ?: 1f.takeIf { downloadState.value.phase == ModuleDownloadPhase.VERIFYING } ?: 0f },
+        iconUrl = route.iconUrl,
+        iconOrigin = route.iconOrigin,
+    )
+}
+
+/** The existing repository sort option, shared by advanced search and the operations panel. */
+@Composable
+internal fun WearModuleRepoSortPage(viewModel: ModuleRepoViewModel, onBack: () -> Unit) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    WearList(onBack = onBack) { spec ->
+        item { WearPageHeader(spec, stringResource(R.string.wear_sort)) }
+        item {
+            WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_star_first), state.sortStargazerCountFirst, { viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it)) }, icon = Icons.Rounded.Star)
+        }
+    }
+}

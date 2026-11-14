@@ -1,7 +1,10 @@
 package org.bakasu.bakasu.domain.usecase
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flowOn
 import org.bakasu.bakasu.data.module.ModuleCatalogRepository
 import org.bakasu.bakasu.data.module.ModuleIconRepository
 import org.bakasu.bakasu.data.module.ModuleReleaseRepository
@@ -32,12 +35,23 @@ class GetCatalogModuleUseCase(private val repository: ModuleCatalogRepository) {
     suspend operator fun invoke(moduleId: String, sourceUrl: String, forceDetail: Boolean = false) = repository.get(moduleId, sourceUrl, forceDetail)
 }
 
+class FindModuleUpdateSourceUseCase(private val repository: ModuleCatalogRepository) {
+    suspend operator fun invoke(moduleId: String, updateJson: String, zipUrl: String): CatalogModule? = try {
+        repository.findUpdateSource(moduleId, updateJson, zipUrl)
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: Exception) {
+        // Optional artwork never prevents a module update.
+        null
+    }
+}
+
 class IsCatalogModuleCurrentUseCase(private val repository: ModuleCatalogRepository) {
     operator fun invoke(module: CatalogModule): Boolean = repository.isCurrent(module)
 }
 
 class GetModuleReadmeUseCase(private val repository: ModuleCatalogRepository) {
-    suspend operator fun invoke(module: CatalogModule, retry: Boolean = false) = repository.readme(module, retry)
+    suspend operator fun invoke(module: CatalogModule) = repository.readme(module)
 }
 
 class GetModuleReleaseDetailsUseCase(private val repository: ModuleReleaseRepository) {
@@ -90,4 +104,11 @@ class RenameModuleRepositoryUseCase(private val repository: ModuleCatalogReposit
 
 class RemoveModuleRepositoryUseCase(private val repository: ModuleCatalogRepository) {
     suspend operator fun invoke(url: String) = repository.remove(url)
+}
+
+/** Resolves artwork from the already loaded catalog without making repository requests. */
+class ResolveInstalledModuleIconUseCase(private val repository: ModuleCatalogRepository) {
+    operator fun invoke() = combine(repository.sources, repository.modules) { sources, modules ->
+        repository.cachedIconModules(sources).associateBy { it.moduleId } + modules.associateBy { it.moduleId }
+    }.flowOn(Dispatchers.IO)
 }

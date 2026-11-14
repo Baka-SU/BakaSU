@@ -8,6 +8,10 @@ class ObserveSulogStateUseCase(private val repository: SulogRepository) {
 
 class RefreshSulogUseCase(private val repository: SulogRepository) {
     suspend operator fun invoke(preferredFilePath: String?) = repository.refresh(preferredFilePath)
+
+    suspend fun silently() = repository.refresh(silent = true)
+
+    suspend fun selectFile(path: String) = repository.selectFile(path)
 }
 
 class EnableSulogUseCase(private val repository: SulogRepository) {

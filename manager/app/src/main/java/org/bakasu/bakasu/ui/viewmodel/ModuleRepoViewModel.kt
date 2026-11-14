@@ -4,7 +4,9 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +24,6 @@ import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetCatalogModuleUseCase
 import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
-import org.bakasu.bakasu.domain.usecase.ObserveModuleCatalogRefreshingUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
 import org.bakasu.bakasu.domain.usecase.SetBooleanPreferenceUseCase
@@ -47,9 +48,9 @@ data class ModuleRepoUiState(
     val failures: Map<String, RepositoryFailure> = emptyMap(),
 ) {
     val content: CatalogContent get() = when {
-        modules.isNotEmpty() -> CatalogContent.MODULES
-        isRefreshing -> CatalogContent.LOADING
+        isRefreshing && modules.isEmpty() -> CatalogContent.LOADING
         sources.any { it.url == repositoryUrl && it.url in failures } -> CatalogContent.FAILED
+        modules.isNotEmpty() -> CatalogContent.MODULES
         search.isNotBlank() -> CatalogContent.SEARCH_EMPTY
         else -> CatalogContent.SOURCE_EMPTY
     }
@@ -64,7 +65,6 @@ sealed interface ModuleRepoUiAction {
 
 class ModuleRepoViewModel(
     private val observeModules: ObserveCatalogModulesUseCase,
-    observeRefreshing: ObserveModuleCatalogRefreshingUseCase,
     private val refreshCatalog: RefreshModuleCatalogUseCase,
     getBooleanPreference: GetBooleanPreferenceUseCase,
     private val setBooleanPreference: SetBooleanPreferenceUseCase,
@@ -96,7 +96,8 @@ class ModuleRepoViewModel(
     private val sortStarsFirst = MutableStateFlow(
         getBooleanPreference("module_repo_sort_star_first", false),
     )
-    private val pullRefreshing = MutableStateFlow(false)
+    private val refreshRequest = MutableStateFlow<Pair<String, Boolean>?>(null)
+    private var refreshJob: Job? = null
 
     private val catalogState = combine(
         observeModules(),
@@ -116,12 +117,11 @@ class ModuleRepoViewModel(
     }.flowOn(Dispatchers.Default)
     val state: StateFlow<ModuleRepoUiState> = combine(
         catalogState,
-        observeRefreshing.sources,
         observeSources.failures,
-        pullRefreshing,
-    ) { catalog, refreshingSources, failures, pulling ->
-        val refreshing = refreshingSources.any { it == catalog.repositoryUrl }
-        catalog.copy(isRefreshing = refreshing, isPullRefreshing = pulling && refreshing, failures = failures)
+        refreshRequest,
+    ) { catalog, failures, request ->
+        val refreshing = request != null && request.first == catalog.repositoryUrl
+        catalog.copy(isRefreshing = refreshing, isPullRefreshing = refreshing && request?.second == true, failures = failures)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(),
@@ -172,16 +172,19 @@ class ModuleRepoViewModel(
         sortStarsFirst.value = enabled
     }
 
-    fun refresh(force: Boolean = true, fromPull: Boolean = false) {
-        viewModelScope.launch {
-            if (fromPull && pullRefreshing.value) return@launch
-            if (fromPull) pullRefreshing.value = true
+    fun refresh(force: Boolean = true, fromPull: Boolean = false): Job {
+        val url = activeRepository()
+        refreshJob?.takeIf { it.isActive && refreshRequest.value?.first == url }?.let { return it }
+        refreshJob?.cancel()
+        return viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            if (url == null) return@launch
+            refreshRequest.value = url to fromPull
             try {
-                activeRepository()?.let { refreshCatalog(it, force) }
+                refreshCatalog(url, force)
             } finally {
-                if (fromPull) pullRefreshing.value = false
+                if (refreshRequest.value?.first == url) refreshRequest.value = null
             }
-        }
+        }.also { refreshJob = it }
     }
 
     fun dispatch(action: ModuleRepoUiAction) {
