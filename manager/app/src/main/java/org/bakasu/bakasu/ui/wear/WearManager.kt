@@ -528,7 +528,10 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     WearModuleRepoSortPage(moduleRepoViewModel, ::back)
                                 }
                                 entry<WearRoute.Downloads> {
-                                    WearDownloadsPage(::back, installer::confirm)
+                                    WearDownloadsPage(::back, installer::confirm, ::open)
+                                }
+                                entry<WearRoute.Download> { route ->
+                                    WearDownloadDetailPage(route, ::back, installer::confirm)
                                 }
                                 entry<WearRoute.RepositorySources> {
                                     WearRepositorySourcesPage(::back, { open(WearRoute.Operations(WearOperationsPage.RepositorySources)) }) { open(WearRoute.RepositorySource(it)) }

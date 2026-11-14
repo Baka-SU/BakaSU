@@ -61,6 +61,21 @@ class WearDownloadLogActionsTest(private val round: Boolean, private val fontSca
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
+    fun tappingTwoDownloadsOpensTheirOwnModuleWithoutInstalling() {
+        val first = DownloadState(1, "first.zip", "one", module = DownloadModuleInfo("First", moduleId = "first"))
+        val second = DownloadState(2, "second.zip", "two", status = DownloadStatus.FAILED, module = DownloadModuleInfo("Second", moduleId = "second"))
+        val opened = mutableListOf<String>()
+        var installs = 0
+        show { WearDownloadsPage(listOf(first, second), false, {}, { installs++ }, {}, {}, { opened += it.module?.moduleId.orEmpty() }) }
+        scrollTo("First")
+        compose.onNodeWithText("First").performClick()
+        scrollTo("Second")
+        compose.onNodeWithText("Second").performClick()
+        assertEquals(listOf("first", "second"), opened)
+        assertEquals(0, installs)
+    }
+
+    @Test
     fun downloadsUseOneRowRevealBeforeRemovalAndRestoreTheBackEdge() {
         val longName = "Very long module name 模块名称需要单行省略而且不能遮挡进度"
         val tasks = mutableStateOf(

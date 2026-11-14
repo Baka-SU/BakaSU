@@ -32,6 +32,7 @@ import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
 import org.bakasu.bakasu.ui.viewmodel.WearDownloadsEvent
 import org.bakasu.bakasu.ui.viewmodel.WearDownloadsViewModel
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
@@ -44,7 +45,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** The shared download service keeps running when this page or a transfer page closes. */
 @Composable
-internal fun WearDownloadsPage(onBack: () -> Unit, onInstall: (String) -> Unit) {
+internal fun WearDownloadsPage(onBack: () -> Unit, onInstall: (String) -> Unit, onOpen: (WearRoute.Download) -> Unit) {
     val viewModel = koinViewModel<WearDownloadsViewModel>()
     val downloads by viewModel.downloads.collectAsStateWithLifecycle()
     val verifying by viewModel.verifying.collectAsStateWithLifecycle()
@@ -58,7 +59,7 @@ internal fun WearDownloadsPage(onBack: () -> Unit, onInstall: (String) -> Unit) 
             }
         }
     }
-    WearDownloadsPage(downloads, verifying, onBack, viewModel::install, viewModel::remove, viewModel::clear)
+    WearDownloadsPage(downloads, verifying, onBack, viewModel::install, viewModel::remove, viewModel::clear, { onOpen(WearRoute.Download(it.module?.moduleId.orEmpty(), it.id)) })
 }
 
 @Composable
@@ -69,6 +70,7 @@ internal fun WearDownloadsPage(
     onInstall: (DownloadState) -> Unit,
     onRemove: (Int) -> Unit,
     onClear: () -> Unit,
+    onOpen: (DownloadState) -> Unit = onInstall,
 ) {
     val listState = rememberTransformingLazyColumnState()
     var pendingRemoval by remember { mutableStateOf<Int?>(null) }
@@ -99,15 +101,15 @@ internal fun WearDownloadsPage(
                 removeDialog.show()
             }) {
                 Button(
-                    onClick = { if (task.status == DownloadStatus.COMPLETED) onInstall(task) },
+                    onClick = { onOpen(task) },
                     enabled = !verifying,
                     colors = ButtonDefaults.filledTonalButtonColors(),
                     modifier = Modifier.fillMaxWidth(),
                     icon = { DownloadModuleIcon(task) },
-                    label = { Text(task.module?.name?.takeIf { it.isNotBlank() } ?: task.fileName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    label = { WearAutoMarqueeText(task.module?.name?.takeIf { it.isNotBlank() } ?: task.fileName) },
                     secondaryLabel = {
                         val active = task.status == DownloadStatus.PENDING || task.status == DownloadStatus.DOWNLOADING
-                        Text(
+                        WearAutoMarqueeText(
                             if (active && task.totalBytes > 0) {
                                 stringResource(R.string.wear_download_percent, task.progress)
                             } else {
@@ -119,6 +121,7 @@ internal fun WearDownloadsPage(
                                     },
                                 )
                             },
+                            maxLines = 2,
                         )
                     },
                 )

@@ -67,6 +67,11 @@ sealed interface WearRoute : NavKey {
     data object Downloads : WearRoute, NeedsRoot
 
     @Serializable
+    data class Download(val moduleId: String, val downloadId: Int? = null) :
+        WearRoute,
+        NeedsRoot
+
+    @Serializable
     data object RepositorySources : WearRoute, NeedsRoot
 
     @Serializable
@@ -112,6 +117,7 @@ sealed interface WearRoute : NavKey {
         val verificationRequired: Boolean = false,
         val iconUrl: String? = null,
         val iconOrigin: String? = null,
+        val moduleId: String? = null,
     ) : WearRoute,
         NeedsRoot
 

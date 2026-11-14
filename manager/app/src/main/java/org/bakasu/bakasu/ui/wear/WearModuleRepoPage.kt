@@ -467,7 +467,7 @@ internal fun WearModuleDownloadPage(route: WearRoute.OnlineModuleDownload, onDow
     val download by downloadState
     val asset = remember(route) { route.asset() }
     LaunchedEffect(viewModel) {
-        if (viewModel.state.value.phase == null) viewModel.start(asset, DownloadModuleInfo(route.name, route.iconUrl, route.iconOrigin))
+        if (viewModel.state.value.phase == null) viewModel.start(asset, DownloadModuleInfo(route.name, route.iconUrl, route.iconOrigin, route.moduleId))
     }
     LaunchedEffect(download.resultUri) {
         download.resultUri?.let(onDownloaded)

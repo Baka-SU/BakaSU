@@ -113,7 +113,7 @@ class ModuleDownloadRemovalTest {
             ),
         )
         every { observe() } returns tasks
-        val model = WearDownloadsViewModel(observe, remove, mockk()).also { store.put("downloads", it) }
+        val model = WearDownloadsViewModel(observe, remove, mockk(), mockk(), mockk()).also { store.put("downloads", it) }
         backgroundScope.launch { model.downloads.collect {} }
         runCurrent()
         assertEquals(listOf(2, 1), model.downloads.value.map { it.id })

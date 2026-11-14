@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
+import org.bakasu.bakasu.domain.usecase.CancelDownloadUseCase
+import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadsUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
@@ -26,6 +28,8 @@ class WearDownloadsViewModel(
     observe: ObserveDownloadsUseCase,
     private val removeDownload: RemoveDownloadUseCase,
     private val verify: VerifyModuleDownloadUseCase,
+    private val cancelDownload: CancelDownloadUseCase,
+    private val enqueueDownload: EnqueueDownloadUseCase,
 ) : ViewModel() {
     val downloads = observe().map { tasks -> tasks.filter { it.fileName.endsWith(".zip", ignoreCase = true) }.sortedByDescending { it.id } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -33,6 +37,10 @@ class WearDownloadsViewModel(
     val verifying = mutableVerifying.asStateFlow()
     private val mutableEvents = MutableSharedFlow<WearDownloadsEvent>(extraBufferCapacity = 1)
     val events = mutableEvents.asSharedFlow()
+
+    fun cancel(id: Int) = cancelDownload(id)
+
+    fun retry(download: DownloadState): Int? = if (download.status == DownloadStatus.FAILED) enqueueDownload(download.url, download.fileName, download.expected, download.module) else null
 
     fun remove(id: Int) = removeDownload(id)
 

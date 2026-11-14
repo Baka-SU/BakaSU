@@ -20,7 +20,7 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     WearRoute.ModuleSort, WearRoute.ModuleRepoSort -> R.string.wear_sort
 
-    WearRoute.Downloads -> R.string.wear_downloads
+    WearRoute.Downloads, is WearRoute.Download -> R.string.wear_downloads
 
     WearRoute.RepositorySources -> R.string.repo_manage
 
