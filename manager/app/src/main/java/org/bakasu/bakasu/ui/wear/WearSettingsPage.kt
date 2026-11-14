@@ -191,7 +191,6 @@ internal fun WearSettingsPage(
                     stringResource(settingsCategoryTitle(entry)),
                     { onOpen(WearRoute.Settings(entry)) },
                     icon = settingsCategoryIcon(entry),
-                    marquee = true,
                 )
             }
             SegmentedColumn(listOf(WearRoute.Color, WearRoute.Dpi), { it.toString() }) { route ->
@@ -200,11 +199,10 @@ internal fun WearSettingsPage(
                     stringResource(if (route == WearRoute.Color) R.string.wear_appearance_theme else R.string.wear_display_touch),
                     { onOpen(route) },
                     icon = settingsRouteIcon(route),
-                    marquee = true,
                 )
             }
             item {
-                WearSettingsJumpPageWidget(spec, stringResource(R.string.tools), { onOpen(WearRoute.Settings(WearSettingsCategory.Advanced)) }, icon = Icons.Rounded.Build, marquee = true)
+                WearSettingsJumpPageWidget(spec, stringResource(R.string.tools), { onOpen(WearRoute.Settings(WearSettingsCategory.Advanced)) }, icon = Icons.Rounded.Build)
             }
             wearGroupGap("about-gap")
             item {
@@ -214,7 +212,6 @@ internal fun WearSettingsPage(
                     { onOpen(WearRoute.About) },
                     icon = Icons.Rounded.Info,
                     description = version,
-                    marquee = true,
                 )
             }
         } else if (category == WearSettingsCategory.Display) {
@@ -226,7 +223,6 @@ internal fun WearSettingsPage(
                     { onOpen(WearRoute.Color) },
                     icon = settingsRouteIcon(WearRoute.Color),
                     description = colorSummary,
-                    marquee = true,
                 )
             }
             item { WearSectionHeader(spec, stringResource(R.string.wear_display_screen_layout)) }
@@ -237,7 +233,6 @@ internal fun WearSettingsPage(
                     { onOpen(route) },
                     icon = settingsRouteIcon(route),
                     description = if (route == WearRoute.Dpi) null else shapeSummary,
-                    marquee = true,
                 )
             }
             // Android 13+ keeps the app language in the system per-app settings, which Wear does not
@@ -252,7 +247,6 @@ internal fun WearSettingsPage(
                         { onOpen(language) },
                         icon = settingsRouteIcon(language),
                         description = languageSummary,
-                        marquee = true,
                     )
                 }
             }
@@ -428,7 +422,6 @@ internal fun WearSettingsPage(
                             { onAction(toggle.action) },
                             icon = settingsToggleIcon(toggle.label),
                             secondaryLabel = toggle.summary?.let { stringResource(it) },
-                            marquee = true,
                         )
                     }
                     LazySegmentedColumn(sectionPages, { it.label }) { entry ->
@@ -443,7 +436,6 @@ internal fun WearSettingsPage(
                                 WearRoute.Umount -> stringResource(R.string.umount_path_manager_summary)
                                 else -> null
                             },
-                            marquee = true,
                         )
                     }
                 }

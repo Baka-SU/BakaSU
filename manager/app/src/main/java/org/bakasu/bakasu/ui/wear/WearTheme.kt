@@ -138,8 +138,9 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             tertiary = generated.tertiaryFixed, tertiaryDim = generated.tertiaryFixedDim,
             tertiaryContainer = generated.tertiaryContainer, onTertiary = generated.onTertiaryFixed,
             onTertiaryContainer = generated.onTertiaryContainer,
-            surfaceContainerLow = generated.surfaceContainerLow, surfaceContainer = generated.surfaceContainer,
-            surfaceContainerHigh = generated.surfaceContainerHigh,
+            surfaceContainerLow = generated.surfaceContainerLow.toHct().withTone(15.0).toColor(),
+            surfaceContainer = generated.surfaceContainer.toHct().withTone(20.0).toColor(),
+            surfaceContainerHigh = generated.surfaceContainerHigh.toHct().withTone(30.0).toColor(),
             onSurface = generated.onSurface, onSurfaceVariant = generated.onSurfaceVariant,
             outline = generated.outline, outlineVariant = generated.outlineVariant,
             background = Color.Black, onBackground = generated.onBackground,
@@ -191,7 +192,7 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             // entry renders its own backdrop as well, so outgoing and incoming scenes transition
             // with independent image layers.
             WearBackground {
-                WearToastHost {
+                WearToastHost(style = preferences.toastStyle) {
                     // Older installs prepare their saved background color before the first content is shown.
                     if (!contentShown && config.useDynamicColor && config.isUseBackgroundSeedColor && config.customBackgroundUri != null && backgroundState.seedColor == 0) {
                         WearLoadingScreen()

@@ -194,7 +194,6 @@ internal fun WearAddRepositoryPage(onBack: () -> Unit) {
                         icon = if (field == RepositoryInput.Url) Icons.Rounded.Language else Icons.Rounded.Tune,
                         enabled = !state.busy,
                         description = if (field == RepositoryInput.Url) state.url.ifBlank { stringResource(R.string.wear_repository_url_hint) } else stringResource(state.apiType.resId),
-                        descriptionMaxLines = if (field == RepositoryInput.Url) 3 else 2,
                     )
                 }
             }

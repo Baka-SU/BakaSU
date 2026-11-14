@@ -87,10 +87,10 @@ fun TransformingLazyColumnItemScope.WearChip(
                 // Keep the description to two lines; mode badges are measured separately in the headline.
                 // A [secondaryLabelStyle] from the theme typography lets a dense summary fit one line.
                 secondaryLabel = secondaryLabel?.let { text ->
-                    { Text(text, style = secondaryLabelStyle ?: LocalTextStyle.current, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                    { WearAutoMarqueeText(text, style = secondaryLabelStyle ?: LocalTextStyle.current, maxLines = 2) }
                 },
             ) {
-                WearChipHeadline(label, labelLines, centered, headlineBadges)
+                WearChipHeadline(label, 1, centered, headlineBadges, marquee = true)
             }
         }
         return
@@ -147,7 +147,15 @@ private fun WearChipHeadline(
     badges: List<String>,
     contentColor: Color = Color.Unspecified,
     style: TextStyle = LocalTextStyle.current,
+    marquee: Boolean = false,
 ) {
+    if (marquee) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            WearAutoMarqueeText(label, Modifier.weight(1f, fill = false), color = contentColor, style = style)
+            badges.forEach { WearBadge(it) }
+        }
+        return
+    }
     if (badges.isEmpty()) {
         Text(
             label,

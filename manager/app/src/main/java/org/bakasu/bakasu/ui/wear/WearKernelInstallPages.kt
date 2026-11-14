@@ -5,9 +5,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Adb
 import androidx.compose.material.icons.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Error
@@ -15,6 +17,8 @@ import androidx.compose.material.icons.rounded.FileOpen
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material.icons.rounded.Upload
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
@@ -44,6 +48,7 @@ import org.bakasu.bakasu.ui.viewmodel.KernelFlashUiAction
 import org.bakasu.bakasu.ui.viewmodel.KernelFlashUiEvent
 import org.bakasu.bakasu.ui.viewmodel.KernelFlashViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearFlashStatus
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -229,18 +234,17 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
                         transformation = SurfaceTransformation(spec),
                         secondaryLabel = if (option == LkmMethod.SELECT_FILE) {
                             {
-                                Text(
+                                WearAutoMarqueeText(
                                     bootUri?.toUri()?.fileName()
                                         ?: stringResource(R.string.select_file_tip, environment.defaultPartition),
                                     maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         } else {
                             null
                         },
                         label = {
-                            Text(
+                            WearAutoMarqueeText(
                                 stringResource(
                                     when (option) {
                                         LkmMethod.SELECT_FILE -> R.string.select_file
@@ -248,8 +252,6 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
                                         LkmMethod.INACTIVE_SLOT -> R.string.install_inactive_slot
                                     },
                                 ),
-                                maxLines = 3,
-                                overflow = TextOverflow.Ellipsis,
                             )
                         },
                     )
@@ -295,6 +297,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
                     allowShell,
                     { allowShell = it },
                     secondaryLabel = stringResource(R.string.allow_shell_summary),
+                    icon = Icons.Rounded.Terminal,
                 )
             }
             item {
@@ -304,6 +307,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
                     enableAdb,
                     { enableAdb = it },
                     secondaryLabel = stringResource(R.string.enable_adb_summary),
+                    icon = Icons.Rounded.Adb,
                 )
             }
             if (method == LkmMethod.SELECT_FILE) {
@@ -314,6 +318,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
                         forceBackup,
                         { forceBackup = it },
                         secondaryLabel = stringResource(R.string.install_force_backup_summary),
+                        icon = Icons.Rounded.Backup,
                     )
                 }
             }
@@ -387,7 +392,7 @@ internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit,
                         modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
                             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
                         transformation = SurfaceTransformation(spec),
-                        label = { Text(stringResource(label)) },
+                        label = { WearAutoMarqueeText(stringResource(label)) },
                     )
                 }
             }
@@ -400,6 +405,7 @@ internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit,
                 skipKsud,
                 { skipKsud = it },
                 secondaryLabel = stringResource(R.string.skip_ksud_summary),
+                icon = Icons.Rounded.SkipNext,
             )
         }
     }

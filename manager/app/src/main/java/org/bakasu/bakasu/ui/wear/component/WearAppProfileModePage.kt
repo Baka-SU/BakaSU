@@ -75,7 +75,7 @@ fun WearAppProfileTemplateChoicePage(
         isRefreshing = isRefreshing && !isLoading,
         onOpenPanel = onOpenPanel,
         hasOperationsPanel = true,
-        labelMaxLines = Int.MAX_VALUE,
+
         extraContent = { spec ->
             if (loadFailed) {
                 item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_load_failed), tone = WearStatusTone.ERROR) }

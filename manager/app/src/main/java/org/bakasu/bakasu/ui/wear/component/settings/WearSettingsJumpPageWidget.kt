@@ -1,10 +1,9 @@
 package org.bakasu.bakasu.ui.wear.component.settings
 
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -17,6 +16,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
+import androidx.wear.compose.material3.ButtonColors
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.Icon
@@ -24,6 +24,7 @@ import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
@@ -42,19 +43,22 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
     description: String? = null,
     transformed: Boolean = true,
     largeIcon: Boolean = false,
-    descriptionMaxLines: Int = 1,
-    marquee: Boolean = false,
     isLoading: Boolean = false,
     titleBadge: String? = null,
     iconContent: (@Composable BoxScope.() -> Unit)? = null,
+    colors: ButtonColors = ButtonDefaults.filledTonalButtonColors(),
+    secondaryLabelContent: (@Composable RowScope.() -> Unit)? = null,
+    titleContent: (@Composable () -> Unit)? = null,
+    transformSurface: Boolean = transformed,
 ) {
     val loadingDescription = stringResource(R.string.wear_loading)
     val button: @Composable () -> Unit = {
         FilledTonalButton(
             onClick = onClick,
             enabled = enabled,
+            colors = colors,
             modifier = Modifier.fillMaxWidth(),
-            transformation = if (transformed) SurfaceTransformation(spec) else null,
+            transformation = if (transformSurface) SurfaceTransformation(spec) else null,
             contentPadding = if (largeIcon) ButtonDefaults.ButtonWithLargeIconContentPadding else ButtonDefaults.ContentPadding,
             icon = iconContent ?: icon?.let {
                 {
@@ -66,35 +70,21 @@ fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
                     }
                 }
             },
-            secondaryLabel = description?.let { text -> { Text(text, modifier = if (marquee) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier, maxLines = if (marquee) 1 else descriptionMaxLines, softWrap = !marquee, overflow = TextOverflow.Ellipsis) } },
+            secondaryLabel = secondaryLabelContent ?: description?.let { text -> { WearAutoMarqueeText(text, maxLines = 2) } },
         ) {
-            if (titleBadge == null) {
-                Text(
-                    title,
-                    modifier = if (marquee) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier,
-                    maxLines = if (marquee) {
-                        1
-                    } else if (description == null) {
-                        3
-                    } else {
-                        2
-                    },
-                    softWrap = !marquee,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            } else if (marquee) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(title, Modifier.weight(1f, fill = false).basicMarquee(iterations = Int.MAX_VALUE), maxLines = 1, softWrap = false)
-                    WearBadge(titleBadge)
-                }
+            if (titleContent != null) {
+                titleContent()
+            } else if (titleBadge == null) {
+                WearAutoMarqueeText(title)
             } else {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp), itemVerticalAlignment = Alignment.CenterVertically) {
-                    Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    WearAutoMarqueeText(title, Modifier.weight(1f, fill = false))
                     WearBadge(titleBadge)
                 }
             }
         }
     }
+
     if (transformed) {
         WearRefreshItem(spec, Modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding), button)
     } else {

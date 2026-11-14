@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -51,26 +52,28 @@ fun TransformingLazyColumnItemScope.WearInfoCard(
     shape: Shape = MaterialTheme.shapes.large,
     contentPadding: PaddingValues = PaddingValues(10.dp),
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(4.dp),
+    transformed: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val transformation = SurfaceTransformation(transformationSpec)
+    val transformation = if (transformed) SurfaceTransformation(transformationSpec) else null
     val color = containerColor ?: MaterialTheme.colorScheme.surfaceContainer
     val background = remember(color) { ColorPainter(color) }
     val painter = remember(transformation, shape, background, border) {
-        transformation.createContainerPainter(background, shape, border)
+        transformation?.createContainerPainter(background, shape, border) ?: background
     }
     Column(
-        modifier = Modifier.wearRefreshOffset()
-            .graphicsLayer { with(transformation) { applyContainerTransformation() } }
-            .then(modifier.transformedHeight(this, transformationSpec))
+        modifier = (if (transformed) Modifier.wearRefreshOffset() else Modifier)
+            .graphicsLayer { transformation?.let { with(it) { applyContainerTransformation() } } }
+            .then(if (transformed) modifier.transformedHeight(this, transformationSpec) else modifier)
             .fillMaxWidth()
+            .then(if (!transformed) Modifier.clip(shape) else Modifier)
             .drawBehind {
                 with(painter) { draw(size) }
             }
             .graphicsLayer {
                 this.shape = shape
                 clip = true
-                with(transformation) { applyContentTransformation() }
+                transformation?.let { with(it) { applyContentTransformation() } }
             }
             .padding(contentPadding),
         verticalArrangement = verticalArrangement,

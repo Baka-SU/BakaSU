@@ -1,6 +1,5 @@
 package org.bakasu.bakasu.ui.wear.component.settings
 
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -17,6 +16,7 @@ import androidx.wear.compose.material3.SwitchButtonDefaults
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.wearCompactRow
 import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
 
@@ -25,7 +25,7 @@ import org.bakasu.bakasu.ui.wear.component.wearRefreshOffset
  * @date 2026/10/1.
  */
 
-/** Settings lists can scroll each label in one line; detail pages retain their multiline text. */
+/** Settings labels scroll only when they overflow their allowed line count. */
 @Composable
 fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
     transformationSpec: TransformationSpec,
@@ -38,8 +38,6 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
     compact: Boolean = false,
     largeIcon: Boolean = false,
     iconContent: (@Composable BoxScope.() -> Unit)? = null,
-    secondaryLabelMaxLines: Int = 2,
-    marquee: Boolean = false,
     transformed: Boolean = true,
     transformSurface: Boolean = true,
 ) {
@@ -54,7 +52,7 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
         onCheckedChange = onCheckedChange,
         enabled = enabled,
         icon = iconContent ?: icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
-        secondaryLabel = secondaryLabel?.let { text -> { Text(text, modifier = if (marquee) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier, maxLines = if (marquee) 1 else secondaryLabelMaxLines, softWrap = !marquee, overflow = TextOverflow.Ellipsis) } },
-        label = { Text(label, modifier = if (marquee) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier, maxLines = if (marquee) 1 else 3, softWrap = !marquee, overflow = TextOverflow.Ellipsis) },
+        secondaryLabel = secondaryLabel?.let { text -> { WearAutoMarqueeText(text, maxLines = 2) } },
+        label = { WearAutoMarqueeText(label) },
     )
 }

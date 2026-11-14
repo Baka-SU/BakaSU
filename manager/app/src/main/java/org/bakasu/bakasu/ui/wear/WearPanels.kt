@@ -5,8 +5,11 @@ import android.os.PowerManager
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ContentPaste
@@ -16,6 +19,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Sort
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,6 +44,7 @@ import org.bakasu.bakasu.ui.viewmodel.SortType
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -191,6 +196,7 @@ internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onA
                 stringResource(R.string.show_system_apps),
                 state.showSystemApps,
                 { onAction(SuperUserUiAction.SetShowSystemApps(it)) },
+                icon = Icons.Rounded.Android,
             )
         }
         LazySegmentedColumn(SortType.entries, { it }) { sort ->
@@ -201,7 +207,7 @@ internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onA
                     .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
                 transformation = SurfaceTransformation(spec),
                 icon = { Icon(Icons.Rounded.Sort, contentDescription = null) },
-                label = { Text(stringResource(sort.displayNameRes), maxLines = 3, overflow = TextOverflow.Ellipsis) },
+                label = { WearAutoMarqueeText(stringResource(sort.displayNameRes)) },
             )
         }
         item {
@@ -210,6 +216,7 @@ internal fun WearSuperUserPanel(state: SuperUserUiState, onBack: () -> Unit, onA
                 stringResource(R.string.reverse_order),
                 state.reverseOrder,
                 { onAction(SuperUserUiAction.SetReverseOrder(it)) },
+                icon = Icons.Rounded.SwapVert,
             )
         }
     }
@@ -226,6 +233,7 @@ internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction:
                 stringResource(R.string.module_sort_action_first),
                 state.sortActionFirst,
                 { onAction(ModuleUiAction.Sort(state.sortEnabledFirst, it)) },
+                icon = Icons.Rounded.Bolt,
             )
         }
         item {
@@ -234,6 +242,7 @@ internal fun WearModulePanel(state: ModuleUiState, onBack: () -> Unit, onAction:
                 stringResource(R.string.module_sort_enabled_first),
                 state.sortEnabledFirst,
                 { onAction(ModuleUiAction.Sort(it, state.sortActionFirst)) },
+                icon = Icons.Rounded.CheckCircle,
             )
         }
     }

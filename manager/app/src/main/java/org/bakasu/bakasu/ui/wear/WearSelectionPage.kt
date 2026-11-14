@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.os.Build
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -40,6 +39,7 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.WearPreference
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
@@ -78,11 +78,9 @@ internal fun WearSelectionPage(
                         enabled = preferences.timeDisplay != "hidden",
                         icon = Icons.Rounded.Schedule,
                         secondaryLabel = stringResource(R.string.wear_time_immersive_summary),
-                        marquee = true,
                     )
                 }
             },
-            marquee = true,
         ) { preferenceViewModel.set(WearPreference.TimeDisplay, it) }
 
         WearSelection.Palette -> WearChoicePage(
@@ -90,7 +88,6 @@ internal fun WearSelectionPage(
             state.dynamicColorSpec.availablePaletteStyles().map { it.name to paletteLabel(it) },
             state.dynamicPaletteStyle.name,
             onBack,
-            marquee = true,
         ) { onAction(SettingsUiAction.SetDynamicPaletteStyle(PaletteStyle.valueOf(it))) }
 
         WearSelection.ColorSpec -> WearChoicePage(
@@ -98,7 +95,6 @@ internal fun WearSelectionPage(
             ColorSpec.SpecVersion.entries.map { it.name to colorSpecLabel(it) },
             state.dynamicColorSpec.name,
             onBack,
-            marquee = true,
         ) { onAction(SettingsUiAction.SetDynamicColorSpec(ColorSpec.SpecVersion.valueOf(it))) }
 
         WearSelection.PickerMode -> WearChoicePage(
@@ -107,7 +103,6 @@ internal fun WearSelectionPage(
             preferences.picker,
             onBack,
             icon = { selectionIcon(selection, it) },
-            marquee = true,
         ) { preferenceViewModel.set(WearPreference.Picker, it) }
 
         WearSelection.ScreenShape -> WearChoicePage(
@@ -116,7 +111,6 @@ internal fun WearSelectionPage(
             preferences.shape,
             onBack,
             icon = { selectionIcon(selection, it) },
-            marquee = true,
         ) { preferenceViewModel.set(WearPreference.Shape, it) }
 
         WearSelection.LinkMode -> WearChoicePage(
@@ -125,7 +119,6 @@ internal fun WearSelectionPage(
             preferences.link,
             onBack,
             icon = { selectionIcon(selection, it) },
-            marquee = true,
         ) { preferenceViewModel.set(WearPreference.Link, it) }
 
         WearSelection.Language -> {
@@ -144,7 +137,6 @@ internal fun WearSelectionPage(
             onBack,
             enabled = state.suStatus == "supported",
             icon = { selectionIcon(selection, it) },
-            marquee = true,
         ) { onAction(SettingsUiAction.SetSuCompatMode(it.toInt())) }
     }
 }
@@ -185,7 +177,7 @@ internal fun WearLanguagePage(selected: Locale?, system: List<Locale>, onBack: (
                             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
                         transformation = SurfaceTransformation(spec),
                         icon = { Icon(Icons.Rounded.Translate, contentDescription = null) },
-                        label = { Text(label, Modifier.basicMarquee(iterations = Int.MAX_VALUE), maxLines = 1, softWrap = false) },
+                        label = { WearAutoMarqueeText(label) },
                     )
                 }
             }

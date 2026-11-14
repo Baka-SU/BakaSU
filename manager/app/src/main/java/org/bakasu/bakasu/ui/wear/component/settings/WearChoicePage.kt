@@ -1,6 +1,5 @@
 package org.bakasu.bakasu.ui.wear.component.settings
 
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -15,6 +14,7 @@ import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
@@ -32,8 +32,6 @@ fun WearChoicePage(
     isRefreshing: Boolean = false,
     onOpenPanel: (() -> Unit)? = null,
     hasOperationsPanel: Boolean = false,
-    labelMaxLines: Int = 3,
-    marquee: Boolean = false,
     extraContent: TransformingLazyColumnScope.(TransformationSpec) -> Unit = {},
     onChoose: (String) -> Unit,
 ) {
@@ -57,7 +55,7 @@ fun WearChoicePage(
                     enabled = enabled,
                     transformation = SurfaceTransformation(spec),
                     icon = icon?.let { { Icon(it(value), contentDescription = null) } },
-                    label = { Text(label, modifier = if (marquee) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier, maxLines = if (marquee) 1 else labelMaxLines, softWrap = !marquee, overflow = TextOverflow.Ellipsis) },
+                    label = { WearAutoMarqueeText(label) },
                 )
             }
         }

@@ -359,6 +359,13 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                     settingsMessageResource = null
                     val message = if (event.formatArg == null) resources.getString(event.stringResource) else resources.getString(event.stringResource, event.formatArg)
                     when (event.stringResource) {
+                        R.string.wear_theme_color_applied -> {
+                            toast.show(message)
+                            if (navigator.top is WearRoute.CustomColor || navigator.top == WearRoute.Color) back()
+                        }
+
+                        R.string.wear_invalid_color -> toast.show(message)
+
                         R.string.dpi_applied_success,
                         R.string.icon_switched,
                         R.string.background_set_success,
@@ -757,6 +764,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         ::back,
                                         dispatchSettings,
                                     )
+                                }
+                                entry<WearRoute.CustomColor> { route ->
+                                    WearCustomColorPage(route.initial, settings, dispatchSettings)
                                 }
                                 entry<WearRoute.Color> {
                                     WearColorPage(settings, ::back, dispatchSettings, ::open) {

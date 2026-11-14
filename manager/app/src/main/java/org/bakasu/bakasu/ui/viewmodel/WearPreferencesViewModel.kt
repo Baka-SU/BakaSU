@@ -20,6 +20,7 @@ import org.bakasu.bakasu.domain.usecase.SetStringPreferenceUseCase
 enum class WearPreference(val key: String, val default: String, val options: List<String> = emptyList()) {
     Picker("wear_file_picker", "auto", listOf("auto", "builtin", "system")),
     Link("wear_link_mode", "auto", listOf("auto", "webview", "phone")),
+    ToastStyle("wear_toast_style", "standard", listOf("standard", "round")),
     Shape("wear_screen_shape", "auto", listOf("auto", "round", "square")),
     TimeDisplay("wear_time_display", "time", listOf("time", "title", "hidden")),
     ImmersiveTime("wear_immersive_time", "false"),
@@ -41,6 +42,7 @@ data class WearPreferences(
     val blockBackKey: Boolean = false,
     val timeDisplay: String = WearPreference.TimeDisplay.default,
     val immersiveTime: Boolean = false,
+    val toastStyle: String = WearPreference.ToastStyle.default,
 )
 
 class WearPreferencesViewModel(
@@ -59,6 +61,7 @@ class WearPreferencesViewModel(
         getPreference.wear(WearPreference.BlockBackKey).toBoolean(),
         getPreference.wear(WearPreference.TimeDisplay),
         getPreference.wear(WearPreference.ImmersiveTime).toBoolean(),
+        getPreference.wear(WearPreference.ToastStyle),
     )
 
     fun set(preference: WearPreference, value: String) {

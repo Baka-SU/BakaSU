@@ -79,7 +79,7 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
         WearSelection.TimeDisplay -> R.string.wear_time_display
     }
 
-    WearRoute.Color -> R.string.theme_color
+    WearRoute.Color, is WearRoute.CustomColor -> R.string.theme_color
 
     WearRoute.Dpi -> R.string.wear_display_touch
 

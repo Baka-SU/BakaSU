@@ -1,7 +1,15 @@
 package org.bakasu.bakasu.ui.wear.component
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Badge
+import androidx.compose.material.icons.rounded.Bookmarks
+import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.Group
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Rule
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.runtime.Composable
@@ -137,7 +145,7 @@ fun WearAppProfileConfig(
                                     } else {
                                         page = R.string.profile_selinux_domain
                                     }
-                                }, description = if (field == R.string.profile_selinux_rules) rules else domain)
+                                }, icon = if (field == R.string.profile_selinux_rules) Icons.Rounded.Rule else Icons.Rounded.Security, description = if (field == R.string.profile_selinux_rules) rules else domain)
                             }
                             item {
                                 WearActionButton(spec, Icons.Rounded.Save, stringResource(R.string.app_profile_template_save), {
@@ -199,6 +207,7 @@ fun WearAppProfileConfig(
                         spec,
                         stringResource(R.string.profile_template),
                         onChooseTemplate,
+                        icon = Icons.Rounded.Bookmarks,
                         description = templates.templateList.firstOrNull { it.id == profile.rootTemplate }?.name ?: profile.rootTemplate,
                     )
                 }
@@ -240,14 +249,28 @@ fun WearAppProfileConfig(
                         R.string.profile_flags -> profile.flags.toRootProfileFlags().joinToString { it.display }
                         else -> profile.context
                     }
-                    WearSettingsJumpPageWidget(spec, stringResource(field), {
-                        if (field == R.string.profile_selinux_context) {
-                            domain = profile.context
-                            rules = profile.rules
-                            onValidateSepolicy(rules)
-                        }
-                        page = field
-                    }, description = value)
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        stringResource(field),
+                        {
+                            if (field == R.string.profile_selinux_context) {
+                                domain = profile.context
+                                rules = profile.rules
+                                onValidateSepolicy(rules)
+                            }
+                            page = field
+                        },
+                        icon = when (field) {
+                            R.string.wear_uid -> Icons.Rounded.Badge
+                            R.string.wear_gid -> Icons.Rounded.Group
+                            R.string.profile_groups -> Icons.Rounded.Groups
+                            R.string.profile_capabilities -> Icons.Rounded.Extension
+                            R.string.profile_namespace -> Icons.Rounded.Category
+                            R.string.profile_flags -> Icons.Rounded.Flag
+                            else -> Icons.Rounded.Security
+                        },
+                        description = value,
+                    )
                 }
             }
         }

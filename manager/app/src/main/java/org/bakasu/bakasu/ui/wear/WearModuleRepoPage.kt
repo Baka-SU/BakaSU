@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -197,7 +198,7 @@ internal fun WearModuleRepoPage(
                     WearCatalogModuleIcon(module, iconSize)
                 },
                 largeIcon = true,
-                marquee = true,
+
                 description = module.summary.ifBlank { module.moduleId },
                 titleBadge = if (module.metamodule) stringResource(R.string.module_meta_label) else null,
             )
@@ -624,7 +625,7 @@ internal fun WearModuleRepoSortPage(viewModel: ModuleRepoViewModel, onBack: () -
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_sort)) }
         item {
-            WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_star_first), state.sortStargazerCountFirst, { viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it)) })
+            WearSettingsSwitchWidget(spec, stringResource(R.string.module_sort_star_first), state.sortStargazerCountFirst, { viewModel.dispatch(ModuleRepoUiAction.SetStarsFirst(it)) }, icon = Icons.Rounded.Star)
         }
     }
 }

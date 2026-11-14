@@ -1,6 +1,5 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +30,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiState
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
@@ -132,8 +132,8 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
                     labels.forEach { label ->
                         val colors = MaterialTheme.colorScheme
                         val (container, content) = when (label) {
-                            R.string.wear_badge_root -> colors.primary to Color.Black
-                            R.string.wear_badge_default -> colors.primaryContainer to Color.White
+                            R.string.wear_badge_root -> colors.primary to colors.onPrimary
+                            R.string.wear_badge_default -> colors.primaryContainer to colors.onPrimaryContainer
                             R.string.wear_badge_umount -> colors.secondaryContainer to colors.onSecondaryContainer
                             R.string.wear_badge_custom -> colors.tertiaryContainer to colors.onTertiaryContainer
                             else -> colors.errorContainer to colors.onErrorContainer
@@ -147,13 +147,7 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
                 }
             },
         ) {
-            Text(
-                group.mainApp.label,
-                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
-                softWrap = false,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            WearAutoMarqueeText(group.mainApp.label)
         }
     }
 }

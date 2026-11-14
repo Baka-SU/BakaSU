@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Article
+import androidx.compose.material.icons.rounded.FilterAlt
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Warning
@@ -48,6 +49,7 @@ import org.bakasu.bakasu.ui.screen.sulogFilterLabel
 import org.bakasu.bakasu.ui.viewmodel.SulogLoading
 import org.bakasu.bakasu.ui.viewmodel.SulogUiState
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
@@ -142,7 +144,7 @@ internal fun WearLogsPage(
                         )
                         CompactButton(
                             onClick = onEnable,
-                            label = { Text(stringResource(R.string.sulog_enable_action)) },
+                            label = { WearAutoMarqueeText(stringResource(R.string.sulog_enable_action)) },
                             enabled = !state.isLoading && !state.isEnabling,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error,
@@ -267,6 +269,7 @@ internal fun WearLogOptionsPage(
                 sulogFilterLabel(filter),
                 filter in state.selectedFilters,
                 { onToggleFilter(filter) },
+                icon = Icons.Rounded.FilterAlt,
             )
         }
         if (state.files.isNotEmpty()) {
@@ -280,7 +283,7 @@ internal fun WearLogOptionsPage(
                         selected = file.path == selectedPath,
                         onSelect = { onSelectFile(file.path) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(file.name.toSulogDisplayName(), maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                        label = { WearAutoMarqueeText(file.name.toSulogDisplayName()) },
                     )
                 }
             }

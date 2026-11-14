@@ -47,6 +47,7 @@ import org.bakasu.bakasu.Natives.KernelPatchImplementation
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
@@ -315,10 +316,10 @@ private fun TransformingLazyColumnItemScope.WearWarningBar(
             secondaryContentColor = content,
             iconColor = content,
         ),
-        secondaryLabel = { Text(stringResource(R.string.wear_tap_to_view), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        secondaryLabel = { WearAutoMarqueeText(stringResource(R.string.wear_tap_to_view), maxLines = 2) },
         transformation = SurfaceTransformation(spec),
     ) {
-        Text(stringResource(warning.title), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        WearAutoMarqueeText(stringResource(warning.title))
     }
 }
 

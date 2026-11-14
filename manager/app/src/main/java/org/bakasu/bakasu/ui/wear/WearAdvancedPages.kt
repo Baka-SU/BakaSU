@@ -57,6 +57,7 @@ import org.bakasu.bakasu.ui.viewmodel.managerSourceLabel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
+import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearInfoRow
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
@@ -251,7 +252,7 @@ internal fun WearDynamicManagerAppsPage(
                     }
                 },
                 secondaryLabel = source?.let { stringResource(R.string.dynamic_manager_fixed_manager_summary, app.packageName, it) } ?: app.packageName,
-                secondaryLabelMaxLines = Int.MAX_VALUE,
+
                 enabled = app.isChangeable,
                 iconContent = {
                     Box(Modifier.size(ButtonDefaults.LargeIconSize)) {
@@ -313,7 +314,7 @@ internal fun WearUmountPage(state: UmountManagerUiState, onBack: () -> Unit, onO
                     remove.show()
                 }, destructive = true),
             ) {
-                WearActionButton(null, entry.path, {}, secondaryText = entry.flags.toUmountFlagName())
+                WearInfoCard(spec, transformed = false) { WearInfoRow(Icons.Rounded.Folder, entry.path, entry.flags.toUmountFlagName()) }
             }
         }
     }

@@ -123,8 +123,8 @@ val WearCompactRowHeight = 48.dp
 fun Modifier.wearCompactRow(compact: Boolean): Modifier = if (compact) heightIn(min = WearCompactRowHeight) else this
 
 /**
- * A full-width list button. A Wear button is sized for two lines and grows to at most three, so
- * the label takes up to three lines alone, or two above a one-line secondary label. A [compact]
+ * A full-width list button with a one-line title and up to two secondary lines. Overflowing
+ * interactive labels use the shared marquee policy. A [compact]
  * button keeps less room above and below its content; see [WearCompactRowHeight].
  */
 @Composable
@@ -174,8 +174,8 @@ fun WearActionButton(
         colors = colors,
         contentPadding = if (largeIcon) ButtonDefaults.ButtonWithLargeIconContentPadding else ButtonDefaults.ContentPadding,
         icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
-        secondaryLabel = secondaryText?.let { text -> { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
-    ) { Text(label, maxLines = if (secondaryText == null) 3 else 2, overflow = TextOverflow.Ellipsis) }
+        secondaryLabel = secondaryText?.let { text -> { WearAutoMarqueeText(text, maxLines = 2) } },
+    ) { WearAutoMarqueeText(label) }
 }
 
 /**
@@ -188,9 +188,7 @@ fun WearBadge(
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.tertiary,
     contentColor: Color = MaterialTheme.colorScheme.onTertiary,
-    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelSmall.let {
-        it.copy(fontSize = it.fontSize * 0.8f, lineHeight = it.lineHeight * 0.8f)
-    },
+    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyExtraSmall,
 ) {
     Text(
         text,

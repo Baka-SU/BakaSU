@@ -109,6 +109,7 @@ data class SettingsUiState(
     val useSoftReboot: Boolean = false,
     val enableSwipeDismiss: Boolean = true,
     val pagerInterceptionMode: Int = 1,
+    val applyingThemeColor: Boolean = false,
 )
 
 sealed interface SettingsUiAction {
@@ -117,6 +118,7 @@ sealed interface SettingsUiAction {
     data object LoadFeatureSettings : SettingsUiAction
     data class SetThemeMode(val index: Int) : SettingsUiAction
     data class SetThemeColor(val color: Int) : SettingsUiAction
+    data class ApplyWearThemeColor(val hex: String) : SettingsUiAction
     data class SetThemeColorDialogVisible(val visible: Boolean) : SettingsUiAction
     data class SetPredictiveBackAnimation(val animation: PredictiveBackAnimation) : SettingsUiAction
     data class SetPredictiveBackExitDirection(
@@ -480,6 +482,8 @@ class SettingsViewModel(
 
             is SettingsUiAction.SetThemeColor -> handleThemeColorChange(action.color)
 
+            is SettingsUiAction.ApplyWearThemeColor -> applyWearThemeColor(action.hex)
+
             is SettingsUiAction.SetThemeColorDialogVisible ->
                 setThemeColorDialogVisible(action.visible)
 
@@ -571,6 +575,35 @@ class SettingsViewModel(
         val coerced = index.coerceIn(0, 2)
         mutableState.update { it.copy(pagerInterceptionMode = coerced) }
         updatePlatformAsync(PlatformSetting.PagerInterceptionMode(coerced))
+    }
+
+    private fun applyWearThemeColor(input: String) {
+        if (mutableState.value.applyingThemeColor) return
+        val hex = input.trim().removePrefix("#")
+        if (hex.length < 6) return
+        if (!hex.matches(Regex("[0-9a-fA-F]{6}"))) {
+            mutableEvents.tryEmit(SettingsUiEvent.Message(R.string.wear_invalid_color))
+            return
+        }
+        mutableState.update { it.copy(applyingThemeColor = true) }
+        viewModelScope.launch {
+            try {
+                updateAppearance(AppearanceSetting.SeedColor(hex.toLong(16).toInt() or 0xFF000000.toInt())).fold(
+                    onSuccess = {
+                        updateAppearance(AppearanceSetting.DynamicColor(false)).fold(
+                            onSuccess = {
+                                applySnapshot(it, resetTempDpi = false)
+                                mutableEvents.emit(SettingsUiEvent.Message(R.string.wear_theme_color_applied))
+                            },
+                            onFailure = ::emitError,
+                        )
+                    },
+                    onFailure = ::emitError,
+                )
+            } finally {
+                mutableState.update { it.copy(applyingThemeColor = false) }
+            }
+        }
     }
 
     private fun updateAppearanceAsync(setting: AppearanceSetting) {

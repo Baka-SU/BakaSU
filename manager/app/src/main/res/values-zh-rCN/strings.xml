@@ -965,4 +965,8 @@
     <string name="wear_download_clear_message">取消并移除所有模块下载任务？已完成的 ZIP 文件将保留。</string>
     <string name="wear_download_url_blocked">下载地址被阻止</string>
     <string name="wear_search_repositories">搜索仓库</string>
+    <string name="wear_round_toast">圆形 Toast（仅适合圆屏）</string>
+    <string name="wear_round_toast_summary">沿屏幕底部弧线显示简短消息。</string>
+    <string name="wear_round_toast_square">仅圆屏布局可用。</string>
+    <string name="wear_theme_color_applied">主题颜色已应用。</string>
 </resources>

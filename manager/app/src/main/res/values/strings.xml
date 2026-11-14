@@ -991,4 +991,8 @@
     <string name="wear_download_clear_message">Cancel and remove all module download tasks? Completed ZIP files will be kept.</string>
     <string name="wear_download_url_blocked">Download URL blocked</string>
     <string name="wear_search_repositories">Search repositories</string>
+    <string name="wear_round_toast">Round Toast (round screens only)</string>
+    <string name="wear_round_toast_summary">Show short messages along the bottom arc.</string>
+    <string name="wear_round_toast_square">Available only with a round screen layout.</string>
+    <string name="wear_theme_color_applied">Theme color applied.</string>
 </resources>
