@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Cloud
@@ -21,10 +22,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.Icon
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.RepositoryApiType
 import org.bakasu.bakasu.domain.model.RepositoryFailure
@@ -106,10 +111,10 @@ internal fun WearRepositorySourcePage(url: String, selectedUrl: String?, onBack:
         timeText = { WearTimeText(source.displayName) },
     ) { spec ->
         item { WearPageHeader(spec, source.displayName) }
-        item { WearModuleInfoCard(spec, compact = true) { WearDetailField(Icons.Rounded.Language, stringResource(R.string.repo_server_url), source.url, largeIcon = true) } }
-        item { WearModuleInfoCard(spec, compact = true) { WearDetailField(Icons.Rounded.Tune, stringResource(R.string.repo_api_type), stringResource(source.apiType.resId), largeIcon = true) } }
+        item { WearModuleInfoCard(spec, compact = true) { WearRepositoryDetailField(Icons.Rounded.Language, stringResource(R.string.repo_server_url), source.url) } }
+        item { WearModuleInfoCard(spec, compact = true) { WearRepositoryDetailField(Icons.Rounded.Tune, stringResource(R.string.repo_api_type), stringResource(source.apiType.resId)) } }
         if (source.description.isNotBlank()) {
-            item { WearModuleInfoCard(spec, compact = true) { WearDetailField(Icons.Rounded.Description, stringResource(R.string.wear_description), source.description, largeIcon = true) } }
+            item { WearModuleInfoCard(spec, compact = true) { WearRepositoryDetailField(Icons.Rounded.Description, stringResource(R.string.wear_description), source.description) } }
         }
         if (!source.isBuiltIn) {
             SegmentedColumn(listOf(R.string.repo_edit_name, R.string.repo_remove), { it }) { action ->
@@ -122,6 +127,14 @@ internal fun WearRepositorySourcePage(url: String, selectedUrl: String?, onBack:
                 )
             }
         }
+    }
+}
+
+/** A standard-sized icon stays centered beside details that may wrap over several lines. */
+@Composable
+private fun WearRepositoryDetailField(icon: ImageVector, label: String, value: String) {
+    WearDetailField(label, value, iconAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
     }
 }
 

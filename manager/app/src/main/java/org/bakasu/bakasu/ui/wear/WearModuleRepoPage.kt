@@ -289,7 +289,7 @@ internal fun WearOnlineModulePage(
         )
         return
     }
-    WearList(isLoading = state.loading, onBack = onBack) { spec ->
+    WearList(isLoading = state.loading, onBack = onBack, backToTop = true) { spec ->
         if (module == null) item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
         if (module != null) {
             // As in the design: the module icon, name and authors, then its main actions. As the

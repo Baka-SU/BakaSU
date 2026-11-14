@@ -22,6 +22,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -79,6 +80,25 @@ class WearRepositorySourceLayoutTest(private val round: Boolean, private val fon
         val y = (((bounds.top + bounds.bottom) / 2 - root.top).value / (root.bottom - root.top).value * bitmap.height).toInt()
         assertEquals(bitmap.getPixel(bitmap.width / 2, 2), bitmap.getPixel(x, y))
         saveScreen("repository-title")
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
+        val label = compose.onNodeWithText(compose.activity.getString(R.string.repo_server_url), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val value = compose.onNodeWithText(RepositorySource.KERNEL_SU_URL, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val details = compose.onNodeWithTag("page").captureToImage().asAndroidBitmap()
+        val pixelsPerDp = details.height / (root.bottom - root.top).value
+        var iconTop = details.height
+        var iconBottom = -1
+        for (py in ((label.top - root.top).value * pixelsPerDp).toInt() until ((value.bottom - root.top).value * pixelsPerDp).toInt().coerceAtMost(details.height)) {
+            for (px in 0 until ((label.left - root.left - 2.dp).value * pixelsPerDp).toInt()) {
+                val pixel = details.getPixel(px, py)
+                if (android.graphics.Color.red(pixel) > 150 && android.graphics.Color.green(pixel) > 150 && android.graphics.Color.blue(pixel) > 150) {
+                    iconTop = minOf(iconTop, py)
+                    iconBottom = maxOf(iconBottom, py)
+                }
+            }
+        }
+        assertTrue("The standard icon must be larger than the old 18dp glyph", (iconBottom - iconTop + 1) / pixelsPerDp > 17f)
+        assertEquals("The icon must be vertically centered beside the entire text block", (label.top.value + value.bottom.value) / 2, root.top.value + (iconTop + iconBottom) / 2f / pixelsPerDp, 2f)
+        saveScreen("repository-icons")
         compose.onNode(hasScrollToIndexAction()).performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 10000f) }
         val select = compose.onNodeWithText(compose.activity.getString(R.string.repo_select_repository))
         select.assertIsDisplayed()
