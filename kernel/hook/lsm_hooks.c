@@ -189,6 +189,7 @@ void __init ksu_lsm_hook_built_in_init(void)
 LSM_HOOK_LIST(GENERATE_LSM_HOOK_DEFS)
 
 setprocattr_fn ksu_orig_setprocattr;
+inode_setxattr_fn ksu_orig_setxattr;
 
 #undef STRIP_PARENS
 #undef GENERATE_LSM_HOOK_DEFS
@@ -241,6 +242,23 @@ void ksu_register_setprocattr_lsm_hook()
 
     ksu_orig_setprocattr = ops->setprocattr;
     ops->setprocattr = ksu_handle_selinux_setprocattr;
+}
+
+void ksu_unregister_setxattr_lsm_hook()
+{
+    struct security_operations *ops = (struct security_operations *)selinux_ops_addr;
+
+    if (ksu_orig_setxattr) {
+        ops->inode_setxattr = ksu_orig_setxattr;
+    }
+}
+
+void ksu_register_setxattr_lsm_hook()
+{
+    struct security_operations *ops = (struct security_operations *)selinux_ops_addr;
+
+    ksu_orig_setxattr = ops->inode_setxattr;
+    ops->inode_setxattr = ksu_handle_selinux_inode_setxattr;
 }
 
 #ifdef CONFIG_KSU_MANUAL_HOOK_AUTO_INITRC_HOOK
