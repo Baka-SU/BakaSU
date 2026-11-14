@@ -3,6 +3,10 @@ package org.bakasu.bakasu.ui.wear.component
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Point
+import android.graphics.Rect
+import android.graphics.RectF
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
@@ -39,7 +43,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.layout.onSizeChanged
@@ -54,14 +57,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.LocalScreenIsActive
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.requestFocusOnHierarchyActive
-import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlinx.coroutines.delay
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.json.JSONObject
 
 /** Uses the full display; inward drags from the round edge reveal one fixed page corner. */
@@ -97,7 +102,7 @@ internal fun WearWebView(webView: WebView, modifier: Modifier = Modifier) {
     var textPercent by remember(webView) { mutableIntStateOf(webView.settings.textZoom) }
     var resetPosition by remember(webView) { mutableIntStateOf(0) }
     var toolsOpen by remember(webView) { mutableStateOf(false) }
-    val scale = listOf(0.6f, 0.8f, 1f)[scaleIndex]
+    val scale = listOf(WebPageBaseScale, 0.8f, 1f)[scaleIndex]
     val scalePercent = listOf(100, 133, 167)[scaleIndex]
     SideEffect { webView.settings.textZoom = textPercent }
     val toolsLabel = stringResource(R.string.wear_web_tools)
@@ -113,28 +118,27 @@ internal fun WearWebView(webView: WebView, modifier: Modifier = Modifier) {
                 menuKey = "web-tools",
                 hintColor = hintColor,
                 showHint = true,
-                revealFromBottom = true,
                 menuOpen = toolsOpen,
                 menuActive = toolsOpen,
                 menuContent = { onClosing ->
-                    WearList(onClosePanel = { toolsOpen = false }, onPanelClosing = onClosing, closePanelOnPullDown = true) { spec ->
+                    val actions = listOf(
+                        R.string.wear_web_reset to WearIconAction(Icons.Rounded.CenterFocusStrong, stringResource(R.string.wear_web_reset), {
+                            resetPosition++
+                            scaleIndex = 0
+                            toolsOpen = false
+                        }),
+                        R.string.wear_web_scale to WearIconAction(Icons.Rounded.ZoomIn, stringResource(R.string.wear_web_scale, scalePercent), {
+                            scaleIndex = (scaleIndex + 1) % 3
+                        }),
+                        R.string.wear_web_text_scale to WearIconAction(Icons.Rounded.TextFields, stringResource(R.string.wear_web_text_scale, textPercent), {
+                            textPercent = if (textPercent >= 150) 100 else textPercent + 25
+                        }),
+                    )
+                    val listState = rememberTransformingLazyColumnState(initialAnchorItemIndex = actions.size)
+                    WearList(onClosePanel = { toolsOpen = false }, onPanelClosing = onClosing, listState = listState) { spec ->
                         item { WearPageHeader(spec, toolsLabel) }
-                        item {
-                            WearActionButton(spec, Icons.Rounded.CenterFocusStrong, stringResource(R.string.wear_web_reset), {
-                                resetPosition++
-                                scaleIndex = 0
-                                toolsOpen = false
-                            }, colors = ButtonDefaults.filledTonalButtonColors())
-                        }
-                        item {
-                            WearActionButton(spec, Icons.Rounded.ZoomIn, stringResource(R.string.wear_web_scale, scalePercent), {
-                                scaleIndex = (scaleIndex + 1) % 3
-                            }, colors = ButtonDefaults.filledTonalButtonColors())
-                        }
-                        item {
-                            WearActionButton(spec, Icons.Rounded.TextFields, stringResource(R.string.wear_web_text_scale, textPercent), {
-                                textPercent = if (textPercent >= 150) 100 else textPercent + 25
-                            }, colors = ButtonDefaults.filledTonalButtonColors())
+                        SegmentedColumn(actions, { it.first }) { (_, action) ->
+                            WearSettingsJumpPageWidget(spec, action.label, action.onClick, icon = action.icon)
                         }
                     }
                 },
@@ -222,10 +226,8 @@ private fun WearWebViewContent(
         onRelease = { it.removeView(webView) },
         modifier = Modifier.fillMaxSize()
             .onSizeChanged { height = it.height.toFloat().coerceAtLeast(1f) }
-            .graphicsLayer {
-                scaleX = wearPanelPageScale(reveal)
-                scaleY = scaleX
-            }
+            // The shared menu still slides and dims above this page. Scaling AndroidView here
+            // changes Chromium's visual viewport even though the native layout stays fixed.
             .semantics {
                 if (active && !toolsOpen) {
                     customActions = listOf(
@@ -262,9 +264,11 @@ private fun WearWebViewContent(
     }
 }
 
-/** A full, exactly measured responsive viewport with native child touch-coordinate transforms. */
+private const val WebPageBaseScale = 0.6f
+
+/** Fixed page dimensions per window and explicit zoom setting; gestures only translate the page. */
 @SuppressLint("ViewConstructor")
-private class WearWebViewViewport(context: Context, private val webView: WebView) : ViewGroup(context) {
+internal class WearWebViewViewport(context: Context, private val webView: WebView) : ViewGroup(context) {
     private var pageScale = 1f
     private var round = false
     private var resetPosition = 0
@@ -299,10 +303,16 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
     private val pullThreshold = WearPullThreshold.value * resources.displayMetrics.density
 
     init {
+        // WebView's native edge effect can stretch/shrink its drawing without changing any
+        // CSS dimensions. The host owns boundary gestures, including after a corner reveal.
+        webView.overScrollMode = OVER_SCROLL_NEVER
         webView.settings.apply {
             useWideViewPort = true
             loadWithOverviewMode = false
-            builtInZoomControls = true
+            // The tools menu owns visual zoom. Native pinch/double-tap zoom would change the
+            // visual viewport independently and break the fixed page and touch mapping.
+            setSupportZoom(false)
+            builtInZoomControls = false
             displayZoomControls = false
         }
         addView(webView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
@@ -331,7 +341,8 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
         this.onStart = onStart
         this.onPull = onPull
         this.onEnd = onEnd
-        if (pageScale != scale || round != isRound || resetPosition != reset) {
+        val scaleChanged = pageScale != scale
+        if (scaleChanged || round != isRound || resetPosition != reset) {
             if (resetPosition != reset) {
                 restoring?.cancel()
                 restoring = null
@@ -347,10 +358,11 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
             resetPosition = reset
             rotaryTarget = null
             gesture++
-            requestLayout()
         }
         webView.scaleX = scale
         webView.scaleY = scale
+        // Only an explicit menu zoom changes the responsive layout, never gesture progress.
+        if (scaleChanged) requestLayout() else positionPage()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -372,16 +384,47 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
         positionPage()
     }
 
+    // Chromium uses native screen coordinates to derive visualViewport. Corner offsets must
+    // affect only drawing and input, otherwise scrolling after a pan resizes fixed WebUI content.
+    val pageTranslationX: Float get() = webView.translationX + offsetX
+    val pageTranslationY: Float get() = webView.translationY + offsetY
+
+    override fun drawChild(canvas: Canvas, child: android.view.View, drawingTime: Long): Boolean {
+        val checkpoint = canvas.save()
+        if (child === webView) canvas.translate(offsetX, offsetY)
+        return try {
+            super.drawChild(canvas, child, drawingTime)
+        } finally {
+            canvas.restoreToCount(checkpoint)
+        }
+    }
+
+    override fun getChildVisibleRect(child: android.view.View, rect: Rect, offset: Point?): Boolean {
+        if (child !== webView) return super.getChildVisibleRect(child, rect, offset)
+        // Report the complete scaled child to Chromium. The corner position is a drawing
+        // translation applied by this parent and must never become a smaller visual viewport.
+        val bounds = RectF(rect)
+        child.matrix.mapRect(bounds)
+        bounds.offset(child.left.toFloat(), child.top.toFloat())
+        bounds.roundOut(rect)
+        offset?.let {
+            val point = floatArrayOf(it.x.toFloat(), it.y.toFloat())
+            child.matrix.mapPoints(point)
+            it.set(point[0].toInt() + child.left, point[1].toInt() + child.top)
+        }
+        return !rect.isEmpty
+    }
     private fun positionPage() {
         offsetX = if (round) offsetX.coerceIn(-width / 4f, width / 4f) else 0f
         offsetY = if (round) offsetY.coerceIn(-height / 4f, height / 4f) else 0f
-        webView.translationX = (width - webView.width * pageScale) / 2f + offsetX
-        webView.translationY = (height - webView.height * pageScale) / 2f + offsetY
+        webView.translationX = (width - webView.width * pageScale) / 2f
+        webView.translationY = (height - webView.height * pageScale) / 2f
+        invalidate()
     }
 
     private fun pagePoint(x: Float, y: Float) = Pair(
-        ((x - webView.translationX) / pageScale / webView.width).coerceIn(0f, 1f),
-        ((y - webView.translationY) / pageScale / webView.height).coerceIn(0f, 1f),
+        ((x - pageTranslationX) / pageScale / webView.width).coerceIn(0f, 1f),
+        ((y - pageTranslationY) / pageScale / webView.height).coerceIn(0f, 1f),
     )
 
     /** Reads the hit element's complete scroll chain without changing the module's DOM or handlers. */
@@ -497,7 +540,13 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
                 }
             }
         }
-        val handled = super.dispatchTouchEvent(event)
+        val pageEvent = MotionEvent.obtain(event)
+        val handled = try {
+            pageEvent.offsetLocation(-offsetX, -offsetY)
+            super.dispatchTouchEvent(pageEvent)
+        } finally {
+            pageEvent.recycle()
+        }
         if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
             gesture++
             parent.requestDisallowInterceptTouchEvent(false)
@@ -618,7 +667,7 @@ private class WearWebViewViewport(context: Context, private val webView: WebView
     }
 }
 
-private enum class WebCorner(val x: Int, val y: Int) {
+internal enum class WebCorner(val x: Int, val y: Int) {
     Default(0, 0),
     TopLeft(1, 1),
     TopRight(-1, 1),

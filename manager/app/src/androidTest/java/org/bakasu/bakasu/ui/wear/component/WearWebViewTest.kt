@@ -161,7 +161,7 @@ class WearWebViewTest(private val round: Boolean) {
         }
         openTools()
         clickTool(compose.activity.getString(R.string.wear_web_reset))
-        val initial = compose.runOnIdle { Offset(webView.translationX, webView.translationY) }
+        val initial = compose.runOnIdle { Offset(pageTranslationX, pageTranslationY) }
         compose.onNodeWithTag("web-host").performTouchInput {
             swipe(center, center - Offset(width * 0.07f, height * 0.07f), 500)
         }
@@ -190,8 +190,8 @@ class WearWebViewTest(private val round: Boolean) {
         openTools()
         clickTool(compose.activity.getString(R.string.wear_web_reset))
         compose.runOnIdle {
-            assertEquals(initial.x, webView.translationX, 1f)
-            assertEquals(initial.y, webView.translationY, 1f)
+            assertEquals(initial.x, pageTranslationX, 1f)
+            assertEquals(initial.y, pageTranslationY, 1f)
         }
     }
 
@@ -238,15 +238,20 @@ class WearWebViewTest(private val round: Boolean) {
     @Test
     fun ordinaryScrollingAndBackRemainAvailable() {
         showPage()
-        val initial = compose.runOnIdle { Offset(webView.translationX, webView.translationY) }
+        js("window.touchEvents = []; ['touchstart','touchmove','touchend','touchcancel'].forEach(type => document.addEventListener(type, e => touchEvents.push(type), {passive:true}))")
+        val initial = compose.runOnIdle { Offset(pageTranslationX, pageTranslationY) }
         compose.onNodeWithTag("web-host").performTouchInput {
             // Scroll within the native viewport, including on a 192dp watch.
             swipe(Offset(width * 0.25f, height * 0.55f), Offset(width * 0.25f, height * 0.25f), 500)
         }
-        compose.waitUntil(10_000) { js("scrollY").toDouble() > 20 }
+        try {
+            compose.waitUntil(10_000) { js("visualViewport.pageTop").toDouble() > 20 }
+        } catch (error: AssertionError) {
+            throw AssertionError(js("JSON.stringify({events:touchEvents,scroll:scrollY,page:visualViewport.pageTop,height:visualViewport.height,root:document.scrollingElement.scrollHeight})"), error)
+        }
         compose.runOnIdle {
-            assertEquals(initial.x, webView.translationX, 0.01f)
-            assertEquals(initial.y, webView.translationY, 0.01f)
+            assertEquals(initial.x, pageTranslationX, 0.01f)
+            assertEquals(initial.y, pageTranslationY, 0.01f)
             assertEquals(0, backCount)
         }
         openTools()
@@ -299,20 +304,22 @@ class WearWebViewTest(private val round: Boolean) {
     fun crownReturnsToTheSamePageAfterClosingTools() {
         showPage()
         rotateCrown(64f)
-        compose.waitUntil(5_000) { js("scrollY").toDouble() > 20 }
+        compose.waitUntil(5_000) { js("visualViewport.pageTop").toDouble() > 20 }
         awaitStableScroll()
-        val before = js("scrollY").toDouble()
+        val before = js("visualViewport.pageTop").toDouble()
         openTools()
         rotateCrown(64f)
-        assertEquals(before, js("scrollY").toDouble(), 1.0)
+        assertEquals(before, js("visualViewport.pageTop").toDouble(), 1.0)
         closeTools()
         rotateCrown(64f)
-        compose.waitUntil(5_000) { js("scrollY").toDouble() > before + 20 }
+        compose.waitUntil(5_000) { js("visualViewport.pageTop").toDouble() > before + 20 }
     }
 
     @Test
-    fun twoFingerGestureDoesNotOpenToolsOrClickThrough() {
+    fun twoFingerGestureDoesNotResizeTheViewportOpenToolsOrClickThrough() {
         showPage("wear-webview-navigation.html")
+        val dimensions = compose.runOnIdle { webView.width to webView.height }
+        val cssDimensions = js("JSON.stringify([innerWidth, innerHeight, visualViewport.width, visualViewport.height])")
         compose.onNodeWithTag("web-host").performTouchInput {
             down(0, Offset(centerX - width * 0.1f, centerY))
             down(1, Offset(centerX + width * 0.1f, centerY))
@@ -321,6 +328,9 @@ class WearWebViewTest(private val round: Boolean) {
             up(0)
             up(1)
         }
+        awaitWebFrame()
+        compose.runOnIdle { assertEquals(dimensions, webView.width to webView.height) }
+        assertEquals(cssDimensions, js("JSON.stringify([innerWidth, innerHeight, visualViewport.width, visualViewport.height])"))
         control(R.string.wear_web_tools).assertDoesNotExist()
         assertEquals("[]", js("clicks"))
     }
@@ -388,8 +398,8 @@ class WearWebViewTest(private val round: Boolean) {
                     moveTo(center - Offset(width * 0.07f * dx, height * 0.07f * dy), delayMillis = 300)
                 }
                 compose.runOnIdle {
-                    assertEquals(viewport.width * 0.15f * dx, webView.translationX, 2f)
-                    assertEquals(viewport.height * 0.15f * dy, webView.translationY, 2f)
+                    assertEquals(viewport.width * 0.15f * dx, pageTranslationX, 2f)
+                    assertEquals(viewport.height * 0.15f * dy, pageTranslationY, 2f)
                     assertTrue(hapticEvents.isEmpty())
                 }
                 compose.onNodeWithTag("web-host").performTouchInput {
@@ -413,7 +423,7 @@ class WearWebViewTest(private val round: Boolean) {
         showPage()
         rotateCrown(64f)
         awaitStableScroll()
-        val scroll = js("scrollY").toDouble()
+        val scroll = js("visualViewport.pageTop").toDouble()
         compose.onNodeWithTag("wear-menu-hint").assertExists()
         openTools()
         compose.onNodeWithTag("wear-menu-hint").assertDoesNotExist()
@@ -431,7 +441,7 @@ class WearWebViewTest(private val round: Boolean) {
         }
         control(R.string.wear_web_tools).assertDoesNotExist()
         compose.onNodeWithTag("wear-menu-hint").assertExists()
-        assertEquals(scroll, js("scrollY").toDouble(), 1.0)
+        assertEquals(scroll, js("visualViewport.pageTop").toDouble(), 1.0)
         assertEquals(0, backCount)
     }
 
@@ -464,6 +474,9 @@ class WearWebViewTest(private val round: Boolean) {
     fun menuPreviewDuringDragProbe() {
         showPage("wear-webview-navigation.html")
         val before = compose.onNodeWithTag("web-host").captureToImage().toPixelMap()
+        val dimensions = compose.runOnIdle { webView.width to webView.height }
+        // Menu gestures must preserve both the layout and visual viewport, including mid-drag.
+        val cssDimensions = js("JSON.stringify([innerWidth, innerHeight, visualViewport.width, visualViewport.height, visualViewport.scale])")
         compose.onNodeWithTag("web-host").performTouchInput {
             down(Offset(centerX, height * 0.30f))
         }
@@ -473,6 +486,8 @@ class WearWebViewTest(private val round: Boolean) {
         }
         try {
             screenshot("probe-menu-mid-drag")
+            compose.runOnIdle { assertEquals(dimensions, webView.width to webView.height) }
+            assertEquals(cssDimensions, js("JSON.stringify([innerWidth, innerHeight, visualViewport.width, visualViewport.height, visualViewport.scale])"))
             val during = compose.onNodeWithTag("web-host").captureToImage().toPixelMap()
             var changed = 0
             for (y in 0 until before.height) {
@@ -483,6 +498,41 @@ class WearWebViewTest(private val round: Boolean) {
             assertTrue("The menu and scrim must be drawn before release", changed > before.width * before.height / 5)
         } finally {
             compose.onNodeWithTag("web-host").performTouchInput { up() }
+        }
+    }
+
+    @Test
+    fun downwardMenuPullAfterEachCornerNeverResizesThePage() {
+        showOverflowPage()
+        val dimensions = js("JSON.stringify([innerWidth, innerHeight, visualViewport.width, visualViewport.height, visualViewport.scale])")
+        val nativeDimensions = compose.runOnIdle { webView.width to webView.height }
+        js("window.viewportResizes = 0; visualViewport.addEventListener('resize', () => viewportResizes++)")
+        listOf(1f to 1f, -1f to 1f, 1f to -1f, -1f to -1f).forEach { (dx, dy) ->
+            peekCorner(dx, dy)
+            compose.onNodeWithTag("web-host").performTouchInput { down(Offset(centerX, height * 0.35f)) }
+            awaitWebFrame()
+            compose.onNodeWithTag("web-host").performTouchInput { moveBy(Offset(0f, height * 0.14f), delayMillis = 350) }
+            // Chromium defers its viewport inset calculation by 200ms after a native position change.
+            SystemClock.sleep(300)
+            awaitWebFrame()
+            try {
+                assertEquals(dimensions, js("JSON.stringify([innerWidth, innerHeight, visualViewport.width, visualViewport.height, visualViewport.scale])"))
+                compose.runOnIdle { assertEquals(nativeDimensions, webView.width to webView.height) }
+            } finally {
+                compose.onNodeWithTag("web-host").performTouchInput { cancel() }
+            }
+            compose.waitForIdle()
+            openTools()
+            closeTools()
+            SystemClock.sleep(300)
+            assertEquals(dimensions, js("JSON.stringify([innerWidth, innerHeight, visualViewport.width, visualViewport.height, visualViewport.scale])"))
+            assertEquals("Downward pulls and menu transitions must not dispatch resize", "0", js("viewportResizes"))
+            if (round) {
+                compose.onNodeWithTag("web-host").performTouchInput {
+                    swipe(center, center - Offset(width * 0.3f * dx, height * 0.3f * dy), 600)
+                }
+                awaitPosition(0f, 0f)
+            }
         }
     }
 
@@ -550,25 +600,30 @@ class WearWebViewTest(private val round: Boolean) {
     @Test
     fun pannedAndScaledOverflowContentKeepsScrollingAndMenuDoesNotResetIt() {
         showOverflowPage()
+        val dimensions = js("JSON.stringify([innerWidth, innerHeight, visualViewport.width, visualViewport.height, visualViewport.scale])")
         if (round) {
             peekCorner(1f, 1f)
         }
-        val pan = compose.runOnIdle { Offset(webView.translationX, webView.translationY) }
+        awaitWebFrame()
+        assertEquals(dimensions, js("JSON.stringify([innerWidth, innerHeight, visualViewport.width, visualViewport.height, visualViewport.scale])"))
+        val pan = compose.runOnIdle { Offset(pageTranslationX, pageTranslationY) }
         compose.onNodeWithTag("web-host").performTouchInput {
             swipe(Offset(width * 0.55f, height * 0.65f), Offset(width * 0.57f, height * 0.4f), 500)
         }
         compose.waitUntil(5_000) { js("document.querySelector('main').scrollTop").toDouble() > 20 }
+        awaitWebFrame()
+        assertEquals(dimensions, js("JSON.stringify([innerWidth, innerHeight, visualViewport.width, visualViewport.height, visualViewport.scale])"))
         compose.runOnIdle {
-            assertEquals(pan.x, webView.translationX, 1f)
-            assertEquals(pan.y, webView.translationY, 1f)
+            assertEquals(pan.x, pageTranslationX, 1f)
+            assertEquals(pan.y, pageTranslationY, 1f)
         }
         openTools()
         clickTool(compose.activity.getString(R.string.wear_web_scale, 100))
         closeTools()
         awaitWebFrame()
         compose.runOnIdle {
-            assertEquals(pan.x, webView.translationX, 1f)
-            assertEquals(pan.y, webView.translationY, 1f)
+            assertEquals(pan.x, pageTranslationX, 1f)
+            assertEquals(pan.y, pageTranslationY, 1f)
         }
         val before = js("document.querySelector('main').scrollTop").toDouble()
         // Resizing may leave Chromium at the bottom; turn towards available content.
@@ -578,8 +633,8 @@ class WearWebViewTest(private val round: Boolean) {
         openTools()
         clickTool(compose.activity.getString(R.string.wear_web_reset))
         compose.runOnIdle {
-            assertEquals(0f, webView.translationX, 1f)
-            assertEquals(0f, webView.translationY, 1f)
+            assertEquals(0f, pageTranslationX, 1f)
+            assertEquals(0f, pageTranslationY, 1f)
             assertEquals(0.6f, webView.scaleX, 0.001f)
         }
     }
@@ -587,20 +642,25 @@ class WearWebViewTest(private val round: Boolean) {
     @Test
     fun cornersSnapAndReverseToDefaultWithoutFreeDragging() {
         showPage("wear-webview-navigation.html")
+        val dimensions = compose.runOnIdle { webView.width to webView.height }
+        val cssDimensions = js("JSON.stringify([innerWidth, innerHeight, visualViewport.width, visualViewport.height, visualViewport.scale])")
         listOf(1f to 1f, -1f to 1f, 1f to -1f, -1f to -1f).forEach { (dx, dy) ->
             peekCorner(dx, dy)
             val viewport = compose.runOnIdle { webView.parent as View }
             val expectedX = if (round) viewport.width / 4f * dx else 0f
             val expectedY = if (round) viewport.height / 4f * dy else 0f
             compose.runOnIdle {
-                assertEquals(expectedX, webView.translationX, 1f)
-                assertEquals(expectedY, webView.translationY, 1f)
+                assertEquals(expectedX, pageTranslationX, 1f)
+                assertEquals(expectedY, pageTranslationY, 1f)
             }
+            awaitWebFrame()
+            assertEquals(cssDimensions, js("JSON.stringify([innerWidth, innerHeight, visualViewport.width, visualViewport.height, visualViewport.scale])"))
             openTools()
             closeTools()
             compose.runOnIdle {
-                assertEquals(expectedX, webView.translationX, 1f)
-                assertEquals(expectedY, webView.translationY, 1f)
+                assertEquals(dimensions, webView.width to webView.height)
+                assertEquals(expectedX, pageTranslationX, 1f)
+                assertEquals(expectedY, pageTranslationY, 1f)
             }
             compose.onNodeWithTag("web-host").performTouchInput {
                 swipe(center, center - Offset(width * 0.3f * dx, height * 0.3f * dy), 600)
@@ -645,9 +705,12 @@ class WearWebViewTest(private val round: Boolean) {
         awaitPosition(if (round) viewport.width / 4f * dx else 0f, if (round) viewport.height / 4f * dy else 0f)
     }
 
+    private val pageTranslationX: Float get() = (webView.parent as WearWebViewViewport).pageTranslationX
+    private val pageTranslationY: Float get() = (webView.parent as WearWebViewViewport).pageTranslationY
+
     private fun awaitPosition(x: Float, y: Float) {
         compose.waitUntil(5_000) {
-            compose.runOnIdle { kotlin.math.abs(webView.translationX - x) < 1f && kotlin.math.abs(webView.translationY - y) < 1f }
+            compose.runOnIdle { kotlin.math.abs(pageTranslationX - x) < 1f && kotlin.math.abs(pageTranslationY - y) < 1f }
         }
     }
 
@@ -656,7 +719,7 @@ class WearWebViewTest(private val round: Boolean) {
         var stable = 0
         compose.waitUntil(5_000) {
             awaitWebFrame()
-            val current = js("scrollY").toDouble()
+            val current = js("visualViewport.pageTop").toDouble()
             stable = if (current == previous) stable + 1 else 0
             previous = current
             stable >= 2
@@ -686,7 +749,11 @@ class WearWebViewTest(private val round: Boolean) {
             WindowCompat.setDecorFitsSystemWindows(compose.activity.window, false)
             WindowCompat.getInsetsController(compose.activity.window, compose.activity.window.decorView)
                 .hide(WindowInsetsCompat.Type.systemBars())
-            webView = WebView(compose.activity).apply { settings.javaScriptEnabled = true }
+            webView = WebView(compose.activity).apply {
+                settings.javaScriptEnabled = true
+                // Menu expectations use 100%; the watch's system font scale can change this default.
+                settings.textZoom = 100
+            }
         }
         compose.setContent {
             val configuration = Configuration(LocalConfiguration.current).apply {
@@ -725,7 +792,11 @@ class WearWebViewTest(private val round: Boolean) {
         compose.waitUntil(10_000) { compose.runOnIdle { asset != "wear-webview.html" || webView.canScrollVertically(1) } }
     }
 
-    private fun control(resource: Int) = compose.onNodeWithText(compose.activity.getString(resource))
+    private fun control(resource: Int) = if (resource == R.string.wear_web_tools) {
+        compose.onNodeWithTag("wear-operations-menu")
+    } else {
+        compose.onNodeWithText(compose.activity.getString(resource))
+    }
 
     private fun clickTool(text: String) {
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(text))
@@ -745,8 +816,8 @@ class WearWebViewTest(private val round: Boolean) {
 
     private fun assertPageFitsViewport() {
         compose.runOnIdle {
-            val left = webView.translationX
-            val top = webView.translationY
+            val left = pageTranslationX
+            val top = pageTranslationY
             val right = left + webView.width * webView.scaleX
             val bottom = top + webView.height * webView.scaleY
             val viewport = webView.parent as View
@@ -784,7 +855,7 @@ class WearWebViewTest(private val round: Boolean) {
         val rect = JSONObject(js("(() => { const r = document.getElementById('$id').getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2,d:devicePixelRatio}; })()"))
         val point = compose.runOnIdle {
             val factor = rect.getDouble("d").toFloat() * webView.scaleX
-            Offset(rect.getDouble("x").toFloat() * factor + webView.translationX, rect.getDouble("y").toFloat() * factor + webView.translationY)
+            Offset(rect.getDouble("x").toFloat() * factor + pageTranslationX, rect.getDouble("y").toFloat() * factor + pageTranslationY)
         }
         if (round) {
             val viewport = compose.runOnIdle { webView.parent as View }
