@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -63,7 +64,7 @@ class CompanionBridgeService : Service() {
     private val refreshModules: RefreshInstalledModulesUseCase by inject()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val sockets = ConcurrentHashMap.newKeySet<BluetoothSocket>()
-    private var server: BluetoothServerSocket? = null
+    private val servers = ConcurrentHashMap.newKeySet<BluetoothServerSocket>()
     private var listener: Job? = null
     private val notifications get() = getSystemService(NotificationManager::class.java)
 
@@ -90,13 +91,31 @@ class CompanionBridgeService : Service() {
             if (listener?.isActive != true) {
                 listener = scope.launch {
                     try {
-                        val listeningSocket = repository.adapter().listenUsingRfcommWithServiceRecord(getString(R.string.wear_bridge), CompanionBridgeRepository.SERVICE_UUID)
-                        server = listeningSocket
-                        repository.setListening(true)
-                        while (isActive) {
-                            val socket = listeningSocket.accept()
-                            sockets.add(socket)
-                            launch { serve(socket) }
+                        coroutineScope {
+                            val channels = if (repository.isWatch) {
+                                listOf(CompanionBridgeRepository.SERVICE_UUID, CompanionBridgeRepository.SPAWN_UUID)
+                            } else {
+                                listOf(CompanionBridgeRepository.SERVICE_UUID)
+                            }
+                            val listeners = channels.map { uuid ->
+                                repository.adapter().listenUsingRfcommWithServiceRecord(getString(R.string.wear_bridge), uuid)
+                                    .also { servers.add(it) } to uuid
+                            }
+                            repository.setListening(true)
+                            listeners.forEach { (listeningSocket, uuid) ->
+                                launch {
+                                    try {
+                                        while (isActive) {
+                                            val socket = listeningSocket.accept()
+                                            sockets.add(socket)
+                                            launch { serve(socket, uuid == CompanionBridgeRepository.SPAWN_UUID) }
+                                        }
+                                    } finally {
+                                        // A failed accept must close the other blocking listener too.
+                                        stopSelf()
+                                    }
+                                }
+                            }
                         }
                     } catch (error: Exception) {
                         if (isActive) Log.w(TAG, "Bluetooth listener stopped", error)
@@ -113,15 +132,17 @@ class CompanionBridgeService : Service() {
         return if (repository.isWatch) START_NOT_STICKY else START_STICKY
     }
 
-    private suspend fun serve(socket: BluetoothSocket) {
+    private suspend fun serve(socket: BluetoothSocket, streaming: Boolean) {
         try {
             repository.connection(socket).use { connection ->
-                when (repository.authenticate(connection)) {
+                val operation = repository.authenticate(connection)
+                check((operation == WearWebUiProtocol.SPAWN_PATH) == streaming)
+                when (operation) {
                     BridgeHandoff.OPERATION -> serveHandoff(connection)
 
                     WearWebUiProtocol.CLAIM_PATH -> serveWebUiClaim(connection)
 
-                    WearWebUiProtocol.RPC_PATH -> serveWebUiCall(connection, LocalWebUiBackend(webUiRepository, packageRepository, icons)) {
+                    WearWebUiProtocol.RPC_PATH, WearWebUiProtocol.SPAWN_PATH -> serveWebUiCall(connection, LocalWebUiBackend(webUiRepository, packageRepository, icons), spawnOnly = streaming) {
                         if (packageRepository.packages.value.isEmpty()) packageRepository.refresh()
                     }
 
@@ -275,7 +296,7 @@ class CompanionBridgeService : Service() {
         notifications.cancel(OPEN_ID)
         repository.setListening(false)
         repository.closeConnections()
-        runCatching { server?.close() }.onFailure { Log.w(TAG, "Listener close failed", it) }
+        servers.forEach { server -> runCatching { server.close() }.onFailure { Log.w(TAG, "Listener close failed", it) } }
         sockets.forEach { socket -> runCatching { socket.close() }.onFailure { Log.w(TAG, "Socket close failed", it) } }
         scope.cancel()
         super.onDestroy()

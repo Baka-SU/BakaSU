@@ -97,6 +97,9 @@ class CompanionBridgeRepository(
 ) {
     companion object {
         internal val SERVICE_UUID: UUID = UUID.fromString("4127a3ac-74f1-48fd-a418-7e81b39e117f")
+        internal val SPAWN_UUID: UUID = UUID.fromString("4127a3ac-74f1-48fd-a418-7e81b39e1180")
+        internal fun serviceUuid(operation: String): UUID = if (operation == WearWebUiProtocol.SPAWN_PATH) SPAWN_UUID else SERVICE_UUID
+
         internal const val WIRE_VERSION = "bakasu-webui-rfcomm-1"
         private const val ADDRESS = "wear_bridge_address"
         private const val NAME = "wear_bridge_name"
@@ -535,7 +538,7 @@ class CompanionBridgeRepository(
 
     internal fun connect(address: String, operation: String): BridgeConnection {
         val key = credential(address)
-        val socket = adapter().getRemoteDevice(address).createRfcommSocketToServiceRecord(SERVICE_UUID)
+        val socket = adapter().getRemoteDevice(address).createRfcommSocketToServiceRecord(serviceUuid(operation))
         return connectSocket(socket, operation, key)
     }
 
@@ -585,7 +588,7 @@ class CompanionBridgeRepository(
             return@handshake operation
         }
         check(isWatch && state.value.peer?.address.equals(peer, true))
-        check(operation in setOf(WearWebUiProtocol.CLAIM_PATH, WearWebUiProtocol.RPC_PATH, WearWebUiProtocol.CLOSED_PATH))
+        check(operation in setOf(WearWebUiProtocol.CLAIM_PATH, WearWebUiProtocol.RPC_PATH, WearWebUiProtocol.SPAWN_PATH, WearWebUiProtocol.CLOSED_PATH))
         val key = preferences.getString(SECRET)
         check(!key.isNullOrEmpty())
         val clientNonce = connection.input.readUTF()

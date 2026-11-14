@@ -16,6 +16,7 @@ import org.json.JSONObject
 /** Frames on an authenticated secure RFCOMM connection: type byte, 4 byte length and payload. */
 object WearWebUiProtocol {
     const val CLAIM_PATH = "/resukisu/webui/claim"
+    const val SPAWN_PATH = "/resukisu/webui/spawn"
     const val RPC_PATH = "/resukisu/webui/rpc"
     const val CLOSED_PATH = "/resukisu/webui/closed"
 
@@ -117,21 +118,24 @@ object WearWebUiSession {
  * answered by the watch. Calls block, as the WebView calls its bridge and file handler off the main
  * thread.
  */
-class RemoteWebUiBackend private constructor(
+class RemoteWebUiBackend internal constructor(
     private val transport: CompanionBridgeRepository,
     private val peerAddress: String,
     private val token: String,
     val moduleId: String,
     val moduleName: String,
 ) : WebUiBackend {
-    // RFCOMM uses one channel for this service. WebView requests assets concurrently, so keep
-    // ownership until the current response (including a streamed file) has been consumed.
+    // Each RFCOMM service has one channel per peer. Keep files serialized until consumed,
+    // but let a long-lived process use its own service/channel alongside ordinary requests.
     private val requests = Semaphore(1, true)
+    private val processes = Semaphore(1, true)
 
     private fun <T> call(op: String, arg: String, extra: Int = 0, timeout: Boolean = true, onConnection: ((BridgeConnection) -> Unit)? = null, read: (DataInputStream) -> T): T {
-        requests.acquire()
+        val streaming = op == "spawn"
+        val lane = if (streaming) processes else requests
+        lane.acquire()
         try {
-            transport.connect(peerAddress, WearWebUiProtocol.RPC_PATH).use { connection ->
+            transport.connect(peerAddress, if (streaming) WearWebUiProtocol.SPAWN_PATH else WearWebUiProtocol.RPC_PATH).use { connection ->
                 onConnection?.invoke(connection)
                 val output = connection.output
                 val request = JSONObject().put("token", token).put("op", op).put("arg", arg).put("extra", extra)
@@ -143,7 +147,7 @@ class RemoteWebUiBackend private constructor(
             Log.w("RemoteWebUi", "Module RPC failed: $op", error)
             throw error
         } finally {
-            requests.release()
+            lane.release()
         }
     }
 
@@ -368,6 +372,7 @@ internal fun serveWebUiClaim(connection: BridgeConnection) {
 internal suspend fun serveWebUiCall(
     connection: BridgeConnection,
     backend: WebUiBackend,
+    spawnOnly: Boolean = false,
     ensurePackages: suspend () -> Unit,
 ) {
     try {
@@ -380,6 +385,7 @@ internal suspend fun serveWebUiCall(
                 output.writeFrame(FRAME_ERROR, ByteArray(0))
                 return
             }
+            check(!spawnOnly || request.optString("op") == "spawn")
             val arg = request.optString("arg")
             fun answer(payload: ByteArray?) = if (payload == null) output.writeFrame(FRAME_ERROR, ByteArray(0)) else output.writeFrame(FRAME_OK, payload)
             when (request.optString("op")) {
