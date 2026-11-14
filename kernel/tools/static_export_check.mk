@@ -30,6 +30,7 @@ ifneq ($(shell grep -q "struct selinux_state " $(srctree)/security/selinux/inclu
     $(eval $(call check_symbol_export, static DEFINE_MUTEX(sel_mutex), $(srctree)/security/selinux/selinuxfs.c, sel_mutex))
     $(eval $(call check_symbol_export, static DEFINE_RWLOCK(policy_rwlock), $(srctree)/security/selinux/ss/services.c, policy_rwlock))
     $(eval $(call check_symbol_export, static u32 latest_granting, $(srctree)/security/selinux/ss/services.c, latest_granting))
+    $(eval $(call check_symbol_export, static int inode_doinit_with_dentry, $(srctree)/security/selinux/hooks.c, inode_doinit_with_dentry))
 endif
 
 # if kernel < 4.2, we should check selinux_ops has NOT been static.

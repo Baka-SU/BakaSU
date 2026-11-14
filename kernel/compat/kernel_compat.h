@@ -12,7 +12,7 @@
 #include <linux/ptrace.h>
 #include <linux/syscalls.h>
 #ifdef CONFIG_COMPAT
-#include <asm/compat.h>
+#include <linux/compat.h>
 #endif
 #include "arch.h"
 
@@ -596,4 +596,12 @@ static struct user_arg_ptr ksu_take_user_argv(const char __user *const __user *a
     argv.ptr.native = argv_user;
     return argv;
 }
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 18, 0) && !defined(KSU_COMPAT_HAS_AUDIT_CONTEXT)
+static inline struct audit_context *audit_context(void)
+{
+    return current->audit_context;
+}
+#endif
+
 #endif
