@@ -220,7 +220,10 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         }
         navigator.open(route)
     }
-    fun back() = navigator.back()
+    var templateBack by remember { mutableStateOf<(() -> Unit)?>(null) }
+    fun back() {
+        if (navigator.top is WearRoute.TemplateEditor && templateBack != null) templateBack?.invoke() else navigator.back()
+    }
     val repositoryPageLoading = rememberWearRepositoryLoading(WearRoute.ModuleRepo in navigator.backStack, catalog.repositoryUrl) { moduleRepoViewModel.refresh() }
     val templateManagementLoading = rememberWearTemplateLoading(WearRoute.Templates.takeIf { it in navigator.backStack }) { templateViewModel.fetchTemplates() }
     val templateChoice = navigator.backStack.filterIsInstance<WearRoute.AppProfileTemplateChoice>().lastOrNull()
@@ -853,7 +856,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     WearOnlineTemplateDetail(onlineTemplateViewModel(viewModelStores), route.id, ::back)
                                 }
                                 entry<WearRoute.TemplateEditor> { route ->
-                                    WearTemplateEditor(route.id, route.readOnly, route.creation, ::back)
+                                    WearTemplateEditor(route.id, route.readOnly, route.creation, { templateBack = it }, { navigator.back() })
                                 }
                                 entry<WearRoute.SuSFS> {
                                     WearSuSFSPage(::back) { open(WearRoute.Reboot) }

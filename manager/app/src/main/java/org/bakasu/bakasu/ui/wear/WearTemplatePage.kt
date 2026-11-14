@@ -18,11 +18,13 @@ import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -342,7 +344,7 @@ internal fun WearOnlineTemplateDetail(
 }
 
 @Composable
-internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean, onBack: () -> Unit) {
+internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean, registerBack: ((() -> Unit)?) -> Unit = {}, onBack: () -> Unit) {
     val viewModel = koinViewModel<TemplateEditorViewModel>(parameters = { parametersOf(id, readOnly, creation) })
     val state by viewModel.state.collectAsStateWithLifecycle()
     val toast = LocalWearToast.current
@@ -370,6 +372,19 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
     val delete = rememberWearConfirmDialog(stringResource(R.string.app_profile_template_delete), stringResource(R.string.wear_template_delete_message, template.name.ifBlank { template.id }), destructive = true) {
         viewModel.dispatch(TemplateEditorUiAction.Delete)
     }
+    val leave by rememberUpdatedState<() -> Unit> {
+        if (input != 0) {
+            input = 0
+        } else if (!creation && !readOnly && state.dirty) {
+            viewModel.dispatch(TemplateEditorUiAction.Save)
+        } else {
+            onBack()
+        }
+    }
+    DisposableEffect(viewModel) {
+        registerBack { leave() }
+        onDispose { registerBack(null) }
+    }
     val shownInput = input
     if (shownInput != 0) {
         WearSubPage({ input = 0 }) {
@@ -382,7 +397,7 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
                 }
             } else {
                 WearTextInputPage(stringResource(shownInput), template.field(shownInput), multiline = shownInput == R.string.profile_selinux_rules) { text ->
-                    runCatching { template.withField(shownInput, text) }.fold(onSuccess = { viewModel.dispatch(TemplateEditorUiAction.Update(it)) }, onFailure = { if (creation) toast.show(failed) else result = WearResult(failed, success = false) })
+                    runCatching { template.withField(shownInput, text) }.fold(onSuccess = { viewModel.dispatch(TemplateEditorUiAction.Update(it, autoSave = !creation && !readOnly)) }, onFailure = { if (creation) toast.show(failed) else result = WearResult(failed, success = false) })
                     input = 0
                 }
             }
@@ -390,8 +405,9 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
     } else {
         WearList(
             isLoading = state.loading,
-            onBack = onBack,
-            onConfirm = if (creation && !readOnly && state.loadFailure == null) ({ viewModel.dispatch(TemplateEditorUiAction.Save) }) else null,
+            onBack = { leave() },
+            confirmEnabled = !state.saving && (creation || state.dirty),
+            onConfirm = if (!readOnly && state.loadFailure == null) ({ viewModel.dispatch(TemplateEditorUiAction.Save) }) else null,
             confirmLabel = stringResource(R.string.app_profile_template_save),
         ) { spec ->
             item { WearPageHeader(spec, stringResource(if (readOnly) R.string.app_profile_template_view else R.string.app_profile_template_edit)) }
@@ -406,9 +422,6 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
                         icon = templateFieldIcon(field),
                         description = template.field(field).ifEmpty { null },
                     )
-                }
-                if (!readOnly && !creation) {
-                    item { WearActionButton(spec, Icons.Rounded.Save, stringResource(R.string.app_profile_template_save), { viewModel.dispatch(TemplateEditorUiAction.Save) }) }
                 }
                 if (!creation && !state.loading) item { WearActionButton(spec, Icons.Rounded.Delete, stringResource(R.string.app_profile_template_delete), delete::show) }
             }
