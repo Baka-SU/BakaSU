@@ -113,7 +113,7 @@ internal fun WearOperationsHost(
                 val dim = WearPanelMaxDim * (pull.floatValue / WearPanelDimReach).coerceIn(0f, 1f)
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)).clearAndSetSemantics {})
                 Box(
-                    Modifier.fillMaxSize().hierarchicalFocusGroup(active = menuActive && screenActive)
+                    Modifier.fillMaxSize().testTag("wear-operations-menu").hierarchicalFocusGroup(active = menuActive && screenActive)
                         // Keep horizontal back and its haptics local to the active menu.
                         .then(
                             if (menuActive && screenActive) {

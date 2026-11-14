@@ -24,8 +24,6 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
 
     WearRoute.RepositorySources -> R.string.repo_manage
 
-    WearRoute.RepositorySourceSearch, is WearRoute.RepositorySourceSearchResults -> R.string.wear_search_repositories
-
     WearRoute.AddRepository -> R.string.repo_add_repository
 
     is WearRoute.RepositorySource -> R.string.repo_configure
@@ -77,6 +75,7 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
         WearSelection.Palette -> R.string.dynamic_palette_style
         WearSelection.ColorSpec -> R.string.dynamic_color_spec
         WearSelection.TimeDisplay -> R.string.wear_time_display
+        WearSelection.ToastDisplay -> R.string.wear_toast_display
     }
 
     WearRoute.Color, is WearRoute.CustomColor -> R.string.theme_color

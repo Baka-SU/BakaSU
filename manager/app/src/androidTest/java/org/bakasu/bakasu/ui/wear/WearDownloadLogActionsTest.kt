@@ -18,6 +18,7 @@ import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -59,6 +60,27 @@ class WearDownloadLogActionsTest(private val round: Boolean, private val fontSca
     }
 
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun activeDownloadOpensSharedProgressAndKeepsObservingTheTask() {
+        val task = mutableStateOf(DownloadState(7, "active.zip", "one", downloadedBytes = 37, totalBytes = 100, status = DownloadStatus.DOWNLOADING))
+        val selected = mutableStateOf(false)
+        var installs = 0
+        show {
+            if (selected.value) {
+                WearDownloadDetailContent(task.value, false, { selected.value = false }, { installs++ }, {})
+            } else {
+                WearDownloadsPage(listOf(task.value), false, {}, { installs++ }, {}, {}, { selected.value = true })
+            }
+        }
+        scrollTo("active.zip")
+        compose.onNodeWithText("active.zip").performClick()
+        compose.onNodeWithTag("module-download-ring").assertIsDisplayed()
+        compose.onNodeWithText("37%").assertIsDisplayed()
+        compose.runOnIdle { task.value = task.value.copy(downloadedBytes = 63) }
+        compose.onNodeWithText("63%").assertIsDisplayed()
+        compose.runOnIdle { assertEquals(0, installs) }
+    }
 
     @Test
     fun tappingTwoDownloadsOpensTheirOwnModuleWithoutInstalling() {
@@ -119,7 +141,9 @@ class WearDownloadLogActionsTest(private val round: Boolean, private val fontSca
         compose.runOnIdle { assertEquals(1, installs) }
         repeat(3) { compose.onNode(hasScrollToIndexAction()).performTouchInput { swipeUp() } }
         compose.mainClock.advanceTimeBy(500)
-        compose.onNodeWithText(InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.wear_download_clear_all)).assertIsDisplayed().performClick()
+        val clearLabel = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.wear_download_clear_all)
+        val clearAction = if (round) compose.onNodeWithText(clearLabel) else compose.onNodeWithContentDescription(clearLabel)
+        clearAction.assertIsDisplayed().performClick()
         compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription(InstrumentationRegistry.getInstrumentation().targetContext.getString(androidx.wear.compose.material3.R.string.wear_m3c_alert_dialog_content_description_confirm_button)).fetchSemanticsNodes().isNotEmpty() }
         confirm()
         compose.onNodeWithText(InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.wear_downloads_empty)).assertExists()

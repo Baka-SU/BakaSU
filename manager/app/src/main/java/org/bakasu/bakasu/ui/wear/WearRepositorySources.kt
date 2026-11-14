@@ -60,12 +60,12 @@ private fun wearRepositoryError(failure: RepositoryFailure?): String? {
 
 /** The same source repository and validation as the phone, presented with Wear settings rows. */
 @Composable
-internal fun WearRepositorySourcesPage(onBack: () -> Unit, onOpenPanel: () -> Unit, query: String = "", onSource: (String) -> Unit) {
+internal fun WearRepositorySourcesPage(onBack: () -> Unit, onAdd: () -> Unit, onSource: (String) -> Unit) {
     val viewModel = koinViewModel<RepositorySourcesViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     WearErrorDialog(wearRepositoryError(state.error), viewModel::clearError)
-    val sources = state.sources.filter { it.displayName.contains(query.trim(), true) || it.url.contains(query.trim(), true) }
-    WearList(onBack = onBack, isBusy = state.busy, onOpenPanel = onOpenPanel, hasOperationsPanel = true, panelLabel = stringResource(R.string.wear_operations)) { spec ->
+    val sources = state.sources
+    WearList(onBack = onBack, isBusy = state.busy, onConfirm = onAdd, confirmLabel = stringResource(R.string.repo_add_repository), confirmIcon = Icons.Rounded.Add, confirmEnabled = !state.busy) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.repo_manage)) }
         if (sources.isEmpty()) item { WearEmptyState(spec, Icons.Rounded.Cloud, stringResource(R.string.search_no_any_match)) }
         LazySegmentedColumn(sources, { it.url }) { source ->

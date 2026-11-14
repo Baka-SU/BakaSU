@@ -8,11 +8,11 @@ import kotlinx.serialization.Serializable
 enum class WearSettingsCategory { General, Security, Advanced, Display }
 
 @Serializable
-enum class WearOperationsPage { Home, SuperUser, Modules, Logs, Repository, RepositorySources, DynamicManagerApps, Umount, Templates, OnlineTemplates, TemplateChoice }
+enum class WearOperationsPage { Home, SuperUser, Modules, Logs, Repository, DynamicManagerApps, Umount, Templates, OnlineTemplates, TemplateChoice }
 
 /** The settings that are chosen from a single list of options. */
 @Serializable
-enum class WearSelection { PickerMode, LinkMode, ScreenShape, Language, SuCompat, Palette, ColorSpec, TimeDisplay }
+enum class WearSelection { PickerMode, LinkMode, ScreenShape, Language, SuCompat, Palette, ColorSpec, TimeDisplay, ToastDisplay }
 
 /** Navigation destinations of [WearManagerScreen]; [Main] is the pager with the four top-level pages. */
 @Serializable
@@ -73,14 +73,6 @@ sealed interface WearRoute : NavKey {
 
     @Serializable
     data object RepositorySources : WearRoute, NeedsRoot
-
-    @Serializable
-    data object RepositorySourceSearch : WearRoute, NeedsRoot
-
-    @Serializable
-    data class RepositorySourceSearchResults(val query: String) :
-        WearRoute,
-        NeedsRoot
 
     @Serializable
     data object AddRepository : WearRoute, NeedsRoot

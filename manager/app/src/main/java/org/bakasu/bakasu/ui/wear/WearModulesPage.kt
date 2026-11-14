@@ -133,6 +133,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             module.name,
             onClick = { onModuleClick(module.id) },
             largeIcon = true,
+            contentPadding = ButtonDefaults.ContentPadding,
             transformed = false,
             transformSurface = actions.isEmpty(),
             // A reveal row owns its transformation; a standalone row owns its own.
@@ -154,6 +155,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                 else -> ButtonDefaults.filledTonalButtonColors()
             },
             iconContent = {
+                // Preserve the existing icon size while matching the reference's inset and gap.
                 val iconSize = with(LocalDensity.current) { MaterialTheme.typography.labelMedium.lineHeight.toDp() + MaterialTheme.typography.labelSmall.lineHeight.toDp() }.coerceAtLeast(ButtonDefaults.LargeIconSize)
                 val active = module.enabled && !module.update && !module.remove
                 WearCatalogModuleIcon(

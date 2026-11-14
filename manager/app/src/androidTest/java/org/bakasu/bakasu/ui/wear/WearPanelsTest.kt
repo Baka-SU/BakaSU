@@ -103,7 +103,7 @@ class WearPanelsTest(private val round: Boolean, private val page: WearOperation
     }
 
     @Test
-    fun refreshIsLastAndClosesTheMenuAfterDispatchingOnce() {
+    fun refreshIsLastAndDispatchesOnceAfterClosingTheMenu() {
         showPanels()
         previewMenu()
         compose.runOnIdle { menuOpen = true }
@@ -114,6 +114,29 @@ class WearPanelsTest(private val round: Boolean, private val page: WearOperation
             assertFalse(menuOpen)
             assertFalse(filterOpen)
         }
+    }
+
+    @Test
+    fun touchingDuringRefreshCloseCannotCancelOrDispatchTwice() {
+        showPanels()
+        previewMenu()
+        compose.runOnIdle { menuOpen = true }
+        compose.waitForIdle()
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithText(compose.activity.getString(R.string.wear_refresh)).performClick()
+        compose.mainClock.advanceTimeBy(32)
+        assertEquals(0, refreshes)
+        compose.onNodeWithTag("menu", useUnmergedTree = true).performTouchInput {
+            down(center)
+            moveTo(center + Offset(0f, 20f), delayMillis = 16)
+            up()
+        }
+        compose.mainClock.advanceTimeBy(500)
+        compose.runOnIdle {
+            assertFalse(menuOpen)
+            assertEquals(1, refreshes)
+        }
+        compose.mainClock.autoAdvance = true
     }
 
     @Test
@@ -174,6 +197,7 @@ class WearPanelsTest(private val round: Boolean, private val page: WearOperation
                                                     onReboot = {},
                                                     onClosing = onClosing,
                                                     onRefresh = {
+                                                        assertFalse("Refresh must start on the uncovered page", menuOpen)
                                                         refreshes++
                                                         refreshing = true
                                                     },

@@ -35,7 +35,7 @@ class WearSearchMenusTest(private val page: WearOperationsPage) {
     }
 
     @Test
-    fun menuRoutesSearchAndRepositoryAdditionToTheirOwnPages() {
+    fun menuRoutesSearchToItsOwnPage() {
         var searches = 0
         var opened: WearRoute? = null
         compose.setContent {
@@ -55,23 +55,18 @@ class WearSearchMenusTest(private val page: WearOperationsPage) {
                 WearOperationsPage.OnlineTemplates -> R.string.wear_template_search
                 WearOperationsPage.DynamicManagerApps -> R.string.search_apps
                 WearOperationsPage.Repository -> R.string.search_modules
-                else -> R.string.wear_search_repositories
+                else -> error("Unexpected operations page")
             },
         )
         assertEquals(1, searches)
-        if (page == WearOperationsPage.Repository || page == WearOperationsPage.RepositorySources) {
+        if (page == WearOperationsPage.Repository) {
             val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
             java.io.File(compose.activity.getExternalFilesDir(null), "fixed-menu-$page.png").outputStream().use {
                 bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
             }
         }
-        if (page == WearOperationsPage.RepositorySources) {
-            click(R.string.repo_add_repository)
-            assertEquals(WearRoute.AddRepository, opened)
-        }
         if (page == WearOperationsPage.Repository) {
             compose.onNodeWithText(compose.activity.getString(R.string.repo_add_repository)).assertDoesNotExist()
-            compose.onNodeWithText(compose.activity.getString(R.string.wear_search_repositories)).assertDoesNotExist()
             assertEquals(1, searches)
         }
     }
@@ -79,6 +74,6 @@ class WearSearchMenusTest(private val page: WearOperationsPage) {
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "page={0}")
-        fun parameters() = listOf(WearOperationsPage.OnlineTemplates, WearOperationsPage.DynamicManagerApps, WearOperationsPage.Repository, WearOperationsPage.RepositorySources).map { arrayOf(it) }
+        fun parameters() = listOf(WearOperationsPage.OnlineTemplates, WearOperationsPage.DynamicManagerApps, WearOperationsPage.Repository).map { arrayOf(it) }
     }
 }

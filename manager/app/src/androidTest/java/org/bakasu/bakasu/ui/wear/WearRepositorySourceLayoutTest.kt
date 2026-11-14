@@ -19,6 +19,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -42,6 +43,27 @@ import org.junit.runners.Parameterized
 class WearRepositorySourceLayoutTest(private val round: Boolean, private val fontScale: Float) {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun repositoryManagementAddsFromTheFooterWithoutAnOperationsMenu() {
+        var additions = 0
+        compose.setContent {
+            val configuration = Configuration(LocalConfiguration.current).apply {
+                screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
+                    if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
+            }
+            CompositionLocalProvider(LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, fontScale)) {
+                MaterialTheme {
+                    AppScaffold(timeText = {}) { WearRepositorySourcesPage({}, { additions++ }, {}) }
+                }
+            }
+        }
+        compose.onNode(hasScrollToIndexAction()).performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 10000f) }
+        val add = compose.onNodeWithText(compose.activity.getString(R.string.repo_add_repository)).assertIsDisplayed()
+        // Square screens use an icon button with a separate, non-clickable caption.
+        if (round) add.performClick() else compose.onNodeWithContentDescription(compose.activity.getString(R.string.repo_add_repository)).performClick()
+        assertEquals(1, additions)
+    }
 
     @Test
     fun repositoryTitleHasNoCardAndSelectionUsesTheBottomAction() {
@@ -105,12 +127,13 @@ class WearRepositorySourceLayoutTest(private val round: Boolean, private val fon
         val actionBounds = select.getUnclippedBoundsInRoot()
         assertTrue(actionBounds.top + actionBounds.bottom > root.top + root.bottom)
         saveScreen("repository-selection")
-        select.performClick()
+        val selectAction = if (round) select else compose.onNodeWithContentDescription(compose.activity.getString(R.string.repo_select_repository))
+        selectAction.performClick()
         compose.runOnIdle {
             assertEquals(1, selections)
             assertEquals(RepositorySource.KERNEL_SU_URL, selected.value)
         }
-        select.assertIsNotEnabled()
+        selectAction.assertIsNotEnabled()
     }
 
     private fun saveScreen(name: String) {

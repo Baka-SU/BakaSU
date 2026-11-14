@@ -110,6 +110,7 @@ internal fun WearModuleDetail(
     onUpdate: (InstalledModule) -> Unit,
     onErrorShown: () -> Unit = {},
     artwork: CatalogModule? = null,
+    removalPending: Boolean = false,
 ) {
     if (module == null) {
         WearList(onBack = onBack) { spec ->
@@ -132,7 +133,7 @@ internal fun WearModuleDetail(
         message = stringResource(if (module.metamodule) R.string.wear_metamodule_uninstall_message else R.string.wear_uninstall_message),
         destructive = true,
         subject = module.name,
-        onConfirm = { onRemove(module.id, true) },
+        onConfirm = { onRemove(module.dirId, true) },
     )
     WearResultDialog(error?.takeIf { it.isNotBlank() }?.let { WearResult(it, success = false) }, onErrorShown)
     WearList(onBack = onBack, itemSpacing = WearCompactItemSpacing, topContentPadding = 12.dp) { spec ->
@@ -157,8 +158,8 @@ internal fun WearModuleDetail(
                 spec,
                 stringResource(R.string.wear_enable_module),
                 module.enabled,
-                { onEnabledChange(module.id, it) },
-                enabled = !module.remove && !module.update,
+                { onEnabledChange(module.dirId, it) },
+                enabled = !removalPending && !module.remove && !module.update,
                 icon = Icons.Rounded.PowerSettingsNew,
                 secondaryLabel = stringResource(if (module.enabled) R.string.wear_enabled else R.string.wear_disabled),
             )
@@ -207,7 +208,9 @@ internal fun WearModuleDetail(
                 spec,
                 if (module.remove) Icons.Rounded.Restore else Icons.Rounded.Delete,
                 stringResource(if (module.remove) R.string.wear_restore_module else R.string.uninstall),
-                if (module.remove) ({ onRemove(module.id, false) }) else removeDialog::show,
+                if (module.remove) ({ onRemove(module.dirId, false) }) else removeDialog::show,
+                enabled = !removalPending,
+                isLoading = removalPending,
                 secondaryText = stringResource(if (module.remove) R.string.wear_restore_module_summary else R.string.wear_uninstall_summary),
                 // Every part takes the error pair: left unset, the secondary label and icon would keep
                 // the filled button's onPrimary and follow the accent color.
@@ -573,12 +576,11 @@ internal fun WearAppDetail(
                         Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(group.mainApp.label, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Text(
+                            WearAutoMarqueeText(
                                 group.mainApp.displayIdentifier,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }

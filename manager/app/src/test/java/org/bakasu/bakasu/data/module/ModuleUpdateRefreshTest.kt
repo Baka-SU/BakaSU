@@ -39,6 +39,15 @@ class ModuleUpdateRefreshTest {
     }
 
     @Test
+    fun lateUpdateMetadataPreservesTheNewRemovalAndEnabledState() {
+        val changed = installed.copy(remove = true, enabled = false, moduleUpdate = null)
+        val merged = changed.withCachedUpdate(installed)
+        assertTrue(merged.remove)
+        assertFalse(merged.enabled)
+        assertEquals(update, merged.moduleUpdate)
+    }
+
+    @Test
     fun changedIdentityVersionOrSourceDoesNotReuseAnUpdate() {
         for (module in listOf(
             installed.copy(id = "different"),

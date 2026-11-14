@@ -43,6 +43,7 @@ import org.bakasu.bakasu.domain.model.DownloadFailureReason
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadUiState
 import org.bakasu.bakasu.ui.wear.component.LocalWearTimeOptions
+import org.bakasu.bakasu.ui.wear.component.WearModuleDownloadScreen
 import org.bakasu.bakasu.ui.wear.component.WearTimeOptions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

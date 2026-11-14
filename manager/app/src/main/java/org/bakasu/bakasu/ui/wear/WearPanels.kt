@@ -131,11 +131,6 @@ internal fun WearOperationsPanel(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.search_apps), onSearch),
         )
 
-        WearOperationsPage.RepositorySources -> listOf(
-            WearIconAction(Icons.Rounded.Add, stringResource(R.string.repo_add_repository), { onOpen(WearRoute.AddRepository) }),
-            WearIconAction(Icons.Rounded.Search, stringResource(R.string.wear_search_repositories), onSearch),
-        )
-
         WearOperationsPage.TemplateChoice -> listOf(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.wear_template_search), onSearch),
         )
@@ -156,14 +151,13 @@ internal fun WearOperationsPanel(
         )
     }
     val menuActions = actions + listOfNotNull(
-        onRefresh?.let { refresh ->
+        onRefresh?.let {
             WearIconAction(
                 Icons.Rounded.Refresh,
                 stringResource(R.string.wear_refresh),
                 {
                     if (!refreshRequested && !isRefreshing) {
                         refreshRequested = true
-                        refresh()
                     }
                 },
                 enabled = !isRefreshing && !refreshRequested,
@@ -172,14 +166,17 @@ internal fun WearOperationsPanel(
     )
     // Start the reveal at the end on its first layout, before the preview is shown.
     val listState = rememberTransformingLazyColumnState(initialAnchorItemIndex = menuActions.lastIndex.coerceAtLeast(0))
-    WearList(onClosePanel = onBack, onPanelClosing = onClosing, closePanelRequested = refreshRequested, snap = false, listState = listState) { spec ->
+    WearList(onClosePanel = {
+        onBack()
+        if (refreshRequested) onRefresh?.invoke()
+    }, onPanelClosing = onClosing, closePanelRequested = refreshRequested, snap = false, listState = listState) { spec ->
         LazySegmentedColumn(menuActions, { it.label }) { action ->
             WearSettingsJumpPageWidget(
                 spec,
                 action.label,
                 action.onClick,
                 icon = action.icon,
-                enabled = action.enabled,
+                enabled = action.enabled && !refreshRequested,
             )
         }
     }

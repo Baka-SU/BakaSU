@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.InsertDriveFile
 import androidx.compose.material.icons.rounded.Refresh
@@ -18,7 +17,10 @@ import androidx.wear.compose.material3.Text
 import java.text.DateFormat
 import java.util.Date
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
+import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
+import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadUiState
 import org.bakasu.bakasu.ui.viewmodel.WearDownloadsEvent
 import org.bakasu.bakasu.ui.viewmodel.WearDownloadsViewModel
 import org.bakasu.bakasu.ui.viewmodel.formatFileSize
@@ -29,6 +31,7 @@ import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearInfoRow
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearModuleDownloadScreen
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -49,6 +52,35 @@ internal fun WearDownloadDetailPage(route: WearRoute.Download, onBack: () -> Uni
                 WearDownloadsEvent.VerificationFailed -> toast.show(failed)
             }
         }
+    }
+    WearDownloadDetailContent(task, verifying, onBack, viewModel::install) {
+        downloadId = viewModel.retry(it) ?: downloadId
+    }
+}
+
+@Composable
+internal fun WearDownloadDetailContent(
+    task: DownloadState?,
+    verifying: Boolean,
+    onBack: () -> Unit,
+    onInstall: (DownloadState) -> Unit,
+    onRetry: (DownloadState) -> Unit,
+) {
+    // Observe this exact service task; reusing the start-download route would enqueue another ZIP.
+    if (task != null && (task.status == DownloadStatus.PENDING || task.status == DownloadStatus.DOWNLOADING)) {
+        val progress = ModuleDownloadUiState(
+            phase = ModuleDownloadPhase.DOWNLOADING,
+            downloadedBytes = task.downloadedBytes,
+            totalBytes = task.totalBytes,
+        )
+        WearModuleDownloadScreen(
+            task.module?.name ?: task.fileName,
+            progress,
+            fraction = { progress.fraction ?: 0f },
+            iconUrl = task.module?.iconUrl,
+            iconOrigin = task.module?.iconOrigin,
+        )
+        return
     }
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, task?.module?.name ?: stringResource(R.string.wear_downloads)) }
@@ -77,9 +109,9 @@ internal fun WearDownloadDetailPage(route: WearRoute.Download, onBack: () -> Uni
             item { WearInfoCard(spec) { WearInfoRow(Icons.Rounded.Schedule, stringResource(R.string.wear_download_started), DateFormat.getDateTimeInstance().format(Date(task.startedAt))) } }
             item {
                 when (task.status) {
-                    DownloadStatus.PENDING, DownloadStatus.DOWNLOADING -> WearActionButton(spec, Icons.Rounded.Close, stringResource(R.string.download_cancel), { viewModel.cancel(task.id) })
-                    DownloadStatus.FAILED -> WearActionButton(spec, Icons.Rounded.Refresh, stringResource(R.string.network_retry), { downloadId = viewModel.retry(task) ?: downloadId })
-                    DownloadStatus.COMPLETED -> WearActionButton(spec, Icons.Rounded.Download, stringResource(R.string.install), { viewModel.install(task) }, enabled = !verifying)
+                    DownloadStatus.PENDING, DownloadStatus.DOWNLOADING -> Unit
+                    DownloadStatus.FAILED -> WearActionButton(spec, Icons.Rounded.Refresh, stringResource(R.string.network_retry), { onRetry(task) })
+                    DownloadStatus.COMPLETED -> WearActionButton(spec, Icons.Rounded.Download, stringResource(R.string.install), { onInstall(task) }, enabled = !verifying)
                 }
             }
         }

@@ -56,7 +56,7 @@ class WearInstallEntryTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun firstInstallOpensTheRealPatchPageWithoutAnEntryFrameAndReturnsOnce() {
+    fun firstInstallAnimatesToTheRealPatchPageAndReturnsOnce() {
         val stack = NavBackStack<NavKey>(WearRoute.Main)
         val navigator = WearNavigator(stack, {}, {}, {})
         val home = HomeDashboardState(isInitialDataLoaded = true, systemStatus = KernelStatus(kernelVersion = KernelVersion(6, 1, 0)))
@@ -72,14 +72,13 @@ class WearInstallEntryTest {
                                 entry<WearRoute.Main> {
                                     WearHomePage(home, null, {}, {}, onInstall = {
                                         assertTrue(home.canOpenPatchDirectly())
-                                        navigator.open(WearRoute.LkmInstall, immediately = true)
+                                        navigator.open(WearRoute.LkmInstall)
                                     })
                                 }
                                 entry<WearRoute.LkmInstall> {
                                     Box(Modifier.fillMaxSize().testTag("patch-entry")) { WearLkmInstallPage({ navigator.back() }, { navigator.open(it) }) }
                                 }
                             },
-                            immediateEntry = navigator.immediateEntry,
                         ) { _, content -> content() },
                     )
                 }
@@ -90,16 +89,19 @@ class WearInstallEntryTest {
         compose.mainClock.autoAdvance = false
         compose.onNodeWithText(install).performSemanticsAction(SemanticsActions.OnClick) { it() }
         var visibleFrames = 0
+        var translatedFrames = 0
         repeat(10) {
             compose.mainClock.advanceTimeByFrame()
             if (compose.onAllNodes(hasTestTag("patch-entry")).fetchSemanticsNodes().isNotEmpty()) {
                 val bounds = compose.onNodeWithTag("patch-entry").getUnclippedBoundsInRoot()
-                assertEquals("The first and subsequent visible patch frames must have no translation", 0f, bounds.left.value, 0.5f)
-                assertEquals(0f, bounds.top.value, 0.5f)
+                if (bounds.left.value > 0.5f) translatedFrames++
                 visibleFrames++
             }
         }
         assertTrue("The patch entry must render during the first navigation frames", visibleFrames > 0)
+        assertTrue("The patch page must use the Navigation 3 entry transition", translatedFrames > 0)
+        compose.mainClock.advanceTimeBy(1000)
+        assertEquals(0f, compose.onNodeWithTag("patch-entry").getUnclippedBoundsInRoot().left.value, 0.5f)
         assertEquals(listOf(WearRoute.Main, WearRoute.LkmInstall), stack.toList())
         compose.onNodeWithText(compose.activity.getString(R.string.GKI_install_methods)).assertDoesNotExist()
         if (Build.VERSION.SDK_INT >= 36) {

@@ -339,7 +339,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                 is ModuleUiEvent.RemovedChanged -> {
                     if (event.successful) {
-                        moduleViewModel.dispatch(ModuleUiAction.Refresh())
+                        // Removal state is already published, without waiting for online updates.
+                        moduleError = null
                     } else {
                         moduleError = operationFailedText
                     }
@@ -442,7 +443,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         onSettings = dispatchSettings,
                                         onOpen = ::open,
                                         onInstall = {
-                                            if (home.canOpenPatchDirectly()) navigator.open(WearRoute.LkmInstall, immediately = true) else open(WearRoute.KernelInstall)
+                                            open(if (home.canOpenPatchDirectly()) WearRoute.LkmInstall else WearRoute.KernelInstall)
                                         },
                                         onTitleChange = { mainTitle = it },
                                         onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
@@ -460,6 +461,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         onExecute = { open(WearRoute.ModuleAction(it.id)) },
                                         onUpdate = { open(WearRoute.ModuleUpdate(it.id)) },
                                         onErrorShown = { moduleError = null },
+                                        removalPending = modules.moduleList.firstOrNull { it.id == route.id }?.dirId in modules.pendingRemovals,
                                     )
                                 }
                                 entry<WearRoute.ModuleAction> { route ->
@@ -535,22 +537,10 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     WearDownloadDetailPage(route, ::back, installer::confirm)
                                 }
                                 entry<WearRoute.RepositorySources> {
-                                    WearRepositorySourcesPage(::back, { open(WearRoute.Operations(WearOperationsPage.RepositorySources)) }) { open(WearRoute.RepositorySource(it)) }
+                                    WearRepositorySourcesPage(::back, { open(WearRoute.AddRepository) }) { open(WearRoute.RepositorySource(it)) }
                                 }
                                 entry<WearRoute.AddRepository> {
                                     WearAddRepositoryPage(::back)
-                                }
-                                entry<WearRoute.RepositorySourceSearch> {
-                                    val query = navigator.backStack.filterIsInstance<WearRoute.RepositorySourceSearchResults>().lastOrNull()?.query.orEmpty()
-                                    WearSearchPage(stringResource(R.string.wear_search_repositories), "repository-sources", query, ::back) { input ->
-                                        back()
-                                        if (navigator.top is WearRoute.Operations) back()
-                                        if (navigator.top is WearRoute.RepositorySourceSearchResults) back()
-                                        if (input.isNotBlank()) open(WearRoute.RepositorySourceSearchResults(input.trim()))
-                                    }
-                                }
-                                entry<WearRoute.RepositorySourceSearchResults> { route ->
-                                    WearRepositorySourcesPage(::back, { open(WearRoute.Operations(WearOperationsPage.RepositorySources)) }, route.query) { open(WearRoute.RepositorySource(it)) }
                                 }
                                 entry<WearRoute.RepositorySource> { route ->
                                     val catalog by moduleRepoViewModel.state.collectAsStateWithLifecycle()
@@ -772,7 +762,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     )
                                 }
                                 entry<WearRoute.CustomColor> { route ->
-                                    WearCustomColorPage(route.initial, settings, dispatchSettings)
+                                    WearCustomColorPage(route.initial, settings, dispatchSettings, ::back)
                                 }
                                 entry<WearRoute.Color> {
                                     WearColorPage(settings, ::back, dispatchSettings, ::open) {
@@ -967,7 +957,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     )
                                 }
                             },
-                            immediateEntry = navigator.immediateEntry,
                             pageContent = page@{ key, content ->
                                 val route = key as WearRoute
                                 // The cloud entry owns its ViewModel and refresh menu, so opening a local menu never loads it.
@@ -989,8 +978,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     WearRoute.Umount, is WearRoute.UmountSearchResults -> WearOperationsPage.Umount
 
                                     WearRoute.ModuleRepo, WearRoute.ModuleRepoSearchResults -> WearOperationsPage.Repository
-
-                                    WearRoute.RepositorySources, is WearRoute.RepositorySourceSearchResults -> WearOperationsPage.RepositorySources
 
                                     WearRoute.DynamicManagerApps -> WearOperationsPage.DynamicManagerApps
 
@@ -1014,12 +1001,12 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                 onOpen = ::open,
                                                 onImportTemplates = importTemplates,
                                                 onExportTemplates = { templateViewModel.dispatch(TemplateUiAction.Export) },
-                                                onRefresh = if (operationsPage in listOf(WearOperationsPage.Home, WearOperationsPage.Templates, WearOperationsPage.RepositorySources)) {
+                                                onRefresh = if (operationsPage in listOf(WearOperationsPage.Home, WearOperationsPage.Templates)) {
                                                     null
                                                 } else {
                                                     {
                                                         when (operationsPage) {
-                                                            WearOperationsPage.Home, WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates, WearOperationsPage.RepositorySources -> Unit
+                                                            WearOperationsPage.Home, WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates -> Unit
 
                                                             WearOperationsPage.DynamicManagerApps -> dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Refresh)
 
@@ -1044,7 +1031,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                     }
                                                 },
                                                 isRefreshing = when (operationsPage) {
-                                                    WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates, WearOperationsPage.RepositorySources -> false
+                                                    WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates -> false
                                                     WearOperationsPage.DynamicManagerApps -> dynamicManager.isLoading || dynamicManager.isRefreshing || dynamicManager.isSubmitting
                                                     WearOperationsPage.TemplateChoice -> templateChoiceLoading.loading || templateChoiceLoading.refreshing
                                                     WearOperationsPage.Home -> home.isRefreshing
@@ -1069,8 +1056,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                         }
 
                                                         WearOperationsPage.Templates -> open(WearRoute.TemplateSearch)
-
-                                                        WearOperationsPage.RepositorySources -> open(WearRoute.RepositorySourceSearch)
 
                                                         WearOperationsPage.DynamicManagerApps -> open(WearRoute.DynamicManagerSearch)
 
@@ -1177,12 +1162,10 @@ private val DynamicManagerTransitions: Map<String, Any> = if (Build.VERSION.SDK_
  */
 internal fun <T : Any> withPageTransitions(
     provider: (T) -> NavEntry<T>,
-    immediateEntry: T? = null,
     pageContent: @Composable (T, @Composable () -> Unit) -> Unit,
 ): (T) -> NavEntry<T> = { key ->
     val entry = provider(key)
-    val forward = if (key == immediateEntry) NavDisplay.transitionSpec { EnterTransition.None togetherWith ExitTransition.None } else emptyMap()
-    NavEntry(key, entry.contentKey, WearPageTransitions + entry.metadata + forward) { pageContent(key) { entry.Content() } }
+    NavEntry(key, entry.contentKey, WearPageTransitions + entry.metadata) { pageContent(key) { entry.Content() } }
 }
 
 /**

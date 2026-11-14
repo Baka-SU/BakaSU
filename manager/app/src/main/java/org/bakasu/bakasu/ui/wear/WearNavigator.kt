@@ -2,10 +2,8 @@ package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -29,11 +27,7 @@ class WearNavigator internal constructor(
         return if (index >= 0) backStack.getOrNull(index + 1) as? WearRoute.Operations else null
     }
 
-    var immediateEntry: WearRoute? by mutableStateOf(null)
-        private set
-
-    fun open(route: WearRoute, immediately: Boolean = false) {
-        immediateEntry = route.takeIf { immediately }
+    fun open(route: WearRoute) {
         onChange()
         if (top != route) backStack.add(route)
     }

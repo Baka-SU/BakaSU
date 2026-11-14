@@ -47,6 +47,7 @@ data class ModuleUiState(
     val metaModuleStatus: MetaModuleStatus = MetaModuleStatus.MISSING,
     val isNeedRefresh: Boolean = false,
     val showMoreModuleInfo: Boolean = false,
+    val pendingRemovals: Set<String> = emptySet(),
 )
 
 sealed interface ModuleUiAction {
@@ -83,6 +84,7 @@ private data class ModuleControls(
     val search: String = "",
     val isNeedRefresh: Boolean = false,
     val moduleSizes: Map<String, String> = emptyMap(),
+    val pendingRemovals: Set<String> = emptySet(),
 )
 
 class ModuleViewModel(
@@ -130,6 +132,7 @@ class ModuleViewModel(
             metaModuleStatus = source.metaModuleStatus,
             isNeedRefresh = local.isNeedRefresh,
             showMoreModuleInfo = preferences.showMoreModuleInfo,
+            pendingRemovals = local.pendingRemovals,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ModuleUiState())
     val uiState: StateFlow<ModuleUiState> = state
@@ -185,11 +188,17 @@ class ModuleViewModel(
                 )
             }
 
-            is ModuleUiAction.SetRemoved -> viewModelScope.launch {
-                val successful = setModuleRemoved(action.moduleId, action.removed).isSuccess
-                mutableEvents.emit(
-                    ModuleUiEvent.RemovedChanged(action.moduleId, action.removed, successful),
-                )
+            is ModuleUiAction.SetRemoved -> {
+                if (action.moduleId in controls.value.pendingRemovals) return
+                controls.update { it.copy(pendingRemovals = it.pendingRemovals + action.moduleId) }
+                viewModelScope.launch {
+                    try {
+                        val successful = setModuleRemoved(action.moduleId, action.removed).isSuccess
+                        mutableEvents.emit(ModuleUiEvent.RemovedChanged(action.moduleId, action.removed, successful))
+                    } finally {
+                        controls.update { it.copy(pendingRemovals = it.pendingRemovals - action.moduleId) }
+                    }
+                }
             }
 
             ModuleUiAction.Reboot -> viewModelScope.launch {
