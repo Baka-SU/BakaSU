@@ -54,9 +54,6 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.rememberPagerState
-import androidx.wear.compose.material3.AlertDialog
-import androidx.wear.compose.material3.AlertDialogDefaults
-import androidx.wear.compose.material3.AnimatedPage
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.HorizontalPagerScaffold
 import androidx.wear.compose.material3.MaterialTheme
@@ -108,14 +105,15 @@ import org.bakasu.bakasu.ui.viewmodel.WearPreferences
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearPanelPull
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
+import org.bakasu.bakasu.ui.wear.component.WearAnimatedPage
 import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
-import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPageIndicator
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPager
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
 import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
+import org.bakasu.bakasu.ui.wear.component.WearNoticeDialog
 import org.bakasu.bakasu.ui.wear.component.WearOperationsBackHandler
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.bakasu.bakasu.ui.wear.component.WearResult
@@ -125,7 +123,6 @@ import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.bakasu.bakasu.ui.wear.component.WearTimeTitleLayout
-import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -261,15 +258,12 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
             dismiss()
             clearSettingsFeedback()
         }
-        AlertDialog(
-            verticalArrangement = WearDialogVerticalArrangement,
-            contentPadding = wearDialogContentPadding(edgeButton = true),
+        WearNoticeDialog(
             visible = true,
             onDismissRequest = close,
             icon = { WearDialogIcon(Icons.Rounded.Info) },
             title = { Text(stringResource(R.string.settings)) },
             text = { Text(settingsNotice.orEmpty()) },
-            edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },
         )
     }
     LaunchedEffect(settingsNotice) {
@@ -1271,7 +1265,7 @@ private fun WearMainPages(
                     flingBehavior = PagerScaffoldDefaults.snapWithSpringFlingBehavior(pagerState),
                     key = { pages[it] },
                 ) { page ->
-                    AnimatedPage(pageIndex = page, pagerState = pagerState) {
+                    WearAnimatedPage(pageIndex = page, pagerState = pagerState) {
                         when (pages.getOrNull(page)) {
                             HOME -> WearHomePage(
                                 home,

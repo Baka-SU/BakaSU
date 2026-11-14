@@ -21,8 +21,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material3.AlertDialog
-import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
@@ -33,11 +31,10 @@ import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
-import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearNoticeDialog
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
-import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
 import org.bakasu.bakasu.ui.wear.component.wearGroupGap
 
 /**
@@ -55,15 +52,12 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
     val supportUrl = stringResource(R.string.home_support_url)
     val learnUrl = stringResource(R.string.home_learn_kernelsu_url)
     val copyright = rememberCustomDialog { dismiss ->
-        AlertDialog(
-            verticalArrangement = WearDialogVerticalArrangement,
-            contentPadding = wearDialogContentPadding(edgeButton = true),
+        WearNoticeDialog(
             visible = true,
             onDismissRequest = dismiss,
             icon = { WearDialogIcon(Icons.Rounded.Info) },
             title = { Text(stringResource(R.string.wear_icon_copyright)) },
             text = { Text(stringResource(R.string.about_app_icon, stringResource(R.string.wear_icon_author))) },
-            edgeButton = { AlertDialogDefaults.EdgeButton(onClick = dismiss) },
         )
     }
     WearList(onBack = onBack, snap = true) { spec ->

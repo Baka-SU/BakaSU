@@ -223,7 +223,7 @@
     <string name="home_zygisk_implement">Implementasi Zygisk</string>
     <string name="sus_loop_paths_description_title">Konfigurasi Jalur Loop</string>
     <string name="sus_loop_paths_description_text">Jalur loop ditandai ulang sebagai SUS_PATH di setiap aplikasi non-root atau layanan terisolasi. Ini membantu mengatasi masalah di mana jalur yang ditambahkan mungkin memiliki status inode direset atau inode dibuat ulang di kernel</string>
-    <string name="home_hook_type">Jenis hook</string>
+    <string name="home_hook_type">Jenis Hook</string>
     <string name="confirm_installation">Konfirmasi Instalasi</string>
     <string name="confirm_multiple_installation">Konfirmasi Instalasi (Berkas %d)</string>
     <string name="install_confirm">Instal</string>
@@ -242,11 +242,11 @@
     <string name="settings_kernel_umount">Meng-unmount modul</string>
     <string name="settings_kernel_umount_summary">Perilaku umount tingkat kernel dikendalikan oleh KernelSU</string>
     <string name="learn_more">Pelajari selengkapnya</string>
-    <string name="home_seccomp_status">Status seccomp</string>
+    <string name="home_seccomp_status">Status Seccomp</string>
     <string name="seccomp_status_not_supported">Tidak didukung</string>
     <string name="seccomp_status_disabled">Tidak aktif</string>
     <string name="seccomp_status_strict">Ketat</string>
-    <string name="seccomp_status_filter">Saring</string>
+    <string name="seccomp_status_filter">Disaring</string>
     <string name="seccomp_status_unknown">Tidak Diketahui</string>
     <string name="sulog">Log SU</string>
     <string name="sulog_log_files">Berkas Log</string>
@@ -344,7 +344,7 @@
     <string name="background_crop_method_in_app">Krop Bawaan</string>
     <string name="predictive_back_animation">Animasi Predictive Back</string>
     <string name="predictive_back_exit_direction">Arah Keluar</string>
-    <string name="search_modules">Cari modul</string>
+    <string name="search_modules">Cari Modul</string>
     <string name="home_meta_module_implement">Implementasi Modul Meta</string>
     <string name="sus_maps_description_text">Sembunyikan jalur asli dari pemetaan memori di /proc/self/[maps|smaps|smaps_rollup|map_files|mem|pagemap]. Catatan: Fitur ini tidak mendukung penyembunyian pemetaan memori anonim, serta tidak dapat menyembunyikan inline hook atau PLT hook yang disebabkan oleh library yang diinjeksi itu sendiri</string>
     <string name="sus_maps_warning">Pemberitahuan Penting: Untuk aplikasi dengan mekanisme deteksi injeksi yang dirancang dengan baik, fitur ini mungkin tidak akan efektif untuk melewati deteksi</string>
@@ -460,10 +460,10 @@
     <string name="dynamic_manager_grant_confirm_message">Aplikasi yang dipilih akan menjadi manajer dinamis. Jika manajer dinamis sudah dikonfigurasi, konfigurasi tersebut akan segera dibatalkan.\n\nfitur ini akanmemberikan tingkat izin tertinggi untuk perangkat ini. Jika Anda tidak tau maksudnya, batalkan.</string>
     <string name="dynamic_manager_clear_confirm_message">Anda yakin ingin menghapus konfigurasi manajer dinamis?</string>
     <string name="manage_managers">Kelola manajer</string>
-    <string name="home_version_info">Info versi</string>
-    <string name="home_status_info">Info status</string>
+    <string name="home_version_info">Info Versi</string>
+    <string name="home_status_info">Info Status</string>
     <string name="home_short_info">SuperUser: %1$d, Modul: %2$d</string>
-    <string name="home_kernel_version">Versi driver kernel</string>
+    <string name="home_kernel_version">Versi Driver</string>
     <string name="search_no_any_match">Tidak ada konten yang cocok</string>
     <string name="beta_version_available">Versi beta baru %1$d tersedia, klik untuk membarui</string>
     <string name="beta_update_check_failed">Pemeriksaan pembaruan beta gagal. Tarik ke bawah untuk memuat ulang dan coba lagi.</string>
@@ -662,4 +662,12 @@
     <string name="superuser_root_access_required">Akses root diperlukan untuk memuat aplikasi.</string>
     <string name="superuser_service_start_failed">RootService gagal dimulai. Coba lagi untuk memuat aplikasi.</string>
     <string name="superuser_packages_load_failed">Gagal memuat aplikasi dari RootService. Silakan coba lagi.</string>
+    <string name="settings_shell_su_adb_only">Batasi akses root shell hanya untuk ADB</string>
+    <string name="settings_shell_su_adb_only_summary">Aktifkan pemeriksaan tambahan untuk shell: Hanya proses shell yang dimulai oleh adbd atau proses root KernelSU yang dapat memperoleh akses root</string>
+    <string name="module_flash_complete">Modul berhasil di-flash</string>
+    <string name="kernel_flash_complete">Kernel berhasil di-flash</string>
+    <string name="patch_complete">Patch selesai diterapkan</string>
+    <string name="settings_flash_card_background">Latar belakang kartu di layar flashing</string>
+    <string name="settings_flash_card_background_summary">Tampilkan latar belakang kartu di balik log flashing. Selalu aktif saat latar belakang khusus digunakan</string>
+    <string name="feature_status_forced_summary">Fitur ini ditetapkan oleh konfigurasi boot dan tidak dapat diubah</string>
 </resources>

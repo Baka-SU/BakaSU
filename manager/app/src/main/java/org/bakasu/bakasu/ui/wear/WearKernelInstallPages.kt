@@ -216,6 +216,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
             },
             confirmEnabled = ready,
             confirmLabel = stringResource(R.string.install_next),
+            confirmIcon = Icons.Rounded.ArrowForward,
         ) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.Lkm_install_methods)) }
             methods.forEach { option ->
@@ -360,6 +361,7 @@ internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit,
         onConfirm = { zipUri?.let { onOpen(WearRoute.KernelFlash(it, slot, skipKsud)) } },
         confirmEnabled = ready,
         confirmLabel = stringResource(R.string.install_next),
+        confirmIcon = Icons.Rounded.ArrowForward,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.GKI_install_methods)) }
         if (!environment.rootAvailable) {
