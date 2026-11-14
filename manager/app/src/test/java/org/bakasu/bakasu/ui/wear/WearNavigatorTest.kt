@@ -156,6 +156,24 @@ class WearNavigatorTest {
     }
 
     @Test
+    fun restoredPagesWaitForInitialCapabilitiesBeforeBeingPruned() {
+        val navigator = navigator()
+        navigator.open(WearRoute.SuSFS)
+        val loading = org.bakasu.bakasu.domain.model.HomeDashboardState()
+        navigator.closeUnavailable(loading)
+        assertEquals(WearRoute.SuSFS, navigator.top)
+        val available = loading.copy(
+            isInitialDataLoaded = true,
+            systemStatus = loading.systemStatus.copy(isFullFeatured = true, isRootAvailable = true),
+            systemInfo = loading.systemInfo.copy(susfsEnabled = true),
+        )
+        navigator.closeUnavailable(available)
+        assertEquals(WearRoute.SuSFS, navigator.top)
+        navigator.closeUnavailable(available.copy(systemInfo = available.systemInfo.copy(susfsEnabled = false)))
+        assertEquals(listOf(WearRoute.Main), navigator.backStack.toList())
+    }
+
+    @Test
     fun dynamicManagerInputsReturnToTheirOwningPageAndCloseWhenRootIsLost() {
         val navigator = navigator()
         navigator.open(WearRoute.DynamicManager)

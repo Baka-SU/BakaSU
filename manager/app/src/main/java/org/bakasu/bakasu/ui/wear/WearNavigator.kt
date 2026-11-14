@@ -7,6 +7,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
+import org.bakasu.bakasu.domain.model.HomeDashboardState
 
 /**
  * The Wear back stack and its rules: a page opens once on top, Back on the first page leaves the
@@ -42,6 +43,12 @@ class WearNavigator internal constructor(
     fun replace(route: WearRoute) {
         back()
         open(route)
+    }
+
+    /** Initial false capability defaults must not discard the restored back stack. */
+    fun closeUnavailable(home: HomeDashboardState) {
+        if (!home.isInitialDataLoaded) return
+        closeUnavailable(home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled, home.systemStatus.isRootAvailable)
     }
 
     /** Closes every page once root or SUSFS, which it needs, is no longer available. */
