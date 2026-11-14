@@ -47,7 +47,6 @@ static inline bool ksu_preinit_handle_execve_tracepoint(const char __user **file
 #elif defined(CONFIG_KSU_MANUAL_HOOK)
 static inline void ksu_preinit_handle_execve_manual(const char **filename, struct user_arg_ptr *argv)
 {
-    return false;
 }
 #elif defined(CONFIG_KSU_SUSFS)
 static inline int ksu_setup_preinit_file(struct filename **filename_ptr, struct user_arg_ptr *argv_user)
