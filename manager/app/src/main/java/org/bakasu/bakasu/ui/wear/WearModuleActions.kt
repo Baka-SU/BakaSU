@@ -1,5 +1,9 @@
 package org.bakasu.bakasu.ui.wear
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -17,9 +21,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.material3.ButtonDefaults
@@ -36,11 +43,13 @@ import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleChangelogViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearInfoRow
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLogPage
+import org.bakasu.bakasu.ui.wear.component.WearModuleHeader
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
@@ -63,6 +72,7 @@ internal fun WearModuleUpdatePage(
     onDownload: (InstalledModule, ModuleUpdateMetadata, CatalogModule?) -> Unit,
     onChangelog: () -> Unit,
     findSource: suspend (InstalledModule) -> CatalogModule? = { null },
+    artwork: CatalogModule? = null,
 ) {
     val scope = rememberCoroutineScope()
     val active by rememberUpdatedState(LocalScreenIsActive.current)
@@ -82,14 +92,7 @@ internal fun WearModuleUpdatePage(
         if (module != null && update != null) {
             // The module and its version change lead, followed by the two actions.
             item {
-                WearModuleInfoCard(spec, compact = true) {
-                    WearInfoRow(
-                        icon = Icons.Rounded.Update,
-                        label = module.name,
-                        value = stringResource(R.string.wear_update_version, module.version.ifBlank { stringResource(R.string.unknown) }, update.version),
-                        labelStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    )
-                }
+                WearModuleHeader(spec, module, artwork, stringResource(R.string.wear_update_version, module.version.ifBlank { stringResource(R.string.unknown) }, update.version))
             }
             item {
                 WearActionButton(

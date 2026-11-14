@@ -60,6 +60,21 @@ class ModuleCatalogRepository(
     val sources: StateFlow<List<RepositorySource>> = mutableSources.asStateFlow()
     val failures: StateFlow<Map<String, RepositoryFailure>> = mutableFailures.asStateFlow()
 
+    /** Reads only saved catalogs, without loading details or refreshing any source. */
+    suspend fun cachedIconModules(sources: List<RepositorySource>): List<CatalogModule> = sources.flatMap { source ->
+        attempt {
+            if (source.apiType == RepositoryApiType.KERNEL_SU) {
+                registry.forSource(source.url).cachedCatalog()?.let { catalog ->
+                    catalog.modules.map { RegistryCatalogMapper.summary(it, catalog, source) }
+                }.orEmpty()
+            } else {
+                networkRequestRepository.cached("${source.url}json/modules.json")?.let {
+                    MmrlRepositoryParser.parse(source.url, it).modules
+                }.orEmpty()
+            }
+        }.getOrDefault(emptyList())
+    }
+
     /** An update icon must belong to both this module ID and its release source. */
     suspend fun findUpdateSource(moduleId: String, updateJson: String, zipUrl: String): CatalogModule? {
         val owner = registry.sourceForUpdate(updateJson)

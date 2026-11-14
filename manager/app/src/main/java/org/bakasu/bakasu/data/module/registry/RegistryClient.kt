@@ -61,6 +61,9 @@ class RegistryClient(
 
     fun currentCatalog(): RegistryCatalog? = current
 
+    /** Artwork lookup never refreshes the repository or changes its browsing state. */
+    fun cachedCatalog(): RegistryCatalog? = synchronized(lock) { current ?: readCachedCatalog() }
+
     /** Reads index + list from the network. Browsing disables the fallback used by update checks. */
     fun loadCatalog(allowCache: Boolean = true): CatalogLoad = synchronized(lock) {
         try {

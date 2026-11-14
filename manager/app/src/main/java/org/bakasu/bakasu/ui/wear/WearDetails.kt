@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Tag
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Update
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,6 +55,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.AppControlAction
 import org.bakasu.bakasu.domain.model.AppProfile
+import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.ProfileTemplate
@@ -66,12 +70,15 @@ import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileConfig
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileModePage
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileTemplateChoicePage
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearBadge
+import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
 import org.bakasu.bakasu.ui.wear.component.WearCompactItemSpacing
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearInfoRow
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearModuleHeader
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearResult
@@ -102,6 +109,7 @@ internal fun WearModuleDetail(
     onExecute: (InstalledModule) -> Unit,
     onUpdate: (InstalledModule) -> Unit,
     onErrorShown: () -> Unit = {},
+    artwork: CatalogModule? = null,
 ) {
     if (module == null) {
         WearList(onBack = onBack) { spec ->
@@ -130,22 +138,9 @@ internal fun WearModuleDetail(
     WearList(onBack = onBack, itemSpacing = WearCompactItemSpacing, topContentPadding = 12.dp) { spec ->
         // As in the design, the page opens with the module title card instead of a page title.
         item {
-            WearInfoCard(spec, shape = ButtonDefaults.shape, contentPadding = ButtonDefaults.ContentPadding) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Extension, null, Modifier.size(ButtonDefaults.IconSize))
-                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(module.name, style = MaterialTheme.typography.titleMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp), itemVerticalAlignment = Alignment.CenterVertically) {
-                            Text(module.version.ifBlank { unknown }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (module.metamodule) {
-                                WearBadge(stringResource(R.string.wear_meta_badge))
-                            }
-                        }
-                    }
-                }
-            }
+            WearModuleHeader(spec, module, artwork)
         }
+
         item { WearSectionHeader(spec, stringResource(R.string.wear_module_information)) }
         // Information rows read like the operation buttons below (icon, label, secondary label), but
         // stay cards, as nothing happens on a tap.
@@ -165,15 +160,7 @@ internal fun WearModuleDetail(
                 { onEnabledChange(module.id, it) },
                 enabled = !module.remove && !module.update,
                 icon = Icons.Rounded.PowerSettingsNew,
-                secondaryLabel = stringResource(
-                    when {
-                        module.remove -> R.string.wear_pending_removal
-                        module.update -> R.string.reboot_to_apply
-                        module.enabled -> R.string.wear_enabled
-                        else -> R.string.wear_disabled
-                    },
-                ),
-                compact = true,
+                secondaryLabel = stringResource(if (module.enabled) R.string.wear_enabled else R.string.wear_disabled),
             )
         }
         if (module.hasWebUi) {
@@ -655,6 +642,7 @@ internal fun WearAppDetail(
                     spec,
                     stringResource(R.string.affected_applications),
                     { onOpen(WearRoute.AffectedApps(group.uid, group.primaryPackageName)) },
+                    icon = Icons.Rounded.Apps,
                     description = stringResource(R.string.wear_same_uid_apps),
                 )
             }
@@ -664,6 +652,7 @@ internal fun WearAppDetail(
                         spec,
                         stringResource(R.string.wear_app_operations),
                         { onOpen(WearRoute.AppActions(group.uid, group.primaryPackageName)) },
+                        icon = Icons.Rounded.Tune,
                         description = stringResource(R.string.wear_app_operations_summary),
                     )
                 }
@@ -715,7 +704,18 @@ internal fun WearAppActionsRoute(uid: Int, packageName: String, onBack: () -> Un
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_app_operations)) }
         listOf(AppControlAction.LAUNCH to R.string.launch_app, AppControlAction.FORCE_STOP to R.string.force_stop_app).forEach { (action, label) ->
-            item { WearActionButton(spec, Icons.Rounded.Apps, stringResource(label), { viewModel.dispatch(AppProfileUiAction.ControlApp(action)) }) }
+            item {
+                WearActionButton(
+                    spec,
+                    when (action) {
+                        AppControlAction.LAUNCH -> Icons.Rounded.PlayArrow
+                        AppControlAction.FORCE_STOP -> Icons.Rounded.PowerSettingsNew
+                        AppControlAction.RESTART -> Icons.Rounded.Restore
+                    },
+                    stringResource(label),
+                    { viewModel.dispatch(AppProfileUiAction.ControlApp(action)) },
+                )
+            }
         }
     }
 }

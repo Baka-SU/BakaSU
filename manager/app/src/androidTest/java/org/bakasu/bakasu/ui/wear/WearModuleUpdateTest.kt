@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -97,7 +98,7 @@ class WearModuleUpdateTest(private val round: Boolean) {
 
     @Test
     fun longModuleNameAndVersionRemainUnclipped() {
-        val installed = module.copy(name = "A module with a deliberately long name", moduleUpdate = update.copy(version = "2026.11.08-long-release-version"))
+        val installed = module.copy(name = "A module with a deliberately long name", metamodule = true, moduleUpdate = update.copy(version = "2026.11.08-long-release-version"))
         showPage(installed)
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
         val version = compose.activity.getString(R.string.wear_update_version, installed.version, installed.moduleUpdate!!.version)
@@ -105,7 +106,16 @@ class WearModuleUpdateTest(private val round: Boolean) {
             val layouts = mutableListOf<TextLayoutResult>()
             compose.onNodeWithText(text, useUnmergedTree = true)
                 .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            assertEquals("The module capsule has one title and one version line", 1, layouts.single().lineCount)
             assertFalse(layouts.single().hasVisualOverflow)
+        }
+        val titleBounds = compose.onNodeWithText(installed.name, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val versionBounds = compose.onNodeWithText(version, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val badgeBounds = compose.onNodeWithText(compose.activity.getString(R.string.wear_meta_badge), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertEquals((titleBounds.top.value + titleBounds.bottom.value) / 2, (badgeBounds.top.value + badgeBounds.bottom.value) / 2, 0.5f)
+        assertTrue(titleBounds.bottom <= versionBounds.top)
+        File(compose.activity.getExternalFilesDir(null), "update-header-$round.png").outputStream().use {
+            compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
         }
     }
 
@@ -118,6 +128,8 @@ class WearModuleUpdateTest(private val round: Boolean) {
             OkHttpClient.Builder().addInterceptor { chain ->
                 Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("test").body(bytes.toResponseBody()).build()
             }.build(),
+            compose.activity.application,
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO),
         )
         runBlocking { icons.load(iconUrl, null) }
         val app = koinApplication { modules(module { single { LoadModuleIconUseCase(icons) } }) }

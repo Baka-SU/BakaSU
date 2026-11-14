@@ -450,6 +450,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 entry<WearRoute.Module> { route ->
                                     WearModuleDetail(
                                         module = modules.moduleList.firstOrNull { it.id == route.id },
+                                        artwork = modules.moduleIcons[route.id],
                                         error = moduleError,
                                         onBack = ::back,
                                         onEnabledChange = { id, enabled -> moduleViewModel.dispatch(ModuleUiAction.SetEnabled(id, enabled)) },
@@ -471,6 +472,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         installer::update,
                                         onChangelog = { open(WearRoute.ModuleChangelog(route.id)) },
                                         findSource = moduleViewModel::findUpdateSource,
+                                        artwork = modules.moduleIcons[route.id],
                                     )
                                 }
                                 entry<WearRoute.ModuleChangelog> { route ->

@@ -158,6 +158,7 @@ import org.bakasu.bakasu.domain.usecase.RemoveModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.RemovePreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveUmountPathUseCase
 import org.bakasu.bakasu.domain.usecase.RenameModuleRepositoryUseCase
+import org.bakasu.bakasu.domain.usecase.ResolveInstalledModuleIconUseCase
 import org.bakasu.bakasu.domain.usecase.ResolveModuleUpdateUseCase
 import org.bakasu.bakasu.domain.usecase.RunScriptUseCase
 import org.bakasu.bakasu.domain.usecase.SaveModuleActionLogUseCase
@@ -310,7 +311,7 @@ val repositoryModule = module {
     singleOf(::UmountRepository)
     singleOf(::ModuleCatalogRepository)
     single { ModuleReleaseRepository(get(), get(applicationScopeQualifier)) }
-    singleOf(::ModuleIconRepository)
+    single { ModuleIconRepository(get(), androidApplication(), get(applicationScopeQualifier)) }
     single { KernelSuRegistryRepository(get(), get(), get()) }
     singleOf(::RepositorySourceStore)
     singleOf(::ModuleRepository)
@@ -405,6 +406,7 @@ val useCaseModule = module {
     factoryOf(::IsCatalogModuleCurrentUseCase)
     factoryOf(::GetModuleReadmeUseCase)
     factoryOf(::GetModuleReleaseDetailsUseCase)
+    factoryOf(::ResolveInstalledModuleIconUseCase)
     factoryOf(::LoadModuleIconUseCase)
     factoryOf(::ResolveModuleUpdateUseCase)
     factoryOf(::GetModuleUpdateChangelogUseCase)

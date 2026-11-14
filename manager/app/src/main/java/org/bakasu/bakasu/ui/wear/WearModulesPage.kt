@@ -1,6 +1,5 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,9 +30,12 @@ import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearBadge
+import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
@@ -41,6 +44,7 @@ import org.bakasu.bakasu.ui.wear.component.WearModuleSwipeActions
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.wearStatusColors
 
 /**
@@ -82,16 +86,16 @@ internal fun WearModulesPage(
             }
         }
         items(state.moduleList, key = { it.id }) { module ->
-            WearModuleItem(spec, module, onModuleClick, listState.isScrollInProgress, onWebUi, onExecute)
+            WearModuleItem(spec, module, onModuleClick, listState.isScrollInProgress, onWebUi, onExecute, state.moduleIcons[module.id])
         }
     }
 }
 
 /**
  * One module row: the row opens the module details. The whole container takes the active color
- * while the module is enabled and applied, a medium-emphasis red while pending removal and the
- * neutral tonal surface otherwise. Pending state has its own secondary line above the version and
- * metamodule label, so a long version cannot hide it.
+ * while the module is enabled and applied, a subdued removal color while pending removal and the
+ * neutral tonal surface otherwise. META shares the title row, and only the version appears below.
+ * Pending changes are conveyed by color and the removal strike-through.
  */
 @Composable
 internal fun TransformingLazyColumnItemScope.WearModuleItem(
@@ -101,6 +105,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
     scrolling: Boolean = false,
     onWebUi: ((InstalledModule) -> Unit)? = null,
     onExecute: ((InstalledModule) -> Unit)? = null,
+    artwork: CatalogModule? = null,
 ) {
     val actions = buildList {
         if (module.enabled && !module.remove) {
@@ -122,84 +127,55 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             }
         }
     }
-    val pendingState = when {
-        module.remove -> stringResource(R.string.wear_pending_removal)
-        module.update -> stringResource(R.string.reboot_to_apply)
-        else -> null
-    }
     val button: @Composable () -> Unit = {
-        Button(
+        WearSettingsJumpPageWidget(
+            spec,
+            module.name,
             onClick = { onModuleClick(module.id) },
-            modifier = Modifier.fillMaxWidth(),
+            largeIcon = true,
+            transformed = false,
+            transformSurface = actions.isEmpty(),
             // A reveal row owns its transformation; a standalone row owns its own.
-            transformation = if (actions.isEmpty()) SurfaceTransformation(spec) else null,
             colors = when {
                 module.remove -> ButtonDefaults.filledTonalButtonColors(
-                    // Medium emphasis keeps the red signal but sits between the neutral tonal
-                    // container and the full-strength error container.
+                    // Pending removal has the lowest emphasis while retaining its error hue.
                     containerColor = lerp(
                         MaterialTheme.colorScheme.surfaceContainer,
                         MaterialTheme.colorScheme.errorContainer,
-                        0.5f,
+                        0.2f,
                     ),
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    iconColor = MaterialTheme.colorScheme.onErrorContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    secondaryContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 module.enabled && !module.update -> ButtonDefaults.filledVariantButtonColors()
 
                 else -> ButtonDefaults.filledTonalButtonColors()
             },
-            icon = { Icon(Icons.Rounded.Extension, contentDescription = null) },
-            secondaryLabel = if (module.description.isNotBlank() || pendingState != null || module.version.isNotBlank() || module.metamodule) {
-                {
-                    Column {
-                        if (module.description.isNotBlank()) {
-                            Text(module.description, Modifier.basicMarquee(iterations = Int.MAX_VALUE), maxLines = 1, softWrap = false)
-                        }
-                        if (module.remove && pendingState != null) {
-                            Text(pendingState, color = LocalContentColor.current)
-                        }
-                        if (module.version.isNotBlank() || module.metamodule) {
-                            // Keep META whole even when the version must be ellipsized.
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (module.version.isNotBlank()) {
-                                    Text(
-                                        module.version,
-                                        Modifier.weight(1f, fill = false),
-                                        color = LocalContentColor.current,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                                if (module.metamodule) {
-                                    WearBadge(
-                                        stringResource(R.string.wear_meta_badge),
-                                        Modifier.padding(start = if (module.version.isNotBlank()) 4.dp else 0.dp),
-                                    )
-                                }
-                            }
-                        }
-                        if (!module.remove && pendingState != null) {
-                            val (container, content) = wearStatusColors(WearStatusTone.WARNING)
-                            WearBadge(pendingState, containerColor = container ?: MaterialTheme.colorScheme.surfaceContainer, contentColor = content)
-                        }
-                    }
-                }
-            } else {
-                null
+            iconContent = {
+                val iconSize = with(LocalDensity.current) { MaterialTheme.typography.labelMedium.lineHeight.toDp() + MaterialTheme.typography.labelSmall.lineHeight.toDp() }.coerceAtLeast(ButtonDefaults.LargeIconSize)
+                val active = module.enabled && !module.update && !module.remove
+                WearCatalogModuleIcon(
+                    artwork?.iconUrl?.takeIf { it.isNotBlank() } ?: artwork?.registryMetadata?.iconUrl,
+                    artwork?.repositoryUrl?.takeIf { artwork.registryMetadata != null },
+                    iconSize,
+                    fallbackContainerColor = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                    fallbackContentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
+                )
             },
-        ) {
-            Text(
-                module.name,
-                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
-                softWrap = false,
-                textDecoration = if (module.remove) TextDecoration.LineThrough else TextDecoration.None,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+            secondaryLabelContent = module.version.takeIf { it.isNotBlank() }?.let { version -> { WearAutoMarqueeText(version) } },
+            titleContent = {
+                Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    WearAutoMarqueeText(
+                        module.name,
+                        Modifier.weight(1f, fill = false),
+                        textDecoration = if (module.remove) TextDecoration.LineThrough else TextDecoration.None,
+                    )
+                    if (module.metamodule) WearBadge(stringResource(R.string.wear_meta_badge))
+                }
+            },
+        )
     }
     if (actions.isEmpty()) {
         WearRefreshItem(spec, Modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding), button)

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.data.module.ModulePreferencesRepository
+import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.MetaModuleStatus
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
@@ -26,6 +27,7 @@ import org.bakasu.bakasu.domain.usecase.IsSoftRebootPreferredUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveInstalledModulesUseCase
 import org.bakasu.bakasu.domain.usecase.RebootUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshInstalledModulesUseCase
+import org.bakasu.bakasu.domain.usecase.ResolveInstalledModuleIconUseCase
 import org.bakasu.bakasu.domain.usecase.ResolveModuleUpdateUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleRemovedUseCase
@@ -34,6 +36,7 @@ import org.bakasu.bakasu.domain.usecase.UpdateCachedModuleEnabledUseCase
 
 data class ModuleUiState(
     val moduleList: List<InstalledModule> = emptyList(),
+    val moduleIcons: Map<String, CatalogModule> = emptyMap(),
     val moduleSizes: Map<String, String> = emptyMap(),
     val isRefreshing: Boolean = false,
     val search: String = "",
@@ -97,6 +100,7 @@ class ModuleViewModel(
     private val resolveModuleUpdate: ResolveModuleUpdateUseCase,
     private val getModuleUpdateChangelog: GetModuleUpdateChangelogUseCase,
     private val findModuleUpdateSource: FindModuleUpdateSourceUseCase,
+    resolveIcons: ResolveInstalledModuleIconUseCase,
 ) : ViewModel() {
     private val controls = MutableStateFlow(ModuleControls())
     private val mutableEvents = MutableSharedFlow<ModuleUiEvent>(extraBufferCapacity = 1)
@@ -106,7 +110,8 @@ class ModuleViewModel(
         observeInstalledModules(),
         controls,
         modulePreferences.preferences,
-    ) { source, local, preferences ->
+        resolveIcons(),
+    ) { source, local, preferences, icons ->
         ModuleUiState(
             moduleList = buildModuleList(
                 modules = source.modules,
@@ -115,6 +120,7 @@ class ModuleViewModel(
                 sortActionFirst = preferences.sortActionFirst,
             ),
             moduleSizes = local.moduleSizes,
+            moduleIcons = icons,
             isRefreshing = source.refreshing,
             search = local.search,
             sortEnabledFirst = preferences.sortEnabledFirst,

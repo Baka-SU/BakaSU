@@ -52,6 +52,71 @@ class WearMarqueeLayoutTest(private val round: Boolean, private val font: Float)
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
+    fun moduleDetailTitleAndVersionActuallyScrollAndHonorReducedMotion() {
+        val title = "很长的模块名称 A very long module name ".repeat(4)
+        val version = "version-2026.11.13-release-candidate-".repeat(3)
+        val reduceMotion = mutableStateOf(false)
+        val module = InstalledModule("example", title, "Author", version, 1, "", true, false, false, "", false, false, true, null, null, "example", null)
+        // Automatic test-clock advancement cancels infinite animations such as marquee.
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            val config = Configuration(LocalConfiguration.current).apply {
+                screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
+            }
+            CompositionLocalProvider(
+                LocalConfiguration provides config,
+                LocalDensity provides Density(LocalDensity.current.density, font),
+                LocalReduceMotion provides reduceMotion.value,
+            ) {
+                MaterialTheme {
+                    Box(Modifier.requiredSize(192.dp)) {
+                        AppScaffold(timeText = {}) { WearModuleDetail(module, null, {}, { _, _ -> }, { _, _ -> }, {}, {}, {}) }
+                    }
+                }
+            }
+        }
+        compose.mainClock.advanceTimeBy(500)
+        fun layout(text: String): TextLayoutResult {
+            val layouts = mutableListOf<TextLayoutResult>()
+            compose.onNodeWithText(text, useUnmergedTree = true).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            return layouts.single()
+        }
+        fun snapshot(text: String): Bitmap {
+            val bounds = compose.onNodeWithText(text, useUnmergedTree = true).getUnclippedBoundsInRoot()
+            val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+            val density = compose.activity.resources.displayMetrics.density
+            val left = (bounds.left.value * density).toInt().coerceIn(0, bitmap.width - 1)
+            val top = (bounds.top.value * density).toInt().coerceIn(0, bitmap.height - 1)
+            val right = (bounds.right.value * density).toInt().coerceIn(left + 1, bitmap.width)
+            val bottom = (bounds.bottom.value * density).toInt().coerceIn(top + 1, bitmap.height)
+            return Bitmap.createBitmap(bitmap, left, top, right - left, bottom - top)
+        }
+        listOf(title, version).forEach {
+            assertEquals(1, layout(it).lineCount)
+            assertFalse("Overflowing module text must be measured for marquee, not ellipsized", layout(it).hasVisualOverflow)
+        }
+        compose.mainClock.autoAdvance = false
+        try {
+            compose.mainClock.advanceTimeBy(4000)
+            val scrolling = listOf(title, version).map(::snapshot)
+            compose.mainClock.advanceTimeBy(600)
+            listOf(title, version).forEachIndexed { index, text ->
+                assertFalse("Both title and version must visibly scroll: index=$index", scrolling[index].sameAs(snapshot(text)))
+            }
+            compose.runOnIdle { reduceMotion.value = true }
+            compose.mainClock.advanceTimeBy(300)
+            listOf(title, version).forEach { assertTrue("Reduced motion uses ellipsis", layout(it).hasVisualOverflow) }
+            val stopped = listOf(title, version).map(::snapshot)
+            compose.mainClock.advanceTimeBy(600)
+            listOf(title, version).forEachIndexed { index, text ->
+                assertTrue("Reduced motion must stop the text", stopped[index].sameAs(snapshot(text)))
+            }
+        } finally {
+            compose.mainClock.autoAdvance = true
+        }
+    }
+
+    @Test
     fun overflowingSummariesBecomeSingleLineWhileInformationCardsKeepWrapping() {
         val summary = "A long interactive summary ".repeat(20)
         val information = "Read-only information remains fully wrapped ".repeat(20)

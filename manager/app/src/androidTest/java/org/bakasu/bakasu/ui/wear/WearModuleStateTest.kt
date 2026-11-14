@@ -8,7 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
@@ -33,6 +35,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AppScaffold
+import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.InstalledModule
@@ -58,23 +61,49 @@ class WearModuleStateTest(private val round: Boolean) {
     )
 
     @Test
-    fun pendingUpdateStaysReadableWithLongVersionAndMetaAndStillOpensDetails() {
+    fun enabledModuleFallbackIconHasADistinctThemeContainer() {
+        val installed = mutableStateOf(module.copy(name = "Module", update = false))
+        var activeColor = Color.Unspecified
+        var inactiveColor = Color.Unspecified
+        show {
+            activeColor = MaterialTheme.colorScheme.primary
+            inactiveColor = MaterialTheme.colorScheme.primaryContainer
+            WearList { spec -> item { WearModuleItem(spec, installed.value, {}) } }
+        }
+        fun tilePixel(): Int {
+            val title = compose.onNodeWithText("Module", useUnmergedTree = true).getUnclippedBoundsInRoot()
+            val version = compose.onNodeWithText(module.version, useUnmergedTree = true).getUnclippedBoundsInRoot()
+            val density = compose.activity.resources.displayMetrics.density
+            val x = ((title.left - ButtonDefaults.IconSpacing - 4.dp).value * density).toInt()
+            val y = ((title.top.value + title.bottom.value + version.top.value + version.bottom.value) / 4 * density).toInt()
+            val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+            if (installed.value.enabled) {
+                java.io.File(compose.activity.getExternalFilesDir(null), "active-module-icon-$round.png").outputStream().use {
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+                }
+            }
+            return bitmap.getPixel(x, y)
+        }
+        assertEquals("An active module's icon must stand out from its primaryContainer row", activeColor.toArgb(), tilePixel())
+        assertFalse(activeColor == inactiveColor)
+        compose.runOnIdle { installed.value = installed.value.copy(enabled = false) }
+        assertEquals("Inactive modules retain the tonal fallback", inactiveColor.toArgb(), tilePixel())
+    }
+
+    @Test
+    fun pendingUpdateKeepsMetaInTheTitleWithoutAStatusLabel() {
         val installed = mutableStateOf(module.copy(version = "version-".repeat(12), metamodule = true))
         var opened: String? = null
         show {
             WearList { spec -> item { WearModuleItem(spec, installed.value, { opened = it }) } }
         }
         val status = compose.activity.getString(R.string.reboot_to_apply)
-        val layouts = mutableListOf<TextLayoutResult>()
-        compose.onNodeWithText(status, useUnmergedTree = true).assertIsDisplayed()
-            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
-        assertFalse(layouts.single().hasVisualOverflow)
+        compose.onNodeWithText(status, useUnmergedTree = true).assertDoesNotExist()
+        val titleBounds = compose.onNodeWithText(module.name, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val versionBounds = compose.onNodeWithText(installed.value.version, useUnmergedTree = true).getUnclippedBoundsInRoot()
-        val statusBounds = compose.onNodeWithText(status, useUnmergedTree = true).getUnclippedBoundsInRoot()
-        assertFalse("The version must precede the reboot warning", versionBounds.bottom > statusBounds.top)
-        compose.onNodeWithText(compose.activity.getString(R.string.wear_meta_badge), useUnmergedTree = true).assertIsDisplayed()
         val metaBounds = compose.onNodeWithText(compose.activity.getString(R.string.wear_meta_badge), useUnmergedTree = true).getUnclippedBoundsInRoot()
-        assertEquals("META and version must share the text center", (versionBounds.top.value + versionBounds.bottom.value) / 2, (metaBounds.top.value + metaBounds.bottom.value) / 2, 0.5f)
+        assertEquals("META shares the title center", (titleBounds.top.value + titleBounds.bottom.value) / 2, (metaBounds.top.value + metaBounds.bottom.value) / 2, 0.5f)
+        assertFalse("The version belongs below the title", titleBounds.bottom > versionBounds.top)
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         java.io.File(compose.activity.getExternalFilesDir(null), "fixed-meta-list-$round.png").outputStream().use {
             bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
@@ -86,11 +115,18 @@ class WearModuleStateTest(private val round: Boolean) {
     }
 
     @Test
-    fun detailVersionAndMetaShareTheTextCenter() {
+    fun detailKeepsMetaBesideItsSingleLineTitle() {
         show { Detail(module.copy(version = "v1.2", metamodule = true)) }
+        val title = compose.onNodeWithText(module.name, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val version = compose.onNodeWithText("v1.2", useUnmergedTree = true).getUnclippedBoundsInRoot()
         val badge = compose.onNodeWithText(compose.activity.getString(R.string.wear_meta_badge), useUnmergedTree = true).getUnclippedBoundsInRoot()
-        assertEquals((version.top.value + version.bottom.value) / 2, (badge.top.value + badge.bottom.value) / 2, 0.5f)
+        assertEquals((title.top.value + title.bottom.value) / 2, (badge.top.value + badge.bottom.value) / 2, 0.5f)
+        assertFalse(title.bottom > version.top)
+        listOf(module.name, "v1.2").forEach { text ->
+            val layouts = mutableListOf<TextLayoutResult>()
+            compose.onNodeWithText(text, useUnmergedTree = true).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            assertEquals(1, layouts.single().lineCount)
+        }
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         java.io.File(compose.activity.getExternalFilesDir(null), "fixed-meta-detail-$round.png").outputStream().use {
             bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
@@ -98,11 +134,11 @@ class WearModuleStateTest(private val round: Boolean) {
     }
 
     @Test
-    fun removalTakesPriorityOverPendingUpdate() {
+    fun pendingRemovalAndUpdateHaveNoStatusLabels() {
         show {
             WearList { spec -> item { WearModuleItem(spec, module.copy(remove = true), {}) } }
         }
-        compose.onNodeWithText(compose.activity.getString(R.string.wear_pending_removal), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText(compose.activity.getString(R.string.wear_pending_removal), useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithText(compose.activity.getString(R.string.reboot_to_apply), useUnmergedTree = true).assertDoesNotExist()
     }
 
@@ -113,7 +149,7 @@ class WearModuleStateTest(private val round: Boolean) {
         val enable = compose.activity.getString(R.string.wear_enable_module)
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(5)
         compose.onNodeWithText(enable).assertIsOn().assertIsNotEnabled()
-        compose.onNodeWithText(compose.activity.getString(R.string.reboot_to_apply), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText(compose.activity.getString(R.string.reboot_to_apply), useUnmergedTree = true).assertDoesNotExist()
         compose.runOnIdle { installed.value = installed.value.copy(remove = true) }
         compose.onNodeWithText(enable).assertIsOn().assertIsNotEnabled()
         compose.onNodeWithText(compose.activity.getString(R.string.reboot_to_apply), useUnmergedTree = true).assertDoesNotExist()

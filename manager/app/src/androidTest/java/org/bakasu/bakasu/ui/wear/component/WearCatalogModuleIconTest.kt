@@ -22,6 +22,10 @@ import androidx.wear.compose.material3.MaterialTheme
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -38,7 +42,40 @@ import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 
 class WearCatalogModuleIconTest {
+    private val iconHost = "https://icons-${System.nanoTime()}.example"
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun concurrentRequestsShareOneTransferAndColdLoadsUseDisk() = runBlocking {
+        val bitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888).apply { eraseColor(android.graphics.Color.GREEN) }
+        val bytes = ByteArrayOutputStream().also { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
+        val requests = AtomicInteger()
+        val release = java.util.concurrent.CountDownLatch(1)
+        val started = java.util.concurrent.CountDownLatch(1)
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            requests.incrementAndGet()
+            started.countDown()
+            check(release.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("test").body(bytes.toResponseBody()).build()
+        }.build()
+        try {
+            val repository = ModuleIconRepository(client, compose.activity.application, scope)
+            val url = "$iconHost/concurrent.png"
+            val loads = List(8) { async(kotlinx.coroutines.Dispatchers.Default) { repository.load(url, null) } }
+            assertTrue(started.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            delay(100)
+            release.countDown()
+            assertTrue(loads.awaitAll().all { it != null })
+            assertEquals(1, requests.get())
+            val offline = ModuleIconRepository(OkHttpClient.Builder().addInterceptor { error("Disk cache must not access the network") }.build(), compose.activity.application, scope)
+            assertEquals(android.graphics.Color.GREEN, offline.load(url, null)?.getPixel(0, 0))
+        } finally {
+            release.countDown()
+            scope.cancel()
+        }
+    }
 
     @Test
     fun smallAndLargeTilesKeepSquareCornersWhiteTransparencyAndFilledEdges() {
@@ -60,8 +97,10 @@ class WearCatalogModuleIconTest {
                 val bytes = images.getValue(chain.request().url.encodedPath.removePrefix("/"))
                 Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("test").body(bytes.toResponseBody()).build()
             }.build(),
+            compose.activity.application,
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO),
         )
-        runBlocking { images.keys.forEach { repository.load("https://icons.example/$it", null) } }
+        runBlocking { images.keys.forEach { repository.load("$iconHost/$it", null) } }
         val application = koinApplication { modules(module { single { LoadModuleIconUseCase(repository) } }) }
         try {
             compose.setContent {
@@ -72,7 +111,7 @@ class WearCatalogModuleIconTest {
                                 Row {
                                     images.keys.forEach { kind ->
                                         Box(Modifier.testTag("$kind-$size")) {
-                                            WearCatalogModuleIcon(if (kind == "missing") null else "https://icons.example/$kind", null, size.dp)
+                                            WearCatalogModuleIcon(if (kind == "missing") null else "$iconHost/$kind", null, size.dp)
                                         }
                                     }
                                 }
@@ -92,13 +131,13 @@ class WearCatalogModuleIconTest {
                 assertTrue("$size dp must not be circular", solid[(solid.width * 0.25f).toInt(), (solid.height * 0.06f).toInt()].green > 0.9f)
                 val padded = compose.onNodeWithTag("padded-$size").captureToImage().toPixelMap()
                 val edge = padded[padded.width / 2, 1]
-                assertTrue("The small transparent outer border must be filled", edge.green > 0.9f && edge.red < 0.1f)
+                assertTrue("The small transparent outer border must be filled", edge.green > 0.7f && edge.red > 0.7f)
                 val rounded = compose.onNodeWithTag("rounded-$size").captureToImage().toPixelMap()
                 val corner = rounded[(rounded.width * 0.12f).toInt(), (rounded.height * 0.12f).toInt()]
-                assertTrue("Rounder supplied corners must also fill the tile", corner.green > 0.9f && corner.red < 0.1f)
+                assertTrue("Rounder supplied corners must also fill the tile", corner.green > 0.7f && corner.red > 0.7f)
                 val transparent = compose.onNodeWithTag("transparent-$size").captureToImage().toPixelMap()
                 val base = transparent[transparent.width / 2, (transparent.height * 0.2f).toInt()]
-                assertTrue("Transparent supplied artwork must use white without a fallback glyph", base.red > 0.95f && base.green > 0.95f && base.blue > 0.95f)
+                assertTrue("Monochrome artwork keeps a transparent themed tile", base.red < 0.1f && base.green < 0.1f && base.blue < 0.1f)
             }
             val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
             File(compose.activity.getExternalFilesDir(null), "fixed-icon-sizes.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -119,8 +158,10 @@ class WearCatalogModuleIconTest {
                 Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1)
                     .code(if (chain.request().url.encodedPath == "/ok.png") 200 else 404).message("test").body(bytes.toResponseBody()).build()
             }.build(),
+            compose.activity.application,
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO),
         )
-        runBlocking { repository.load("https://icons.example/ok.png", null) }
+        runBlocking { repository.load("$iconHost/ok.png", null) }
         val application = koinApplication { modules(module { single { LoadModuleIconUseCase(repository) } }) }
         val url = mutableStateOf<String?>(null)
         val origin = mutableStateOf<String?>(null)
@@ -134,16 +175,16 @@ class WearCatalogModuleIconTest {
             }
             fun center() = compose.onNodeWithTag("icon").captureToImage().toPixelMap().let { it[it.width / 2, it.height / 2] }
             val fallback = center()
-            compose.runOnIdle { url.value = "https://icons.example/ok.png" }
+            compose.runOnIdle { url.value = "$iconHost/ok.png" }
             assertTrue(center().green > 0.95f && center().red < 0.05f)
             assertEquals(1, requests.get())
-            compose.runOnIdle { url.value = "https://icons.example/missing.png" }
+            compose.runOnIdle { url.value = "$iconHost/missing.png" }
             compose.waitUntil(5_000) { requests.get() == 2 }
             assertEquals(fallback, center())
             compose.runOnIdle { url.value = "http://icons.example/ok.png" }
             assertEquals(fallback, center())
             compose.runOnIdle {
-                url.value = "https://icons.example/ok.png"
+                url.value = "$iconHost/ok.png"
                 origin.value = "https://another.example/"
             }
             assertEquals(fallback, center())

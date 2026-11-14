@@ -177,6 +177,8 @@ class KernelSuRegistryRepository private constructor(
         }
     }
 
+    suspend fun cachedCatalog(): RegistryCatalog? = withClient { client.cachedCatalog() }
+
     suspend fun loadCatalog(): RegistryClient.CatalogLoad = withClient { client.loadCatalog(allowCache = false) }
 
     suspend fun loadDetail(moduleId: String): RegistryClient.DetailLoad = withClient {

@@ -36,6 +36,16 @@ class RegistryLiveLoadingTest {
     private fun client() = RegistryClient(fetcher = fetcher, cache = cache)
 
     @Test
+    fun artworkLookupReadsTheSavedCatalogWithoutNetworkOrPublishingIt() {
+        client().loadCatalog(allowCache = false)
+        val before = requests
+        val cold = client()
+        assertEquals("first", cold.cachedCatalog()?.buildId)
+        assertEquals(before, requests)
+        assertEquals(null, cold.currentCatalog())
+    }
+
+    @Test
     fun liveCatalogRejectsMemoryAndDiskFallbackAndRecoversWithTheNewBuild() {
         val client = client()
         assertEquals("first", client.loadCatalog(allowCache = false).catalog.buildId)
