@@ -42,6 +42,9 @@ import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.model.ModuleUpdateMetadata
+import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
+import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
 import org.bakasu.bakasu.ui.wear.component.wearEmphasizedBodyStyle
 import org.koin.compose.koinInject
 
@@ -170,16 +173,11 @@ internal fun WearModuleInstallConfirmDialog(installer: WearModuleInstaller) {
         module?.versionCode?.ifBlank { null }?.let { "($it)" },
     ).joinToString(" ")
     AlertDialog(
+        verticalArrangement = WearDialogVerticalArrangement,
+        contentPadding = wearDialogContentPadding(),
         visible = uri != null && module != null,
         onDismissRequest = installer::dismissConfirmation,
-        icon = {
-            Icon(
-                Icons.Rounded.Extension,
-                contentDescription = null,
-                modifier = Modifier.size(ButtonDefaults.LargeIconSize),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        },
+        icon = { WearDialogIcon(Icons.Rounded.Extension) },
         title = { Text(stringResource(R.string.confirm_installation)) },
         text = {
             Text(

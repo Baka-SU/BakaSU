@@ -110,6 +110,7 @@ import org.bakasu.bakasu.ui.wear.component.LocalWearPanelPull
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPageIndicator
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPager
@@ -124,6 +125,7 @@ import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.bakasu.bakasu.ui.wear.component.WearTimeTitleLayout
+import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -260,6 +262,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
             clearSettingsFeedback()
         }
         AlertDialog(
+            verticalArrangement = WearDialogVerticalArrangement,
+            contentPadding = wearDialogContentPadding(edgeButton = true),
             visible = true,
             onDismissRequest = close,
             icon = { WearDialogIcon(Icons.Rounded.Info) },

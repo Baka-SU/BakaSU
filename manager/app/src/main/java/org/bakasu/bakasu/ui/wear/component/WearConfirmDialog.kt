@@ -72,6 +72,8 @@ fun rememberWearConfirmDialog(
     }
     if (subject == null) {
         AlertDialog(
+            verticalArrangement = WearDialogVerticalArrangement,
+            contentPadding = wearDialogContentPadding(),
             visible = true,
             onDismissRequest = dismiss,
             icon = icon,
@@ -82,6 +84,8 @@ fun rememberWearConfirmDialog(
         )
     } else {
         AlertDialog(
+            verticalArrangement = WearDialogVerticalArrangement,
+            contentPadding = wearDialogContentPadding(),
             visible = true,
             onDismissRequest = dismiss,
             icon = icon,

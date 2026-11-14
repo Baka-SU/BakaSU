@@ -44,12 +44,14 @@ import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
 import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.WearWatchOpenFailureDialog
 import org.bakasu.bakasu.ui.wear.component.WearWebView
+import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
 import org.bakasu.bakasu.ui.webui.HandleConfigurationChanges
 import org.bakasu.bakasu.ui.webui.HandleWebViewLifecycle
 import org.bakasu.bakasu.ui.webui.MonetColorsProvider
@@ -224,6 +226,8 @@ private fun HandleWearWebUIEvent(state: WebUIState) {
             dismiss()
         }
         AlertDialog(
+            verticalArrangement = WearDialogVerticalArrangement,
+            contentPadding = wearDialogContentPadding(),
             visible = true,
             onDismissRequest = { respond(false) },
             icon = { WearDialogIcon(Icons.Rounded.Info) },

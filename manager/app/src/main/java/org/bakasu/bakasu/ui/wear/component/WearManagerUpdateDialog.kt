@@ -68,6 +68,8 @@ fun WearManagerUpdateDialog(update: ManagerUpdateInfo?) {
         val stable = info.channel == ManagerUpdateChannel.STABLE
         val details = stringResource(R.string.manager_update_details, info.versionName, info.versionCode, info.abi)
         AlertDialog(
+            verticalArrangement = WearDialogVerticalArrangement,
+            contentPadding = wearDialogContentPadding(),
             visible = true,
             onDismissRequest = dismiss,
             icon = { WearDialogIcon(Icons.Rounded.SystemUpdateAlt) },

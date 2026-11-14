@@ -32,9 +32,12 @@ import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
+import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
+import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
 import org.bakasu.bakasu.ui.wear.component.wearGroupGap
 
 /**
@@ -53,11 +56,11 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
     val learnUrl = stringResource(R.string.home_learn_kernelsu_url)
     val copyright = rememberCustomDialog { dismiss ->
         AlertDialog(
+            verticalArrangement = WearDialogVerticalArrangement,
+            contentPadding = wearDialogContentPadding(edgeButton = true),
             visible = true,
             onDismissRequest = dismiss,
-            icon = {
-                Icon(Icons.Rounded.Info, contentDescription = null, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
-            },
+            icon = { WearDialogIcon(Icons.Rounded.Info) },
             title = { Text(stringResource(R.string.wear_icon_copyright)) },
             text = { Text(stringResource(R.string.about_app_icon, stringResource(R.string.wear_icon_author))) },
             edgeButton = { AlertDialogDefaults.EdgeButton(onClick = dismiss) },

@@ -25,11 +25,11 @@ fun WearErrorDialog(message: String?, onDismiss: () -> Unit = {}) {
             onDismiss()
         }
         AlertDialog(
+            verticalArrangement = WearDialogVerticalArrangement,
+            contentPadding = wearDialogContentPadding(edgeButton = true),
             visible = true,
             onDismissRequest = close,
-            icon = {
-                Icon(Icons.Rounded.Error, null, Modifier.size(ButtonDefaults.LargeIconSize), tint = MaterialTheme.colorScheme.error)
-            },
+            icon = { WearDialogIcon(Icons.Rounded.Error, tint = MaterialTheme.colorScheme.error) },
             title = { Text(stringResource(R.string.operation_failed)) },
             text = { Text(message.orEmpty()) },
             edgeButton = { AlertDialogDefaults.EdgeButton(onClick = close) },

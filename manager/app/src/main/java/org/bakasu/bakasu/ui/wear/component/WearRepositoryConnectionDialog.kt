@@ -22,6 +22,8 @@ internal fun WearRepositoryConnectionDialog(failure: RepositoryFailure?, onRetry
             onDismiss()
         }
         AlertDialog(
+            verticalArrangement = WearDialogVerticalArrangement,
+            contentPadding = wearDialogContentPadding(),
             visible = true,
             onDismissRequest = close,
             icon = { WearDialogIcon(Icons.Rounded.Error, tint = MaterialTheme.colorScheme.error) },

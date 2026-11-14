@@ -51,11 +51,13 @@ import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
+import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
 import org.bakasu.bakasu.ui.wear.component.wearStatusColors
 
 /**
@@ -144,6 +146,8 @@ internal fun WearHomePage(
         }
         if (action != null) {
             AlertDialog(
+                verticalArrangement = WearDialogVerticalArrangement,
+                contentPadding = wearDialogContentPadding(),
                 visible = true,
                 onDismissRequest = dismiss,
                 icon = icon,
@@ -161,6 +165,8 @@ internal fun WearHomePage(
             )
         } else {
             AlertDialog(
+                verticalArrangement = WearDialogVerticalArrangement,
+                contentPadding = wearDialogContentPadding(edgeButton = true),
                 visible = true,
                 onDismissRequest = dismiss,
                 icon = icon,

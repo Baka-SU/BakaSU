@@ -98,6 +98,7 @@ import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
@@ -114,6 +115,7 @@ import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
+import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
 import org.bakasu.bakasu.ui.wear.component.wearRepositoryFailureText
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -235,6 +237,8 @@ private fun rememberModuleDownload(module: CatalogModule?, installer: WearModule
     val confirmDialog = rememberCustomDialog { dismiss ->
         val asset = pendingAsset
         AlertDialog(
+            verticalArrangement = WearDialogVerticalArrangement,
+            contentPadding = wearDialogContentPadding(),
             visible = true,
             onDismissRequest = dismiss,
             icon = { WearDialogIcon(Icons.Rounded.Download) },

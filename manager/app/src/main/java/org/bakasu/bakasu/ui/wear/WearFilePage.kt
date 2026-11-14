@@ -56,6 +56,7 @@ import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
+import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -66,6 +67,7 @@ import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
+import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
 import org.bakasu.bakasu.ui.wear.component.wearGroupGap
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -119,6 +121,8 @@ internal fun WearFilePage(
             if (state.directory == null) onBack()
         }
         AlertDialog(
+            verticalArrangement = WearDialogVerticalArrangement,
+            contentPadding = wearDialogContentPadding(),
             visible = true,
             onDismissRequest = close,
             icon = { WearDialogIcon(Icons.Rounded.Error) },
@@ -169,6 +173,8 @@ internal fun WearFilePage(
             if (state.failed) errorDialog.show()
         }
         AlertDialog(
+            verticalArrangement = WearDialogVerticalArrangement,
+            contentPadding = wearDialogContentPadding(),
             visible = true,
             onDismissRequest = cancel,
             icon = { WearDialogIcon(Icons.Rounded.Folder) },
