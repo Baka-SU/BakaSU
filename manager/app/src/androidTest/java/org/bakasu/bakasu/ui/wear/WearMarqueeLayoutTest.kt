@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
@@ -27,11 +28,15 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.RadioButton
 import java.io.File
+import kotlinx.coroutines.flow.MutableSharedFlow
+import org.bakasu.bakasu.domain.model.AppProfile
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.InstalledApp
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.domain.model.InstalledModule
+import org.bakasu.bakasu.ui.viewmodel.AppProfileUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiState
 import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
@@ -50,6 +55,78 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 class WearMarqueeLayoutTest(private val round: Boolean, private val font: Float) {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun patchFileSubtitleKeepsItsLineCountAcrossMarqueeFrames() {
+        val wrapped = "Boot image\ninit_boot"
+        val filename = "init_boot-" + "long-release-name-".repeat(12) + ".img"
+        val subtitle = mutableStateOf(wrapped)
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            val configuration = Configuration(LocalConfiguration.current).apply {
+                screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
+                    if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
+            }
+            CompositionLocalProvider(LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, font)) {
+                MaterialTheme {
+                    Box(Modifier.requiredSize(192.dp)) {
+                        AppScaffold(timeText = {}) {
+                            WearList { _ ->
+                                item {
+                                    RadioButton(
+                                        selected = true,
+                                        onSelect = {},
+                                        modifier = Modifier.fillMaxWidth(),
+                                        label = { WearAutoMarqueeText("Select file") },
+                                        secondaryLabel = { WearAutoMarqueeText(subtitle.value, maxLines = 2) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        try {
+            listOf(wrapped to 2, filename to 1, wrapped to 2).forEach { (text, lines) ->
+                compose.runOnIdle { subtitle.value = text }
+                repeat(20) {
+                    compose.mainClock.advanceTimeBy(if (it < 10) 16 else 400)
+                    val layouts = mutableListOf<TextLayoutResult>()
+                    compose.onNodeWithText(text, useUnmergedTree = true).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+                    assertEquals("Subtitle must not alternate between wrapping and marquee", lines, layouts.single().lineCount)
+                    assertFalse(layouts.single().hasVisualOverflow)
+                }
+            }
+        } finally {
+            compose.mainClock.autoAdvance = true
+        }
+    }
+
+    @Test
+    fun appDetailIdentifierUsesMarqueeWhenItExceedsTwoLines() {
+        val app = InstalledApp("org.example." + "longidentifier".repeat(12), "Example", 10001)
+        val group = InstalledAppGroup(app.uid, app.packageName, listOf(app))
+        compose.setContent {
+            val configuration = Configuration(LocalConfiguration.current).apply {
+                screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
+                    if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
+            }
+            CompositionLocalProvider(LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, font)) {
+                MaterialTheme {
+                    Box(Modifier.requiredSize(192.dp)) {
+                        AppScaffold(timeText = {}) {
+                            WearAppDetail(group, false, {}, {}, AppProfileUiState(profile = AppProfile(app.packageName), isLoading = false), MutableSharedFlow(), {})
+                        }
+                    }
+                }
+            }
+        }
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText(app.displayIdentifier, useUnmergedTree = true).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        assertEquals(1, layouts.single().lineCount)
+        assertFalse(layouts.single().hasVisualOverflow)
+    }
 
     @Test
     fun moduleDetailTitleAndVersionActuallyScrollAndHonorReducedMotion() {

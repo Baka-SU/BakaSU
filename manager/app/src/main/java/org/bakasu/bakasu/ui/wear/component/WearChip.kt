@@ -1,9 +1,9 @@
 package org.bakasu.bakasu.ui.wear.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -149,10 +150,9 @@ private fun WearChipHeadline(
     style: TextStyle = LocalTextStyle.current,
     marquee: Boolean = false,
 ) {
-    if (marquee) {
+    if (marquee && badges.isEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             WearAutoMarqueeText(label, Modifier.weight(1f, fill = false), color = contentColor, style = style)
-            badges.forEach { WearBadge(it) }
         }
         return
     }
@@ -168,26 +168,28 @@ private fun WearChipHeadline(
         )
         return
     }
-    FlowRow(
+    // Match the phone's title -> mode -> architecture row. Only the badges can scroll when
+    // accessibility text sizes or extra modes exceed the remaining width; the title stays still.
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            label,
-            color = contentColor,
-            style = style,
-            maxLines = maxLines,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.align(Alignment.CenterVertically),
-        )
-        badges.forEach { badge ->
-            WearBadge(
-                badge,
-                modifier = Modifier.align(Alignment.CenterVertically),
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+        Text(label, color = contentColor, style = style, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+        Row(
+            Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            badges.forEach { badge ->
+                WearBadge(
+                    badge,
+                    // A nested badge stays solid, distinct from the bright primary status surface.
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 1f),
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    horizontalPadding = 2.dp,
+                )
+            }
         }
     }
 }

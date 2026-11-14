@@ -143,6 +143,7 @@ class HomeViewModel(
                     homeStateRepository.update { current ->
                         current.copy(
                             systemInfo = HomeSystemInfo(
+                                architecture = basicInfo.architecture,
                                 kernelRelease = basicInfo.kernelRelease,
                                 androidVersion = basicInfo.androidVersion,
                                 deviceModel = basicInfo.deviceModel,

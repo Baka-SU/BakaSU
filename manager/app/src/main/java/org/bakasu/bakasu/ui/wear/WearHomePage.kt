@@ -220,6 +220,7 @@ internal fun WearHomePage(
                         listOfNotNull(
                             stringResource(if (status.lkmMode == true) R.string.wear_mode_lkm else R.string.wear_mode_builtin),
                             if (status.isLateLoadMode) stringResource(R.string.jailbreak_mode) else null,
+                            info.architecture.takeIf { it.isNotBlank() && it != "aarch64" },
                         )
                     } else {
                         emptyList()

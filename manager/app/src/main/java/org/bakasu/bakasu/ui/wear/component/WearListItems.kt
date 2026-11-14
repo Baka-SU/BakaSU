@@ -134,6 +134,7 @@ fun TransformingLazyColumnItemScope.WearActionButton(
     colors: ButtonColors = wearButtonColors(),
     compact: Boolean = false,
     largeIcon: Boolean = false,
+    isLoading: Boolean = false,
 ) {
     WearRefreshItem(transformationSpec, Modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)) {
         WearActionButton(
@@ -143,6 +144,7 @@ fun TransformingLazyColumnItemScope.WearActionButton(
             colors = colors,
             compact = compact,
             largeIcon = largeIcon,
+            isLoading = isLoading,
             transformation = SurfaceTransformation(transformationSpec),
         )
     }
@@ -160,6 +162,7 @@ fun WearActionButton(
     colors: ButtonColors = wearButtonColors(),
     compact: Boolean = false,
     largeIcon: Boolean = false,
+    isLoading: Boolean = false,
     transformation: SurfaceTransformation? = null,
 ) {
     Button(
@@ -169,7 +172,7 @@ fun WearActionButton(
         transformation = transformation,
         colors = colors,
         contentPadding = if (largeIcon) ButtonDefaults.ButtonWithLargeIconContentPadding else ButtonDefaults.ContentPadding,
-        icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
+        icon = icon?.let { { if (isLoading) WearLoadingIndicator(Modifier.size(ButtonDefaults.IconSize)) else Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
         secondaryLabel = secondaryText?.let { text -> { WearAutoMarqueeText(text, maxLines = 2) } },
     ) { WearAutoMarqueeText(label) }
 }
@@ -185,12 +188,13 @@ fun WearBadge(
     containerColor: Color = MaterialTheme.colorScheme.tertiary,
     contentColor: Color = MaterialTheme.colorScheme.onTertiary,
     style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyExtraSmall,
+    horizontalPadding: androidx.compose.ui.unit.Dp = 4.dp,
 ) {
     Text(
         text,
         modifier = modifier
             .background(containerColor, MaterialTheme.shapes.extraSmall)
-            .padding(horizontal = 4.dp),
+            .padding(horizontal = horizontalPadding),
         color = contentColor,
         style = style,
         maxLines = 1,
