@@ -185,8 +185,7 @@ class WearRepositoryLoadingTest {
         compose.setContent {
             MaterialTheme {
                 AppScaffold {
-                    WearList(isRefreshing = refreshing.value, onBack = {}) { spec ->
-                        item { WearPageHeader(spec, label) }
+                    WearList(pageTitle = label, isRefreshing = refreshing.value, onBack = {}) { spec ->
                         item { WearChip(spec, stringResource(R.string.readme)) }
                     }
                 }

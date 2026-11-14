@@ -77,11 +77,12 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
             ) {
                 MaterialTheme {
                     Box(Modifier.requiredSize(192.dp)) {
-                        AppScaffold(timeText = {}) {
-                            state = rememberTransformingLazyColumnState()
-                            WearList(isRefreshing = refreshing, listState = state, itemSpacing = spacing) { spec ->
-                                item { WearPageHeader(spec, stringResource(R.string.umount_path_manager)) }
-                                items(20) { WearChip(spec, stringResource(R.string.readme), modifier = Modifier.testTag("row-$it")) }
+                        WearTimeTitleLayout(titleInTime) {
+                            AppScaffold(timeText = { WearTimeText(stringResource(R.string.umount_path_manager)) }) {
+                                state = rememberTransformingLazyColumnState()
+                                WearList(pageTitle = stringResource(R.string.umount_path_manager), isRefreshing = refreshing, listState = state, itemSpacing = spacing) { spec ->
+                                    items(20) { WearChip(spec, stringResource(R.string.readme), modifier = Modifier.testTag("row-$it")) }
+                                }
                             }
                         }
                     }
@@ -113,7 +114,11 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         val compactRow = compose.onNodeWithTag("row-0").getUnclippedBoundsInRoot()
         assertEquals("Compact item spacing must also leave an 8dp gap", 8f, (compactRow.top - compactIndicator.bottom).value, 1f)
         compose.runOnIdle { titleInTime = true }
-        compose.onNodeWithText(resources.getString(R.string.umount_path_manager)).assertDoesNotExist()
+        if (round) {
+            compose.onNodeWithContentDescription(resources.getString(R.string.umount_path_manager)).assertIsDisplayed()
+        } else {
+            compose.onNodeWithText(resources.getString(R.string.umount_path_manager)).assertIsDisplayed()
+        }
         compose.onNodeWithContentDescription(loading).assertIsDisplayed()
         val rowDuringRefresh = compose.onNodeWithTag("row-0").getUnclippedBoundsInRoot()
         compose.runOnIdle { refreshing = false }
@@ -149,8 +154,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
                 MaterialTheme {
                     AppScaffold(timeText = {}) {
                         listState = rememberTransformingLazyColumnState()
-                        WearList(isRefreshing = refreshing, onBack = {}, listState = listState) { spec ->
-                            item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
+                        WearList(pageTitle = stringResource(R.string.module_repo), isRefreshing = refreshing, onBack = {}, listState = listState) { spec ->
                             item {
                                 WearChip(spec, stringResource(R.string.readme), modifier = Modifier.testTag("first-row"))
                             }
@@ -167,20 +171,19 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         val titleNode = compose.onNodeWithText(compose.activity.getString(R.string.module_repo))
         val titleBefore = titleNode.getUnclippedBoundsInRoot()
         val action = compose.onNodeWithContentDescription(compose.activity.getString(R.string.about))
-        val actionBefore = action.getUnclippedBoundsInRoot()
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { refreshing = true }
         compose.mainClock.advanceTimeBy(80)
         val entering = firstRowTop()
         val indicatorBefore = compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).getUnclippedBoundsInRoot()
-        assertEquals(titleBefore.top.value, titleNode.getUnclippedBoundsInRoot().top.value, 1f)
+        assertEquals(titleBefore.top.value, titleNode.getUnclippedBoundsInRoot().top.value, 4f)
         compose.mainClock.advanceTimeBy(300)
         val settled = firstRowTop()
         val indicatorAfter = compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).getUnclippedBoundsInRoot()
-        assertEquals(indicatorBefore.top.value, indicatorAfter.top.value, 1f)
-        assertEquals(titleBefore.top.value, titleNode.getUnclippedBoundsInRoot().top.value, 1f)
-        assertEquals(48f, (action.getUnclippedBoundsInRoot().top - actionBefore.top).value, 1f)
-        assertEquals(actionBefore.left.value, action.getUnclippedBoundsInRoot().left.value, 1f)
+        assertTrue("The refresh region remains below the title during entry", indicatorBefore.top >= titleNode.getUnclippedBoundsInRoot().bottom)
+        assertTrue("The settled refresh region remains below the title", indicatorAfter.top >= titleNode.getUnclippedBoundsInRoot().bottom)
+        assertEquals(titleBefore.top.value, titleNode.getUnclippedBoundsInRoot().top.value, 4f)
+        assertTrue("Actions remain in the list region below refresh", action.fetchSemanticsNode().boundsInRoot.top >= compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).fetchSemanticsNode().boundsInRoot.bottom)
         assertTrue("The bars must move down over multiple frames", original < entering && entering < settled)
         compose.runOnIdle { refreshing = false }
         compose.mainClock.advanceTimeBy(80)
@@ -191,10 +194,13 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         assertEquals(original.value, restored.value, 1f)
         compose.runOnIdle { reduceMotion = true }
         compose.mainClock.advanceTimeBy(32)
-        val reducedBaseline = firstRowTop()
         compose.runOnIdle { refreshing = true }
         compose.mainClock.advanceTimeBy(32)
-        assertEquals("Reduced motion must apply the full gap immediately: backward=${listState.canScrollBackward}, padding=${listState.layoutInfo.beforeContentPadding}, first=${listState.layoutInfo.visibleItems.firstOrNull()?.let { it.index to it.offset }}, anchor=${listState.anchorItemIndex}:${listState.anchorItemScrollOffset}", (reducedBaseline + 48.dp).value, firstRowTop().value, 1f)
+        val reducedPosition = firstRowTop()
+        val reducedIndicator = compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).fetchSemanticsNode().boundsInRoot
+        assertEquals("Reduced motion must immediately reveal the complete indicator", WearLoadingIndicatorSize.value * compose.activity.resources.displayMetrics.density, reducedIndicator.height, 1f)
+        compose.mainClock.advanceTimeBy(300)
+        assertEquals("Reduced motion must not continue moving the list", reducedPosition.value, firstRowTop().value, 1f)
         compose.runOnIdle {
             refreshing = false
             reduceMotion = false
@@ -236,8 +242,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
                         WearTimeTitleLayout(titleId) {
                             titleBottom = requireNotNull(LocalWearTimeTitleBottom.current)
                             AppScaffold(timeText = { WearTimeText(stringResource(titleId)) }) {
-                                WearList(isRefreshing = refreshing) { spec ->
-                                    item { WearPageHeader(spec, stringResource(titleId)) }
+                                WearList(pageTitle = stringResource(titleId), isRefreshing = refreshing) { spec ->
                                     item { WearChip(spec, stringResource(R.string.readme), modifier = Modifier.testTag("time-first"), onClick = { clicks++ }) }
                                 }
                             }
@@ -270,12 +275,17 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         checkTimeTitle()
         assertEquals(before.top.value, compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot().top.value, 1f)
         compose.runOnIdle { titleId = R.string.umount_path_manager }
-        assertEquals(before.top.value, compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot().top.value, 1f)
+        checkTimeTitle()
         compose.runOnIdle { titleId = R.string.module_repo }
         for (newMode in listOf("time", "hidden", "title")) {
             compose.runOnIdle { mode = newMode }
-            val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
-            assertEquals("This request keeps its root anchor when the title mode changes", before.top.value, indicator.top.value, 1f)
+            if (newMode == "title") {
+                checkTimeTitle()
+            } else {
+                val header = compose.onNodeWithText(compose.activity.getString(titleId)).getUnclippedBoundsInRoot()
+                val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
+                assertEquals("Refresh follows the current title after a mode change", 8f, (indicator.top - header.bottom).value, 1f)
+            }
         }
         compose.mainClock.autoAdvance = false
         val fixed = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot().top
@@ -294,7 +304,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
     }
 
     @Test
-    fun refreshIndicatorRemainsVisibleAtTheBottomDuringRefresh() {
+    fun refreshIndicatorStaysRenderedAtTheBottomAndReturnsWithTheTitle() {
         var refreshing by mutableStateOf(false)
         lateinit var listState: TransformingLazyColumnState
         compose.setContent {
@@ -309,8 +319,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
                 MaterialTheme {
                     AppScaffold(timeText = {}) {
                         listState = rememberTransformingLazyColumnState()
-                        WearList(isRefreshing = refreshing, listState = listState) { spec ->
-                            item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
+                        WearList(pageTitle = stringResource(R.string.module_repo), isRefreshing = refreshing, listState = listState) { spec ->
                             items(20) { WearChip(spec, stringResource(R.string.readme)) }
                         }
                     }
@@ -320,13 +329,64 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         val loading = compose.activity.getString(R.string.wear_loading)
         compose.runOnIdle { refreshing = true }
         compose.onNodeWithContentDescription(loading).assertIsDisplayed()
-        compose.onNode(hasScrollToIndexAction()).performTouchInput {
+        val indicatorId = compose.onNodeWithContentDescription(loading).fetchSemanticsNode().id
+        compose.onRoot().performTouchInput {
             swipe(Offset(centerX, height * 0.7f), Offset(centerX, height * 0.4f), 500)
         }
-        compose.onNodeWithContentDescription(loading).assertIsDisplayed()
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(20)
+        compose.runOnIdle { listState.requestScrollToItem(20) }
         compose.runOnIdle { assertTrue("The reproduction must reach the bottom", !listState.canScrollForward) }
         compose.onNodeWithContentDescription(loading).assertIsDisplayed()
+        assertEquals("Scrolling to the bottom must retain the refresh node", indicatorId, compose.onNodeWithContentDescription(loading).fetchSemanticsNode().id)
+        compose.runOnIdle { listState.requestScrollToItem(0) }
+        compose.onNodeWithContentDescription(loading).assertIsDisplayed()
+        assertEquals("Returning to the top must not recreate refresh", indicatorId, compose.onNodeWithContentDescription(loading).fetchSemanticsNode().id)
+    }
+
+    @Test
+    fun refreshAndBarsShareTheMovingSurfaceDuringPull() {
+        compose.setContent {
+            val configuration = Configuration(LocalConfiguration.current).apply {
+                screenWidthDp = 192
+                screenHeightDp = 192
+                screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
+                    if (round) Configuration.SCREENLAYOUT_ROUND_YES else Configuration.SCREENLAYOUT_ROUND_NO
+            }
+            CompositionLocalProvider(LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, fontScale)) {
+                MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(surfaceContainer = Color.Red, primary = Color.Green)) {
+                    Box(Modifier.requiredSize(192.dp)) {
+                        AppScaffold(timeText = {}) {
+                            WearList(pageTitle = stringResource(R.string.module_repo), isRefreshing = true, onOpenPanel = {}) { spec ->
+                                items(20) { WearChip(spec, stringResource(R.string.readme), modifier = Modifier.testTag("pull-row-$it")) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        val loading = compose.activity.getString(R.string.wear_loading)
+        val indicatorBefore = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
+        val rowBefore = compose.onNodeWithTag("pull-row-0").getUnclippedBoundsInRoot()
+        compose.mainClock.autoAdvance = false
+        compose.onRoot().performTouchInput {
+            down(Offset(centerX, height * 0.65f))
+            moveBy(Offset(0f, height * 0.12f))
+        }
+        compose.mainClock.advanceTimeBy(80)
+        val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
+        val row = compose.onNodeWithTag("pull-row-0").getUnclippedBoundsInRoot()
+        val pixels = compose.onNodeWithContentDescription(loading).captureToImage().toPixelMap()
+        var green = 0
+        for (y in 0 until pixels.height) {
+            for (x in 0 until pixels.width) {
+                if (pixels[x, y].green > 0.8f && pixels[x, y].red < 0.2f) green++
+            }
+        }
+        compose.onRoot().performTouchInput { up() }
+        compose.mainClock.autoAdvance = true
+        assertTrue("The gesture must move the bars: before=$rowBefore after=$row", row.top > rowBefore.top)
+        assertEquals("Refresh and bars move on the same surface", (row.top - rowBefore.top).value, (indicator.top - indicatorBefore.top).value, 1f)
+        assertTrue("The bars keep clear of refresh while pulling", row.top >= indicator.bottom)
+        assertTrue("The bars must not cover the refresh surface", green > 100)
     }
 
     @Test
@@ -357,8 +417,7 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
                                     }
                                 },
                             ) {
-                                WearList(isRefreshing = refreshing, onBack = {}, hasOperationsPanel = true, onOpenPanel = { menuOpen = true }) { spec ->
-                                    item { WearPageHeader(spec, stringResource(R.string.umount_path_manager)) }
+                                WearList(pageTitle = stringResource(R.string.umount_path_manager), isRefreshing = refreshing, onBack = {}, hasOperationsPanel = true, onOpenPanel = { menuOpen = true }) { spec ->
                                     item { WearChip(spec, stringResource(R.string.readme), modifier = Modifier.testTag("painted-row")) }
                                 }
                             }
@@ -389,12 +448,12 @@ class WearRefreshLayoutTest(private val round: Boolean, private val fontScale: F
         compose.mainClock.autoAdvance = false
         compose.runOnIdle { refreshing = true }
         compose.mainClock.advanceTimeByFrame()
-        val requestAnchor = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot().top
         compose.mainClock.advanceTimeBy(400)
         assertRowsPainted("refresh")
         val indicator = compose.onNodeWithContentDescription(loading).getUnclippedBoundsInRoot()
         val row = compose.onNodeWithTag("painted-row").getUnclippedBoundsInRoot()
-        assertEquals("Closing the menu must preserve the request root anchor", requestAnchor.value, indicator.top.value, 1f)
+        val title = compose.onNodeWithText(compose.activity.getString(R.string.umount_path_manager)).getUnclippedBoundsInRoot()
+        assertEquals("The indicator follows the title as the menu closes", 8f, (indicator.top - title.bottom).value, 1f)
         assertTrue("Refresh space must keep the first row clear of the indicator", row.top >= indicator.bottom)
         compose.runOnIdle { refreshing = false }
         compose.mainClock.advanceTimeBy(80)

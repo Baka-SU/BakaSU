@@ -165,6 +165,7 @@ internal fun WearModuleRepoPage(
     val loading = isPageLoading || (state.isRefreshing && !state.isPullRefreshing)
     val failed = !loading && !state.isRefreshing && state.content == CatalogContent.FAILED
     WearList(
+        pageTitle = stringResource(R.string.module_repo),
         isLoading = loading,
         isRefreshing = state.isRefreshing && state.isPullRefreshing && !loading,
         onRefresh = onRefresh,
@@ -176,7 +177,6 @@ internal fun WearModuleRepoPage(
         hasOperationsPanel = hasOperationsPanel,
         panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
         if (failed) {
             item {
                 WearLoadFailureContent(spec, wearRepositoryFailureText(state.failures[state.repositoryUrl]))
@@ -394,8 +394,7 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String
     }
     val loading = state.loading || readmeLoading
     val hasContent = module != null && (section != "readme" || readme?.document != null)
-    WearList(isLoading = loading && !hasContent, isRefreshing = loading && hasContent, onBack = onBack) { spec ->
-        item { WearPageHeader(spec, module?.moduleName ?: stringResource(R.string.module_repo)) }
+    WearList(pageTitle = module?.moduleName ?: stringResource(R.string.module_repo), isLoading = loading && !hasContent, isRefreshing = loading && hasContent, onBack = onBack) { spec ->
         if (module != null) {
             when (section) {
                 "readme" -> when {

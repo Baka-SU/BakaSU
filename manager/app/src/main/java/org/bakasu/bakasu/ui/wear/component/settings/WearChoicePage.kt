@@ -36,6 +36,7 @@ fun WearChoicePage(
     onChoose: (String) -> Unit,
 ) {
     WearList(
+        pageTitle = title,
         onBack = onBack,
         snap = true,
         isLoading = isLoading,
@@ -45,7 +46,6 @@ fun WearChoicePage(
         hasOperationsPanel = hasOperationsPanel,
         panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
-        item { WearPageHeader(spec, title) }
         LazySegmentedColumn(choices, { it.first }) { (value, label) ->
             WearRefreshItem(spec, Modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)) {
                 RadioButton(

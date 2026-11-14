@@ -178,6 +178,7 @@ internal fun WearAddRepositoryPage(onBack: () -> Unit) {
             }
         } else {
             WearList(
+                pageTitle = stringResource(R.string.repo_add_repository),
                 onBack = onBack,
                 isBusy = state.busy,
                 isRefreshing = state.busy,
@@ -185,7 +186,6 @@ internal fun WearAddRepositoryPage(onBack: () -> Unit) {
                 confirmLabel = stringResource(R.string.add),
                 confirmEnabled = state.url.isNotBlank() && !state.busy,
             ) { spec ->
-                item { WearPageHeader(spec, stringResource(R.string.repo_add_repository)) }
                 SegmentedColumn(listOf(RepositoryInput.Url, RepositoryInput.Api), { it }) { field ->
                     WearSettingsJumpPageWidget(
                         spec,

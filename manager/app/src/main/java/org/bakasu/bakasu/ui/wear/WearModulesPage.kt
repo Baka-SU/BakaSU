@@ -69,6 +69,7 @@ internal fun WearModulesPage(
     val loading = state.isRefreshing && state.moduleList.isEmpty() && state.search.isEmpty()
     WearErrorDialog(error.takeUnless { state.isRefreshing })
     WearList(
+        pageTitle = stringResource(R.string.module),
         isLoading = loading,
         isRefreshing = state.isRefreshing && !loading,
         onRefresh = onRefresh,
@@ -79,7 +80,6 @@ internal fun WearModulesPage(
         panelLabel = stringResource(R.string.wear_operations),
         hasOperationsPanel = hasOperationsPanel,
     ) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.module)) }
         if (state.moduleList.isEmpty() && error.isNullOrBlank()) {
             item {
                 WearEmptyState(spec, Icons.Rounded.Extension, stringResource(R.string.module_empty))

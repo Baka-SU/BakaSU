@@ -112,6 +112,7 @@ internal fun WearLogsPage(
     }
     // Every visit and log operation loads the page; only an explicit refresh keeps the list.
     WearList(
+        pageTitle = stringResource(if (onEditSearch != null) R.string.sulog_search_placeholder else R.string.sulog),
         listState = listState,
         isLoading = pageLoading,
         isRefreshing = refreshing,
@@ -121,7 +122,6 @@ internal fun WearLogsPage(
         panelLabel = stringResource(R.string.wear_operations),
         hasOperationsPanel = hasOperationsPanel,
     ) { spec ->
-        item { WearPageHeader(spec, stringResource(if (onEditSearch != null) R.string.sulog_search_placeholder else R.string.sulog)) }
         when (state.sulogStatus) {
             "unsupported" -> item { WearStatusItem(spec, Icons.Rounded.Warning, stringResource(R.string.sulog_unsupported_title)) }
 

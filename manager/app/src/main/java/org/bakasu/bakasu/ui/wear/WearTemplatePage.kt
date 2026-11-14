@@ -101,6 +101,7 @@ internal fun WearTemplatePage(
         pendingDelete = null
     }
     WearList(
+        pageTitle = stringResource(if (searchResults) R.string.wear_template_search else R.string.settings_profile_template),
         isLoading = state.isLoading,
         isRefreshing = state.isRefreshing && !state.isLoading,
         onBack = onBack,
@@ -109,7 +110,6 @@ internal fun WearTemplatePage(
         hasOperationsPanel = true,
         panelLabel = stringResource(R.string.wear_operations),
     ) { spec ->
-        item { WearPageHeader(spec, stringResource(if (searchResults) R.string.wear_template_search else R.string.settings_profile_template)) }
         if (state.loadFailed) {
             item { WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_load_failed), tone = WearStatusTone.ERROR) }
         } else if (!state.isLoading && shownTemplates.isEmpty()) {
@@ -226,6 +226,7 @@ internal fun WearOnlineTemplatePage(
         },
     ) {
         WearList(
+            pageTitle = stringResource(R.string.wear_template_online),
             isLoading = loading,
             isRefreshing = state.isRefreshing && !loading,
             onBack = onBack,
@@ -241,7 +242,6 @@ internal fun WearOnlineTemplatePage(
             },
             confirmLabel = if (failed) stringResource(R.string.network_retry) else null,
         ) { spec ->
-            item { WearPageHeader(spec, stringResource(R.string.wear_template_online)) }
             if (failed) {
                 item {
                     WearLoadFailureContent(

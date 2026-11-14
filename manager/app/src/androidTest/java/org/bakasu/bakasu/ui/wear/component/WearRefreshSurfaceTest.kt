@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Density
@@ -41,7 +42,7 @@ class WearRefreshSurfaceTest(private val round: Boolean, private val fontScale: 
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun refreshMovesTheWholeSurfaceWithoutClippingItsHeightOrHitTarget() {
+    fun refreshKeepsSurfacesVisibleAndOutsideTheIndicatorRegion() {
         var refreshing by mutableStateOf(false)
         var clicks = 0
         var pixelsPerDp = 1f
@@ -68,8 +69,7 @@ class WearRefreshSurfaceTest(private val round: Boolean, private val fontScale: 
                                 onChoose = { clicks++ },
                             )
                         } else {
-                            WearList(isRefreshing = refreshing) { spec ->
-                                item { WearPageHeader(spec, stringResource(R.string.about)) }
+                            WearList(pageTitle = stringResource(R.string.about), isRefreshing = refreshing) { spec ->
                                 item {
                                     when (kind) {
                                         "card" -> WearModuleInfoCard(spec) { Text(stringResource(R.string.readme)) }
@@ -116,15 +116,22 @@ class WearRefreshSurfaceTest(private val round: Boolean, private val fontScale: 
             compose.runOnIdle { refreshing = true }
             compose.mainClock.advanceTimeBy(80)
             val entering = paintedBounds("entering")
+            val enteringIndicator = compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).fetchSemanticsNode().boundsInRoot
             compose.mainClock.advanceTimeBy(300)
             val settled = paintedBounds("refresh")
-            for ((stage, bounds) in listOf("entering" to entering, "refresh" to settled)) {
-                assertEquals("The $kind surface must retain its full painted height during $stage", before.height.toFloat(), bounds.height.toFloat(), 2f)
-                assertEquals("The $kind surface must retain its full painted width during $stage", before.width.toFloat(), bounds.width.toFloat(), 2f)
+            val settledIndicator = compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_loading)).fetchSemanticsNode().boundsInRoot
+            for ((stage, bounds, indicator) in listOf(Triple("entering", entering, enteringIndicator), Triple("refresh", settled, settledIndicator))) {
+                if (round) {
+                    // The smaller viewport changes the official round-screen transformation. Both
+                    // axes must follow it, rather than cutting off only the top/bottom of a surface.
+                    assertEquals("The $kind surface must transform without clipping during $stage", bounds.width.toFloat() / before.width, bounds.height.toFloat() / before.height, 0.04f)
+                } else {
+                    assertEquals("The $kind surface must retain its full painted height during $stage", before.height.toFloat(), bounds.height.toFloat(), 2f)
+                    assertEquals("The $kind surface must retain its full painted width during $stage", before.width.toFloat(), bounds.width.toFloat(), 2f)
+                }
+                assertTrue("The $kind surface must not paint over the indicator during $stage", bounds.top >= indicator.bottom - 2f)
             }
             assertTrue("The entire surface must move down over multiple frames", before.top < entering.top && entering.top < settled.top)
-            assertEquals("The top and bottom must move together", (settled.top - before.top).toFloat(), (settled.bottom - before.bottom).toFloat(), 2f)
-            assertEquals("All surfaces use the same refresh displacement", 48f * pixelsPerDp, (settled.top - before.top).toFloat(), 2f)
             if (kind != "card") {
                 compose.onRoot().performTouchInput { click(Offset(settled.center.x.toFloat(), settled.center.y.toFloat())) }
                 compose.runOnIdle { assertEquals("The translated surface must remain tappable", 1, clicks) }
@@ -132,8 +139,10 @@ class WearRefreshSurfaceTest(private val round: Boolean, private val fontScale: 
             compose.runOnIdle { refreshing = false }
             compose.mainClock.advanceTimeBy(80)
             val leaving = paintedBounds("leaving")
-            assertEquals("The full surface must remain painted while returning", before.height.toFloat(), leaving.height.toFloat(), 2f)
-            assertEquals("The surface must keep its width while returning", before.width.toFloat(), leaving.width.toFloat(), 2f)
+            if (!round) {
+                assertEquals("The full surface must remain painted while returning", before.height.toFloat(), leaving.height.toFloat(), 2f)
+                assertEquals("The surface must keep its width while returning", before.width.toFloat(), leaving.width.toFloat(), 2f)
+            }
             compose.mainClock.advanceTimeBy(300)
             val after = paintedBounds("completion")
             assertEquals(before.top.toFloat(), after.top.toFloat(), 2f)

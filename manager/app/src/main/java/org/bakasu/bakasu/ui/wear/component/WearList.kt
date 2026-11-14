@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -29,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -62,20 +65,17 @@ import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
-import androidx.wear.compose.material3.CircularProgressIndicator
-import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.EdgeButton
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ListHeaderDefaults
-import androidx.wear.compose.material3.LocalContentColor
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.ResponsiveTransformationSpec
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.TransformationVariableSpec
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 
@@ -108,8 +108,6 @@ internal fun Modifier.wearRefreshOffset(): Modifier {
     val offset = LocalWearRefreshOffset.current
     return this.offset { IntOffset(0, offset.roundToPx()) }
 }
-
-internal val LocalWearRefreshHeaderBottom = compositionLocalOf<MutableState<Float?>?> { null }
 
 /**
  * A Wear screen whose crown and vertical touch gestures scroll only its own content.
@@ -144,6 +142,7 @@ fun WearList(
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     fixedHeader: (@Composable () -> Unit)? = null,
     timeText: (@Composable () -> Unit)? = null,
+    pageTitle: String? = null,
     content: TransformingLazyColumnScope.(TransformationSpec) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -161,20 +160,7 @@ fun WearList(
         // Keep it across recompositions so a stream of crown events can finish its scroll animation.
         remember(listState, flingBehavior, density, configuration) { behavior }
     }
-    val headerBottom = remember(timeMode, configuration, density) { mutableStateOf<Float?>(null) }
     var viewportTop by remember { mutableFloatStateOf(0f) }
-    var viewportReady by remember { mutableStateOf(false) }
-    var refreshFallback by remember { mutableStateOf(0.dp) }
-    var refreshAnchor by remember(isRefreshing) {
-        mutableStateOf(
-            if (isRefreshing && viewportReady) {
-                (if (timeMode == "title") timeTitleBottom?.value else headerBottom.value)
-                    ?: (viewportTop + with(density) { refreshFallback.toPx() })
-            } else {
-                null
-            },
-        )
-    }
     // Round screens scale and fade items at the edges; square screens (including the screen shape
     // setting) keep items at full size, as nothing is cut off there.
     val transformationSpec = if (LocalConfiguration.current.isScreenRound) {
@@ -185,21 +171,14 @@ fun WearList(
     val pullOffset = remember { mutableFloatStateOf(0f) }
     val pullProgress = remember { mutableFloatStateOf(0f) }
     val reduceMotion = LocalReduceMotion.current
-    // Open space beneath the title at the list start. Scrolling away dismisses both the gap and its
-    // indicator for this request, so refresh feedback cannot hover over content farther down.
-    var showRefreshGap by remember(isRefreshing, isLoading, listState) {
-        val atStart = listState.isAtWearListStart(with(density) { 2.dp.roundToPx() })
-        mutableStateOf(isRefreshing && !isLoading && atStart)
-    }
-    LaunchedEffect(listState.isScrollInProgress, listState.canScrollBackward) {
-        if (listState.isScrollInProgress && listState.canScrollBackward) showRefreshGap = false
-    }
+    // Keep the refresh gap stable while the list scrolls, including at its bottom boundary.
+    val showRefreshGap = isRefreshing && !isLoading
     val titleBottomPadding = if (timeMode == "title") 0.dp else ListHeaderDefaults.ContentPadding.calculateBottomPadding()
+    val refreshHeight = WearLoadingIndicatorSize + WearRefreshSpacing * 2 - if (pageTitle != null) itemSpacing else 0.dp
     // A display change starts with its own geometry instead of animating from the old title gap.
     val refreshOffset by key(timeMode, configuration, density) {
         animateDpAsState(
-            // Reuse the space already below the title text instead of adding it a second time.
-            targetValue = if (showRefreshGap) (WearLoadingIndicatorSize + WearRefreshSpacing * 2 - titleBottomPadding - itemSpacing).coerceAtLeast(0.dp) else 0.dp,
+            targetValue = if (showRefreshGap) refreshHeight else 0.dp,
             animationSpec = if (reduceMotion) snap() else tween(180),
             label = "wear-refresh-content-offset",
         )
@@ -341,69 +320,105 @@ fun WearList(
             start = scaffoldPadding.calculateStartPadding(layoutDirection),
             end = scaffoldPadding.calculateEndPadding(layoutDirection),
             top = maxOf(scaffoldPadding.calculateTopPadding(), timeSpace) + topContentPadding,
-            // Keep the final menu button inside the straight moving edge, including on round screens.
-            bottom = maxOf(scaffoldPadding.calculateBottomPadding(), if (onClosePanel != null) 24.dp else 0.dp) + refreshOffset,
+            // Keep the final menu button inside the bottom edge, including on round screens.
+            bottom = maxOf(scaffoldPadding.calculateBottomPadding(), if (onClosePanel != null) 24.dp else 0.dp),
         )
-        SideEffect { refreshFallback = contentPadding.calculateTopPadding() }
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 WearLoadingIndicator(Modifier.semantics { contentDescription = loadingDescription })
             }
         } else {
-            CompositionLocalProvider(LocalWearRefreshOffset provides refreshOffset, LocalWearRefreshHeaderBottom provides headerBottom) {
-                Box(Modifier.fillMaxSize()) {
-                    Column(Modifier.fillMaxSize()) {
-                        if (fixedHeader != null) {
-                            Box(
-                                Modifier.padding(
-                                    start = contentPadding.calculateStartPadding(layoutDirection),
-                                    end = contentPadding.calculateEndPadding(layoutDirection),
-                                    top = contentPadding.calculateTopPadding(),
-                                    bottom = itemSpacing,
-                                ),
-                            ) {
+            // Header, refresh and list occupy separate layout regions on the same moving surface.
+            val keepRefreshSpace = showRefreshGap || refreshOffset > 0.dp
+            val pinTitle = keepRefreshSpace && pageTitle != null && fixedHeader == null
+            val refreshBoundary = remember(pinTitle) {
+                when {
+                    listState.isAtWearListStart(with(density) { 2.dp.roundToPx() }) -> -1
+                    !listState.canScrollForward -> 1
+                    else -> 0
+                }
+            }
+            LaunchedEffect(pinTitle, refreshOffset) {
+                if (!keepRefreshSpace || pageTitle == null) return@LaunchedEffect
+                // A resizing viewport must retain its top/bottom boundary rather than an old
+                // header-relative offset. Middle-of-list anchors remain untouched.
+                when (refreshBoundary) {
+                    -1 -> listState.requestScrollToItem(0)
+                    1 -> listState.requestScrollToItem((listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0))
+                }
+            }
+            val timeBottom = timeTitleBottom?.value
+            val pinnedTopPadding = if (timeMode == "title" && timeBottom != null) {
+                with(density) { ((timeBottom - viewportTop) / pageScale.coerceAtLeast(0.01f)).toDp().coerceAtLeast(0.dp) }
+            } else {
+                contentPadding.calculateTopPadding()
+            }
+            CompositionLocalProvider(LocalWearRefreshOffset provides 0.dp) {
+                Column(
+                    Modifier.fillMaxSize().graphicsLayer {
+                        translationY = if (panelHosted && onClosePanel != null) {
+                            0f
+                        } else if (!hasOperationsPanel || pullProgress.floatValue < 0f) {
+                            animatedOffset
+                        } else {
+                            0f
+                        }
+                    },
+                ) {
+                    if (fixedHeader != null || keepRefreshSpace) {
+                        Box(
+                            Modifier.fillMaxWidth().padding(
+                                start = contentPadding.calculateStartPadding(layoutDirection),
+                                end = contentPadding.calculateEndPadding(layoutDirection),
+                                top = if (keepRefreshSpace) pinnedTopPadding else contentPadding.calculateTopPadding(),
+                                bottom = if (fixedHeader != null && !keepRefreshSpace) itemSpacing else 0.dp,
+                            ),
+                        ) {
+                            if (fixedHeader != null) {
                                 fixedHeader()
+                            } else if (pinTitle) {
+                                val progress = (refreshOffset / refreshHeight).coerceIn(0f, 1f)
+                                WearPageHeader(pageTitle!!, bottomPadding = titleBottomPadding * (1f - progress))
                             }
                         }
-                        Box(Modifier.weight(1f).then(if (fixedHeader != null) Modifier.clipToBounds() else Modifier)) {
-                            TransformingLazyColumn(
-                                modifier = Modifier.fillMaxSize().graphicsLayer {
-                                    translationY = if (panelHosted && onClosePanel != null) {
-                                        0f
-                                    } else if (!hasOperationsPanel || pullProgress.floatValue < 0f) {
-                                        animatedOffset
-                                    } else {
-                                        0f
-                                    }
-                                },
-                                state = listState,
-                                contentPadding = if (fixedHeader == null) {
-                                    contentPadding
-                                } else {
-                                    PaddingValues(
-                                        start = contentPadding.calculateStartPadding(layoutDirection),
-                                        end = contentPadding.calculateEndPadding(layoutDirection),
-                                        bottom = contentPadding.calculateBottomPadding(),
-                                    )
-                                },
-                                verticalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.Top),
-                                flingBehavior = if (snap) {
-                                    TransformingLazyColumnDefaults.snapFlingBehavior(listState)
-                                } else {
-                                    ScrollableDefaults.flingBehavior()
-                                },
-                                rotaryScrollableBehavior = rotaryBehavior,
-                            ) {
-                                content(transformationSpec)
-                            }
-                            // Pulling down at the top shows the panel indicator in the room the list makes for it.
-                            if ((onOpenPanel != null && !hasOperationsPanel) || (onClosePanel != null && closePanelOnPullDown)) {
-                                WearPullIndicator(
-                                    pullProgress.floatValue,
-                                    closing = onClosePanel != null,
-                                    Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
+                    }
+                    if (keepRefreshSpace) {
+                        Box(Modifier.fillMaxWidth().height(refreshOffset).clipToBounds(), contentAlignment = Alignment.TopCenter) {
+                            WearLoadingIndicator(
+                                Modifier.padding(top = WearRefreshSpacing).semantics { contentDescription = loadingDescription },
+                                contained = true,
+                            )
+                        }
+                    }
+                    Box(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
+                        TransformingLazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            userScrollEnabled = !isRefreshing,
+                            state = listState,
+                            contentPadding = if (fixedHeader == null && !keepRefreshSpace) {
+                                contentPadding
+                            } else {
+                                PaddingValues(
+                                    start = contentPadding.calculateStartPadding(layoutDirection),
+                                    end = contentPadding.calculateEndPadding(layoutDirection),
+                                    bottom = contentPadding.calculateBottomPadding(),
                                 )
+                            },
+                            verticalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.Top),
+                            flingBehavior = if (snap) {
+                                TransformingLazyColumnDefaults.snapFlingBehavior(listState)
+                            } else {
+                                ScrollableDefaults.flingBehavior()
+                            },
+                            rotaryScrollableBehavior = rotaryBehavior,
+                        ) {
+                            if (pageTitle != null) {
+                                item {
+                                    // Retain index zero while refreshing so existing item anchors stay valid.
+                                    if (!pinTitle) WearPageHeader(transformationSpec, pageTitle) else Spacer(Modifier.height(with(density) { 1.toDp() }))
+                                }
                             }
+                            content(transformationSpec)
                         }
                     }
                 }
@@ -420,13 +435,10 @@ fun WearList(
         }
     }
     Box(
-        Modifier.fillMaxSize().then(gestureModifier).onGloballyPositioned {
-            viewportTop = it.positionInRoot().y
-            viewportReady = true
-        }.onSizeChanged { viewportHeight = it.height.toFloat().coerceAtLeast(1f) },
+        Modifier.fillMaxSize().then(gestureModifier).onGloballyPositioned { viewportTop = it.positionInRoot().y }.onSizeChanged { viewportHeight = it.height.toFloat().coerceAtLeast(1f) },
     ) {
         // The edge button and the room it takes stay hidden until loading ends.
-        if (!isLoading && (onBack != null || onConfirm != null || backToTop)) {
+        if (!isLoading && !isRefreshing && refreshOffset == 0.dp && (onBack != null || onConfirm != null || backToTop)) {
             ScreenScaffold(
                 scrollState = listState,
                 modifier = pageModifier,
@@ -434,7 +446,8 @@ fun WearList(
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
                 edgeButton = {
                     EdgeButton(
-                        enabled = !isRefreshing && (onConfirm == null || confirmEnabled),
+                        enabled = !isRefreshing && (onConfirm == null || confirmEnabled) &&
+                            (onClosePanel != null || onConfirm != null || !backToTop || listState.canScrollBackward),
                         onClick = {
                             if (onClosePanel != null) {
                                 onPanelClosing?.invoke()
@@ -442,23 +455,22 @@ fun WearList(
                             } else if (onConfirm != null) {
                                 onConfirm()
                             } else if (backToTop) {
-                                scope.launch { listState.animateScrollToItem(0) }
+                                scope.launch { if (reduceMotion) listState.scrollToItem(0) else listState.animateScrollToItem(0) }
                             } else {
                                 onBack?.invoke()
                             }
                         },
                         // Dragging on the edge button keeps scrolling the list, as in the M3 list guidance.
-                        modifier = Modifier.offset { IntOffset(0, refreshOffset.roundToPx()) }.scrollable(
+                        modifier = Modifier.scrollable(
                             listState,
+                            enabled = !isRefreshing,
                             orientation = Orientation.Vertical,
                             reverseDirection = true,
                             overscrollEffect = rememberOverscrollEffect(),
                         ),
                     ) {
-                        if (onClosePanel != null && pullProgress.floatValue < 0f) {
-                            WearPullIndicator(-pullProgress.floatValue, closing = true)
-                        } else if (onConfirm != null && confirmLabel != null) {
-                            Text(confirmLabel)
+                        if (onConfirm != null && confirmLabel != null) {
+                            WearAutoMarqueeText(confirmLabel)
                         } else {
                             Icon(
                                 if (onClosePanel != null) {
@@ -493,21 +505,6 @@ fun WearList(
                 timeText = timeText,
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
             ) { listContent(it) }
-        }
-        if (isRefreshing && !isLoading) {
-            val measuredBottom = if (timeMode == "title") timeTitleBottom?.value else headerBottom.value
-            val fallback = viewportTop + with(density) { refreshFallback.toPx() }
-            // The request owns a root-space anchor. Menu scaling, scrolling and title changes
-            // never move this unscaled sibling of the page's scaffold.
-            SideEffect {
-                if (refreshAnchor == null && viewportReady) refreshAnchor = (measuredBottom ?: fallback).coerceAtLeast(fallback)
-            }
-            val top = with(density) { ((refreshAnchor ?: measuredBottom ?: fallback) - viewportTop).toDp() }
-            WearLoadingIndicator(
-                Modifier.align(Alignment.TopCenter).offset(y = top + WearRefreshSpacing)
-                    .semantics { contentDescription = loadingDescription },
-                contained = true,
-            )
         }
     }
 }

@@ -59,16 +59,16 @@ internal fun WearSuperUserPage(
     hasOperationsPanel: Boolean = false,
 ) {
     // As on the phone: an empty list shows the loading indicator in place of the page; once it has
-    // content, refreshing overlays a contained indicator without removing the list.
+    // content, refreshing reserves an indicator region without removing the list.
     val loading = state.isRefreshing && state.appGroupList.isEmpty() && state.search.isEmpty()
     WearErrorDialog(error.takeUnless { state.isRefreshing })
     WearList(
+        pageTitle = stringResource(R.string.superuser),
         isLoading = loading, isRefreshing = state.isRefreshing && !loading, onRefresh = onRefresh,
         onBack = onBack, onOpenPanel = onOpenPanel, panelLabel = stringResource(R.string.wear_operations),
         hasOperationsPanel = hasOperationsPanel,
         snap = true, listState = listState, backToTop = backToTop,
     ) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.superuser)) }
         if (state.appGroupList.isEmpty() && error.isNullOrBlank()) {
             item {
                 WearEmptyState(spec, Icons.Rounded.Archive, stringResource(R.string.no_apps_found))

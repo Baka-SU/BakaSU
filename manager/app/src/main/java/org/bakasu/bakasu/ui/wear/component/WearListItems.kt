@@ -66,12 +66,8 @@ fun WearPageHeader(
     title: String,
     modifier: Modifier = Modifier,
     transformation: SurfaceTransformation? = null,
+    bottomPadding: androidx.compose.ui.unit.Dp? = null,
 ) {
-    val headerBottom = LocalWearRefreshHeaderBottom.current
-    DisposableEffect(headerBottom, title, LocalWearTimeOptions.current.mode) {
-        onDispose { headerBottom?.value = null }
-    }
-    val position = Modifier.onGloballyPositioned { headerBottom?.value = it.boundsInRoot().bottom }
     Column(modifier.fillMaxWidth()) {
         if (LocalWearTimeOptions.current.mode == "title") {
             // TimeText owns the title and its measured refresh anchor.
@@ -80,16 +76,16 @@ fun WearPageHeader(
             val side = maxOf(14.dp, (LocalConfiguration.current.screenWidthDp * 0.073f).dp)
             val defaults = ListHeaderDefaults.ContentPadding
             ListHeader(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().then(if (bottomPadding != null) Modifier.heightIn(min = 1.dp) else Modifier),
                 transformation = transformation,
                 contentPadding = PaddingValues(
                     start = side,
                     end = side,
                     top = defaults.calculateTopPadding(),
-                    bottom = defaults.calculateBottomPadding(),
+                    bottom = bottomPadding ?: defaults.calculateBottomPadding(),
                 ),
             ) {
-                Text(title, modifier = position, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(title, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }

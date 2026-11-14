@@ -205,6 +205,7 @@ internal fun WearDynamicManagerAppsPage(
     }
     val needsRetry = state.loadFailed || state.apps.isEmpty()
     WearList(
+        pageTitle = stringResource(R.string.search_apps),
         isLoading = state.isLoading || state.isSubmitting,
         isRefreshing = state.isRefreshing && !state.isLoading,
         onOpenPanel = onOpenPanel,
@@ -215,7 +216,6 @@ internal fun WearDynamicManagerAppsPage(
         confirmLabel = stringResource(R.string.network_retry),
         confirmEnabled = !state.isRefreshing,
     ) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.search_apps)) }
         if (needsRetry) {
             item {
                 WearEmptyState(
@@ -293,6 +293,7 @@ internal fun WearUmountPage(state: UmountManagerUiState, onBack: () -> Unit, onO
     val paths = state.umountPaths.filter { it.path.contains(query) }
     val listState = rememberTransformingLazyColumnState()
     WearList(
+        pageTitle = stringResource(if (query.isEmpty()) R.string.umount_path_manager else R.string.wear_search_umount_paths),
         isLoading = state.isLoading,
         isRefreshing = state.isRefreshing,
         onBack = onBack,
@@ -301,7 +302,6 @@ internal fun WearUmountPage(state: UmountManagerUiState, onBack: () -> Unit, onO
         panelLabel = stringResource(R.string.wear_operations),
         listState = listState,
     ) { spec ->
-        item { WearPageHeader(spec, stringResource(if (query.isEmpty()) R.string.umount_path_manager else R.string.wear_search_umount_paths)) }
         if (paths.isEmpty()) {
             item { WearEmptyState(spec, Icons.Rounded.Folder, stringResource(if (state.umountPaths.isEmpty()) R.string.no_any_umount_path else R.string.search_no_any_match)) }
         }
