@@ -5,10 +5,16 @@ import android.util.Log
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.util.UUID
 import java.util.concurrent.Semaphore
 import kotlin.concurrent.thread
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import org.bakasu.bakasu.domain.model.WebUiCommandResult
 import org.bakasu.bakasu.domain.model.WebUiProcess
 import org.json.JSONObject
@@ -129,19 +135,42 @@ class RemoteWebUiBackend internal constructor(
     // but let a long-lived process use its own service/channel alongside ordinary requests.
     private val requests = Semaphore(1, true)
     private val processes = Semaphore(1, true)
+    private val connections = mutableSetOf<BridgeConnection>()
+    private var closed = false
+
+    private fun connect(operation: String): BridgeConnection {
+        synchronized(connections) { check(!closed) }
+        val connection = transport.connect(peerAddress, operation)
+        synchronized(connections) {
+            if (closed) {
+                connection.close()
+                error("Remote WebUI is closed")
+            }
+            connections.add(connection)
+        }
+        return connection
+    }
+
+    private fun closeConnection(connection: BridgeConnection) {
+        synchronized(connections) { connections.remove(connection) }
+        connection.close()
+    }
 
     private fun <T> call(op: String, arg: String, extra: Int = 0, timeout: Boolean = true, onConnection: ((BridgeConnection) -> Unit)? = null, read: (DataInputStream) -> T): T {
         val streaming = op == "spawn"
         val lane = if (streaming) processes else requests
         lane.acquire()
         try {
-            transport.connect(peerAddress, if (streaming) WearWebUiProtocol.SPAWN_PATH else WearWebUiProtocol.RPC_PATH).use { connection ->
+            val connection = connect(if (streaming) WearWebUiProtocol.SPAWN_PATH else WearWebUiProtocol.RPC_PATH)
+            try {
                 onConnection?.invoke(connection)
                 val output = connection.output
                 val request = JSONObject().put("token", token).put("op", op).put("arg", arg).put("extra", extra)
                 with(WearWebUiProtocol) { output.writeFrame(FRAME_OK, request.toString().toByteArray()) }
                 val input = connection.input
                 return if (timeout) CompanionBridgeRepository.handshake(connection.socket) { read(input) } else read(input)
+            } finally {
+                closeConnection(connection)
             }
         } catch (error: Exception) {
             Log.w("RemoteWebUi", "Module RPC failed: $op", error)
@@ -152,7 +181,7 @@ class RemoteWebUiBackend internal constructor(
     }
 
     /** A single answer frame: its payload, or null when the watch answered with an error frame. */
-    private fun single(op: String, arg: String, extra: Int = 0): ByteArray? = call(op, arg, extra) { input ->
+    private fun single(op: String, arg: String, extra: Int = 0): ByteArray? = call(op, arg, extra, timeout = op != "exec") { input ->
         val (type, payload) = with(WearWebUiProtocol) { input.readFrame() }
         if (type != WearWebUiProtocol.FRAME_OK) Log.w("RemoteWebUi", "Module RPC rejected: $op, frame=$type")
         payload.takeIf { type == WearWebUiProtocol.FRAME_OK }
@@ -213,7 +242,7 @@ class RemoteWebUiBackend internal constructor(
         var connection: BridgeConnection? = null
         var streaming = false
         try {
-            connection = transport.connect(peerAddress, WearWebUiProtocol.RPC_PATH)
+            connection = connect(WearWebUiProtocol.RPC_PATH)
             val output = connection.output
             val request = JSONObject().put("token", token).put("op", "file").put("arg", path).put("extra", 0)
             with(WearWebUiProtocol) { output.writeFrame(FRAME_OK, request.toString().toByteArray()) }
@@ -235,12 +264,18 @@ class RemoteWebUiBackend internal constructor(
                     ByteArray(0).inputStream()
                 }
 
-                else -> RemoteFileInputStream(connection, input, payload, requests::release).also { streaming = true }
+                else -> {
+                    val activeConnection = connection
+                    RemoteFileInputStream(connection, input, payload) {
+                        closeConnection(activeConnection)
+                        requests.release()
+                    }.also { streaming = true }
+                }
             }
         } finally {
             if (!streaming) {
                 try {
-                    connection?.close()
+                    connection?.let(::closeConnection)
                 } finally {
                     requests.release()
                 }
@@ -256,6 +291,13 @@ class RemoteWebUiBackend internal constructor(
 
     /** Tells the watch the page was closed, so it ends the session and reloads its modules. */
     fun close() {
+        val active = synchronized(connections) {
+            if (closed) return
+            closed = true
+            connections.toList().also { connections.clear() }
+        }
+        // Closing the page also interrupts command reads which have no execution deadline.
+        active.forEach { it.close() }
         transport.notifyClosed(peerAddress, token)
     }
 
@@ -428,22 +470,35 @@ internal suspend fun serveWebUiCall(
                     }
                 }
 
-                "spawn" -> {
-                    val done = java.util.concurrent.CountDownLatch(1)
-                    backend.spawn(arg).start(
-                        onStdout = { synchronized(output) { output.writeFrame(FRAME_STDOUT, it.toByteArray()) } },
-                        onStderr = { synchronized(output) { output.writeFrame(FRAME_STDERR, it.toByteArray()) } },
-                        onComplete = { result ->
-                            synchronized(output) { output.writeFrame(FRAME_EXIT, result.toJson().toByteArray()) }
-                            done.countDown()
-                        },
-                    )
-                    done.await()
+                "spawn" -> coroutineScope {
+                    val streaming = async {
+                        streamWebUiProcess(backend.spawn(arg)) { type, payload ->
+                            CompanionBridgeRepository.handshake(connection.socket) { output.writeFrame(type, payload) }
+                        }
+                    }
+                    // After the request, the phone only reads. EOF means the process lost its owner.
+                    val disconnected = launch(Dispatchers.IO) {
+                        try {
+                            input.read()
+                        } catch (_: IOException) {
+                            // Closing our socket after a completed stream also wakes this reader.
+                        } finally {
+                            streaming.cancel()
+                        }
+                    }
+                    try {
+                        streaming.await()
+                    } finally {
+                        connection.close()
+                        disconnected.cancel()
+                    }
                 }
 
                 else -> answer(null)
             }
         }
+    } catch (error: CancellationException) {
+        throw error
     } catch (error: Exception) {
         Log.w("RemoteWebUi", "Module RPC failed", error)
     } finally {
