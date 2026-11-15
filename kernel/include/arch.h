@@ -3,6 +3,7 @@
 
 #include <linux/version.h>
 #include <linux/types.h>
+#include "compat/kernel_compat.h"
 
 #if defined(__aarch64__)
 

@@ -492,20 +492,20 @@ int __nocfi ksu_handle_selinux_setprocattr(struct task_struct *p, char *name, vo
         if (error == -EAGAIN) {
             // stale type mark, use the dual parse
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_SELINUX_POLICY_STRUCT)
-            error2 = security_context_to_sid_with_policy(backup_sepolicy, value, size, &tmp_sid, SECSID_NULL, GFP_KERNEL,
-                                                        &sid, &error);
+            error2 = security_context_to_sid_with_policy(backup_sepolicy, value, size, &tmp_sid, SECSID_NULL,
+                                                         GFP_KERNEL, &sid, &error);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0) || defined(KSU_COMPAT_SIDTAB_AS_REFERENCE)) &&                    \
     defined(KSU_COMPAT_USE_SELINUX_STATE)
-            error2 =
-                ksu_security_context_to_sid(&selinux_state.ss->policydb, selinux_state.ss->sidtab, backup_policydb,
-                                            backup_sidtab, value, size, &tmp_sid, SECSID_NULL, GFP_KERNEL, &sid, &error);
+            error2 = ksu_security_context_to_sid(&selinux_state.ss->policydb, selinux_state.ss->sidtab, backup_policydb,
+                                                 backup_sidtab, value, size, &tmp_sid, SECSID_NULL, GFP_KERNEL, &sid,
+                                                 &error);
 #elif defined(KSU_COMPAT_USE_SELINUX_STATE)
-            error2 =
-                ksu_security_context_to_sid(&selinux_state.ss->policydb, &selinux_state.ss->sidtab, backup_policydb,
-                                            backup_sidtab, value, size, &tmp_sid, SECSID_NULL, GFP_KERNEL, &sid, &error);
+            error2 = ksu_security_context_to_sid(&selinux_state.ss->policydb, &selinux_state.ss->sidtab,
+                                                 backup_policydb, backup_sidtab, value, size, &tmp_sid, SECSID_NULL,
+                                                 GFP_KERNEL, &sid, &error);
 #else
             error2 = ksu_security_context_to_sid(&policydb, sidtab_ptr, backup_policydb, backup_sidtab, value, size,
-                                                &tmp_sid, SECSID_NULL, GFP_KERNEL, &sid, &error);
+                                                 &tmp_sid, SECSID_NULL, GFP_KERNEL, &sid, &error);
 #endif
             if (error2 || error)
                 return error2 ?: error;

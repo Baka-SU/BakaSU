@@ -93,6 +93,7 @@ int main(int argc, char **argv)
     emit_line(output, "#ifndef KSU_NR_COMPAT_H");
     emit_line(output, "#define KSU_NR_COMPAT_H");
     emit_line(output, "");
+    emit_line(output, "#include \"compat/kernel_compat.h\"");
     emit_line(output, "#include <asm/unistd.h>");
     emit_line(output, "");
     if (compat) {
@@ -108,7 +109,8 @@ int main(int argc, char **argv)
             }
             emit_line(output, "");
         }
-        emit_line(output, "#define ksu_get_syscall_no(name) (is_compat_task() ? __NR_compat32_##name : __NR_##name)");
+        emit_line(output,
+                  "#define ksu_get_syscall_no(name) (ksu_is_compat_task() ? __NR_compat32_##name : __NR_##name)");
         emit_line(output, "#define ksu_get_compat_syscall_no(name) __NR_compat32_##name");
     } else {
         emit_line(output, "#define ksu_get_syscall_no(name) __NR_##name");

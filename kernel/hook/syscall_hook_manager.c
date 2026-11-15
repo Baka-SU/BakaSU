@@ -13,6 +13,7 @@
 #endif
 #include <linux/compat.h>
 
+#include "compat/kernel_compat.h"
 #include "compat/syscall_no.h"
 
 #include "arch.h"

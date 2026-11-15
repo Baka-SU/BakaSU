@@ -278,7 +278,7 @@ static long ksu_handle_execve_sucompat_common_internal(const char __user **filen
     ksu_sulog_emit_pending(pending_sucompat, ret, GFP_KERNEL);
 
 #if defined(CONFIG_COMPAT) && defined(__aarch64__)
-    if (is_compat_task())
+    if (ksu_is_compat_task())
         ret = ksu_call_syscall(ksu_get_compat_syscall_no(execveat), regs);
     else
 #endif
