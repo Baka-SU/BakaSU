@@ -74,6 +74,7 @@ import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
+import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
@@ -216,7 +217,7 @@ private fun rememberModuleDownload(module: CatalogModule?, installer: WearModule
                     onClick = {
                         dismiss()
                         val release = pendingRelease
-                        if (module != null && release != null && asset != null) installer.download(module, release, asset)
+                        if (module != null && !module.isScript && release != null && asset != null) installer.download(module, release, asset)
                     },
                 )
             },
@@ -301,11 +302,14 @@ internal fun WearOnlineModulePage(
             }
             val latestRelease = module.releases.firstOrNull { it.assets.isNotEmpty() }
             val latest = latestRelease?.assets?.firstOrNull()
+            if (module.isScript) {
+                item { WearStatusItem(spec, Icons.Rounded.Info, stringResource(R.string.wear_script_unsupported)) }
+            }
             item {
                 WearIconButtonGroup(
                     spec,
                     listOfNotNull(
-                        WearIconAction(Icons.Rounded.Download, stringResource(R.string.wear_download), { if (latestRelease != null && latest != null) requestDownload(latestRelease, latest) }, latest != null, primary = true),
+                        WearIconAction(Icons.Rounded.Download, stringResource(R.string.wear_download), { if (latestRelease != null && latest != null) requestDownload(latestRelease, latest) }, latest != null && !module.isScript, primary = true),
                         module.sourceUrl.takeIf { it.isNotBlank() }?.let { url ->
                             WearIconAction(Icons.Rounded.Code, stringResource(R.string.source_code), { onLink(url) })
                         },
@@ -388,6 +392,9 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String
                 }
 
                 "releases" -> {
+                    if (module.isScript) {
+                        item { WearStatusItem(spec, Icons.Rounded.Info, stringResource(R.string.wear_script_unsupported)) }
+                    }
                     // Each release keeps its own files, so an earlier version can still be downloaded.
                     module.releases.forEach { release ->
                         item { WearSectionHeader(spec, release.name.ifBlank { release.tagName }) }
@@ -404,6 +411,7 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String
                                 asset.name,
                                 { requestDownload(release, asset) },
                                 secondaryText = asset.size?.let(::formatFileSize),
+                                enabled = !module.isScript,
                             )
                         }
                     }

@@ -1007,4 +1007,5 @@
     <string name="wear_color_saturation">Saturation</string>
     <string name="wear_color_brightness">Brightness</string>
     <string name="wear_color_hex">Hex color</string>
+    <string name="wear_script_unsupported">One-shot scripts cannot be run or installed from the watch repository yet.</string>
 </resources>

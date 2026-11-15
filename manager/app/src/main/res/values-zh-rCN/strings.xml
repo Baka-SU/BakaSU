@@ -981,4 +981,5 @@
     <string name="wear_color_saturation">饱和度</string>
     <string name="wear_color_brightness">明度</string>
     <string name="wear_color_hex">十六进制颜色</string>
+    <string name="wear_script_unsupported">暂不支持从手表仓库运行或安装一次性脚本。</string>
 </resources>

@@ -3,9 +3,11 @@ package org.bakasu.bakasu.ui.wear
 import androidx.compose.runtime.mutableStateOf
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
+import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.ModuleRelease
+import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.model.ModuleUpdateMetadata
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
 import org.junit.Assert.assertEquals
@@ -53,4 +55,14 @@ class WearModuleInstallTest {
         assertNull(route.asset().expected)
     }
 
+    @Test
+    fun scriptCatalogEntryCannotEnterTheModuleInstaller() {
+        val asset = ModuleReleaseAsset("script.zip", "https://example.com/script.zip", 123, 0)
+        val release = ModuleRelease("1", "v1", "", listOf(asset))
+        val script = CatalogModule("script", "Script", "", emptyList(), "", false, 0, "", "", "1", "", 1, release, "", listOf(release), "https://example.com", isScript = true)
+        installer.download(script, release, asset)
+        assertEquals(WearRoute.Main, navigator.top)
+        installer.download(script.copy(isScript = false), release, asset)
+        assertTrue(navigator.top is WearRoute.OnlineModuleDownload)
+    }
 }

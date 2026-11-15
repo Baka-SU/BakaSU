@@ -78,20 +78,23 @@ class WearModuleInstaller internal constructor(
 
     fun install(uri: String) = navigator.open(WearRoute.ModuleInstall(uri))
 
-    fun download(module: CatalogModule, release: ModuleRelease, asset: ModuleReleaseAsset) = navigator.open(
-        WearRoute.OnlineModuleDownload(
-            module.moduleName,
-            asset.name,
-            asset.downloadUrl,
-            asset.expected?.size ?: 0L,
-            asset.expected?.sha256.orEmpty(),
-            release.name.ifBlank { release.tagName },
-            verificationRequired = asset.verificationRequired,
-            moduleId = module.moduleId,
-            iconUrl = module.iconUrl?.takeIf { it.isNotBlank() } ?: module.registryMetadata?.iconUrl,
-            iconOrigin = module.repositoryUrl.takeIf { module.registryMetadata != null },
-        ),
-    )
+    fun download(module: CatalogModule, release: ModuleRelease, asset: ModuleReleaseAsset) {
+        if (module.isScript) return
+        navigator.open(
+            WearRoute.OnlineModuleDownload(
+                module.moduleName,
+                asset.name,
+                asset.downloadUrl,
+                asset.expected?.size ?: 0L,
+                asset.expected?.sha256.orEmpty(),
+                release.name.ifBlank { release.tagName },
+                verificationRequired = asset.verificationRequired,
+                moduleId = module.moduleId,
+                iconUrl = module.iconUrl?.takeIf { it.isNotBlank() } ?: module.registryMetadata?.iconUrl,
+                iconOrigin = module.repositoryUrl.takeIf { module.registryMetadata != null },
+            ),
+        )
+    }
 
     fun update(module: InstalledModule, update: ModuleUpdateMetadata, verification: ModuleUpdateVerification, source: CatalogModule? = null) {
         if (verification == ModuleUpdateVerification.Rejected) return
