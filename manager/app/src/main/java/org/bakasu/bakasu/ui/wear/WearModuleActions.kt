@@ -47,6 +47,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleChangelogViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
 import org.bakasu.bakasu.ui.wear.component.WearChip
+import org.bakasu.bakasu.ui.wear.component.WearFeedbackEffect
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearInfoRow
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -54,8 +55,6 @@ import org.bakasu.bakasu.ui.wear.component.WearLogPage
 import org.bakasu.bakasu.ui.wear.component.WearModuleHeader
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
@@ -85,7 +84,7 @@ internal fun WearModuleUpdatePage(
     var resolving by remember(module) { mutableStateOf(false) }
     var verificationFailed by remember(module) { mutableStateOf(false) }
     val verificationError = stringResource(R.string.repo_update_unverifiable)
-    WearResultDialog(if (verificationFailed) WearResult(verificationError, success = false) else null) { verificationFailed = false }
+    WearFeedbackEffect(if (verificationFailed) verificationError else null) { verificationFailed = false }
     val source = remember(module) { CompletableDeferred<CatalogModule?>() }
     LaunchedEffect(module) {
         try {
@@ -216,9 +215,9 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
     val state by viewModel.state.collectAsStateWithLifecycle()
     var successful by rememberSaveable { mutableStateOf<Boolean?>(null) }
     var showLog by rememberSaveable { mutableStateOf(false) }
-    var result by remember { mutableStateOf<WearResult?>(null) }
-    val saved = WearResult(stringResource(R.string.log_saved), success = true, brief = true)
-    val failed = WearResult(stringResource(R.string.operation_failed), success = false, brief = true)
+    var result by remember { mutableStateOf<String?>(null) }
+    val saved = stringResource(R.string.log_saved)
+    val failed = stringResource(R.string.operation_failed)
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
@@ -284,5 +283,5 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
             )
         }
     }
-    WearResultDialog(result) { result = null }
+    WearFeedbackEffect(result) { result = null }
 }

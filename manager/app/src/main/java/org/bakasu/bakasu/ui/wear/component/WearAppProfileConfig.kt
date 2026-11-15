@@ -66,7 +66,7 @@ fun WearAppProfileConfig(
     var rules by rememberSaveable { mutableStateOf(profile.rules) }
     var rulesInput by rememberSaveable { mutableStateOf(false) }
     val failed = stringResource(R.string.operation_failed)
-    WearResultDialog(if (inputError) WearResult(failed, success = false) else null) { inputError = false }
+    WearFeedbackEffect(if (inputError) failed else null) { inputError = false }
     val mode = rootMode
     val modeChoices = listOf(R.string.profile_default, R.string.profile_template, R.string.profile_custom)
         .map { it.toString() to stringResource(it) }

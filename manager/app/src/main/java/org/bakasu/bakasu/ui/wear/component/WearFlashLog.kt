@@ -17,12 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.wear.compose.material3.ConfirmationDialogDefaults
-import androidx.wear.compose.material3.FailureConfirmationDialog
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.SuccessConfirmationDialog
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.confirmationDialogCurvedText
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -85,15 +81,15 @@ fun WearLogPage(title: String, lines: List<String>, following: Boolean, onBack: 
 
 /**
  * Saves a log to a document the user picks, named `<prefix>_<date>.log` as on the phone, and shows
- * the result once with [WearResultDialog]. Returns the action that starts saving.
+ * the result once with [WearFeedbackEffect]. Returns the action that starts saving.
  */
 @Composable
 fun rememberWearLogSaver(fileNamePrefix: String, content: () -> String): () -> Unit {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var result by remember { mutableStateOf<WearResult?>(null) }
-    val saved = WearResult(stringResource(R.string.log_saved), success = true, brief = true)
-    val failed = WearResult(stringResource(R.string.operation_failed), success = false, brief = true)
+    var result by remember { mutableStateOf<String?>(null) }
+    val saved = stringResource(R.string.log_saved)
+    val failed = stringResource(R.string.operation_failed)
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri: Uri? ->
         if (uri != null) {
             val text = content()
@@ -106,7 +102,7 @@ fun rememberWearLogSaver(fileNamePrefix: String, content: () -> String): () -> U
             }
         }
     }
-    WearResultDialog(result) { result = null }
+    WearFeedbackEffect(result) { result = null }
     return {
         val date = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.getDefault()).format(Date())
         runCatching { launcher.launch("${fileNamePrefix}_$date.log") }.onFailure { result = failed }

@@ -50,6 +50,7 @@ import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadUiState
 import org.bakasu.bakasu.ui.wear.component.WearModuleDownloadScreen
+import org.bakasu.bakasu.ui.wear.component.WearToastHost
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -145,12 +146,14 @@ class WearModuleUpdateTest(private val round: Boolean) {
             compose.setContent {
                 KoinIsolatedContext(app) {
                     MaterialTheme {
-                        AppScaffold(timeText = {}) {
-                            val route = navigator.top
-                            if (route is WearRoute.OnlineModuleDownload) {
-                                WearModuleDownloadScreen(route.name, ModuleDownloadUiState(phase = ModuleDownloadPhase.DOWNLOADING, downloadedBytes = 89, totalBytes = 100), { 0.89f }, route.iconUrl, route.iconOrigin)
-                            } else {
-                                WearModuleUpdatePage(module, {}, installer::update, {}, { ModuleUpdateVerification.Legacy }, { _, _ -> true }, findSource = { lookup.await() })
+                        WearToastHost {
+                            AppScaffold(timeText = {}) {
+                                val route = navigator.top
+                                if (route is WearRoute.OnlineModuleDownload) {
+                                    WearModuleDownloadScreen(route.name, ModuleDownloadUiState(phase = ModuleDownloadPhase.DOWNLOADING, downloadedBytes = 89, totalBytes = 100), { 0.89f }, route.iconUrl, route.iconOrigin)
+                                } else {
+                                    WearModuleUpdatePage(module, {}, installer::update, {}, { ModuleUpdateVerification.Legacy }, { _, _ -> true }, findSource = { lookup.await() })
+                                }
                             }
                         }
                     }
@@ -182,9 +185,11 @@ class WearModuleUpdateTest(private val round: Boolean) {
         val active = mutableStateOf(true)
         compose.setContent {
             MaterialTheme {
-                AppScaffold(timeText = {}) {
-                    CompositionLocalProvider(LocalScreenIsActive provides active.value) {
-                        WearModuleUpdatePage(module, {}, { _, _, _, _ -> downloaded = true }, {}, { ModuleUpdateVerification.Legacy }, { _, _ -> true }, findSource = { lookup.await() })
+                WearToastHost {
+                    AppScaffold(timeText = {}) {
+                        CompositionLocalProvider(LocalScreenIsActive provides active.value) {
+                            WearModuleUpdatePage(module, {}, { _, _, _, _ -> downloaded = true }, {}, { ModuleUpdateVerification.Legacy }, { _, _ -> true }, findSource = { lookup.await() })
+                        }
                     }
                 }
             }
@@ -223,20 +228,22 @@ class WearModuleUpdateTest(private val round: Boolean) {
             }
             CompositionLocalProvider(LocalConfiguration provides configuration) {
                 MaterialTheme {
-                    AppScaffold(timeText = {}) {
-                        Box(Modifier.size(192.dp)) {
-                            WearModuleUpdatePage(
-                                installed,
-                                onBack = {},
-                                onDownload = { selected, metadata, _, _ ->
-                                    assertEquals(installed, selected)
-                                    assertEquals(installed.moduleUpdate, metadata)
-                                    downloaded = true
-                                },
-                                onChangelog = { openedChangelog = true },
-                                resolveUpdate = { verification },
-                                isUpdateCurrent = { _, _ -> current },
-                            )
+                    WearToastHost {
+                        AppScaffold(timeText = {}) {
+                            Box(Modifier.size(192.dp)) {
+                                WearModuleUpdatePage(
+                                    installed,
+                                    onBack = {},
+                                    onDownload = { selected, metadata, _, _ ->
+                                        assertEquals(installed, selected)
+                                        assertEquals(installed.moduleUpdate, metadata)
+                                        downloaded = true
+                                    },
+                                    onChangelog = { openedChangelog = true },
+                                    resolveUpdate = { verification },
+                                    isUpdateCurrent = { _, _ -> current },
+                                )
+                            }
                         }
                     }
                 }

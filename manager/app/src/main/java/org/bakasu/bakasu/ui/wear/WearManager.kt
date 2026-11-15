@@ -114,8 +114,6 @@ import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
 import org.bakasu.bakasu.ui.wear.component.WearMessageDialog
 import org.bakasu.bakasu.ui.wear.component.WearOperationsBackHandler
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
@@ -170,7 +168,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     var moduleError by remember { mutableStateOf<String?>(null) }
     var homeError by remember { mutableStateOf<String?>(null) }
     var logError by remember { mutableStateOf<String?>(null) }
-    var dynamicManagerResult by remember { mutableStateOf<WearResult?>(null) }
     var signatureSize by rememberSaveable { mutableStateOf("") }
     var signatureHash by rememberSaveable { mutableStateOf("") }
     val operationFailedText = stringResource(R.string.operation_failed)
@@ -287,26 +284,27 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val dynamicManagerActive = navigator.backStack.any { it is DynamicManagerRoute }
     val dynamicManagerSucceeded = stringResource(R.string.dynamic_manager_set_success)
     val dynamicManagerCleared = stringResource(R.string.dynamic_manager_disabled_success)
+    val dynamicManagerSetFailed = stringResource(R.string.dynamic_manager_set_failed)
+    val dynamicManagerClearFailed = stringResource(R.string.dynamic_manager_clear_failed)
     LaunchedEffect(dynamicManagerActive, dynamicManagerViewModel) {
         if (dynamicManagerActive) {
             dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Load)
             dynamicManagerViewModel.events.collect { event ->
                 if (event is DynamicManagerUiEvent.OperationCompleted) {
-                    dynamicManagerResult = when {
-                        !event.success -> WearResult(operationFailedText, success = false)
-                        event.operation == DynamicManagerOperation.Clear -> WearResult(dynamicManagerCleared, success = true)
-                        else -> WearResult(dynamicManagerSucceeded, success = true)
-                    }
+                    toast.show(
+                        when (event.operation) {
+                            DynamicManagerOperation.Set -> if (event.success) dynamicManagerSucceeded else dynamicManagerSetFailed
+                            DynamicManagerOperation.Clear -> if (event.success) dynamicManagerCleared else dynamicManagerClearFailed
+                        },
+                    )
                     if (event.success) homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
                 }
             }
         } else {
             signatureSize = ""
             signatureHash = ""
-            dynamicManagerResult = null
         }
     }
-    WearResultDialog(dynamicManagerResult) { dynamicManagerResult = null }
     LaunchedEffect(homeViewModel) {
         homeViewModel.events.collect { event -> if (event is HomeUiEvent.Error) homeError = event.message }
     }

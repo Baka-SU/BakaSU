@@ -25,11 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.wear.compose.material3.ConfirmationDialogDefaults
-import androidx.wear.compose.material3.FailureConfirmationDialog
-import androidx.wear.compose.material3.SuccessConfirmationDialog
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.confirmationDialogCurvedText
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
@@ -41,11 +37,10 @@ import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSBoolean
 import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSConfig
 import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSStatusInfo
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
+import org.bakasu.bakasu.ui.wear.component.WearFeedbackEffect
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
@@ -79,7 +74,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     var sectionName by rememberSaveable { mutableStateOf(WearSuSFSSection.Standard.name) }
     val section = WearSuSFSSection.valueOf(sectionName)
     var selectedPath by rememberSaveable { mutableStateOf("") }
-    var result by remember { mutableStateOf<WearResult?>(null) }
+    var result by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     var pendingImport by rememberSaveable { mutableStateOf("") }
     val failed = stringResource(R.string.susfs_operation_failed)
@@ -91,9 +86,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     val backupFileName = stringResource(R.string.wear_susfs_backup_file_name)
     val config = state.config
 
-    // Export, import and restoring defaults report [brief] results as curved text; the other
-    // commands may report longer messages.
-    fun submit(command: WearSuSFSCommand, successMessage: String = succeeded, brief: Boolean = false, onSuccess: () -> Unit = {}) {
+    fun submit(command: WearSuSFSCommand, successMessage: String = succeeded, onSuccess: () -> Unit = {}) {
         if (busy) return
         busy = true
         result = null
@@ -101,10 +94,10 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
             try {
                 if (awaitSuSFSBoolean(viewModel, command)) {
                     awaitSuSFSConfig(viewModel) { SuSFSUiAction.Load(it) }
-                    result = WearResult(successMessage, success = true, brief)
+                    result = successMessage
                     onSuccess()
                 } else {
-                    result = WearResult(failed, success = false, brief)
+                    result = failed
                 }
             } finally {
                 busy = false
@@ -122,16 +115,13 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                 commands.forEach { if (awaitSuSFSBoolean(viewModel, it)) successCount++ }
                 if (successCount > 0) awaitSuSFSConfig(viewModel) { SuSFSUiAction.Load(it) }
                 val failCount = commands.size - successCount
-                result = WearResult(
-                    if (commands.size > 1) {
-                        batchResult.format(successCount, failCount)
-                    } else if (failCount == 0) {
-                        succeeded
-                    } else {
-                        failed
-                    },
-                    success = failCount == 0,
-                )
+                result = if (commands.size > 1) {
+                    batchResult.format(successCount, failCount)
+                } else if (failCount == 0) {
+                    succeeded
+                } else {
+                    failed
+                }
                 if (failCount == 0) page = SuSFSSubPage.Section
             } finally {
                 busy = false
@@ -139,7 +129,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
         }
     }
 
-    WearResultDialog(result) { result = null }
+    WearFeedbackEffect(result) { result = null }
     ActivityResumeEffect(viewModel) {
         if (!busy) {
             awaitSuSFSConfig(viewModel) { SuSFSUiAction.Refresh(it) }
@@ -147,7 +137,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
         }
     }
     LaunchedEffect(viewModel) {
-        viewModel.events.collect { if (it is SuSFSUiEvent.Error) result = WearResult(it.message.ifBlank { failed }, success = false) }
+        viewModel.events.collect { if (it is SuSFSUiEvent.Error) result = it.message.ifBlank { failed } }
     }
     LaunchedEffect(config?.enabled) {
         if (config?.enabled == false && page?.needsEnabled == true) page = null
@@ -156,20 +146,20 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
         stringResource(R.string.susfs_backup_import_confirm_title),
         stringResource(R.string.susfs_backup_import_confirm_message),
     ) {
-        submit({ SuSFSUiAction.ImportConfig(pendingImport, it) }, importSuccess, brief = true)
+        submit({ SuSFSUiAction.ImportConfig(pendingImport, it) }, importSuccess)
     }
     val restore = rememberWearConfirmDialog(
         stringResource(R.string.susfs_backup_restore_default),
         stringResource(R.string.susfs_backup_restore_default_desc),
     ) {
-        submit({ SuSFSUiAction.RestoreDefault(it) }, succeeded, brief = true)
+        submit({ SuSFSUiAction.RestoreDefault(it) }, succeeded)
     }
     fun importSelected(uri: String) {
         pendingImport = uri
         confirmImport.show()
     }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
-        if (uri != null) submit({ SuSFSUiAction.ExportConfig(uri.toString(), it) }, exportSuccess, brief = true)
+        if (uri != null) submit({ SuSFSUiAction.ExportConfig(uri.toString(), it) }, exportSuccess)
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) importSelected(uri.toString())
@@ -179,7 +169,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     fun launchPicker(export: Boolean) {
         runCatching {
             if (export) exportLauncher.launch(backupFileName) else importLauncher.launch(arrayOf("application/json"))
-        }.onFailure { result = WearResult(failed, success = false, brief = true) }
+        }.onFailure { result = failed }
     }
     val statusContent: @Composable () -> Unit = {
         WearList(isLoading = state.isLoading || busy, onBack = { page = null }) { spec ->

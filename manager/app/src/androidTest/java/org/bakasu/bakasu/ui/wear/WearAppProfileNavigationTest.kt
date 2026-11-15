@@ -47,6 +47,7 @@ import org.bakasu.bakasu.ui.viewmodel.AppProfileUiAction
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiEvent
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiState
 import org.bakasu.bakasu.ui.viewmodel.TemplateUiState
+import org.bakasu.bakasu.ui.wear.component.WearToastHost
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -367,56 +368,58 @@ class WearAppProfileNavigationTest(private val round: Boolean, private val defau
             }
             CompositionLocalProvider(LocalConfiguration provides configuration) {
                 MaterialTheme {
-                    AppScaffold(timeText = {}) {
-                        Box(Modifier.requiredSize(216.dp)) {
-                            NavDisplay(
-                                backStack = stack,
-                                onBack = navigator::back,
-                                sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy()),
-                                entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
-                                entryProvider = withPageTransitions(
-                                    entryProvider {
-                                        entry<WearRoute.Main> { Box {} }
-                                        entry<WearRoute.App> {
-                                            val state by detail.state.collectAsStateWithLifecycle()
-                                            WearAppDetail(group, isManager, navigator::back, navigator::open, state, detail.events) { action ->
-                                                if (action == AppProfileUiAction.Load) detailLoads++
-                                                detail.dispatch(action, saveImmediately = true)
+                    WearToastHost {
+                        AppScaffold(timeText = {}) {
+                            Box(Modifier.requiredSize(216.dp)) {
+                                NavDisplay(
+                                    backStack = stack,
+                                    onBack = navigator::back,
+                                    sceneStrategies = listOf(rememberSwipeDismissableSceneStrategy()),
+                                    entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
+                                    entryProvider = withPageTransitions(
+                                        entryProvider {
+                                            entry<WearRoute.Main> { Box {} }
+                                            entry<WearRoute.App> {
+                                                val state by detail.state.collectAsStateWithLifecycle()
+                                                WearAppDetail(group, isManager, navigator::back, navigator::open, state, detail.events) { action ->
+                                                    if (action == AppProfileUiAction.Load) detailLoads++
+                                                    detail.dispatch(action, saveImmediately = true)
+                                                }
                                             }
-                                        }
-                                        entry<WearRoute.AppProfileMode> { route ->
-                                            val state by mode.state.collectAsStateWithLifecycle()
-                                            WearAppProfileModeRoute(
-                                                route.uid,
-                                                route.packageName,
-                                                app.label,
-                                                onBack = { if (navigator.top == route) navigator.back() },
-                                                onOpen = { if (navigator.top == route) navigator.open(it) },
-                                                state = state,
-                                                events = mode.events,
-                                                onAction = { mode.dispatch(it) },
-                                            )
-                                        }
-                                        entry<WearRoute.AppProfileCustom> { route ->
-                                            val state by custom.state.collectAsStateWithLifecycle()
-                                            WearAppProfileCustomRoute(
-                                                route.uid, route.packageName, app.label,
-                                                onBack = navigator::back, onOpen = navigator::open,
-                                                templates = TemplateUiState(isLoading = false),
-                                                onNonRootProfile = {
-                                                    if (navigator.top == route) {
-                                                        navigator.back()
-                                                        if (navigator.top == modeRoute) navigator.back()
-                                                    }
-                                                },
-                                                state = state, events = custom.events,
-                                                onAction = { custom.dispatch(it, saveImmediately = true) },
-                                            )
-                                        }
-                                        entry<WearRoute.AppProfileTemplateChoice> { Box {} }
-                                    },
-                                ) { _, content -> content() },
-                            )
+                                            entry<WearRoute.AppProfileMode> { route ->
+                                                val state by mode.state.collectAsStateWithLifecycle()
+                                                WearAppProfileModeRoute(
+                                                    route.uid,
+                                                    route.packageName,
+                                                    app.label,
+                                                    onBack = { if (navigator.top == route) navigator.back() },
+                                                    onOpen = { if (navigator.top == route) navigator.open(it) },
+                                                    state = state,
+                                                    events = mode.events,
+                                                    onAction = { mode.dispatch(it) },
+                                                )
+                                            }
+                                            entry<WearRoute.AppProfileCustom> { route ->
+                                                val state by custom.state.collectAsStateWithLifecycle()
+                                                WearAppProfileCustomRoute(
+                                                    route.uid, route.packageName, app.label,
+                                                    onBack = navigator::back, onOpen = navigator::open,
+                                                    templates = TemplateUiState(isLoading = false),
+                                                    onNonRootProfile = {
+                                                        if (navigator.top == route) {
+                                                            navigator.back()
+                                                            if (navigator.top == modeRoute) navigator.back()
+                                                        }
+                                                    },
+                                                    state = state, events = custom.events,
+                                                    onAction = { custom.dispatch(it, saveImmediately = true) },
+                                                )
+                                            }
+                                            entry<WearRoute.AppProfileTemplateChoice> { Box {} }
+                                        },
+                                    ) { _, content -> content() },
+                                )
+                            }
                         }
                     }
                 }

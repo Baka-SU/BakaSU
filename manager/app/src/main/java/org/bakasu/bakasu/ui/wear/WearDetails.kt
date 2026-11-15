@@ -75,14 +75,13 @@ import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
 import org.bakasu.bakasu.ui.wear.component.WearCompactItemSpacing
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
+import org.bakasu.bakasu.ui.wear.component.WearFeedbackEffect
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearInfoRow
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleHeader
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
@@ -135,7 +134,7 @@ internal fun WearModuleDetail(
         subject = module.name,
         onConfirm = { onRemove(module.dirId, true) },
     )
-    WearResultDialog(error?.takeIf { it.isNotBlank() }?.let { WearResult(it, success = false) }, onErrorShown)
+    WearFeedbackEffect(error?.takeIf { it.isNotBlank() }, onErrorShown)
     WearList(onBack = onBack, itemSpacing = WearCompactItemSpacing, topContentPadding = 12.dp) { spec ->
         // As in the design, the page opens with the module title card instead of a page title.
         item {
@@ -296,7 +295,7 @@ internal fun WearAppProfileModeRoute(
             hasResumed = true
         }
     }
-    WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
+    WearFeedbackEffect(error) { error = null }
 
     val profile = state.profile
     if (profile == null) {
@@ -368,7 +367,7 @@ internal fun WearAppProfileTemplateChoiceRoute(
             }
         }
     }
-    WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
+    WearFeedbackEffect(error) { error = null }
 
     val profile = state.profile
     if (profile == null) {
@@ -455,7 +454,7 @@ internal fun WearAppProfileCustomRoute(
             }
         }
     }
-    WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
+    WearFeedbackEffect(error) { error = null }
 
     val profile = state.profile
     // A restored stack can still contain the old non-root editor. Its control now lives in details.
@@ -559,7 +558,7 @@ internal fun WearAppDetail(
         }
     }
 
-    WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
+    WearFeedbackEffect(error) { error = null }
     // Returning from a profile page reloads its values without replacing the visible app details.
     WearList(isLoading = state.isLoading && state.profile == null, onBack = onBack) { spec ->
         val profile = state.profile
@@ -702,7 +701,7 @@ internal fun WearAppActionsRoute(uid: Int, packageName: String, onBack: () -> Un
             if (event is AppProfileUiEvent.Error) error = failed
         }
     }
-    WearResultDialog(error?.let { WearResult(it, success = false) }) { error = null }
+    WearFeedbackEffect(error) { error = null }
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_app_operations)) }
         listOf(AppControlAction.LAUNCH to R.string.launch_app, AppControlAction.FORCE_STOP to R.string.force_stop_app).forEach { (action, label) ->

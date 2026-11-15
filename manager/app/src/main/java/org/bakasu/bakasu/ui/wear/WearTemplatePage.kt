@@ -59,8 +59,6 @@ import org.bakasu.bakasu.ui.wear.component.WearLoadFailureContent
 import org.bakasu.bakasu.ui.wear.component.WearLoadFailureScreen
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
@@ -147,8 +145,6 @@ internal fun rememberWearTemplateImport(viewModel: TemplateViewModel): () -> Uni
     val toast = LocalWearToast.current
     val context = LocalContext.current
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    var result by remember { mutableStateOf<WearResult?>(null) }
-    WearResultDialog(result) { result = null }
     val imported = stringResource(R.string.app_profile_template_import_success)
     val emptyExport = stringResource(R.string.app_profile_template_export_empty)
     val emptyClipboard = stringResource(R.string.app_profile_template_import_empty)
@@ -172,7 +168,7 @@ internal fun rememberWearTemplateImport(viewModel: TemplateViewModel): () -> Uni
 
                 is TemplateUiEvent.Error -> {
                     val message = event.message.ifBlank { failed }
-                    if (event.fromClipboard) toast.show(message) else result = WearResult(message, success = false)
+                    toast.show(message)
                 }
             }
         }
@@ -350,8 +346,6 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
     val toast = LocalWearToast.current
     val created = stringResource(R.string.wear_template_created)
     val failed = stringResource(R.string.app_profile_template_save_failed)
-    var result by remember { mutableStateOf<WearResult?>(null) }
-    WearResultDialog(result) { result = null }
     LaunchedEffect(viewModel, toast, created, failed) {
         viewModel.events.collect { event ->
             when (event) {
@@ -362,7 +356,7 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
                     onBack()
                 }
 
-                is TemplateEditorUiEvent.Error -> if (creation) toast.show(failed) else result = WearResult(failed, success = false)
+                is TemplateEditorUiEvent.Error -> toast.show(failed)
             }
         }
     }
@@ -397,7 +391,7 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
                 }
             } else {
                 WearTextInputPage(stringResource(shownInput), template.field(shownInput), multiline = shownInput == R.string.profile_selinux_rules) { text ->
-                    runCatching { template.withField(shownInput, text) }.fold(onSuccess = { viewModel.dispatch(TemplateEditorUiAction.Update(it, autoSave = !creation && !readOnly)) }, onFailure = { if (creation) toast.show(failed) else result = WearResult(failed, success = false) })
+                    runCatching { template.withField(shownInput, text) }.fold(onSuccess = { viewModel.dispatch(TemplateEditorUiAction.Update(it, autoSave = !creation && !readOnly)) }, onFailure = { toast.show(failed) })
                     input = 0
                 }
             }

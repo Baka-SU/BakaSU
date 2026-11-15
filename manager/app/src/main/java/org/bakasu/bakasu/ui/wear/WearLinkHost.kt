@@ -21,12 +21,10 @@ import org.bakasu.bakasu.domain.model.BridgeFailure
 import org.bakasu.bakasu.ui.viewmodel.WearLinkEvent
 import org.bakasu.bakasu.ui.viewmodel.WearLinkResult
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
-import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
+import org.bakasu.bakasu.ui.wear.component.WearFeedbackEffect
 import org.bakasu.bakasu.ui.wear.component.WearLoadingOverlay
 import org.bakasu.bakasu.ui.wear.component.WearPhoneTransferDialog
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearWatchOpenFailureDialog
 
 /** Opens local pages and hosts the shared permission and phone-transfer feedback. */
@@ -75,18 +73,9 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, showLoading: Boolean, on
             else -> R.string.wear_link_open_failed
         },
     )
-    val toast = LocalWearToast.current
-    LaunchedEffect(failed) {
-        if (failed?.automaticLink == true && failed.bridgeFailure == BridgeFailure.RESULT_UNKNOWN) {
-            toast.show(failureText)
-            viewModel.dismissResult()
-        }
-    }
-    WearResultDialog(
-        result = failed?.takeIf { it.automaticLink && it.bridgeFailure != BridgeFailure.RESULT_UNKNOWN }?.let {
-            WearResult(message = failureText, success = false, brief = true)
-        },
-        onDismiss = viewModel::dismissResult,
+    WearFeedbackEffect(
+        message = failureText.takeIf { failed?.automaticLink == true },
+        onShown = viewModel::dismissResult,
     )
     WearWatchOpenFailureDialog(failureText.takeIf { failed?.onWatch == true }, viewModel::dismissResult)
     WearErrorDialog(failureText.takeIf { failed != null && !failed.automaticLink && !failed.onWatch }, viewModel::dismissResult)

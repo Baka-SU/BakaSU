@@ -25,6 +25,7 @@ import org.bakasu.bakasu.domain.model.AppProfile
 import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.ui.viewmodel.TemplateUiState
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileTemplateChoicePage
+import org.bakasu.bakasu.ui.wear.component.WearToastHost
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -45,20 +46,22 @@ class WearTemplateChoiceLoadingTest {
                 pending.await()
             }
             MaterialTheme {
-                AppScaffold(timeText = {}) {
-                    if (open.value && !child.value) {
-                        WearTemplatePage(
-                            TemplateUiState(
-                                templateList = listOf(ProfileTemplate(id = "cached", name = "Cached template")),
-                                isLoading = loading.loading,
-                                isRefreshing = false,
-                                loadFailed = failed.value,
-                            ),
-                            {},
-                            {},
-                            { _, _, _ -> },
-                            {},
-                        )
+                WearToastHost {
+                    AppScaffold(timeText = {}) {
+                        if (open.value && !child.value) {
+                            WearTemplatePage(
+                                TemplateUiState(
+                                    templateList = listOf(ProfileTemplate(id = "cached", name = "Cached template")),
+                                    isLoading = loading.loading,
+                                    isRefreshing = false,
+                                    loadFailed = failed.value,
+                                ),
+                                {},
+                                {},
+                                { _, _, _ -> },
+                                {},
+                            )
+                        }
                     }
                 }
             }
@@ -108,20 +111,22 @@ class WearTemplateChoiceLoadingTest {
                 templates.value = listOf(template)
             }
             MaterialTheme {
-                AppScaffold(timeText = {}) {
-                    NavDisplay(
-                        backStack = stack,
-                        onBack = { stack.removeAt(stack.lastIndex) },
-                        entryProvider = withPageTransitions(
-                            entryProvider {
-                                entry(parent) { Box(Modifier.fillMaxSize()) }
-                                entry(choice) {
-                                    WearAppProfileTemplateChoicePage(AppProfile("test"), templates.value, loading.refreshing, loading.loading, false, {}, {}, {})
-                                }
-                                entry<WearRoute.AppProfileTemplateSearch> { Box(Modifier.fillMaxSize()) }
-                            },
-                        ) { _, content -> content() },
-                    )
+                WearToastHost {
+                    AppScaffold(timeText = {}) {
+                        NavDisplay(
+                            backStack = stack,
+                            onBack = { stack.removeAt(stack.lastIndex) },
+                            entryProvider = withPageTransitions(
+                                entryProvider {
+                                    entry(parent) { Box(Modifier.fillMaxSize()) }
+                                    entry(choice) {
+                                        WearAppProfileTemplateChoicePage(AppProfile("test"), templates.value, loading.refreshing, loading.loading, false, {}, {}, {})
+                                    }
+                                    entry<WearRoute.AppProfileTemplateSearch> { Box(Modifier.fillMaxSize()) }
+                                },
+                            ) { _, content -> content() },
+                        )
+                    }
                 }
             }
         }

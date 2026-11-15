@@ -13,7 +13,6 @@ import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearToastHost
 import org.bakasu.bakasu.ui.wear.component.WearToastState
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -46,7 +45,7 @@ class WearLinkFeedbackTest {
     }
 
     @Test
-    fun finalAutomaticLinkFailureKeepsTheResultUntilConfirmationDismisses() {
+    fun finalAutomaticLinkFailureShowsToastAndConsumesResult() {
         lateinit var viewModel: WearLinkViewModel
         lateinit var toast: WearToastState
         compose.mainClock.autoAdvance = false
@@ -61,21 +60,17 @@ class WearLinkFeedbackTest {
                 }
             }
         }
-        repeat(2) {
+        repeat(2) { index ->
             compose.runOnIdle { viewModel.open("file:///invalid") }
             compose.waitUntil { viewModel.result.value != null }
             compose.mainClock.advanceTimeBy(500)
-            compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_link_open_failed)).assertExists()
-            compose.onNodeWithText(compose.activity.getString(R.string.operation_failed)).assertDoesNotExist()
             compose.runOnIdle {
-                assertNotNull(viewModel.result.value)
-                assertEquals(0, toast.sequence)
+                assertNull(viewModel.result.value)
+                assertEquals(index + 1, toast.sequence)
+                assertEquals(compose.activity.getString(R.string.wear_link_open_failed), toast.message)
             }
+            compose.onNode(androidx.compose.ui.test.isDialog()).assertDoesNotExist()
             compose.mainClock.advanceTimeBy(6_000)
-            compose.waitUntil { viewModel.result.value == null }
-            compose.mainClock.advanceTimeBy(500)
-            compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_link_open_failed)).assertDoesNotExist()
         }
-        compose.runOnIdle { assertNull(viewModel.result.value) }
     }
 }

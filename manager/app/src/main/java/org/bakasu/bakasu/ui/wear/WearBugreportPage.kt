@@ -25,10 +25,9 @@ import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.usecase.GenerateBugreportUseCase
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearFeedbackEffect
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.koin.compose.koinInject
 
 /** Saving or sharing the bugreport, as the phone's log sheet does. */
@@ -38,10 +37,10 @@ internal fun WearBugreportPage(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val generateBugreport = koinInject<GenerateBugreportUseCase>()
     var busy by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<WearResult?>(null) }
+    var result by remember { mutableStateOf<String?>(null) }
     val sendLog = stringResource(R.string.send_log)
-    val saved = WearResult(stringResource(R.string.log_saved), success = true, brief = true)
-    val failed = WearResult(stringResource(R.string.operation_failed), success = false, brief = true)
+    val saved = stringResource(R.string.log_saved)
+    val failed = stringResource(R.string.operation_failed)
     fun run(block: suspend () -> Unit) {
         busy = true
         result = null
@@ -87,5 +86,5 @@ internal fun WearBugreportPage(onBack: () -> Unit) {
             })
         }
     }
-    WearResultDialog(result) { result = null }
+    WearFeedbackEffect(result) { result = null }
 }

@@ -17,6 +17,7 @@ import org.bakasu.bakasu.domain.model.FlashOperation
 import org.bakasu.bakasu.ui.viewmodel.FlashUiState
 import org.bakasu.bakasu.ui.wear.component.LocalWearTimeOptions
 import org.bakasu.bakasu.ui.wear.component.WearTimeOptions
+import org.bakasu.bakasu.ui.wear.component.WearToastHost
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,8 +38,10 @@ class WearFlashLayoutTest(private val round: Boolean, private val timeMode: Stri
             }
             CompositionLocalProvider(LocalConfiguration provides configuration, LocalWearTimeOptions provides WearTimeOptions(timeMode)) {
                 MaterialTheme {
-                    AppScaffold(timeText = {}) {
-                        WearFlashPage(operation.value, state.value, false, {}, {})
+                    WearToastHost {
+                        AppScaffold(timeText = {}) {
+                            WearFlashPage(operation.value, state.value, false, {}, {})
+                        }
                     }
                 }
             }

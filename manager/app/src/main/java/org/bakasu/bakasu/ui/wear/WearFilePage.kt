@@ -39,12 +39,9 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.ConfirmationDialogDefaults
-import androidx.wear.compose.material3.FailureConfirmationDialog
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.confirmationDialogCurvedText
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.file.matchesMimeType
 import org.bakasu.bakasu.data.file.wearFileMimeType
@@ -58,10 +55,9 @@ import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
+import org.bakasu.bakasu.ui.wear.component.WearFeedbackEffect
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
@@ -201,7 +197,7 @@ internal fun WearFilePage(
         }
     }
     val failedText = stringResource(R.string.operation_failed)
-    WearResultDialog(WearResult(failedText, success = false, brief = true).takeIf { permissionFailed }) { permissionFailed = false }
+    WearFeedbackEffect(failedText.takeIf { permissionFailed }) { permissionFailed = false }
     if (editingName) {
         WearSubPage({ editingName = false }) {
             WearTextInputPage(stringResource(R.string.wear_file_name), state.name) {

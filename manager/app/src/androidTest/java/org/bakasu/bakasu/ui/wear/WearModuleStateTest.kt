@@ -41,6 +41,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.ModuleUpdateMetadata
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearToastHost
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Rule
@@ -196,7 +197,9 @@ class WearModuleStateTest(private val round: Boolean) {
             }
             CompositionLocalProvider(LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, 1.15f)) {
                 MaterialTheme {
-                    AppScaffold(timeText = {}) { Box(Modifier.requiredSize(216.dp)) { content() } }
+                    WearToastHost {
+                        AppScaffold(timeText = {}) { Box(Modifier.requiredSize(216.dp)) { content() } }
+                    }
                 }
             }
         }

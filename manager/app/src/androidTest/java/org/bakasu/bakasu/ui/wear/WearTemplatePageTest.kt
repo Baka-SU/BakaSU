@@ -34,6 +34,7 @@ import org.bakasu.bakasu.ui.viewmodel.TemplateUiState
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileConfig
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileTemplateChoicePage
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
+import org.bakasu.bakasu.ui.wear.component.WearToastHost
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -235,7 +236,9 @@ class WearTemplatePageTest(private val round: Boolean) {
             }
             CompositionLocalProvider(LocalConfiguration provides configuration) {
                 MaterialTheme {
-                    AppScaffold(timeText = {}) { Box(Modifier.requiredSize(216.dp)) { content() } }
+                    WearToastHost {
+                        AppScaffold(timeText = {}) { Box(Modifier.requiredSize(216.dp)) { content() } }
+                    }
                 }
             }
         }

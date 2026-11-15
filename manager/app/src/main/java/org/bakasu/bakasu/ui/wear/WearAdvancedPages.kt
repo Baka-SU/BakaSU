@@ -56,6 +56,7 @@ import org.bakasu.bakasu.ui.viewmodel.UmountManagerUiState
 import org.bakasu.bakasu.ui.viewmodel.managerSourceLabel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
+import org.bakasu.bakasu.ui.wear.component.WearFeedbackEffect
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearInfoRow
@@ -63,8 +64,6 @@ import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearModuleSwipeActions
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
@@ -137,8 +136,8 @@ internal fun WearDynamicManagerManualPage(
     onOpen: (WearRoute) -> Unit,
     onSave: (Int, String) -> Unit,
 ) {
-    var result by remember { mutableStateOf<WearResult?>(null) }
-    WearResultDialog(result) { result = null }
+    var result by remember { mutableStateOf<String?>(null) }
+    WearFeedbackEffect(result) { result = null }
     val failed = stringResource(R.string.operation_failed)
     val invalidHash = stringResource(R.string.hash_must_be_64_chars)
     val grant = rememberWearConfirmDialog(
@@ -154,8 +153,8 @@ internal fun WearDynamicManagerManualPage(
             val length = size.toIntOrNull()
             val signatureHash = hash.trim().lowercase(Locale.ROOT)
             when {
-                length == null || length !in 0x100..0x1000 -> result = WearResult(failed, success = false)
-                !signatureHash.matches(Regex("[0-9a-f]{64}")) -> result = WearResult(invalidHash, success = false)
+                length == null || length !in 0x100..0x1000 -> result = failed
+                !signatureHash.matches(Regex("[0-9a-f]{64}")) -> result = invalidHash
                 else -> grant.show()
             }
         },
@@ -281,12 +280,12 @@ private enum class UmountInput { Path, Flags }
 @Composable
 internal fun WearUmountPage(viewModel: UmountManagerScreenViewModel, onBack: () -> Unit, onOpenPanel: () -> Unit, query: String = "") {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var result by remember { mutableStateOf<WearResult?>(null) }
+    var result by remember { mutableStateOf<String?>(null) }
     val active by rememberUpdatedState(LocalScreenIsActive.current)
-    WearResultDialog(result) { result = null }
+    WearFeedbackEffect(result) { result = null }
     LaunchedEffect(viewModel) {
         viewModel.events.collect {
-            if (it is UmountManagerUiEvent.Message && !it.added && active) result = WearResult(it.message, success = it.success)
+            if (it is UmountManagerUiEvent.Message && !it.added && active) result = it.message
         }
     }
     WearUmountPage(state, onBack, onOpenPanel, query) { viewModel.dispatch(UmountManagerUiAction.Remove(it)) }
@@ -331,8 +330,8 @@ internal fun WearUmountPage(state: UmountManagerUiState, onBack: () -> Unit, onO
 
 @Composable
 internal fun WearAddUmountPage(onBack: () -> Unit, viewModel: UmountManagerScreenViewModel = koinViewModel()) {
-    var result by remember { mutableStateOf<WearResult?>(null) }
-    WearResultDialog(result) { result = null }
+    var result by remember { mutableStateOf<String?>(null) }
+    WearFeedbackEffect(result) { result = null }
     val failed = stringResource(R.string.operation_failed)
     var submitting by rememberSaveable { mutableStateOf(false) }
     var input by rememberSaveable { mutableStateOf<UmountInput?>(null) }
@@ -342,7 +341,7 @@ internal fun WearAddUmountPage(onBack: () -> Unit, viewModel: UmountManagerScree
         viewModel.events.collect {
             if (it is UmountManagerUiEvent.Message && it.added && submitting) {
                 submitting = false
-                if (it.success) onBack() else result = WearResult(it.message, success = false)
+                if (it.success) onBack() else result = it.message
             }
         }
     }
@@ -362,7 +361,7 @@ internal fun WearAddUmountPage(onBack: () -> Unit, viewModel: UmountManagerScree
     WearList(onBack = onBack, isBusy = submitting, confirmLabel = stringResource(R.string.add), confirmEnabled = !submitting, onConfirm = {
         val parsed = flags.toIntOrNull()
         if (!path.startsWith('/') || parsed == null) {
-            result = WearResult(failed, success = false)
+            result = failed
         } else {
             submitting = true
             viewModel.dispatch(UmountManagerUiAction.Add(path, parsed))

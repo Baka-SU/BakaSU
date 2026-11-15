@@ -41,6 +41,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiState
 import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearToastHost
 import org.bakasu.bakasu.ui.wear.component.settings.WearChoicePage
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
@@ -69,17 +70,19 @@ class WearMarqueeLayoutTest(private val round: Boolean, private val font: Float)
             }
             CompositionLocalProvider(LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, font)) {
                 MaterialTheme {
-                    Box(Modifier.requiredSize(192.dp)) {
-                        AppScaffold(timeText = {}) {
-                            WearList { _ ->
-                                item {
-                                    RadioButton(
-                                        selected = true,
-                                        onSelect = {},
-                                        modifier = Modifier.fillMaxWidth(),
-                                        label = { WearAutoMarqueeText("Select file") },
-                                        secondaryLabel = { WearAutoMarqueeText(subtitle.value, maxLines = 2) },
-                                    )
+                    WearToastHost {
+                        Box(Modifier.requiredSize(192.dp)) {
+                            AppScaffold(timeText = {}) {
+                                WearList { _ ->
+                                    item {
+                                        RadioButton(
+                                            selected = true,
+                                            onSelect = {},
+                                            modifier = Modifier.fillMaxWidth(),
+                                            label = { WearAutoMarqueeText("Select file") },
+                                            secondaryLabel = { WearAutoMarqueeText(subtitle.value, maxLines = 2) },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -114,9 +117,11 @@ class WearMarqueeLayoutTest(private val round: Boolean, private val font: Float)
             }
             CompositionLocalProvider(LocalConfiguration provides configuration, LocalDensity provides Density(LocalDensity.current.density, font)) {
                 MaterialTheme {
-                    Box(Modifier.requiredSize(192.dp)) {
-                        AppScaffold(timeText = {}) {
-                            WearAppDetail(group, false, {}, {}, AppProfileUiState(profile = AppProfile(app.packageName), isLoading = false), MutableSharedFlow(), {})
+                    WearToastHost {
+                        Box(Modifier.requiredSize(192.dp)) {
+                            AppScaffold(timeText = {}) {
+                                WearAppDetail(group, false, {}, {}, AppProfileUiState(profile = AppProfile(app.packageName), isLoading = false), MutableSharedFlow(), {})
+                            }
                         }
                     }
                 }
@@ -146,8 +151,10 @@ class WearMarqueeLayoutTest(private val round: Boolean, private val font: Float)
                 LocalReduceMotion provides reduceMotion.value,
             ) {
                 MaterialTheme {
-                    Box(Modifier.requiredSize(192.dp)) {
-                        AppScaffold(timeText = {}) { WearModuleDetail(module, null, {}, { _, _ -> }, { _, _ -> }, {}, {}, {}) }
+                    WearToastHost {
+                        Box(Modifier.requiredSize(192.dp)) {
+                            AppScaffold(timeText = {}) { WearModuleDetail(module, null, {}, { _, _ -> }, { _, _ -> }, {}, {}, {}) }
+                        }
                     }
                 }
             }
@@ -203,11 +210,13 @@ class WearMarqueeLayoutTest(private val round: Boolean, private val font: Float)
             }
             CompositionLocalProvider(LocalConfiguration provides config, LocalDensity provides Density(LocalDensity.current.density, font)) {
                 MaterialTheme {
-                    Box(Modifier.requiredSize(192.dp)) {
-                        AppScaffold(timeText = {}) {
-                            WearList { spec ->
-                                item { WearSettingsJumpPageWidget(spec, "Settings", {}, description = summary) }
-                                item { WearInfoCard(spec) { androidx.wear.compose.material3.Text(information) } }
+                    WearToastHost {
+                        Box(Modifier.requiredSize(192.dp)) {
+                            AppScaffold(timeText = {}) {
+                                WearList { spec ->
+                                    item { WearSettingsJumpPageWidget(spec, "Settings", {}, description = summary) }
+                                    item { WearInfoCard(spec) { androidx.wear.compose.material3.Text(information) } }
+                                }
                             }
                         }
                     }
@@ -239,20 +248,22 @@ class WearMarqueeLayoutTest(private val round: Boolean, private val font: Float)
             }
             CompositionLocalProvider(LocalConfiguration provides config, LocalDensity provides Density(LocalDensity.current.density, font)) {
                 MaterialTheme {
-                    Box(Modifier.requiredSize(192.dp).testTag("marquee-page")) {
-                        AppScaffold(timeText = {}) {
-                            when (page.value) {
-                                "repository" -> WearModuleRepoPage(ModuleRepoUiState(modules = listOf(catalog)), {}, {}, {}, onOpen = { clicks++ })
+                    WearToastHost {
+                        Box(Modifier.requiredSize(192.dp).testTag("marquee-page")) {
+                            AppScaffold(timeText = {}) {
+                                when (page.value) {
+                                    "repository" -> WearModuleRepoPage(ModuleRepoUiState(modules = listOf(catalog)), {}, {}, {}, onOpen = { clicks++ })
 
-                                "choice" -> WearChoicePage("Settings", listOf("one" to title), "one", {}) { clicks++ }
+                                    "choice" -> WearChoicePage("Settings", listOf("one" to title), "one", {}) { clicks++ }
 
-                                else -> WearList { spec ->
-                                    item {
-                                        when (page.value) {
-                                            "module" -> WearModuleItem(spec, module, { clicks++ })
-                                            "app" -> WearAppItem(spec, InstalledAppGroup(app.uid, app.packageName, listOf(app)), { _, _ -> clicks++ })
-                                            "switch" -> WearSettingsSwitchWidget(spec, title, false, { clicks++ }, secondaryLabel = description)
-                                            else -> WearSettingsJumpPageWidget(spec, title, { clicks++ }, description = description)
+                                    else -> WearList { spec ->
+                                        item {
+                                            when (page.value) {
+                                                "module" -> WearModuleItem(spec, module, { clicks++ })
+                                                "app" -> WearAppItem(spec, InstalledAppGroup(app.uid, app.packageName, listOf(app)), { _, _ -> clicks++ })
+                                                "switch" -> WearSettingsSwitchWidget(spec, title, false, { clicks++ }, secondaryLabel = description)
+                                                else -> WearSettingsJumpPageWidget(spec, title, { clicks++ }, description = description)
+                                            }
                                         }
                                     }
                                 }

@@ -22,10 +22,9 @@ import org.bakasu.bakasu.ui.viewmodel.SuperUserUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuperUserUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearFeedbackEffect
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearResult
-import org.bakasu.bakasu.ui.wear.component.WearResultDialog
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 
@@ -37,10 +36,10 @@ import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 @Composable
 internal fun WearAllowlistBackupPage(viewModel: SuperUserViewModel, onBack: () -> Unit) {
     var restoreUri by rememberSaveable { mutableStateOf("") }
-    var result by remember { mutableStateOf<WearResult?>(null) }
-    val backupSuccess = WearResult(stringResource(R.string.allowlist_backup_success), success = true, brief = true)
-    val restoreSuccess = WearResult(stringResource(R.string.allowlist_restore_success), success = true, brief = true)
-    val failed = WearResult(stringResource(R.string.operation_failed), success = false, brief = true)
+    var result by remember { mutableStateOf<String?>(null) }
+    val backupSuccess = stringResource(R.string.allowlist_backup_success)
+    val restoreSuccess = stringResource(R.string.allowlist_restore_success)
+    val failed = stringResource(R.string.operation_failed)
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             if (event is SuperUserUiEvent.AllowlistOperationFinished) {
@@ -92,5 +91,5 @@ internal fun WearAllowlistBackupPage(viewModel: SuperUserViewModel, onBack: () -
             )
         }
     }
-    WearResultDialog(result) { result = null }
+    WearFeedbackEffect(result) { result = null }
 }

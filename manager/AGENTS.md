@@ -116,8 +116,8 @@ its UI and a few Wear-only data sources are separate.
   `WearSectionHeader`, `WearChip`, `WearActionButton` and the settings adapters.
 * `WearSubPage` holds input or detail pages nested in one destination; `WearLogPage` and
   `rememberWearLogSaver` show and save the output of flash and script runs.
-* Confirmations use `rememberWearConfirmDialog`; one-shot results use the M3
-  `SuccessConfirmationDialog`/`FailureConfirmationDialog`.
+* Confirmations use `rememberWearConfirmDialog`; one-shot operation results use
+  `LocalWearToast` or `WearFeedbackEffect` for pending message state, without result dialogs.
 * `WearManagerTheme` applies DPI, screen shape, haptics, keep screen on, dynamic color, background
   and card opacity, sharing `ThemeConfig`, `BackgroundManager` and the settings use cases with the
   phone.
