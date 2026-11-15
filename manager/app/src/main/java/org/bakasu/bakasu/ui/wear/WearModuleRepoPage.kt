@@ -33,8 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.items
-import androidx.wear.compose.material3.AlertDialog
-import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.MaterialTheme
@@ -47,7 +45,6 @@ import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
-import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.viewmodel.CatalogContent
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
@@ -60,8 +57,6 @@ import org.bakasu.bakasu.ui.viewmodel.formatFileSize
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
-import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
-import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearIconButtonGroup
@@ -75,11 +70,11 @@ import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSearchPage
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
+import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
-import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
 import org.bakasu.bakasu.ui.wear.component.wearRepositoryFailureText
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -198,31 +193,14 @@ private fun rememberModuleDownload(module: CatalogModule?, installer: WearModule
     var pendingRelease by remember { mutableStateOf<ModuleRelease?>(null) }
     var pendingAsset by remember { mutableStateOf<ModuleReleaseAsset?>(null) }
     val thenInstall = stringResource(R.string.wear_download_then_install)
-    val confirmDialog = rememberCustomDialog { dismiss ->
-        val asset = pendingAsset
-        AlertDialog(
-            verticalArrangement = WearDialogVerticalArrangement,
-            contentPadding = wearDialogContentPadding(),
-            visible = true,
-            onDismissRequest = dismiss,
-            icon = { WearDialogIcon(Icons.Rounded.Download) },
-            title = { Text(stringResource(R.string.wear_download_confirm_title)) },
-            text = {
-                if (asset != null) {
-                    Text(stringResource(R.string.wear_catalog_summary, asset.name, formatFileSize(asset.size ?: 0L)) + "\n" + thenInstall)
-                }
-            },
-            confirmButton = {
-                AlertDialogDefaults.ConfirmButton(
-                    onClick = {
-                        dismiss()
-                        val release = pendingRelease
-                        if (module != null && !module.isScript && release != null && asset != null) installer.download(module, release, asset)
-                    },
-                )
-            },
-            dismissButton = { AlertDialogDefaults.DismissButton(onClick = dismiss) },
-        )
+    val asset = pendingAsset
+    val confirmDialog = rememberWearConfirmDialog(
+        title = stringResource(R.string.wear_download_confirm_title),
+        message = if (asset != null) stringResource(R.string.wear_catalog_summary, asset.name, formatFileSize(asset.size ?: 0L)) + "\n" + thenInstall else "",
+        icon = Icons.Rounded.Download,
+    ) {
+        val release = pendingRelease
+        if (module != null && !module.isScript && release != null && asset != null) installer.download(module, release, asset)
     }
     return { release, asset ->
         pendingRelease = release

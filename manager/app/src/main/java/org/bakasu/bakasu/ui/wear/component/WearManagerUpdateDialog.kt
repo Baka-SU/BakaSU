@@ -2,7 +2,6 @@ package org.bakasu.bakasu.ui.wear.component
 
 import android.Manifest
 import android.os.Build
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,7 +15,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.material3.AlertDialog
@@ -43,7 +41,7 @@ import org.koin.compose.koinInject
  */
 @Composable
 fun WearManagerUpdateDialog(update: ManagerUpdateInfo?) {
-    val context = LocalContext.current
+    val toast = LocalWearToast.current
     val enqueue = koinInject<EnqueueManagerUpdateUseCase>()
     val current by rememberUpdatedState(update)
     var promptedVersion by rememberSaveable { mutableIntStateOf(0) }
@@ -53,7 +51,7 @@ fun WearManagerUpdateDialog(update: ManagerUpdateInfo?) {
         if (granted) {
             current?.let(enqueue::invoke)
         } else {
-            Toast.makeText(context, deniedText, Toast.LENGTH_SHORT).show()
+            toast.show(deniedText)
         }
     }
     fun download(info: ManagerUpdateInfo) {

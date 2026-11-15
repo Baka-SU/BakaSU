@@ -6,7 +6,6 @@ import androidx.compose.material.icons.rounded.InsertDriveFile
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -21,12 +20,11 @@ import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadUiState
-import org.bakasu.bakasu.ui.viewmodel.WearDownloadsEvent
 import org.bakasu.bakasu.ui.viewmodel.WearDownloadsViewModel
 import org.bakasu.bakasu.ui.viewmodel.formatFileSize
-import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
+import org.bakasu.bakasu.ui.wear.component.WearDownloadsFeedback
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearInfoRow
@@ -43,16 +41,7 @@ internal fun WearDownloadDetailPage(route: WearRoute.Download, onBack: () -> Uni
     val verifying by viewModel.verifying.collectAsStateWithLifecycle()
     var downloadId by rememberSaveable(route) { mutableStateOf(route.downloadId) }
     val task = if (downloadId != null) downloads.firstOrNull { it.id == downloadId } else downloads.firstOrNull { it.module?.moduleId == route.moduleId }
-    val toast = LocalWearToast.current
-    val failed = stringResource(R.string.wear_download_verify_failed)
-    LaunchedEffect(viewModel, toast, failed) {
-        viewModel.events.collect {
-            when (it) {
-                is WearDownloadsEvent.Install -> onInstall(it.uri)
-                WearDownloadsEvent.VerificationFailed -> toast.show(failed)
-            }
-        }
-    }
+    WearDownloadsFeedback(viewModel.events, onInstall)
     WearDownloadDetailContent(task, verifying, onBack, viewModel::install) {
         downloadId = viewModel.retry(it) ?: downloadId
     }

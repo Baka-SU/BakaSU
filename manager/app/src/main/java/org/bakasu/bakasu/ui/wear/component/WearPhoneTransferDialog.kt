@@ -17,10 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.Icon
-import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.OpenOnPhoneDialog
 import androidx.wear.compose.material3.OpenOnPhoneDialogDefaults
-import androidx.wear.compose.material3.openOnPhoneDialogCurvedText
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.BridgeFailure
 import org.bakasu.bakasu.domain.model.BridgeStage
@@ -57,18 +54,12 @@ fun WearPhoneTransferDialog(transfer: BridgeTransfer?, onCancel: () -> Unit, onD
 
         else -> OpenOnPhoneDialogDefaults.text
     }
-    val style = OpenOnPhoneDialogDefaults.curvedTextStyle
-    val color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-    OpenOnPhoneDialog(
+    WearDeviceFeedbackDialog(
         visible = transfer != null,
-        onDismissRequest = { if (waiting) onCancel() else onDismiss() },
-        curvedText = { openOnPhoneDialogCurvedText(text, style) },
+        onDismiss = { if (waiting) onCancel() else onDismiss() },
+        message = text,
+        failed = failed,
         durationMillis = if (waiting) 300_000L else OpenOnPhoneDialogDefaults.DurationMillis,
-        colors = OpenOnPhoneDialogDefaults.colors(
-            iconColor = if (failed) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
-            iconContainerColor = if (failed) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
-            progressIndicatorColor = color,
-        ),
     ) {
         when {
             state?.stage == BridgeStage.CONNECTING || state?.stage == BridgeStage.CHECKING -> WearLoadingIndicator()

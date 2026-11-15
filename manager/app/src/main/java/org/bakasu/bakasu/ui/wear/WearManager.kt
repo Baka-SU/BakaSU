@@ -58,7 +58,6 @@ import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.HorizontalPagerScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.PagerScaffoldDefaults
-import androidx.wear.compose.material3.Text
 import androidx.wear.compose.navigation3.rememberSwipeDismissableSceneStrategy
 import kotlinx.coroutines.channels.ReceiveChannel
 import org.bakasu.bakasu.R
@@ -67,7 +66,6 @@ import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.LkmSelection
 import org.bakasu.bakasu.domain.model.SuperUserLoadFailure
-import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerOperation
@@ -113,7 +111,7 @@ import org.bakasu.bakasu.ui.wear.component.WearHorizontalPageIndicator
 import org.bakasu.bakasu.ui.wear.component.WearHorizontalPager
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
 import org.bakasu.bakasu.ui.wear.component.WearManagerUpdateDialog
-import org.bakasu.bakasu.ui.wear.component.WearNoticeDialog
+import org.bakasu.bakasu.ui.wear.component.WearMessageDialog
 import org.bakasu.bakasu.ui.wear.component.WearOperationsBackHandler
 import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.bakasu.bakasu.ui.wear.component.WearResult
@@ -253,22 +251,12 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val settingsNotice = settingsMessageResource?.let { (id, arg) ->
         if (arg == null) stringResource(id) else stringResource(id, arg)
     }
-    val settingsNoticeDialog = rememberCustomDialog { dismiss ->
-        val close = {
-            dismiss()
-            clearSettingsFeedback()
-        }
-        WearNoticeDialog(
-            visible = true,
-            onDismissRequest = close,
-            icon = { WearDialogIcon(Icons.Rounded.Info) },
-            title = { Text(stringResource(R.string.settings)) },
-            text = { Text(settingsNotice.orEmpty()) },
-        )
-    }
-    LaunchedEffect(settingsNotice) {
-        if (settingsNotice != null) settingsNoticeDialog.show() else settingsNoticeDialog.hide()
-    }
+    WearMessageDialog(
+        message = settingsNotice,
+        title = stringResource(R.string.settings),
+        onDismiss = { clearSettingsFeedback() },
+        icon = { WearDialogIcon(Icons.Rounded.Info) },
+    )
 
     LaunchedEffect(home.isInitialDataLoaded, home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled, home.systemStatus.isRootAvailable) {
         navigator.closeUnavailable(home)

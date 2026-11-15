@@ -4,11 +4,39 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
+import androidx.wear.compose.material3.Text
+import org.bakasu.bakasu.ui.component.rememberCustomDialog
+
+/** A message owns visibility; all dismiss paths also clear the caller's feedback state. */
+@Composable
+internal fun WearMessageDialog(
+    message: String?,
+    title: String,
+    onDismiss: () -> Unit,
+    icon: @Composable (() -> Unit)? = null,
+) {
+    val dialog = rememberCustomDialog { dismiss ->
+        WearNoticeDialog(
+            visible = true,
+            onDismissRequest = {
+                dismiss()
+                onDismiss()
+            },
+            title = { Text(title) },
+            icon = icon,
+            text = { Text(message.orEmpty()) },
+        )
+    }
+    LaunchedEffect(message) {
+        if (message != null) dialog.show() else dialog.hide()
+    }
+}
 
 /** Single-action notices use a scrolling circular footer on square screens. */
 @Composable

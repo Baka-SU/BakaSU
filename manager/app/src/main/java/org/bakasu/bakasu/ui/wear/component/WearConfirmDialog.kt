@@ -6,6 +6,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,11 +43,12 @@ fun rememberWearConfirmDialog(
     message: String,
     destructive: Boolean = false,
     subject: String? = null,
+    icon: ImageVector = if (destructive) Icons.Rounded.Warning else Icons.Rounded.Info,
     onConfirm: () -> Unit,
 ): DialogHandle = rememberCustomDialog { dismiss ->
-    val icon: @Composable () -> Unit = {
+    val dialogIcon: @Composable () -> Unit = {
         WearDialogIcon(
-            if (destructive) Icons.Rounded.Warning else Icons.Rounded.Info,
+            icon,
             tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
         )
     }
@@ -76,7 +78,7 @@ fun rememberWearConfirmDialog(
             contentPadding = wearDialogContentPadding(),
             visible = true,
             onDismissRequest = dismiss,
-            icon = icon,
+            icon = dialogIcon,
             title = { Text(title) },
             text = message.takeIf { it.isNotBlank() }?.let { { Text(it) } },
             confirmButton = confirmButton,
@@ -88,7 +90,7 @@ fun rememberWearConfirmDialog(
             contentPadding = wearDialogContentPadding(),
             visible = true,
             onDismissRequest = dismiss,
-            icon = icon,
+            icon = dialogIcon,
             title = { Text(title) },
             text = { Text(subject, style = wearEmphasizedBodyStyle()) },
             confirmButton = confirmButton,

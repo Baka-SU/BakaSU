@@ -7,7 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -30,12 +29,11 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
-import org.bakasu.bakasu.ui.viewmodel.WearDownloadsEvent
 import org.bakasu.bakasu.ui.viewmodel.WearDownloadsViewModel
 import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
+import org.bakasu.bakasu.ui.wear.component.WearDownloadsFeedback
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
-import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDelete
@@ -49,16 +47,7 @@ internal fun WearDownloadsPage(onBack: () -> Unit, onInstall: (String) -> Unit, 
     val viewModel = koinViewModel<WearDownloadsViewModel>()
     val downloads by viewModel.downloads.collectAsStateWithLifecycle()
     val verifying by viewModel.verifying.collectAsStateWithLifecycle()
-    var failed by remember { mutableStateOf(false) }
-    WearErrorDialog(stringResource(R.string.wear_download_verify_failed).takeIf { failed }) { failed = false }
-    LaunchedEffect(viewModel) {
-        viewModel.events.collect { event ->
-            when (event) {
-                is WearDownloadsEvent.Install -> onInstall(event.uri)
-                WearDownloadsEvent.VerificationFailed -> failed = true
-            }
-        }
-    }
+    WearDownloadsFeedback(viewModel.events, onInstall)
     WearDownloadsPage(downloads, verifying, onBack, viewModel::install, viewModel::remove, viewModel::clear, { onOpen(WearRoute.Download(it.module?.moduleId.orEmpty(), it.id)) })
 }
 
