@@ -23,6 +23,7 @@ import org.bakasu.bakasu.domain.model.RepositorySource
 import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetCatalogModuleUseCase
 import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
+import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
@@ -73,6 +74,7 @@ class ModuleRepoViewModel(
     private val getModule: GetCatalogModuleUseCase,
     private val isCurrent: IsCatalogModuleCurrentUseCase,
     private val savedState: SavedStateHandle,
+    private val loadModuleIcon: LoadModuleIconUseCase,
     repositoryUrl: String? = null,
 ) : ViewModel() {
     private val search = MutableStateFlow(savedState.get<String>("repository-search") ?: "")
@@ -135,6 +137,8 @@ class ModuleRepoViewModel(
         ),
     )
     val uiState: StateFlow<ModuleRepoUiState> = state
+
+    suspend fun loadIcons(modules: List<CatalogModule>) = loadModuleIcon.loadAll(modules)
 
     private fun visibleState(catalog: ModuleRepoUiState, sources: List<RepositorySource>): ModuleRepoUiState = catalog.copy(
         modules = catalog.modules.filter { module ->

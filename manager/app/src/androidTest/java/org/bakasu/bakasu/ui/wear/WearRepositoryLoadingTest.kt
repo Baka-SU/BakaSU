@@ -272,7 +272,7 @@ class WearRepositoryLoadingTest {
             val koin = GlobalContext.get()
             listModel = ModuleRepoViewModel(
                 ObserveCatalogModulesUseCase(repository), RefreshModuleCatalogUseCase(repository), koin.get(), koin.get(), koin.get(),
-                ObserveRepositorySourcesUseCase(repository), GetCatalogModuleUseCase(repository), IsCatalogModuleCurrentUseCase(repository), SavedStateHandle(),
+                ObserveRepositorySourcesUseCase(repository), GetCatalogModuleUseCase(repository), IsCatalogModuleCurrentUseCase(repository), SavedStateHandle(), koin.get(),
             )
             scope.launch { listModel.state.collect { animations += it.isRefreshing } }
         }

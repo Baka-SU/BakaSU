@@ -58,31 +58,42 @@ internal fun WearCatalogModuleIcon(
         } else {
             null
         }
-        val colors = MaterialTheme.colorScheme
-        val metrics = remember(bitmap) { bitmap?.let(::catalogIconMetrics) }
-        val background = when {
-            metrics == null -> fallbackContainerColor
-            !metrics.transparent || metrics.monochrome -> Color.Transparent
-            metrics.luminance < 0.45f -> colors.onSurface.copy(alpha = 1f)
-            else -> colors.surfaceContainerHigh.copy(alpha = 1f)
-        }
-        // Preserve the detail tile's corner ratio at every size, including the 24dp list tile.
-        Box(
-            Modifier.size(size).clip(RoundedCornerShape(size * (18f / 52f)))
-                .background(background),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (bitmap == null) {
-                Icon(Icons.Rounded.Extension, null, Modifier.size(size * 0.55f), tint = fallbackContentColor)
-            } else {
-                Image(
-                    bitmap.asImageBitmap(),
-                    null,
-                    Modifier.fillMaxSize().scale(metrics?.scale ?: 1f),
-                    contentScale = ContentScale.Crop,
-                    colorFilter = if (metrics?.transparent == true && metrics.monochrome) ColorFilter.tint(colors.onSurface) else null,
-                )
-            }
+        WearCatalogModuleIcon(bitmap, size, fallbackContainerColor, fallbackContentColor)
+    }
+}
+
+/** Renders a completed batch result without starting another request for failed or evicted icons. */
+@Composable
+internal fun WearCatalogModuleIcon(
+    bitmap: Bitmap?,
+    size: Dp = 24.dp,
+    fallbackContainerColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    fallbackContentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+) {
+    val colors = MaterialTheme.colorScheme
+    val metrics = remember(bitmap) { bitmap?.let(::catalogIconMetrics) }
+    val background = when {
+        metrics == null -> fallbackContainerColor
+        !metrics.transparent || metrics.monochrome -> Color.Transparent
+        metrics.luminance < 0.45f -> colors.onSurface.copy(alpha = 1f)
+        else -> colors.surfaceContainerHigh.copy(alpha = 1f)
+    }
+    // Preserve the detail tile's corner ratio at every size, including the 24dp list tile.
+    Box(
+        Modifier.size(size).clip(RoundedCornerShape(size * (18f / 52f)))
+            .background(background),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (bitmap == null) {
+            Icon(Icons.Rounded.Extension, null, Modifier.size(size * 0.55f), tint = fallbackContentColor)
+        } else {
+            Image(
+                bitmap.asImageBitmap(),
+                null,
+                Modifier.fillMaxSize().scale(metrics?.scale ?: 1f),
+                contentScale = ContentScale.Crop,
+                colorFilter = if (metrics?.transparent == true && metrics.monochrome) ColorFilter.tint(colors.onSurface) else null,
+            )
         }
     }
 }

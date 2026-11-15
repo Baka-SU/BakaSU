@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,8 +18,11 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -91,13 +95,15 @@ internal fun WearModuleRepoPage(
     val state by viewModel.state.collectAsStateWithLifecycle()
     var retryLoading by remember(viewModel) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val icons by rememberWearRepositoryIcons(state, viewModel::loadIcons)
     WearModuleRepoPage(
         state,
         { viewModel.refresh(fromPull = true) },
         onBack,
         onOpenPanel,
         hasOperationsPanel,
-        isPageLoading = isPageLoading || retryLoading,
+        isPageLoading = isPageLoading || retryLoading || icons == null,
+        icons = icons.orEmpty(),
         onRetry = {
             retryLoading = true
             scope.launch {
@@ -112,6 +118,18 @@ internal fun WearModuleRepoPage(
     )
 }
 
+/** Reset readiness synchronously for each list so an older batch cannot reveal new rows. */
+@Composable
+internal fun rememberWearRepositoryIcons(
+    state: ModuleRepoUiState,
+    loadIcons: suspend (List<CatalogModule>) -> Map<String, Bitmap?>,
+): State<Map<String, Bitmap?>?> = key(state.repositoryUrl, state.modules, state.content == CatalogContent.FAILED) {
+    val skip = state.modules.isEmpty() || state.content == CatalogContent.FAILED
+    produceState<Map<String, Bitmap?>?>(if (skip) emptyMap() else null) {
+        if (!skip) value = loadIcons(state.modules)
+    }
+}
+
 @Composable
 internal fun WearModuleRepoPage(
     state: ModuleRepoUiState,
@@ -121,6 +139,7 @@ internal fun WearModuleRepoPage(
     hasOperationsPanel: Boolean = false,
     isPageLoading: Boolean = false,
     onRetry: () -> Unit = onRefresh,
+    icons: Map<String, Bitmap?> = emptyMap(),
     onOpen: (CatalogModule) -> Unit,
 ) {
     val loading = isPageLoading || (state.isRefreshing && !state.isPullRefreshing)
@@ -156,7 +175,7 @@ internal fun WearModuleRepoPage(
                     val iconSize = with(LocalDensity.current) {
                         MaterialTheme.typography.labelMedium.lineHeight.toDp() + MaterialTheme.typography.labelSmall.lineHeight.toDp()
                     }.coerceAtLeast(ButtonDefaults.LargeIconSize)
-                    WearCatalogModuleIcon(module, iconSize)
+                    WearCatalogModuleIcon(icons[module.catalogId], iconSize)
                 },
                 largeIcon = true,
 

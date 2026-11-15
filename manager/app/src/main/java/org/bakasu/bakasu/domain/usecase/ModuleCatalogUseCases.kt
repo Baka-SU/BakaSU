@@ -1,7 +1,11 @@
 package org.bakasu.bakasu.domain.usecase
 
+import android.graphics.Bitmap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flowOn
@@ -63,6 +67,34 @@ class GetModuleReleaseDetailsUseCase(private val repository: ModuleReleaseReposi
 class LoadModuleIconUseCase(private val repository: ModuleIconRepository) {
     fun cached(url: String, origin: String?) = repository.cached(url, origin)
     suspend operator fun invoke(url: String, origin: String?) = repository.load(url, origin)
+
+    /** Keep the completed bitmaps with the list, even if the shared LRU evicts them. */
+    suspend fun loadAll(modules: List<CatalogModule>): Map<String, Bitmap?> = coroutineScope {
+        val sources = modules.associate { module ->
+            module.catalogId to (
+                (module.iconUrl?.takeIf { it.isNotBlank() } ?: module.registryMetadata?.iconUrl) to
+                    module.repositoryUrl.takeIf { module.registryMetadata != null }
+                )
+        }
+        val loaded = mutableMapOf<Pair<String?, String?>, Bitmap?>()
+        // Bound queued work as well as active downloads when the page is closed or replaced.
+        sources.values.distinct().chunked(4).forEach { batch ->
+            batch.map { source ->
+                async {
+                    val (url, origin) = source
+                    val bitmap = try {
+                        if (url.isNullOrBlank()) null else repository.load(url, origin)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        null
+                    }
+                    source to bitmap
+                }
+            }.awaitAll().forEach { (source, bitmap) -> loaded[source] = bitmap }
+        }
+        sources.mapValues { (_, source) -> loaded[source] }
+    }
 }
 
 class ResolveModuleUpdateUseCase(private val repository: KernelSuRegistryRepository) {
