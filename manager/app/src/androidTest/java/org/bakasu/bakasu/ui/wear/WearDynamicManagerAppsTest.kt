@@ -4,8 +4,10 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollToIndexAction
-import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
@@ -14,6 +16,7 @@ import androidx.compose.ui.test.swipeUp
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.DynamicManagerApp
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerUiState
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -29,7 +32,7 @@ class WearDynamicManagerAppsTest {
         compose.setContent {
             MaterialTheme {
                 AppScaffold(timeText = {}) {
-                    WearDynamicManagerAppsPage(state.value, {}, {}, { retries++ }, { error("Retry must not select an app") })
+                    WearDynamicManagerAppsPage(state.value, {}, {}, { retries++ }, { error("Retry must not clear a manager") }, { error("Retry must not select an app") })
                 }
             }
         }
@@ -46,5 +49,51 @@ class WearDynamicManagerAppsTest {
             compose.runOnIdle { assertEquals(query, state.value.search) }
         }
         compose.runOnIdle { assertEquals(3, retries) }
+    }
+
+    @Test
+    fun grantAndClearRequireTheirOwnConfirmation() {
+        val candidate = DynamicManagerApp("Candidate", "example.manager", 10001, "/data/app/example/base.apk")
+        val state = mutableStateOf(DynamicManagerUiState(isLoading = false, apps = listOf(candidate)))
+        var grants = 0
+        var clears = 0
+        compose.setContent {
+            MaterialTheme {
+                AppScaffold(timeText = {}) {
+                    WearDynamicManagerAppsPage(state.value, {}, {}, {}, { clears++ }) {
+                        assertEquals(candidate, it)
+                        grants++
+                    }
+                }
+            }
+        }
+        val confirm = compose.activity.getString(androidx.wear.compose.material3.R.string.wear_m3c_alert_dialog_content_description_confirm_button)
+        compose.onNodeWithText(candidate.label).performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.dynamic_manager_grant_confirm_title)).assertExists()
+        compose.runOnIdle { assertEquals(0, grants) }
+        confirmDialog(confirm)
+        compose.runOnIdle {
+            assertEquals(1, grants)
+            state.value = state.value.copy(apps = listOf(candidate.copy(isSelected = true, managerSignatureIndex = 255)))
+        }
+        compose.onNodeWithText(candidate.label).performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.dynamic_manager_clear_confirm_title)).assertExists()
+        compose.runOnIdle { assertEquals(0, clears) }
+        confirmDialog(confirm)
+        compose.runOnIdle {
+            assertEquals(1, grants)
+            assertEquals(1, clears)
+        }
+    }
+    private fun confirmDialog(description: String) {
+        val button = compose.onNodeWithContentDescription(description)
+        repeat(5) {
+            if (button.isDisplayed()) {
+                button.performClick()
+                return
+            }
+            compose.onNode(isDialog()).performTouchInput { swipeUp() }
+        }
+        button.assertIsDisplayed().performClick()
     }
 }

@@ -193,6 +193,7 @@ internal fun WearDynamicManagerAppsPage(
     onBack: () -> Unit,
     onOpenPanel: () -> Unit,
     onRetry: () -> Unit,
+    onClear: () -> Unit,
     onSelect: (DynamicManagerApp) -> Unit,
 ) {
     var pending by remember { mutableStateOf<DynamicManagerApp?>(null) }
@@ -203,6 +204,12 @@ internal fun WearDynamicManagerAppsPage(
         pending?.let(onSelect)
         pending = null
     }
+    val clear = rememberWearConfirmDialog(
+        stringResource(R.string.dynamic_manager_clear_confirm_title),
+        stringResource(R.string.dynamic_manager_clear_confirm_message),
+        destructive = true,
+        onConfirm = onClear,
+    )
     val needsRetry = state.loadFailed || state.apps.isEmpty()
     WearList(
         pageTitle = stringResource(R.string.search_apps),
@@ -249,11 +256,13 @@ internal fun WearDynamicManagerAppsPage(
                     if (checked) {
                         pending = app
                         grant.show()
+                    } else if (app.isSelected) {
+                        clear.show()
                     }
                 },
                 secondaryLabel = source?.let { stringResource(R.string.dynamic_manager_fixed_manager_summary, app.packageName, it) } ?: app.packageName,
 
-                enabled = app.isChangeable,
+                enabled = app.isChangeable && !state.isSubmitting,
                 iconContent = {
                     Box(Modifier.size(ButtonDefaults.LargeIconSize)) {
                         Icon(Icons.Rounded.Apps, null, Modifier.fillMaxSize())

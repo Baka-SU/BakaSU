@@ -850,7 +850,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     }
                                 }
                                 entry<WearRoute.DynamicManagerApps>(metadata = DynamicManagerTransitions) {
-                                    WearDynamicManagerAppsPage(dynamicManager, ::back, { open(WearRoute.Operations(WearOperationsPage.DynamicManagerApps)) }, { dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Retry) }) {
+                                    WearDynamicManagerAppsPage(dynamicManager, ::back, { open(WearRoute.Operations(WearOperationsPage.DynamicManagerApps)) }, { dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Retry) }, { dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Clear) }) {
                                         dynamicManagerViewModel.dispatch(DynamicManagerUiAction.SelectApp(it))
                                     }
                                 }
