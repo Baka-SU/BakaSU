@@ -357,8 +357,12 @@ static inline u64 ksu_ktime_get_ns(void)
 #define untagged_addr(addr) (addr)
 #endif
 
-#ifndef in_compat_syscall
-#define in_compat_syscall() is_compat_task()
+#ifdef CONFIG_COMPAT
+#if defined(__x86_64__)
+#define ksu_is_compat_task() in_compat_syscall()
+#else
+#define ksu_is_compat_task() is_compat_task()
+#endif
 #endif
 
 extern void ksu_run_in_init_if_possible(void (*callback)(void *), void *data);
@@ -581,7 +585,7 @@ static struct user_arg_ptr ksu_take_user_argv(const char __user *const __user *a
     struct user_arg_ptr argv;
 
 #ifdef CONFIG_COMPAT
-    if (in_compat_syscall()) {
+    if (ksu_is_compat_task()) {
         argv.is_compat = true;
         argv.ptr.compat = (const compat_uptr_t __user *)argv_user;
         return argv;
