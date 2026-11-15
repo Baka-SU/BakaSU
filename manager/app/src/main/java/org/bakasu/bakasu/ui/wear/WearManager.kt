@@ -925,7 +925,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 entry<WearRoute.About> {
                                     WearAboutDetail(
                                         onBack = ::back,
-                                        onOpenLink = linkViewModel::openAboutLink,
+                                        onOpenLink = linkViewModel::open,
                                         onLicenses = { open(WearRoute.Licenses) },
                                     )
                                 }

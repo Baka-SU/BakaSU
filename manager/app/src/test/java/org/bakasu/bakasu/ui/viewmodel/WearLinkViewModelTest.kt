@@ -62,8 +62,8 @@ class WearLinkViewModelTest {
     }
 
     @Test
-    fun aboutLinksUseSavedModeAndInternalNavigationRetainsFailureContext() = runTest(dispatcher) {
-        coEvery { repository.resolve(url, "webview", true) } returns WearLinkResolution(WearLinkTarget.WEBVIEW, emptyList())
+    fun linksUseSavedModeAndInternalNavigationRetainsFailureContext() = runTest(dispatcher) {
+        coEvery { repository.resolve(url, "webview") } returns WearLinkResolution(WearLinkTarget.WEBVIEW, emptyList())
         coEvery { repository.continueLink(url, emptyList(), null, false) } throws WearLinkException(WearLinkFailure.WEBVIEW_UNAVAILABLE)
         val navigator = WearNavigator(NavBackStack<NavKey>(WearRoute.Main), model::onNavigation, {}, {})
         backgroundScope.launch {
@@ -72,7 +72,7 @@ class WearLinkViewModelTest {
             }
         }
         runCurrent()
-        model.openAboutLink(url)
+        model.open(url)
         runCurrent()
         selectedMode = "phone"
         model.navigateWithinLink { navigator.back() }
@@ -80,12 +80,12 @@ class WearLinkViewModelTest {
         runCurrent()
         assertFalse((model.result.value as WearLinkResult.Failed).automaticLink)
         coVerify(exactly = 1) { repository.continueLink(url, emptyList(), null, false) }
-        coVerify(exactly = 0) { repository.resolve(url, "phone", any()) }
+        coVerify(exactly = 0) { repository.resolve(url, "phone") }
     }
 
     @Test
     fun userBackCancelsPendingWebViewFallback() = runTest(dispatcher) {
-        coEvery { repository.resolve(url, "webview", false) } returns WearLinkResolution(WearLinkTarget.WEBVIEW, emptyList())
+        coEvery { repository.resolve(url, "webview") } returns WearLinkResolution(WearLinkTarget.WEBVIEW, emptyList())
         model.open(url)
         runCurrent()
         model.onNavigation()

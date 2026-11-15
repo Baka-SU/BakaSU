@@ -38,7 +38,7 @@ sealed interface WearLinkResult {
 }
 
 /**
- * Every entry respects the saved mode. Automatic About links try the phone first.
+ * Every ordinary link entry shares the same fallback order and respects the saved mode.
  */
 class WearLinkViewModel(
     private val repository: WearLinkRepository,
@@ -64,7 +64,6 @@ class WearLinkViewModel(
     private val mode get() = getPreference.wear(WearPreference.Link)
 
     fun open(url: String) = open(url, mode)
-    fun openAboutLink(url: String) = open(url, mode, phoneFirst = true)
 
     /** Internal Browser navigation continues the request; user navigation still cancels it. */
     fun navigateWithinLink(navigate: () -> Unit) {
@@ -99,9 +98,9 @@ class WearLinkViewModel(
         if (webViewRequest?.url == url) webViewRequest = null
     }
 
-    private fun open(url: String, mode: String, phoneFirst: Boolean = false) = run(automaticLink = mode == "auto", onWatch = mode == "webview") {
+    private fun open(url: String, mode: String) = run(automaticLink = mode == "auto", onWatch = mode == "webview") {
         webViewRequest = null
-        showResolution(url, mode, repository.resolve(url, mode, phoneFirst))
+        showResolution(url, mode, repository.resolve(url, mode))
     }
 
     private suspend fun showResolution(url: String, mode: String, resolution: WearLinkResolution) {

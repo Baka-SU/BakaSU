@@ -21,16 +21,10 @@ class WearLinkException(val reason: WearLinkFailure, cause: Throwable? = null, v
 /** Remaining handlers belong to this attempt, including an asynchronous WebView failure. */
 data class WearLinkResolution(val target: WearLinkTarget, val remaining: List<WearLinkTarget>, val phoneFailure: BridgeFailure? = null)
 
-internal fun wearLinkTargets(mode: String, phoneFirst: Boolean): List<WearLinkTarget> = when (mode) {
+internal fun wearLinkTargets(mode: String): List<WearLinkTarget> = when (mode) {
     "phone" -> listOf(WearLinkTarget.PHONE)
-
     "webview" -> listOf(WearLinkTarget.BROWSER, WearLinkTarget.WEBVIEW)
-
-    else -> if (phoneFirst) {
-        listOf(WearLinkTarget.PHONE, WearLinkTarget.WEBVIEW, WearLinkTarget.BROWSER)
-    } else {
-        listOf(WearLinkTarget.BROWSER, WearLinkTarget.WEBVIEW, WearLinkTarget.PHONE)
-    }
+    else -> listOf(WearLinkTarget.PHONE, WearLinkTarget.WEBVIEW, WearLinkTarget.BROWSER)
 }
 
 internal suspend fun resolveWearLink(
@@ -91,7 +85,7 @@ class WearLinkRepository(private val application: Application, private val bridg
         }
     }
 
-    suspend fun resolve(url: String, mode: String, phoneFirst: Boolean = false): WearLinkResolution = continueLink(url, wearLinkTargets(mode, phoneFirst), reportPhoneFailure = mode == "phone")
+    suspend fun resolve(url: String, mode: String): WearLinkResolution = continueLink(url, wearLinkTargets(mode), reportPhoneFailure = mode == "phone")
 
     suspend fun continueLink(
         url: String,

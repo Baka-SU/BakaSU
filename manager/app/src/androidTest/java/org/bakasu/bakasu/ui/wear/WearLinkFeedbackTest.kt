@@ -62,7 +62,7 @@ class WearLinkFeedbackTest {
             }
         }
         repeat(2) {
-            compose.runOnIdle { viewModel.openAboutLink("file:///invalid") }
+            compose.runOnIdle { viewModel.open("file:///invalid") }
             compose.waitUntil { viewModel.result.value != null }
             compose.mainClock.advanceTimeBy(500)
             compose.onNodeWithContentDescription(compose.activity.getString(R.string.wear_link_open_failed)).assertExists()
