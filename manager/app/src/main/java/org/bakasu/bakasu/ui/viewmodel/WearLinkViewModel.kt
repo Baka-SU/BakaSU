@@ -118,19 +118,17 @@ class WearLinkViewModel(
     }
 
     /**
-     * Opens a module WebUI in the watch WebView, or on the phone: when chosen, or automatically when
-     * the watch has no WebView. The phone receives the page from this watch over secure RFCOMM.
+     * Automatic module WebUI tries the phone before the watch WebView. Explicit device choices
+     * stay on that device. The phone receives the page from this watch over secure RFCOMM.
      */
     fun openWebUi(moduleId: String, moduleName: String) {
         val mode = mode
-        if (mode == "phone" || mode != "webview" && !repository.hasWebView()) {
-            run(onPhone = true) {
-                repository.openWebUiOnPhone(moduleId, moduleName)
+        run(onPhone = mode == "phone", automaticLink = mode == "auto", onWatch = mode == "webview") {
+            webViewRequest = null
+            val resolution = repository.resolveWebUi(moduleId, moduleName, mode)
+            if (resolution.target == WearLinkTarget.WEBVIEW) {
+                mutableEvents.emit(WearLinkEvent.WebUi(moduleId))
             }
-        } else if (repository.hasWebView()) {
-            viewModelScope.launch { mutableEvents.emit(WearLinkEvent.WebUi(moduleId)) }
-        } else {
-            fail(WearLinkFailure.WEBVIEW_UNAVAILABLE)
         }
     }
 

@@ -28,6 +28,7 @@ import org.bakasu.bakasu.domain.usecase.ObserveCompanionBridgeUseCase
 import org.bakasu.bakasu.ui.wear.WearNavigator
 import org.bakasu.bakasu.ui.wear.WearRoute
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -97,10 +98,25 @@ class WearLinkViewModelTest {
 
     @Test
     fun explicitWatchModuleFailureNeverInvokesPhone() = runTest(dispatcher) {
-        every { repository.hasWebView() } returns false
+        coEvery { repository.resolveWebUi("module", "Module", "webview") } throws WearLinkException(WearLinkFailure.WEBVIEW_UNAVAILABLE)
         model.openWebUi("module", "Module")
         runCurrent()
         assertFalse((model.result.value as WearLinkResult.Failed).automaticLink)
-        coVerify(exactly = 0) { repository.openWebUiOnPhone(any(), any()) }
+        coVerify(exactly = 1) { repository.resolveWebUi("module", "Module", "webview") }
+    }
+
+    @Test
+    fun automaticModuleWebUiOpensWatchOnlyWhenResolutionFallsBack() = runTest(dispatcher) {
+        selectedMode = "auto"
+        val events = mutableListOf<WearLinkEvent>()
+        backgroundScope.launch { model.events.collect { events += it } }
+        coEvery { repository.resolveWebUi("module", "Module", "auto") } returns WearLinkResolution(WearLinkTarget.PHONE, listOf(WearLinkTarget.WEBVIEW))
+        model.openWebUi("module", "Module")
+        runCurrent()
+        assertEquals(emptyList<WearLinkEvent>(), events)
+        coEvery { repository.resolveWebUi("module", "Module", "auto") } returns WearLinkResolution(WearLinkTarget.WEBVIEW, emptyList())
+        model.openWebUi("module", "Module")
+        runCurrent()
+        assertEquals(listOf(WearLinkEvent.WebUi("module")), events)
     }
 }

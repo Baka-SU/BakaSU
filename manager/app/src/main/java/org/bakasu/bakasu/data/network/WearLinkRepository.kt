@@ -27,6 +27,12 @@ internal fun wearLinkTargets(mode: String): List<WearLinkTarget> = when (mode) {
     else -> listOf(WearLinkTarget.PHONE, WearLinkTarget.WEBVIEW, WearLinkTarget.BROWSER)
 }
 
+internal fun wearWebUiTargets(mode: String): List<WearLinkTarget> = when (mode) {
+    "phone" -> listOf(WearLinkTarget.PHONE)
+    "webview" -> listOf(WearLinkTarget.WEBVIEW)
+    else -> listOf(WearLinkTarget.PHONE, WearLinkTarget.WEBVIEW)
+}
+
 internal suspend fun resolveWearLink(
     targets: List<WearLinkTarget>,
     previousPhoneFailure: BridgeFailure? = null,
@@ -103,7 +109,13 @@ class WearLinkRepository(private val application: Application, private val bridg
         }
     }
 
-    suspend fun openWebUiOnPhone(moduleId: String, moduleName: String) {
-        bridge.handoff(BridgeAction.WEB_UI, moduleId, moduleName)
+    suspend fun resolveWebUi(moduleId: String, moduleName: String, mode: String): WearLinkResolution = withContext(Dispatchers.IO) {
+        resolveWearLink(wearWebUiTargets(mode)) { target ->
+            when (target) {
+                WearLinkTarget.PHONE -> bridge.handoff(BridgeAction.WEB_UI, moduleId, moduleName, reportFailure = mode == "phone")
+                WearLinkTarget.WEBVIEW -> if (!hasWebView()) throw WearLinkException(WearLinkFailure.WEBVIEW_UNAVAILABLE)
+                WearLinkTarget.BROWSER -> error("Module WebUI requires the manager WebView")
+            }
+        }
     }
 }
