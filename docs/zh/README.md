@@ -24,6 +24,8 @@
 
 ## 兼容状态
 
+- 管理器可尝试用现有的 `/system/bin/kauditd` 或 `/system/xbin/kauditd` 启动普通 Root Shell。Superuser 授权策略必须允许管理器当前的应用 UID；此兼容入口不会授予权限，也不提供全局挂载命名空间。KernelSU 专属管理功能仍需兼容的内核。
+
 - BakaSU 官方支持 GKI 2.0 的设备（内核版本 5.10 以上）。
 
 - 旧内核也是兼容的（3.4+），不过需要自己编译内核。

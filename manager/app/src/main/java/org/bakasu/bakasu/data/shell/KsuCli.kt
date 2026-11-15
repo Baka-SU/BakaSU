@@ -56,33 +56,48 @@ class KsuCliRepository(context: Context) {
     /** Shared shells belong to this repository; callers must not close them. */
     fun getRootShell(globalMnt: Boolean = false): Shell = synchronized(shellLock) {
         val cached = if (globalMnt) globalMountShell else rootShell
-        if (cached != null && cached.isAlive) {
+        if (cached != null && cached.isAlive && cached.isRoot) {
             cached
         } else {
+            cached?.close()
             createRootShell(globalMnt).also {
                 if (globalMnt) globalMountShell = it else rootShell = it
             }
         }
     }
 
-    fun generateMainShellBuilder(): Shell.Builder {
-        val builder = Shell.Builder.create()
-        try {
-            builder.setCommands(getKsuDaemonPath(), "debug", "su")
-            builder.build().close()
-        } catch (e: Throwable) {
-            Log.w(TAG, "ksu failed: ", e)
-            try {
-                builder.setCommands("su")
-                builder.build().close()
-            } catch (e: Throwable) {
-                Log.e(TAG, "su failed: ", e)
-                builder.setCommands("sh")
-                builder.build().close()
+    private fun rootCommands(globalMnt: Boolean): List<Array<String>> = buildList {
+        runCatching { getKsuDaemonPath() }.getOrNull()?.let { ksud ->
+            add(if (globalMnt) arrayOf(ksud, "debug", "su", "-g") else arrayOf(ksud, "debug", "su"))
+        }
+        add(if (globalMnt) arrayOf("su", "-mm") else arrayOf("su"))
+        if (!globalMnt) {
+            for (path in listOf("/system/bin/kauditd", "/system/xbin/kauditd")) {
+                if (File(path).isFile) add(arrayOf(path))
             }
         }
+    }
 
-        return builder
+    private fun verifiedRootShell(command: Array<String>): Shell? {
+        val shell = try {
+            Shell.Builder.create().build(*command)
+        } catch (error: Exception) {
+            Log.w(TAG, "Root shell command failed: ${command.first()}", error)
+            return null
+        }
+        if (shell.isRoot) return shell
+        shell.close()
+        return null
+    }
+
+    fun generateMainShellBuilder(): Shell.Builder {
+        Shell.enableVerboseLogging = BuildConfig.DEBUG
+        for (command in rootCommands(globalMnt = false)) {
+            verifiedRootShell(command)?.use {
+                return Shell.Builder.create().setCommands(*command)
+            }
+        }
+        return Shell.Builder.create().setCommands("sh")
     }
 
     inline fun <T> withNewRootShell(
@@ -92,26 +107,10 @@ class KsuCliRepository(context: Context) {
 
     fun createRootShell(globalMnt: Boolean = false): Shell {
         Shell.enableVerboseLogging = BuildConfig.DEBUG
-        val builder = Shell.Builder.create()
-        return try {
-            if (globalMnt) {
-                builder.build(getKsuDaemonPath(), "debug", "su", "-g")
-            } else {
-                builder.build(getKsuDaemonPath(), "debug", "su")
-            }
-        } catch (e: Throwable) {
-            Log.w(TAG, "ksu failed: ", e)
-            try {
-                if (globalMnt) {
-                    builder.build("su", "-mm")
-                } else {
-                    builder.build("su")
-                }
-            } catch (e: Throwable) {
-                Log.e(TAG, "su failed: ", e)
-                builder.build("sh")
-            }
+        for (command in rootCommands(globalMnt)) {
+            verifiedRootShell(command)?.let { return it }
         }
+        return Shell.Builder.create().build("sh")
     }
 
     fun execKsud(args: String, newShell: Boolean = false, globalMnt: Boolean = false): Boolean = if (newShell) {

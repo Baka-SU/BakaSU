@@ -24,6 +24,8 @@ A [`tiann/KernelSU`](https://github.com/tiann/KernelSU)'s downstream, added some
 
 ## Compatibility Status
 
+- The manager can try an existing `/system/bin/kauditd` or `/system/xbin/kauditd` as a regular root shell. Its Superuser policy must authorize the manager app's current UID; this does not grant permission or provide a global mount namespace. KernelSU-specific manager features still require a compatible kernel.
+
 - BakaSU officially supports Android GKI 2.0 devices (kernel 5.10+).
 
 - Older kernels (3.4+) are also compatible, but the kernel will have to be built manually.
