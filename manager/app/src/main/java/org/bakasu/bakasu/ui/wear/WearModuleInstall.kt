@@ -42,6 +42,7 @@ import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.model.ModuleUpdateMetadata
+import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
 import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
@@ -52,7 +53,7 @@ import org.koin.compose.koinInject
  * Installing a module ZIP on the watch, from any of its three starts. A picked file and a
  * repository download are confirmed first, as on the phone; a module update, whose page already
  * asked, installs as soon as it is downloaded. Repository files must match their published size
- * and SHA-256; update ZIPs publish neither, so they install unverified. After installing, [onInstalled]
+ * and SHA-256; registry updates use the same verification as the phone. After installing, [onInstalled]
  * refreshes what shows modules.
  */
 @Stable
@@ -92,20 +93,25 @@ class WearModuleInstaller internal constructor(
         ),
     )
 
-    fun update(module: InstalledModule, update: ModuleUpdateMetadata, source: CatalogModule? = null) = navigator.open(
-        WearRoute.OnlineModuleDownload(
-            module.name,
-            "${module.name}-${update.version}.zip",
-            update.zipUrl,
-            size = 0L,
-            sha256 = "",
-            version = update.version,
-            update = true,
-            moduleId = module.id,
-            iconUrl = source?.iconUrl?.takeIf { it.isNotBlank() } ?: source?.registryMetadata?.iconUrl,
-            iconOrigin = source?.repositoryUrl?.takeIf { source.registryMetadata != null },
-        ),
-    )
+    fun update(module: InstalledModule, update: ModuleUpdateMetadata, verification: ModuleUpdateVerification, source: CatalogModule? = null) {
+        if (verification == ModuleUpdateVerification.Rejected) return
+        val registry = verification as? ModuleUpdateVerification.Registry
+        navigator.open(
+            WearRoute.OnlineModuleDownload(
+                module.name,
+                "${module.name}-${update.version}.zip",
+                registry?.zipUrl ?: update.zipUrl,
+                size = registry?.expected?.size ?: 0L,
+                sha256 = registry?.expected?.sha256.orEmpty(),
+                version = update.version,
+                update = true,
+                verificationRequired = registry != null,
+                moduleId = module.id,
+                iconUrl = source?.iconUrl?.takeIf { it.isNotBlank() } ?: source?.registryMetadata?.iconUrl,
+                iconOrigin = source?.repositoryUrl?.takeIf { source.registryMetadata != null },
+            ),
+        )
+    }
 
     /** A finished download leaves its page; an update also leaves its update page and installs. */
     fun downloaded(route: WearRoute.OnlineModuleDownload, uri: String) {

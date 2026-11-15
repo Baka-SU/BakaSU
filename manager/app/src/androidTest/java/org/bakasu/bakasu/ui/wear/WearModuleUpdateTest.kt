@@ -41,8 +41,11 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.module.ModuleIconRepository
 import org.bakasu.bakasu.domain.model.CatalogModule
+import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.domain.model.InstalledModule
+import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleUpdateMetadata
+import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
 import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadUiState
@@ -147,7 +150,7 @@ class WearModuleUpdateTest(private val round: Boolean) {
                             if (route is WearRoute.OnlineModuleDownload) {
                                 WearModuleDownloadScreen(route.name, ModuleDownloadUiState(phase = ModuleDownloadPhase.DOWNLOADING, downloadedBytes = 89, totalBytes = 100), { 0.89f }, route.iconUrl, route.iconOrigin)
                             } else {
-                                WearModuleUpdatePage(module, {}, installer::update, {}, findSource = { lookup.await() })
+                                WearModuleUpdatePage(module, {}, installer::update, {}, { ModuleUpdateVerification.Legacy }, { _, _ -> true }, findSource = { lookup.await() })
                             }
                         }
                     }
@@ -181,7 +184,7 @@ class WearModuleUpdateTest(private val round: Boolean) {
             MaterialTheme {
                 AppScaffold(timeText = {}) {
                     CompositionLocalProvider(LocalScreenIsActive provides active.value) {
-                        WearModuleUpdatePage(module, {}, { _, _, _ -> downloaded = true }, {}, findSource = { lookup.await() })
+                        WearModuleUpdatePage(module, {}, { _, _, _, _ -> downloaded = true }, {}, { ModuleUpdateVerification.Legacy }, { _, _ -> true }, findSource = { lookup.await() })
                     }
                 }
             }
@@ -193,7 +196,26 @@ class WearModuleUpdateTest(private val round: Boolean) {
         compose.runOnIdle { assertFalse(downloaded) }
     }
 
-    private fun showPage(installed: InstalledModule) {
+    @Test
+    fun rejectedRegistryUpdateDoesNotStartADownload() {
+        showPage(module, ModuleUpdateVerification.Rejected)
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
+        compose.onNodeWithText(compose.activity.getString(R.string.wear_update_download)).performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.repo_update_unverifiable)).assertExists()
+        compose.runOnIdle { assertFalse(downloaded) }
+    }
+
+    @Test
+    fun staleRegistryUpdateDoesNotStartADownload() {
+        val verification = ModuleUpdateVerification.Registry(update.zipUrl, ExpectedFile(123, "a".repeat(64)), ModuleRelease("2", "v2", "", emptyList()), module.id, "old-build")
+        showPage(module, verification, current = false)
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
+        compose.onNodeWithText(compose.activity.getString(R.string.wear_update_download)).performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.repo_update_unverifiable)).assertExists()
+        compose.runOnIdle { assertFalse(downloaded) }
+    }
+
+    private fun showPage(installed: InstalledModule, verification: ModuleUpdateVerification = ModuleUpdateVerification.Legacy, current: Boolean = true) {
         compose.setContent {
             val configuration = Configuration(LocalConfiguration.current).apply {
                 screenLayout = (screenLayout and Configuration.SCREENLAYOUT_ROUND_MASK.inv()) or
@@ -206,12 +228,14 @@ class WearModuleUpdateTest(private val round: Boolean) {
                             WearModuleUpdatePage(
                                 installed,
                                 onBack = {},
-                                onDownload = { selected, metadata, _ ->
+                                onDownload = { selected, metadata, _, _ ->
                                     assertEquals(installed, selected)
                                     assertEquals(installed.moduleUpdate, metadata)
                                     downloaded = true
                                 },
                                 onChangelog = { openedChangelog = true },
+                                resolveUpdate = { verification },
+                                isUpdateCurrent = { _, _ -> current },
                             )
                         }
                     }

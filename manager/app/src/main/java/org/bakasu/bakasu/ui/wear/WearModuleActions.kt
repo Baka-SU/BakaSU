@@ -32,12 +32,14 @@ import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.ModuleUpdateMetadata
+import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiAction
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
@@ -69,8 +71,10 @@ import org.koin.core.parameter.parametersOf
 internal fun WearModuleUpdatePage(
     module: InstalledModule?,
     onBack: () -> Unit,
-    onDownload: (InstalledModule, ModuleUpdateMetadata, CatalogModule?) -> Unit,
+    onDownload: (InstalledModule, ModuleUpdateMetadata, ModuleUpdateVerification, CatalogModule?) -> Unit,
     onChangelog: () -> Unit,
+    resolveUpdate: suspend (InstalledModule) -> ModuleUpdateVerification,
+    isUpdateCurrent: (InstalledModule, ModuleUpdateVerification.Registry) -> Boolean,
     findSource: suspend (InstalledModule) -> CatalogModule? = { null },
     artwork: CatalogModule? = null,
 ) {
@@ -78,6 +82,10 @@ internal fun WearModuleUpdatePage(
     val active by rememberUpdatedState(LocalScreenIsActive.current)
     val currentModule by rememberUpdatedState(module)
     val currentDownload by rememberUpdatedState(onDownload)
+    var resolving by remember(module) { mutableStateOf(false) }
+    var verificationFailed by remember(module) { mutableStateOf(false) }
+    val verificationError = stringResource(R.string.repo_update_unverifiable)
+    WearResultDialog(if (verificationFailed) WearResult(verificationError, success = false) else null) { verificationFailed = false }
     val source = remember(module) { CompletableDeferred<CatalogModule?>() }
     LaunchedEffect(module) {
         try {
@@ -87,7 +95,7 @@ internal fun WearModuleUpdatePage(
         }
     }
     val update = module?.moduleUpdate
-    WearList(onBack = onBack) { spec ->
+    WearList(onBack = onBack, isRefreshing = resolving) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_update)) }
         if (module != null && update != null) {
             // The module and its version change lead, followed by the two actions.
@@ -111,12 +119,30 @@ internal fun WearModuleUpdatePage(
                     Icons.Rounded.Download,
                     stringResource(R.string.wear_update_download),
                     {
+                        resolving = true
                         scope.launch {
-                            val artwork = source.await()
-                            if (active && currentModule == module) currentDownload(module, update, artwork)
+                            try {
+                                val verification = resolveUpdate(module)
+                                val artwork = source.await()
+                                if (active && currentModule == module) {
+                                    if (verification == ModuleUpdateVerification.Rejected ||
+                                        verification is ModuleUpdateVerification.Registry && !isUpdateCurrent(module, verification)
+                                    ) {
+                                        verificationFailed = true
+                                    } else {
+                                        currentDownload(module, update, verification, artwork)
+                                    }
+                                }
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (_: Exception) {
+                                if (active && currentModule == module) verificationFailed = true
+                            } finally {
+                                resolving = false
+                            }
                         }
                     },
-                    enabled = !module.remove && update.zipUrl.isNotBlank(),
+                    enabled = !resolving && !module.remove && update.zipUrl.isNotBlank(),
                     secondaryText = stringResource(R.string.wear_update_to, update.version),
                 )
             }

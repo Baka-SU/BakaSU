@@ -474,6 +474,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         ::back,
                                         installer::update,
                                         onChangelog = { open(WearRoute.ModuleChangelog(route.id)) },
+                                        resolveUpdate = moduleViewModel::resolveUpdate,
+                                        isUpdateCurrent = moduleViewModel::isUpdateCurrent,
                                         findSource = moduleViewModel::findUpdateSource,
                                         artwork = modules.moduleIcons[route.id],
                                     )
