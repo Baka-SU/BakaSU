@@ -50,6 +50,7 @@ $(eval $(call check_ksu_hook,ksu_handle_sys_read,$(srctree)/fs/read_write.c))
 
 $(eval $(call check_ksu_manual_guard,$(srctree)/fs/stat.c))
 $(eval $(call check_ksu_hook,ksu_handle_stat,$(srctree)/fs/stat.c))
+$(eval $(call check_ksu_hook,ksu_handle_vfs_fstat,$(srctree)/fs/stat.c))
 
 $(eval $(call check_ksu_manual_guard,$(srctree)/kernel/reboot.c))
 $(eval $(call check_ksu_hook,ksu_handle_sys_reboot,$(srctree)/kernel/reboot.c))
