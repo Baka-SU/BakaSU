@@ -153,6 +153,7 @@ static inline void ksu_unlock_sepolicy_legacy(void)
 
 void apply_kernelsu_rules()
 {
+    struct ksu_original_symbols *symbols;
     struct policydb *db;
 
     if (!getenforce()) {
@@ -254,11 +255,13 @@ retry:
     u32 seqno = (*latest_granting_ptr) + 1;
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_POLICY_MUTEX)
-    if (!ksu_set_original_types(db, &old_pol->policydb, seqno))
-#else
-    if (!ksu_set_original_types(db, policydb_ptr, seqno))
+    symbols = ksu_prepare_original_symbols(db, &old_pol->policydb, seqno);
+    if (!symbols) {
+        pr_err("failed to initialize original symbol metadata\n");
+        ksu_destroy_sepolicy(pol);
+        goto out_unlock;
+    }
 #endif
-        pr_warn("failed to save original type metadata, use backup lookups\n");
 
     ksu_type(db, KERNEL_SU_DOMAIN, "domain");
     ksu_permissive(db, KERNEL_SU_DOMAIN);
@@ -341,6 +344,7 @@ retry:
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_POLICY_MUTEX)
     rcu_assign_pointer(selinux_state.policy, pol);
+    ksu_publish_original_symbols(symbols);
     synchronize_rcu();
     ksu_destroy_sepolicy(old_pol);
 
@@ -362,7 +366,6 @@ out_unlock:
         memset(newpolicydb, 0, sizeof(*newpolicydb));
         goto retry;
     }
-    selinux_state.ss->latest_granting = seqno;
 #else
     if ((*latest_granting_ptr) + 1 != seqno) {
         // sepolicy edit by other, retry!
@@ -372,9 +375,21 @@ out_unlock:
         memset(newpolicydb, 0, sizeof(*newpolicydb));
         goto retry;
     }
+#endif
+    symbols = ksu_prepare_original_symbols(policydb_ptr, oldpolicydb, seqno);
+    if (!symbols) {
+        pr_err("failed to initialize original symbol metadata\n");
+        ksu_unlock_sepolicy_legacy();
+        ksu_destroy_policydb(newpolicydb);
+        goto out_free;
+    }
+#if defined(KSU_COMPAT_USE_SELINUX_STATE) && !defined(SELINUX_POLICY_INSTEAD_SELINUX_SS)
+    selinux_state.ss->latest_granting = seqno;
+#else
     (*latest_granting_ptr) = seqno;
 #endif
     memcpy(policydb_ptr, newpolicydb, sizeof(*policydb_ptr));
+    ksu_publish_original_symbols(symbols);
     ksu_unlock_sepolicy_legacy();
 
     reset_avc_cache(seqno);
@@ -656,6 +671,7 @@ static int apply_one_sepolicy_cmd(struct policydb *db, const struct sepol_data *
 
 int handle_sepolicy(void __user *user_data, u64 data_len)
 {
+    struct ksu_original_symbols *symbols;
     struct policydb *db;
     struct sepol_batch_cursor cursor;
     u8 *payload;
@@ -781,10 +797,15 @@ retry:
         ksu_destroy_sepolicy(pol);
         goto retry;
     }
-    if (!ksu_advance_original_types(db, &old_pol->policydb, old_pol->latest_granting, seqno))
-        pr_warn("failed to carry original type metadata, use backup lookups\n");
+    symbols = ksu_advance_original_symbols(db, &old_pol->policydb, old_pol->latest_granting, seqno);
+    if (!symbols) {
+        pr_err("failed to carry original symbol metadata\n");
+        ret = -EINVAL;
+        goto out_drop_new_policy;
+    }
 
     rcu_assign_pointer(selinux_state.policy, pol);
+    ksu_publish_original_symbols(symbols);
     synchronize_rcu();
     ksu_destroy_sepolicy(old_pol);
 
@@ -801,9 +822,6 @@ out_unlock:
     /* Save the old policydb to free later. */
     memcpy(oldpolicydb, policydb_ptr, sizeof(*policydb_ptr));
 
-    if (!ksu_advance_original_types(db, oldpolicydb, seqno - 1, seqno))
-        pr_warn("failed to carry original type metadata, use backup lookups\n");
-
     /* Install the new policydb. */
     ksu_lock_sepolicy_legacy();
 #if defined(KSU_COMPAT_USE_SELINUX_STATE) && !defined(SELINUX_POLICY_INSTEAD_SELINUX_SS)
@@ -815,7 +833,6 @@ out_unlock:
         memset(newpolicydb, 0, sizeof(*newpolicydb));
         goto retry;
     }
-    selinux_state.ss->latest_granting = seqno;
 #else
     if ((*latest_granting_ptr) + 1 != seqno) {
         // sepolicy edit by other, retry!
@@ -825,9 +842,21 @@ out_unlock:
         memset(newpolicydb, 0, sizeof(*newpolicydb));
         goto retry;
     }
+#endif
+    symbols = ksu_advance_original_symbols(policydb_ptr, policydb_ptr, seqno - 1, seqno);
+    if (!symbols) {
+        pr_err("failed to carry original symbol metadata\n");
+        ksu_unlock_sepolicy_legacy();
+        ret = -EINVAL;
+        goto out_drop_new_policy;
+    }
+#if defined(KSU_COMPAT_USE_SELINUX_STATE) && !defined(SELINUX_POLICY_INSTEAD_SELINUX_SS)
+    selinux_state.ss->latest_granting = seqno;
+#else
     (*latest_granting_ptr) = seqno;
 #endif
     memcpy(policydb_ptr, newpolicydb, sizeof(*policydb_ptr));
+    ksu_publish_original_symbols(symbols);
     ksu_unlock_sepolicy_legacy();
 
     reset_avc_cache(seqno);

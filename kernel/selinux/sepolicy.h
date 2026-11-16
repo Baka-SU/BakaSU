@@ -27,11 +27,19 @@ bool ksu_enforce(struct policydb *db, const char *type);
 bool ksu_typeattribute(struct policydb *db, const char *type, const char *attr);
 bool ksu_exists(struct policydb *db, const char *type);
 
-// Return 1 when the type value is from the initial policy, 0 when it is not, and -1 when metadata is unavailable
-int ksu_type_is_original(struct policydb *db, u32 policy_generation, u32 type_value);
-bool ksu_set_original_types(struct policydb *db, struct policydb *orig_db, u32 policy_generation);
-bool ksu_advance_original_types(struct policydb *db, struct policydb *old_db, u32 old_policy_generation,
-                                u32 policy_generation);
+// for selinux_hide speed up
+bool ksu_type_is_original(struct policydb *db, u32 policy_generation, u32 type_value);
+bool ksu_role_is_original(struct policydb *db, u32 policy_generation, u32 role_value);
+bool ksu_user_is_original(struct policydb *db, u32 policy_generation, u32 user_value);
+
+struct ksu_original_symbols;
+
+struct ksu_original_symbols *ksu_prepare_original_symbols(struct policydb *db, struct policydb *orig_db,
+                                                          u32 policy_generation);
+struct ksu_original_symbols *ksu_advance_original_symbols(struct policydb *db, struct policydb *old_db,
+                                                          u32 old_policy_generation, u32 policy_generation);
+void ksu_publish_original_symbols(struct ksu_original_symbols *snapshot);
+void ksu_original_symbols_exit(void);
 
 // Access vector rules
 bool ksu_allow(struct policydb *db, const char *src, const char *tgt, const char *cls, const char *perm);

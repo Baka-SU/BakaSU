@@ -1,4 +1,4 @@
-#include "feature/selinux_hide.h"
+#include "feature/selinux_hide/selinux_hide.h"
 #include <linux/err.h>
 #include <linux/fs.h>
 #include <linux/namei.h>

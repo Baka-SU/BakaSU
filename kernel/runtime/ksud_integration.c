@@ -1,4 +1,4 @@
-#include "feature/selinux_hide.h"
+#include "feature/selinux_hide/selinux_hide.h"
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
 #include <linux/mm.h>
