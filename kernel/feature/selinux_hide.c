@@ -726,7 +726,7 @@ static struct ksu_lsm_hook selinux_inode_setxattr_hook =
     KSU_LSM_HOOK_INIT(inode_setxattr, "selinux_inode_setxattr", ksu_handle_selinux_inode_setxattr, 0);
 #endif
 
-static int selinux_hide_init_setxattr()
+__maybe_static int selinux_hide_init_setxattr()
 {
     int ret;
 
