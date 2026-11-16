@@ -392,6 +392,8 @@ void track_throne(unsigned int flags)
 // 6.8+, we use pkg_observer
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0) && !defined(CONFIG_KSU_TRACEPOINT_HOOK)
 #ifdef CONFIG_KSU_SUSFS
+#include <linux/task_work.h>
+
 static void ksu_track_throne_tw_func(struct callback_head *cb)
 {
     kfree(cb);

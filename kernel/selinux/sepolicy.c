@@ -4,6 +4,7 @@
 #include <linux/version.h>
 #include <linux/vmalloc.h>
 #include <linux/mutex.h>
+#include <linux/rcupdate.h>
 
 #include "ss/avtab.h"
 #include "ss/constraint.h"
@@ -62,9 +63,14 @@ static void add_typeattribute_raw(struct policydb *db, struct type_datum *type, 
 
 static bool add_typeattribute(struct policydb *db, const char *type, const char *attr);
 
-static const struct policydb *ksu_original_types_policy;
-static u32 ksu_original_types_limit;
-static u32 ksu_original_types_generation;
+struct ksu_original_symbols {
+    const struct policydb *policy;
+    u32 generation;
+    u32 limits[SYM_NUM];
+    struct rcu_head rcu;
+};
+
+static struct ksu_original_symbols __rcu *ksu_original_symbols;
 
 //////////////////////////////////////////////////////
 // Implementation
@@ -1057,52 +1063,111 @@ bool ksu_exists(struct policydb *db, const char *type)
     return symtab_search(&db->p_types, type) != NULL;
 }
 
-bool ksu_set_original_types(struct policydb *db, struct policydb *orig_db, u32 policy_generation)
+/* Writers hold the policy mutex or the legacy policy write lock. */
+static struct ksu_original_symbols *ksu_alloc_original_symbols(void)
 {
-    if (!db || !orig_db || !policy_generation || orig_db->p_types.nprim > db->p_types.nprim) {
-        WRITE_ONCE(ksu_original_types_generation, 0);
-        WRITE_ONCE(ksu_original_types_policy, NULL);
-        WRITE_ONCE(ksu_original_types_limit, 0);
-        return false;
-    }
-
-    WRITE_ONCE(ksu_original_types_limit, orig_db->p_types.nprim);
-    WRITE_ONCE(ksu_original_types_generation, policy_generation);
-    WRITE_ONCE(ksu_original_types_policy, db);
-    return true;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_POLICY_MUTEX)
+    return kzalloc(sizeof(struct ksu_original_symbols), GFP_KERNEL);
+#else
+    return kzalloc(sizeof(struct ksu_original_symbols), GFP_ATOMIC);
+#endif
 }
 
-bool ksu_advance_original_types(struct policydb *db, struct policydb *old_db, u32 old_policy_generation,
-                                u32 policy_generation)
+void ksu_publish_original_symbols(struct ksu_original_symbols *snapshot)
 {
-    u32 original_types_limit = READ_ONCE(ksu_original_types_limit);
-    u32 original_types_generation = READ_ONCE(ksu_original_types_generation);
+    struct ksu_original_symbols *old = rcu_dereference_protected(ksu_original_symbols, 1);
 
-    if (!db || !old_db || !old_policy_generation || !policy_generation || !original_types_limit ||
-        !original_types_generation || old_policy_generation != original_types_generation ||
-        READ_ONCE(ksu_original_types_policy) != old_db || db->p_types.nprim < original_types_limit) {
-        WRITE_ONCE(ksu_original_types_generation, 0);
-        WRITE_ONCE(ksu_original_types_policy, NULL);
-        WRITE_ONCE(ksu_original_types_limit, 0);
-        return false;
-    }
-
-    WRITE_ONCE(ksu_original_types_generation, policy_generation);
-    WRITE_ONCE(ksu_original_types_policy, db);
-    return true;
+    rcu_assign_pointer(ksu_original_symbols, snapshot);
+    if (old)
+        kfree_rcu(old, rcu);
 }
 
-int ksu_type_is_original(struct policydb *db, u32 policy_generation, u32 type_value)
+struct ksu_original_symbols *ksu_prepare_original_symbols(struct policydb *db, struct policydb *orig_db,
+                                                          u32 policy_generation)
 {
-    const struct policydb *original_types_policy = READ_ONCE(ksu_original_types_policy);
-    u32 original_types_limit = READ_ONCE(ksu_original_types_limit);
-    u32 original_types_generation = READ_ONCE(ksu_original_types_generation);
+    struct ksu_original_symbols *snapshot;
 
-    if (!db || !policy_generation || original_types_policy != db || original_types_generation != policy_generation ||
-        !original_types_limit || type_value > db->p_types.nprim)
-        return -1;
+    if (!db || !orig_db || !policy_generation || !orig_db->p_types.nprim || !orig_db->p_roles.nprim ||
+        !orig_db->p_users.nprim || orig_db->p_types.nprim > db->p_types.nprim ||
+        orig_db->p_roles.nprim > db->p_roles.nprim || orig_db->p_users.nprim > db->p_users.nprim)
+        return NULL;
 
-    return type_value && type_value <= original_types_limit ? 1 : 0;
+    snapshot = ksu_alloc_original_symbols();
+    if (!snapshot)
+        return NULL;
+
+    snapshot->policy = db;
+    snapshot->generation = policy_generation;
+    snapshot->limits[SYM_TYPES] = orig_db->p_types.nprim;
+    snapshot->limits[SYM_ROLES] = orig_db->p_roles.nprim;
+    snapshot->limits[SYM_USERS] = orig_db->p_users.nprim;
+    return snapshot;
+}
+
+struct ksu_original_symbols *ksu_advance_original_symbols(struct policydb *db, struct policydb *old_db,
+                                                          u32 old_policy_generation, u32 policy_generation)
+{
+    struct ksu_original_symbols *snapshot, *old;
+
+    if (!db || !old_db || !old_policy_generation || !policy_generation)
+        return NULL;
+
+    /* Policy writers are serialized by the caller's policy lock. */
+    old = rcu_dereference_protected(ksu_original_symbols, 1);
+    if (!old || old->policy != old_db || old->generation != old_policy_generation ||
+        db->p_types.nprim < old->limits[SYM_TYPES] || db->p_roles.nprim < old->limits[SYM_ROLES] ||
+        db->p_users.nprim < old->limits[SYM_USERS])
+        return NULL;
+
+    snapshot = ksu_alloc_original_symbols();
+    if (!snapshot)
+        return NULL;
+    snapshot->policy = db;
+    snapshot->generation = policy_generation;
+    memcpy(snapshot->limits, old->limits, sizeof(snapshot->limits));
+    return snapshot;
+}
+
+/* The caller holds the policy's RCU read lock or legacy policy lock. */
+static bool ksu_symbol_is_original(struct policydb *db, u32 policy_generation, u32 value, u32 sym)
+{
+    const struct ksu_original_symbols *snapshot;
+    u32 limit = 0;
+
+    rcu_read_lock();
+    snapshot = rcu_dereference(ksu_original_symbols);
+    if (snapshot && snapshot->policy == db && snapshot->generation == policy_generation)
+        limit = snapshot->limits[sym];
+    rcu_read_unlock();
+
+    return value && value <= limit;
+}
+
+bool ksu_type_is_original(struct policydb *db, u32 policy_generation, u32 type_value)
+{
+    return ksu_symbol_is_original(db, policy_generation, type_value, SYM_TYPES);
+}
+
+bool ksu_role_is_original(struct policydb *db, u32 policy_generation, u32 role_value)
+{
+    return ksu_symbol_is_original(db, policy_generation, role_value, SYM_ROLES);
+}
+
+bool ksu_user_is_original(struct policydb *db, u32 policy_generation, u32 user_value)
+{
+    return ksu_symbol_is_original(db, policy_generation, user_value, SYM_USERS);
+}
+
+/* Called after policy writers and SELinux hide hooks have been stopped. */
+void ksu_original_symbols_exit(void)
+{
+    struct ksu_original_symbols *snapshot;
+
+    snapshot = rcu_dereference_protected(ksu_original_symbols, 1);
+    rcu_assign_pointer(ksu_original_symbols, NULL);
+    synchronize_rcu();
+    kfree(snapshot);
+    /* Retired snapshots use kfree_rcu(), with no callback into module text. */
 }
 
 // Access vector rules

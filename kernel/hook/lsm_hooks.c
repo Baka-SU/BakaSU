@@ -137,7 +137,7 @@ void __init ksu_lsm_hook_built_in_init(void)
 }
 #else // linux kernel >= 4.2 || KSU_COMPAT_HAS_LIST_OF_LSM_HOOKS
 #include "avc_ss.h"
-#include "feature/selinux_hide.h"
+#include "feature/selinux_hide/selinux_hide.h"
 #include "infra/symbol_resolver.h"
 
 #ifdef CONFIG_KSU_MANUAL_HOOK_AUTO_SETUID_HOOK
