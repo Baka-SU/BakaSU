@@ -959,13 +959,13 @@ static int ksu_selinux_hide_enable()
 #endif
     // clang-format on
 
+#ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
     ret = selinux_hide_init_setxattr();
     if (ret) {
         pr_err("selinux_hide: init: setxattr helpers err: %d\n", ret);
         return ret;
     }
 
-#ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
 #ifdef CONFIG_KALLSYMS_ALL
     selinux_write_op = (write_op_fn *)find_kernel_symbol_exact("write_op");
 #else
