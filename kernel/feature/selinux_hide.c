@@ -726,6 +726,27 @@ static struct ksu_lsm_hook selinux_inode_setxattr_hook =
     KSU_LSM_HOOK_INIT(inode_setxattr, "selinux_inode_setxattr", ksu_handle_selinux_inode_setxattr, 0);
 #endif
 
+__maybe_static int selinux_hide_init_setxattr()
+{
+    int ret;
+
+    ret = ksu_selinux_superblock_init();
+    if (ret)
+        return ret;
+
+#ifdef CONFIG_KALLSYMS_ALL
+    inode_doinit_with_dentry_fn = ksu_resolve_symbol_for_functable_hook("inode_doinit_with_dentry");
+    if (!inode_doinit_with_dentry_fn)
+        return -ENOENT;
+
+#else
+    extern int inode_doinit_with_dentry(struct inode * inode, struct dentry * opt_dentry);
+
+    inode_doinit_with_dentry_fn = &inode_doinit_with_dentry;
+#endif
+    return 0;
+}
+
 typedef int (*sel_open_handle_status_fn)(struct inode *inode, struct file *filp);
 static sel_open_handle_status_fn orig_sel_open_handle_status, *sel_open_handle_status_slot;
 static int my_sel_open_handle_status(struct inode *inode, struct file *filp)
@@ -835,27 +856,6 @@ extern void ksu_register_setxattr_lsm_hook();
     do {                                                                                                               \
     } while (0)
 #endif // #ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
-
-__maybe_static int selinux_hide_init_setxattr()
-{
-    int ret;
-
-    ret = ksu_selinux_superblock_init();
-    if (ret)
-        return ret;
-
-#ifdef CONFIG_KALLSYMS_ALL
-    inode_doinit_with_dentry_fn = ksu_resolve_symbol_for_functable_hook("inode_doinit_with_dentry");
-    if (!inode_doinit_with_dentry_fn)
-        return -ENOENT;
-
-#else
-    extern int inode_doinit_with_dentry(struct inode * inode, struct dentry * opt_dentry);
-
-    inode_doinit_with_dentry_fn = &inode_doinit_with_dentry;
-#endif
-    return 0;
-}
 
 static int ksu_selinux_hide_enable()
 {
