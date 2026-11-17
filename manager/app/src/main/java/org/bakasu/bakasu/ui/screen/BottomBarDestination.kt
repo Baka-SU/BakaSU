@@ -21,6 +21,8 @@ enum class BottomBarDestination(
     val iconSelected: ImageVector,
     val iconNotSelected: ImageVector,
     val rootRequired: Boolean,
+    /** Whether this page's top bar carries a search field. */
+    val hasSearchBar: Boolean = false,
 ) {
     Home(
         { bottomPadding -> HomePage(bottomPadding) },
@@ -35,6 +37,7 @@ enum class BottomBarDestination(
         Icons.TwoTone.AdminPanelSettings,
         Icons.TwoTone.AdminPanelSettings,
         true,
+        hasSearchBar = true,
     ),
     Module(
         { bottomPadding -> ModulePage(bottomPadding) },
@@ -42,6 +45,7 @@ enum class BottomBarDestination(
         Icons.TwoTone.Extension,
         Icons.TwoTone.Extension,
         true,
+        hasSearchBar = true,
     ),
     Settings(
         { bottomPadding -> SettingsPage(bottomPadding) },

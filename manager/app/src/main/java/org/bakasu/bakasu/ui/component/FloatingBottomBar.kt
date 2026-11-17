@@ -222,8 +222,11 @@ fun FloatingBottomBar(
     val pillShape = remember { CircleShape }
     val accentColor = MaterialTheme.colorScheme.primary
     val tabContentColor = MaterialTheme.colorScheme.onSurface
-    val surfaceContainer = MaterialTheme.colorScheme.surfaceContainer
-    val containerColor = if (isBlurEnabled) surfaceContainer.copy(alpha = 0.4f) else surfaceContainer
+    // NavContainer paints the app background with surfaceContainer, so the bar cannot use that
+    // role or it is the same colour and vanishes into it whenever no wallpaper is set. A higher
+    // role keeps it distinct against both a plain background and a custom one.
+    val barSurface = MaterialTheme.colorScheme.surfaceContainerHighest
+    val containerColor = if (isBlurEnabled) barSurface.copy(alpha = 0.6f) else barSurface
 
     val backdrop: Backdrop = LocalBlurState.current ?: rememberLayerBackdrop()
     val tabsBackdrop = rememberLayerBackdrop()
