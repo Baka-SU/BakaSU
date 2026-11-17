@@ -85,7 +85,7 @@
     <string name="settings_auto_jailbreak">自动越狱</string>
     <string name="settings_auto_jailbreak_summary">开机检测到 Permissive SELinux 时自动使用 Magica 提权。需要授予本应用自启动权限。</string>
     <string name="settings_soft_reboot">使用软重启代替重启</string>
-    <string name="settings_soft_reboot_summary">安装、更新或开关模块时使用软重启代替完整重启</string>
+    <string name="settings_soft_reboot_summary">安装、更新或开关模块时使用软重启代替完整重启。</string>
     <string name="settings_adb_root_summary">以 root 权限运行 adbd 守护进程</string>
     <string name="settings_shell_su_adb_only">限制 Shell 仅可通过 ADB 获取 Root</string>
     <string name="settings_shell_su_adb_only_summary">启用对 Shell 的额外检查：仅由 adbd 或 KernelSU Root 进程启动的 shell 进程可获取 Root</string>
@@ -217,7 +217,7 @@
     <string name="settings_config_enable_blur">启用模糊</string>
     <string name="settings_config_enable_blur_summary">对此 App 启用模糊处理</string>
     <string name="enable_floating_bottom_bar">悬浮底栏</string>
-    <string name="enable_floating_bottom_bar_summary">使用 Apple 风格的悬浮底栏</string>
+    <string name="enable_floating_bottom_bar_summary">使用 Apple 风格的悬浮底栏。</string>
     <string name="settings_exp_draw_background_to_blur">将自定义背景渲染到模糊</string>
     <string name="settings_exp_draw_background_to_blur_description">实验性功能，后果自负</string>
     <string name="settings_config_use_custom_background_seed_color">从自定义背景图片中取色</string>
@@ -297,7 +297,7 @@
     <string name="predictive_back_exit_direction_always_right">始终向右</string>
     <string name="predictive_back_exit_direction_always_left">始终向左</string>
     <string name="settings_enable_swipe_dismiss">横移返回手势</string>
-    <string name="settings_enable_swipe_dismiss_summary">从屏幕边缘横移返回上一页</string>
+    <string name="settings_enable_swipe_dismiss_summary">从屏幕边缘横移返回上一页。</string>
     <string name="settings_pager_gesture_mode">页面切换手势</string>
     <string name="settings_pager_gesture_native">默认</string>
     <string name="settings_pager_gesture_cross_axis">跨轴拦截</string>
@@ -556,12 +556,12 @@
     <string name="ak3_select_zip">选择一个要刷写的 AnyKernel3 zip 文件</string>
     <string name="install_upload_lkm_file_summary">使用自定义 .ko 文件代替内置 LKM</string>
     <string name="skip_ksud">不要安装 ksud</string>
-    <string name="skip_ksud_summary">取消安装 ksud，非必要请勿开启！</string>
+    <string name="skip_ksud_summary">取消安装 ksud，非必要请勿开启。</string>
     <string name="advanced_options">高级选项</string>
     <string name="allow_shell">总是给 shell 授予 Root 权限</string>
-    <string name="allow_shell_summary">总是允许 adb shell 调用 SU 命令，非必要请勿开启！</string>
-    <string name="enable_adb">启动时强制启用 ADB 调试</string>
-    <string name="enable_adb_summary">强制允许 USB 调试并取消 adb 认证，非必要请勿开启！</string>
+    <string name="allow_shell_summary">总是允许 adb shell 调用 SU 命令，非必要请勿开启。</string>
+    <string name="enable_adb">启动时强制启用 adb</string>
+    <string name="enable_adb_summary">强制允许 USB 调试并禁用 adb 认证，非必要请勿开启。</string>
     <string name="install_force_backup">备份为原厂镜像</string>
     <string name="install_force_backup_summary">请确保你选择的 boot 镜像是原厂镜像</string>
     <string name="repo_add_repository">添加仓库</string>
@@ -626,7 +626,6 @@
     <string name="repo_expand_changelog">展开更新日志</string>
     <string name="repo_collapse_changelog">收起更新日志</string>
     <string name="repo_select_install_asset">选择要安装的文件</string>
-
     <string name="module_repo_script_badge">脚本</string>
     <string name="script_run">运行</string>
     <string name="script_run_title">运行脚本</string>
