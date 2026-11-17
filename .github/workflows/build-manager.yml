@@ -77,8 +77,8 @@ jobs:
     needs: prepare
     uses: ./.github/workflows/build-lkm.yml
     with:
-      expected_pr_build_size: ${{ needs.prepare.outputs.expected_size || '' }}
-      expected_pr_build_hash: ${{ needs.prepare.outputs.expected_hash || '' }}
+      expected_size: '0x03e4'
+      expected_hash: '612aee3d240ceb3e035332332232a514b3d2679717c2365bfee802b11bef34ef'
     secrets: inherit
 
   build-ksuinit:
