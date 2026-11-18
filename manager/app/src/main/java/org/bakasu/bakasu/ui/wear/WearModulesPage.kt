@@ -11,7 +11,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
@@ -29,6 +29,9 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
+import com.materialkolor.hct.Hct
+import com.materialkolor.ktx.toColor
+import com.materialkolor.ktx.toHct
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.InstalledModule
@@ -139,12 +142,7 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             // A reveal row owns its transformation; a standalone row owns its own.
             colors = when {
                 module.remove -> ButtonDefaults.filledTonalButtonColors(
-                    // Pending removal has the lowest emphasis while retaining its error hue.
-                    containerColor = lerp(
-                        MaterialTheme.colorScheme.surfaceContainer,
-                        MaterialTheme.colorScheme.errorContainer,
-                        0.2f,
-                    ),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer.withoutTint(),
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     secondaryContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -162,8 +160,16 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                     artwork?.iconUrl?.takeIf { it.isNotBlank() } ?: artwork?.registryMetadata?.iconUrl,
                     artwork?.repositoryUrl?.takeIf { artwork.registryMetadata != null },
                     iconSize,
-                    fallbackContainerColor = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
-                    fallbackContentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
+                    fallbackContainerColor = when {
+                        module.remove -> MaterialTheme.colorScheme.surfaceContainerHigh.withoutTint()
+                        active -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.primaryContainer
+                    },
+                    fallbackContentColor = when {
+                        module.remove -> MaterialTheme.colorScheme.onSurfaceVariant
+                        active -> MaterialTheme.colorScheme.onPrimary
+                        else -> MaterialTheme.colorScheme.onPrimaryContainer
+                    },
                 )
             },
             secondaryLabelContent = module.version.takeIf { it.isNotBlank() }?.let { version -> { WearAutoMarqueeText(version) } },
@@ -185,3 +191,5 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
         WearModuleSwipeActions(spec, scrolling, actions.first(), actions.getOrNull(1), content = button)
     }
 }
+
+private fun Color.withoutTint(): Color = Hct.from(0.0, 0.0, toHct().tone).toColor().copy(alpha = alpha)

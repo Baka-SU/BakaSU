@@ -66,6 +66,7 @@ import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.LkmSelection
 import org.bakasu.bakasu.domain.model.SuperUserLoadFailure
+import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerOperation
@@ -170,6 +171,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     var logError by remember { mutableStateOf<String?>(null) }
     var signatureSize by rememberSaveable { mutableStateOf("") }
     var signatureHash by rememberSaveable { mutableStateOf("") }
+    var colorDraft by rememberSaveable { mutableStateOf<FloatArray?>(null) }
     val operationFailedText = stringResource(R.string.operation_failed)
     // Missing root is explained by the home warning; other load failures show on the list.
     val superuserError = superuser.loadFailure
@@ -208,6 +210,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                 }
 
                 WearRoute.DynamicManagerApps -> dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Search(""))
+
+                WearRoute.CustomColor -> colorDraft = null
 
                 else -> Unit
             }
@@ -349,7 +353,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                     when (event.stringResource) {
                         R.string.wear_theme_color_applied -> {
                             toast.show(message)
-                            if (navigator.top is WearRoute.CustomColor || navigator.top == WearRoute.Color) back()
+                            if (navigator.top == WearRoute.CustomColor || navigator.top == WearRoute.Color) back()
                         }
 
                         R.string.wear_invalid_color -> toast.show(message)
@@ -749,11 +753,28 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         dispatchSettings,
                                     )
                                 }
-                                entry<WearRoute.CustomColor> { route ->
-                                    WearCustomColorPage(route.initial, settings, dispatchSettings, ::back)
+                                entry<WearRoute.CustomColor> {
+                                    val seed = wearThemeSeedColor(themeConfig, LocalBackgroundRenderState.current.seedColor)
+                                    WearCustomColorPage(
+                                        colorDraft ?: remember(seed) { seed.toWearColorHsv() },
+                                        settings,
+                                        onHsvChange = { colorDraft = it },
+                                        onEditHex = { if (navigator.top == WearRoute.CustomColor) open(WearRoute.ColorHex(it)) },
+                                        onAction = dispatchSettings,
+                                        onBack = ::back,
+                                    )
+                                }
+                                entry<WearRoute.ColorHex> { route ->
+                                    WearColorHexPage(route.initial) {
+                                        if (navigator.top == route) {
+                                            colorDraft = it
+                                            back()
+                                        }
+                                    }
                                 }
                                 entry<WearRoute.Color> {
-                                    WearColorPage(settings, ::back, dispatchSettings, ::open) {
+                                    val seed = wearThemeSeedColor(themeConfig, LocalBackgroundRenderState.current.seedColor)
+                                    WearColorPage(settings, seed, ::back, dispatchSettings, ::open) {
                                         runCatching { selectImageLauncher.launch(arrayOf("image/*")) }
                                             .onFailure { settingsError = operationFailedText }
                                     }

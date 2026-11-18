@@ -204,7 +204,10 @@ sealed interface WearRoute : NavKey {
     data object Color : WearRoute
 
     @Serializable
-    data class CustomColor(val initial: String) : WearRoute
+    data object CustomColor : WearRoute
+
+    @Serializable
+    data class ColorHex(val initial: String) : WearRoute
 
     @Serializable
     data object Dpi : WearRoute

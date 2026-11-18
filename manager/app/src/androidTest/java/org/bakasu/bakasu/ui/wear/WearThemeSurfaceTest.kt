@@ -23,6 +23,7 @@ import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
+import com.materialkolor.PaletteStyle
 import com.materialkolor.ktx.toHct
 import java.io.File
 import org.bakasu.bakasu.R
@@ -31,6 +32,7 @@ import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,6 +51,7 @@ class WearThemeSurfaceTest(private val round: Boolean) {
         val originalDynamic = config.useDynamicColor
         val originalBackground = config.customBackgroundUri
         val originalBackgroundSeed = config.isUseBackgroundSeedColor
+        val originalStyle = config.dynamicPaletteStyle
         val originalCustomCards = cards.isCustomBackgroundEnabled
         var originalAlpha = 1f
         lateinit var colors: ColorScheme
@@ -57,6 +60,7 @@ class WearThemeSurfaceTest(private val round: Boolean) {
             originalAlpha = cards.cardAlpha
             config.customBackgroundUri = null
             config.isUseBackgroundSeedColor = false
+            config.dynamicPaletteStyle = PaletteStyle.TonalSpot
         }
         try {
             compose.setContent {
@@ -79,7 +83,7 @@ class WearThemeSurfaceTest(private val round: Boolean) {
                     }
                 }
             }
-            listOf(false to 0xFF000001.toInt(), false to 0xFF0033CC.toInt(), true to originalSeed).forEach { (dynamic, seed) ->
+            listOf(false to 0xFFFF0000.toInt(), false to 0xFF0033CC.toInt(), true to originalSeed).forEach { (dynamic, seed) ->
                 listOf(1f, 0.8f, 0.5f).forEach { alpha ->
                     compose.runOnIdle {
                         config.useDynamicColor = dynamic
@@ -92,6 +96,13 @@ class WearThemeSurfaceTest(private val round: Boolean) {
                         assertEquals(20.0, colors.surfaceContainer.copy(alpha = 1f).toHct().tone, 1.0)
                         assertEquals(30.0, colors.surfaceContainerHigh.copy(alpha = 1f).toHct().tone, 1.0)
                         assertEquals(alpha, colors.surfaceContainer.alpha, 0.01f)
+                        assertEquals(Color.Black, colors.background)
+                        if (!dynamic) {
+                            listOf(colors.surfaceContainerLow, colors.surfaceContainer, colors.surfaceContainerHigh).forEach { surface ->
+                                assertTrue(surface.copy(alpha = 1f).toHct().chroma > 12.0)
+                                assertTrue(if (seed == 0xFFFF0000.toInt()) surface.red > surface.blue else surface.blue > surface.red)
+                            }
+                        }
                     }
                     val pixels = compose.onNodeWithTag("surface-card").captureToImage().toPixelMap()
                     val actual = pixels[pixels.width / 2, (pixels.height * 0.08f).toInt()]
@@ -110,6 +121,7 @@ class WearThemeSurfaceTest(private val round: Boolean) {
                 config.useDynamicColor = originalDynamic
                 config.customBackgroundUri = originalBackground
                 config.isUseBackgroundSeedColor = originalBackgroundSeed
+                config.dynamicPaletteStyle = originalStyle
                 cards.cardAlpha = originalAlpha
                 cards.isCustomBackgroundEnabled = originalCustomCards
             }

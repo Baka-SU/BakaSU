@@ -68,7 +68,7 @@ class WearRotaryPagesTest(private val page: String, private val round: Boolean) 
                                 },
                             ) {}
 
-                            "theme-color" -> WearColorPage(SettingsUiState(), onBack, {}, {}, {})
+                            "theme-color" -> WearColorPage(SettingsUiState(), 0xFF336699.toInt(), onBack, {}, {}, {})
 
                             "superuser" -> WearSuperUserPage(SuperUserUiState(appGroupList = apps, isRefreshing = false), null, {}, { _, _ -> }, onBack, {})
 

@@ -35,8 +35,10 @@ import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.MotionScheme
 import androidx.wear.compose.material3.Text
+import com.materialkolor.PaletteStyle
 import com.materialkolor.ktx.toColor
 import com.materialkolor.ktx.toHct
+import com.materialkolor.palettes.TonalPalette
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.theme.BackgroundRenderState
 import org.bakasu.bakasu.ui.theme.CardConfig
@@ -62,6 +64,14 @@ import org.koin.compose.viewmodel.koinViewModel
  * @author Hanhan_awa
  * @date 2026/10/1.
  */
+
+@Composable
+internal fun wearThemeSeedColor(config: ThemeConfig, backgroundSeedColor: Int): Int = when {
+    config.useDynamicColor && config.isUseBackgroundSeedColor && backgroundSeedColor != 0 -> backgroundSeedColor
+    config.useDynamicColor && Build.VERSION.SDK_INT >= 31 -> colorResource(android.R.color.system_accent1_500).toArgb()
+    config.useDynamicColor -> config.monetCompatSeedColor
+    else -> config.seedColor
+}
 
 @Composable
 fun WearManagerTheme(content: @Composable () -> Unit) {
@@ -107,28 +117,25 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
     val backgroundState = remember(config.customBackgroundUri) {
         BackgroundRenderState().apply { seedColor = config.backgroundSeedColor }
     }
-    val seed = when {
-        config.useDynamicColor && config.isUseBackgroundSeedColor && backgroundState.seedColor != 0 -> backgroundState.seedColor
-        config.useDynamicColor && Build.VERSION.SDK_INT >= 31 -> colorResource(android.R.color.system_accent1_500).toArgb()
-        config.useDynamicColor -> config.monetCompatSeedColor
-        else -> config.seedColor
-    }
-    val generated = remember(seed, config.dynamicPaletteStyle, config.dynamicColorSpec) {
-        com.materialkolor.dynamicColorScheme(
+    val seed = wearThemeSeedColor(config, backgroundState.seedColor)
+    val style = config.dynamicPaletteStyle
+    val colorSpec = config.dynamicColorSpec
+    val colors = remember(seed, style, colorSpec) {
+        val generated = com.materialkolor.dynamicColorScheme(
             seedColor = Color(seed),
             isDark = true,
-            style = config.dynamicPaletteStyle,
-            specVersion = config.dynamicColorSpec,
+            style = style,
+            specVersion = colorSpec,
         )
-    }
-    // A custom accent maps the generated dark scheme onto the Wear roles exactly as the Wear
-    // dynamicColorScheme maps the system palette: accents from the fixed colors, containers, surfaces,
-    // outlines and errors from the dark roles. Every role comes from the same seed, so each on-color
-    // keeps its pairing and contrast.
-    // Remembered, so settings updates such as dragging the DPI slider do not rebuild the scheme and
-    // recompose every themed component.
-    val colors = remember(generated) {
-        val scheme = ColorScheme(
+        // Wear's card tones need a visible seed tint; Material's neutral roles can be nearly gray.
+        // Keep the chosen palette's neutral hue and preserve explicitly monochrome schemes.
+        val surface = generated.surfaceContainer.toHct()
+        val seedChroma = (Color(seed).toHct().chroma / 3).coerceAtMost(24.0)
+        val surfaces = TonalPalette.fromHueAndChroma(
+            surface.hue,
+            if (style == PaletteStyle.Monochrome) surface.chroma else maxOf(surface.chroma, seedChroma),
+        )
+        ColorScheme(
             primary = generated.primaryFixed, primaryDim = generated.primaryFixedDim,
             primaryContainer = generated.primaryContainer, onPrimary = generated.onPrimaryFixed,
             onPrimaryContainer = generated.onPrimaryContainer,
@@ -138,9 +145,9 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             tertiary = generated.tertiaryFixed, tertiaryDim = generated.tertiaryFixedDim,
             tertiaryContainer = generated.tertiaryContainer, onTertiary = generated.onTertiaryFixed,
             onTertiaryContainer = generated.onTertiaryContainer,
-            surfaceContainerLow = generated.surfaceContainerLow.toHct().withTone(15.0).toColor(),
-            surfaceContainer = generated.surfaceContainer.toHct().withTone(20.0).toColor(),
-            surfaceContainerHigh = generated.surfaceContainerHigh.toHct().withTone(30.0).toColor(),
+            surfaceContainerLow = Color(surfaces.tone(15)),
+            surfaceContainer = Color(surfaces.tone(20)),
+            surfaceContainerHigh = Color(surfaces.tone(30)),
             onSurface = generated.onSurface, onSurfaceVariant = generated.onSurfaceVariant,
             outline = generated.outline, outlineVariant = generated.outlineVariant,
             background = Color.Black, onBackground = generated.onBackground,
@@ -148,10 +155,6 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             errorContainer = generated.errorContainer, onError = generated.onError,
             onErrorContainer = generated.onErrorContainer,
         )
-        // Wear screens keep a pure black background whichever scheme is used. The navigation host
-        // makes this role transparent so its backdrop image is not covered by the scene's
-        // swipe-dismiss box, and restores it per entry; see WearManager.pageBaseDecorator.
-        scheme.copy(background = Color.Black)
     }
     // Container colors follow the card transparency so a custom background shows through them,
     // the same rule the phone applies per row in SettingsBaseWidget. It has to happen here rather

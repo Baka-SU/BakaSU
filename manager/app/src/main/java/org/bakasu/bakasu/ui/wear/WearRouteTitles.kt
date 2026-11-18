@@ -78,7 +78,9 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
         WearSelection.ToastDisplay -> R.string.wear_toast_display
     }
 
-    WearRoute.Color, is WearRoute.CustomColor -> R.string.theme_color
+    WearRoute.Color, WearRoute.CustomColor -> R.string.theme_color
+
+    is WearRoute.ColorHex -> R.string.wear_color_hex
 
     WearRoute.Dpi -> R.string.wear_display_touch
 

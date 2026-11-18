@@ -35,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,7 +78,6 @@ import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSliderCard
-import org.bakasu.bakasu.ui.wear.component.WearSubPage
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
@@ -96,13 +94,15 @@ import org.koin.compose.viewmodel.koinViewModel
 
 private fun Int.toHex() = "#%06X".format(this and 0xFFFFFF)
 
+internal fun Int.toWearColorHsv() = FloatArray(3).also { android.graphics.Color.colorToHSV(this, it) }
+
 /**
  * One scrolling page in three sections: accent color (follow-system switch and swatches), custom
  * color (preview and HSV editor) and background
  * (image, removal and dimming).
  */
 @Composable
-internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit, onOpen: (WearRoute) -> Unit, onImage: () -> Unit) {
+internal fun WearColorPage(state: SettingsUiState, seed: Int, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit, onOpen: (WearRoute) -> Unit, onImage: () -> Unit) {
     val config = koinInject<ThemeConfig>()
     val backgrounds = koinInject<BackgroundManager>()
     val resources = LocalResources.current
@@ -115,8 +115,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
             }
         }
     }
-    var hex by rememberSaveable(config.seedColor) { mutableStateOf(config.seedColor.toHex()) }
-    val valid = hex.matches(Regex("#[0-9a-fA-F]{6}"))
+    val hex = seed.toHex()
     Box(Modifier.fillMaxSize()) {
         // Keep three equally sized cells; each toggle leaves 5% space on each side.
         val columns = 3
@@ -173,7 +172,6 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                             row.forEach { value ->
                                 Box(Modifier.weight(1f).heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
                                     ColorSwatch(Color(value), !state.useDynamicColor && config.seedColor == Color(value).toArgb()) {
-                                        hex = Color(value).toArgb().toHex()
                                         onAction(SettingsUiAction.SetDynamicColor(false))
                                         onAction(SettingsUiAction.SetThemeColor(Color(value).toArgb()))
                                     }
@@ -184,7 +182,7 @@ internal fun WearColorPage(state: SettingsUiState, onBack: () -> Unit, onAction:
                 }
             }
             item { WearSectionHeader(spec, stringResource(R.string.wear_custom_color)) }
-            item { HexColorButton(spec, hex, valid) { onOpen(WearRoute.CustomColor(hex)) } }
+            item { HexColorButton(spec, hex) { onOpen(WearRoute.CustomColor) } }
             item { WearSectionHeader(spec, stringResource(R.string.settings_custom_background)) }
             item {
                 WearActionButton(
@@ -276,28 +274,19 @@ private fun ColorSwatch(color: Color, selected: Boolean, onSelect: () -> Unit) {
 
 /**
  * The editable hex value, previewed by a color dot in the icon slot; the `#RRGGBB` hint is its
- * secondary label, and the button turns red while the value is invalid.
+ * secondary label.
  */
 @Composable
-private fun TransformingLazyColumnItemScope.HexColorButton(spec: TransformationSpec, hex: String, valid: Boolean, onClick: () -> Unit) {
+private fun TransformingLazyColumnItemScope.HexColorButton(spec: TransformationSpec, hex: String, onClick: () -> Unit) {
     FilledTonalButton(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
         transformation = SurfaceTransformation(spec),
-        colors = if (valid) {
-            ButtonDefaults.filledTonalButtonColors()
-        } else {
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                secondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
-            )
-        },
         icon = {
-            Box(Modifier.size(ButtonDefaults.IconSize).background(if (valid) Color(hex.toColorInt()) else Color.Transparent, CircleShape))
+            Box(Modifier.size(ButtonDefaults.IconSize).background(Color(hex.toColorInt()), CircleShape))
         },
-        secondaryLabel = { WearAutoMarqueeText(stringResource(if (valid) R.string.wear_color_hex else R.string.wear_invalid_color), maxLines = 2) },
+        secondaryLabel = { WearAutoMarqueeText(stringResource(R.string.wear_color_hex), maxLines = 2) },
     ) { WearAutoMarqueeText(hex) }
 }
 
@@ -439,32 +428,16 @@ internal fun WearDpiPage(
 
 /** The phone's HSV picker adapted to a scrolling Wear page with one edge confirmation. */
 @Composable
-internal fun WearCustomColorPage(initial: String, state: SettingsUiState, onAction: (SettingsUiAction) -> Unit, onBack: () -> Unit = {}) {
-    val initialColor = remember(initial) { runCatching { initial.toColorInt() }.getOrDefault(android.graphics.Color.WHITE) }
-    val hsv = remember(initialColor) { FloatArray(3).also { android.graphics.Color.colorToHSV(initialColor, it) } }
-    var hue by rememberSaveable(initial) { mutableStateOf(hsv[0]) }
-    var saturation by rememberSaveable(initial) { mutableStateOf(hsv[1]) }
-    var brightness by rememberSaveable(initial) { mutableStateOf(hsv[2]) }
-    var editingHex by rememberSaveable { mutableStateOf(false) }
-    val selected = android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation, brightness))
-    val hex = selected.toHex()
-    if (editingHex) {
-        WearSubPage({ editingHex = false }) {
-            WearTextInputPage(
-                stringResource(R.string.wear_color_hex),
-                hex,
-                canSubmit = { it.trim().removePrefix("#").matches(Regex("[0-9a-fA-F]{6}")) },
-            ) {
-                val next = FloatArray(3)
-                android.graphics.Color.colorToHSV(("#" + it.trim().removePrefix("#")).toColorInt(), next)
-                hue = next[0]
-                saturation = next[1]
-                brightness = next[2]
-                editingHex = false
-            }
-        }
-        return
-    }
+internal fun WearCustomColorPage(
+    hsv: FloatArray,
+    state: SettingsUiState,
+    onHsvChange: (FloatArray) -> Unit,
+    onEditHex: (String) -> Unit,
+    onAction: (SettingsUiAction) -> Unit,
+    onBack: () -> Unit,
+) {
+    val (hue, saturation, brightness) = hsv
+    val hex = android.graphics.Color.HSVToColor(hsv).toHex()
     WearList(
         onBack = onBack,
         onConfirm = { onAction(SettingsUiAction.ApplyWearThemeColor(hex)) },
@@ -472,9 +445,20 @@ internal fun WearCustomColorPage(initial: String, state: SettingsUiState, onActi
         confirmEnabled = !state.applyingThemeColor,
     ) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.wear_custom_color)) }
-        item { HexColorButton(spec, hex, true) { editingHex = true } }
-        item { WearSliderCard(spec, Icons.Rounded.Palette, stringResource(R.string.wear_color_hue), "${hue.roundToInt()}°", hue, { hue = it }, 0f..360f, 359) }
-        item { WearSliderCard(spec, Icons.Rounded.Opacity, stringResource(R.string.wear_color_saturation), "${(saturation * 100).roundToInt()}%", saturation, { saturation = it }, 0f..1f, 99) }
-        item { WearSliderCard(spec, Icons.Rounded.LightMode, stringResource(R.string.wear_color_brightness), "${(brightness * 100).roundToInt()}%", brightness, { brightness = it }, 0f..1f, 99) }
+        item { HexColorButton(spec, hex) { onEditHex(hex) } }
+        item { WearSliderCard(spec, Icons.Rounded.Palette, stringResource(R.string.wear_color_hue), "${hue.roundToInt()}°", hue, { onHsvChange(floatArrayOf(it, saturation, brightness)) }, 0f..360f, 359) }
+        item { WearSliderCard(spec, Icons.Rounded.Opacity, stringResource(R.string.wear_color_saturation), "${(saturation * 100).roundToInt()}%", saturation, { onHsvChange(floatArrayOf(hue, it, brightness)) }, 0f..1f, 99) }
+        item { WearSliderCard(spec, Icons.Rounded.LightMode, stringResource(R.string.wear_color_brightness), "${(brightness * 100).roundToInt()}%", brightness, { onHsvChange(floatArrayOf(hue, saturation, it)) }, 0f..1f, 99) }
+    }
+}
+
+@Composable
+internal fun WearColorHexPage(initial: String, onSubmit: (FloatArray) -> Unit) {
+    WearTextInputPage(
+        stringResource(R.string.wear_color_hex),
+        initial,
+        canSubmit = { it.trim().removePrefix("#").matches(Regex("[0-9a-fA-F]{6}")) },
+    ) {
+        onSubmit(("#" + it.trim().removePrefix("#")).toColorInt().toWearColorHsv())
     }
 }
