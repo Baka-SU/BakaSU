@@ -619,7 +619,7 @@ int __nocfi ksu_handle_selinux_inode_setxattr(struct dentry *dentry, const char 
     if (likely(ksu_get_uid_t(current_uid()) < 10000) || strcmp(name, XATTR_NAME_SELINUX))
         goto call_orig;
 
-        // Keep native force parsing for callers with CAP_MAC_ADMIN
+    // Keep native force parsing for callers with CAP_MAC_ADMIN
 #ifdef CAP_OPT_NOAUDIT
     if (!cap_capable(current_cred(), &init_user_ns, CAP_MAC_ADMIN, CAP_OPT_NOAUDIT))
 #else
@@ -647,7 +647,7 @@ int __nocfi ksu_handle_selinux_inode_setxattr(struct dentry *dentry, const char 
     isec = ksu_selinux_inode(inode);
     if (IS_ERR(isec))
         return PTR_ERR(isec);
-        // Match backing_inode_security: keep old label if reload fails
+    // Match backing_inode_security: keep old label if reload fails
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0) || defined(KSU_COMPAT_HAS_ISEC_LABEL_INITIALIZED)
     if (isec->initialized == LABEL_INITIALIZED)
 #else
@@ -1552,7 +1552,7 @@ retry:
     if (rc)
         goto out_unlock;
 
-        // update backup sidtab first
+    // update backup sidtab first
 #ifdef KSU_COMPAT_HAS_CONTEXT_ADD_HASH
     rc = context_add_hash(policydb, &context);
     if (!rc)
@@ -1570,8 +1570,8 @@ retry:
     if (orig_rc)
         goto out_unlock;
 
-        // only sync valid contexts
-        // sync to live sidtab
+    // only sync valid contexts
+    // sync to live sidtab
 #ifdef KSU_COMPAT_HAS_CONTEXT_ADD_HASH
     orig_rc = context_add_hash(orig_policydb, &orig_context);
 #endif
