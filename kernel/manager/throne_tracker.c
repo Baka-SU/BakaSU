@@ -11,6 +11,9 @@
 #include <linux/stat.h>
 #include <linux/namei.h>
 #include <linux/kernel.h> // for container_of in UL
+#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
+#include <linux/susfs.h>
+#endif
 
 #include "policy/allowlist.h"
 #include "manager/apk_sign.h"
@@ -360,6 +363,14 @@ out:
         kfree(np);
     }
     revert_creds(old_cred);
+#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
+    // Refresh after tracking completes, including deferred scans.
+    susfs_parse_priority_app_strings();
+#endif
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+    // Renew the sus path uid bitmap filter
+    susfs_parse_sus_path_app_strings();
+#endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 }
 
 void track_throne(unsigned int flags)
@@ -380,6 +391,18 @@ void track_throne(unsigned int flags)
 // for 6.8- kernel, we can use LSM hook in manual hook
 // 6.8+, we use pkg_observer
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0) && !defined(CONFIG_KSU_TRACEPOINT_HOOK)
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/task_work.h>
+
+static void ksu_track_throne_tw_func(struct callback_head *cb)
+{
+    kfree(cb);
+    if (current->flags & PF_EXITING)
+        return;
+    track_throne(TRACK_THRONE_FORCE_SYNCHRONOUS);
+}
+#endif
+
 void ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
 {
     // skip kernel threads
@@ -414,6 +437,24 @@ void ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
 
     pr_info("renameat: %s -> %s, new path: %s\n", old_dentry->d_iname, new_dentry->d_iname, buf);
 
+    // a fancy thing to run in post renameat, execute in THIS task before return to userspace
+    // we only need that in susfs, because some susfs things requires read /data/system/packages.list
+    // even they using kthread, it still unreliable in some really slow devices
+    // Let's directly call track_throne when renameat complete
+#ifdef CONFIG_KSU_SUSFS
+    struct callback_head *cb;
+
+    if (!(current->flags & PF_KTHREAD)) {
+        cb = kzalloc(sizeof(*cb), GFP_KERNEL);
+        if (cb) {
+            cb->func = ksu_track_throne_tw_func;
+            if (!task_work_add(current, cb, TWA_RESUME))
+                return;
+            kfree(cb);
+        }
+        return;
+    }
+#endif
     // after renameat hook, packages.list.tmp -> packages.list
     // don't async for it, or it will always have an race
     // for example,

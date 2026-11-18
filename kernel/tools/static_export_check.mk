@@ -19,7 +19,7 @@ $(eval $(call check_symbol_export, static ssize_t (*write_op[]), $(srctree)/secu
 # Reason: selinux_hide
 $(eval $(call check_symbol_export, static const struct file_operations sel_handle_status_ops, $(srctree)/security/selinux/selinuxfs.c, sel_handle_status_ops))
 
-# if no selinux_state, we should check selinux_status_page, selinux_status_lock, sel_mutex, policy_rwlock and sidtab has been NOT static.
+# if no selinux_state, we should check selinux_status_page, selinux_status_lock, sel_mutex, policy_rwlock, latest_granting and sidtab has been NOT static.
 ifneq ($(shell grep -q "struct selinux_state " $(srctree)/security/selinux/include/security.h; echo $$?),0)
     # Reason: selinux_hide
     $(eval $(call check_symbol_export, static struct page *selinux_status_page, $(srctree)/security/selinux/ss/status.c, selinux_status_page))
@@ -29,6 +29,8 @@ ifneq ($(shell grep -q "struct selinux_state " $(srctree)/security/selinux/inclu
     # Reason: safe policydb patch/dup
     $(eval $(call check_symbol_export, static DEFINE_MUTEX(sel_mutex), $(srctree)/security/selinux/selinuxfs.c, sel_mutex))
     $(eval $(call check_symbol_export, static DEFINE_RWLOCK(policy_rwlock), $(srctree)/security/selinux/ss/services.c, policy_rwlock))
+    $(eval $(call check_symbol_export, static u32 latest_granting, $(srctree)/security/selinux/ss/services.c, latest_granting))
+    $(eval $(call check_symbol_export, static int inode_doinit_with_dentry, $(srctree)/security/selinux/hooks.c, inode_doinit_with_dentry))
 endif
 
 # if kernel < 4.2, we should check selinux_ops has NOT been static.

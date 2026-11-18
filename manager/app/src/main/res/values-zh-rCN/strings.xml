@@ -164,6 +164,7 @@
     <string name="home_pr_build_warning">当前为 PR 调试构建，请勿在生产环境中使用！</string>
     <string name="action">执行</string>
     <string name="close">关闭</string>
+    <string name="external_link_open_failed">无法打开链接</string>
     <string name="direct_install">直接安装（推荐）</string>
     <string name="select_file">选择一个需要修补的镜像</string>
     <string name="install_inactive_slot">安装到未使用的槽位（OTA 后）</string>
@@ -446,6 +447,7 @@
     <string name="download_failed_content">%s 下载失败</string>
     <string name="download_cancel">取消</string>
     <string name="download_install">安装</string>
+    <string name="open">打开</string>
     <string name="notification_permission_description">需要通知权限来展示下载进度。</string>
     <string name="notification_permission_denied">下载失败，缺失通知权限</string>
     <string name="storage_permission_description">需要外部存储权限来展示下载进度。</string>
@@ -671,4 +673,12 @@
     <string name="superuser_root_access_required">加载应用列表需要 Root 权限。</string>
     <string name="superuser_service_start_failed">RootService 启动失败，请重试以加载应用列表。</string>
     <string name="superuser_packages_load_failed">从 RootService 加载应用列表失败，请重试。</string>
+    <string name="susfs_priority_uid_filter_title">优先级 UID 过滤</string>
+    <string name="susfs_priority_uid_filter_description">勾选需要从优先级和 I/O 优先级系统调用中隐藏 UID 的应用。仅支持 UID 10000–19999，修改立即生效并在重启后恢复。共享 UID 的应用会一同受到影响。</string>
+    <string name="susfs_priority_uid_filter_search">搜索应用</string>
+    <string name="susfs_priority_uid_filter_loading">正在加载应用…</string>
+    <string name="susfs_sus_path_uid_filter_title">隐藏路径可见应用</string>
+    <string name="susfs_sus_path_uid_filter_description">选择可以看见 SUSFS 隐藏路径的应用。其他普通应用无法看见这些路径。仅可选择 UID 10000–19999 的应用，修改立即生效并在重启后恢复。共享 UID 的应用会一同受到影响。</string>
+    <string name="susfs_uid_filter_search">搜索应用</string>
+    <string name="susfs_uid_filter_loading">正在加载应用…</string>
 </resources>

@@ -144,6 +144,10 @@ void *ksu_compat_kvrealloc(const void *p, size_t oldsize, size_t newsize, gfp_t 
 }
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0) && defined(CONFIG_KSU_SUSFS)
+#error SUSFS is only support in kernel 4.3+
+#endif
+
 // https://github.com/torvalds/linux/commit/e73f8959af0439d114847eab5a8a5ce48f1217c4
 // this feature include in 3.5, but from my test, we no need that for 3.5-
 // directly call is enough

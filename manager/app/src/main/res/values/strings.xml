@@ -166,6 +166,7 @@
     <string name="home_pr_build_warning">This is a PR debug build. Do NOT use it in production!</string>
     <string name="action">Action</string>
     <string name="close">Close</string>
+    <string name="external_link_open_failed">Unable to open link</string>
     <string name="direct_install">Direct install (Recommended)</string>
     <string name="select_file">Select a image that needs to be patched</string>
     <string name="install_inactive_slot">Install to inactive slot (After OTA)</string>
@@ -454,6 +455,7 @@
     <string name="download_failed_content">Failed to download %s</string>
     <string name="download_cancel">Cancel</string>
     <string name="download_install">Install</string>
+    <string name="open">Open</string>
     <string name="notification_permission_description">Notification permission is needed to show download progress.</string>
     <string name="notification_permission_denied">Download failed: Notification permission is required</string>
     <string name="storage_permission_description">External Storage permission is needed to write file.</string>
@@ -675,4 +677,12 @@
     <string name="superuser_root_access_required">Root access is required to load applications.</string>
     <string name="superuser_service_start_failed">RootService failed to start. Retry to load applications.</string>
     <string name="superuser_packages_load_failed">Failed to load applications from RootService. Please retry.</string>
+    <string name="susfs_priority_uid_filter_title">Priority UID filter</string>
+    <string name="susfs_priority_uid_filter_description">Select apps whose UIDs should be hidden from priority and I/O priority syscalls. Applies to app UIDs 10000–19999. Changes take effect immediately and are restored after reboot. Apps sharing a UID are affected together.</string>
+    <string name="susfs_priority_uid_filter_search">Search apps</string>
+    <string name="susfs_priority_uid_filter_loading">Loading apps…</string>
+    <string name="susfs_sus_path_uid_filter_title">SUS path visibility</string>
+    <string name="susfs_sus_path_uid_filter_description">Select apps that can see paths hidden by SUSFS. Other ordinary apps cannot see these paths. Only app UIDs 10000–19999 can be selected. Changes take effect immediately and are restored after reboot. Apps sharing a UID are affected together.</string>
+    <string name="susfs_uid_filter_search">Search apps</string>
+    <string name="susfs_uid_filter_loading">Loading apps…</string>
 </resources>

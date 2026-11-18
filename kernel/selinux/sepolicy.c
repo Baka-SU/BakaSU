@@ -18,6 +18,11 @@
 #include "ss/symtab.h"
 #include "compat/kernel_compat.h" // Add check Huawei Device
 
+#ifdef CONFIG_KSU_SUSFS
+extern int susfs_add_sus_avd_allowed_by_type(u32 s_type, u32 t_type, u32 c_type, u32 orig_avd_allowed);
+extern int susfs_add_sus_type(const char *secctx, u32 type_value);
+#endif // #ifdef CONFIG_KSU_SUSFS
+
 #define KSU_SUPPORT_ADD_TYPE
 
 //////////////////////////////////////////////////////
@@ -56,6 +61,10 @@ static bool set_type_state(struct policydb *db, const char *type_name, bool perm
 static void add_typeattribute_raw(struct policydb *db, struct type_datum *type, struct type_datum *attr);
 
 static bool add_typeattribute(struct policydb *db, const char *type, const char *attr);
+
+static const struct policydb *ksu_original_types_policy;
+static u32 ksu_original_types_limit;
+static u32 ksu_original_types_generation;
 
 //////////////////////////////////////////////////////
 // Implementation
@@ -337,6 +346,10 @@ static bool add_rule_raw(struct policydb *db, struct type_datum *src, struct typ
             if (!node)
                 return false;
         }
+
+#ifdef CONFIG_KSU_SUSFS
+        susfs_add_sus_avd_allowed_by_type(src->value, tgt->value, cls->value, node->datum.u.data);
+#endif // #ifdef CONFIG_KSU_SUSFS
 
         if (invert) {
             if (perm)
@@ -761,6 +774,9 @@ static bool add_type(struct policydb *db, const char *type_name, bool attr)
         ebitmap_set_bit(&db->role_val_to_struct[i]->types, value - 1, 1);
     }
 
+#ifdef CONFIG_KSU_SUSFS
+    susfs_add_sus_type(type_name, type->value);
+#endif // #ifdef CONFIG_KSU_SUSFS
     return true;
 
     // safe? because only huawei do this fucking things
@@ -1039,6 +1055,54 @@ bool ksu_typeattribute(struct policydb *db, const char *type, const char *attr)
 bool ksu_exists(struct policydb *db, const char *type)
 {
     return symtab_search(&db->p_types, type) != NULL;
+}
+
+bool ksu_set_original_types(struct policydb *db, struct policydb *orig_db, u32 policy_generation)
+{
+    if (!db || !orig_db || !policy_generation || orig_db->p_types.nprim > db->p_types.nprim) {
+        WRITE_ONCE(ksu_original_types_generation, 0);
+        WRITE_ONCE(ksu_original_types_policy, NULL);
+        WRITE_ONCE(ksu_original_types_limit, 0);
+        return false;
+    }
+
+    WRITE_ONCE(ksu_original_types_limit, orig_db->p_types.nprim);
+    WRITE_ONCE(ksu_original_types_generation, policy_generation);
+    WRITE_ONCE(ksu_original_types_policy, db);
+    return true;
+}
+
+bool ksu_advance_original_types(struct policydb *db, struct policydb *old_db, u32 old_policy_generation,
+                                u32 policy_generation)
+{
+    u32 original_types_limit = READ_ONCE(ksu_original_types_limit);
+    u32 original_types_generation = READ_ONCE(ksu_original_types_generation);
+
+    if (!db || !old_db || !old_policy_generation || !policy_generation || !original_types_limit ||
+        !original_types_generation || old_policy_generation != original_types_generation ||
+        READ_ONCE(ksu_original_types_policy) != old_db || db->p_types.nprim < original_types_limit) {
+        WRITE_ONCE(ksu_original_types_generation, 0);
+        WRITE_ONCE(ksu_original_types_policy, NULL);
+        WRITE_ONCE(ksu_original_types_limit, 0);
+        return false;
+    }
+
+    WRITE_ONCE(ksu_original_types_generation, policy_generation);
+    WRITE_ONCE(ksu_original_types_policy, db);
+    return true;
+}
+
+int ksu_type_is_original(struct policydb *db, u32 policy_generation, u32 type_value)
+{
+    const struct policydb *original_types_policy = READ_ONCE(ksu_original_types_policy);
+    u32 original_types_limit = READ_ONCE(ksu_original_types_limit);
+    u32 original_types_generation = READ_ONCE(ksu_original_types_generation);
+
+    if (!db || !policy_generation || original_types_policy != db || original_types_generation != policy_generation ||
+        !original_types_limit || type_value > db->p_types.nprim)
+        return -1;
+
+    return type_value && type_value <= original_types_limit ? 1 : 0;
 }
 
 // Access vector rules

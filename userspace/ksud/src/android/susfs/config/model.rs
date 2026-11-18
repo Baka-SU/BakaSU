@@ -27,6 +27,10 @@ pub struct Config {
     pub(super) sus_kstat: HashSet<SusKstatItem>,
     pub(super) open_redirect: HashSet<OpenRedirectItem>,
     pub(super) sus_map: HashSet<String>,
+    #[serde(default)]
+    pub(super) priority_uid_filter: HashSet<String>,
+    #[serde(default)]
+    pub(super) sus_path_uid_filter: HashSet<String>,
 }
 
 impl Default for Config {
@@ -46,6 +50,8 @@ impl Default for Config {
             sus_kstat: HashSet::new(),
             open_redirect: HashSet::new(),
             sus_map: HashSet::new(),
+            priority_uid_filter: HashSet::new(),
+            sus_path_uid_filter: HashSet::new(),
         }
     }
 }
