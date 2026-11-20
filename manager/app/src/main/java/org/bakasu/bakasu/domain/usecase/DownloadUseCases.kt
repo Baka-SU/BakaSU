@@ -4,21 +4,34 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import org.bakasu.bakasu.data.download.DownloadRepository
+import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.domain.model.ManagerUpdateInfo
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 
 class EnqueueDownloadUseCase(private val repository: DownloadRepository) {
-    operator fun invoke(url: String, fileName: String, expected: ExpectedFile? = null): Int = repository.enqueue(url, fileName, expected)
+    operator fun invoke(url: String, fileName: String, expected: ExpectedFile? = null, module: DownloadModuleInfo? = null): Int = repository.enqueue(url, fileName, expected, module)
 }
 
 class EnqueueManagerUpdateUseCase(private val repository: DownloadRepository) {
     operator fun invoke(update: ManagerUpdateInfo): Int = repository.enqueueManagerUpdate(update)
 }
 
+class CancelDownloadUseCase(private val repository: DownloadRepository) {
+    operator fun invoke(id: Int) = repository.cancel(id)
+}
+
+class RemoveDownloadUseCase(private val repository: DownloadRepository) {
+    operator fun invoke(id: Int) = repository.remove(id)
+}
+
 class ObserveDownloadUseCase(private val repository: DownloadRepository) {
     operator fun invoke(id: Int): Flow<DownloadState?> = repository.downloads.map { it[id] }
+}
+
+class ObserveDownloadsUseCase(private val repository: DownloadRepository) {
+    operator fun invoke(): Flow<List<DownloadState>> = repository.downloads.map { it.values.toList() }
 }
 
 class ObserveAssetDownloadUseCase(private val repository: DownloadRepository) {

@@ -61,11 +61,15 @@ class RegistryClient(
 
     fun currentCatalog(): RegistryCatalog? = current
 
-    /** Reads index + list from the network, falling back to the last complete good copy. */
-    fun loadCatalog(): CatalogLoad = synchronized(lock) {
+    /** Artwork lookup never refreshes the repository or changes its browsing state. */
+    fun cachedCatalog(): RegistryCatalog? = synchronized(lock) { current ?: readCachedCatalog() }
+
+    /** Reads index + list from the network. Browsing disables the fallback used by update checks. */
+    fun loadCatalog(allowCache: Boolean = true): CatalogLoad = synchronized(lock) {
         try {
             CatalogLoad(fetchCatalog())
         } catch (e: Exception) {
+            if (!allowCache) throw e
             val fallback = current ?: readCachedCatalog()
             if (fallback != null) {
                 current = fallback
@@ -77,7 +81,7 @@ class RegistryClient(
     }
 
     /** Returns the catalog in memory, or loads one (network, then cache). */
-    fun catalog(): RegistryCatalog = current ?: loadCatalog().catalog
+    fun catalog(allowCache: Boolean = true): RegistryCatalog = current ?: loadCatalog(allowCache).catalog
 
     private fun fetchCatalog(): RegistryCatalog {
         var lastError: Exception? = null
@@ -120,12 +124,12 @@ class RegistryClient(
 
     /**
      * Loads a module detail consistent with the catalog. Throws [ModuleNotInIndexException]
-     * when the module is not part of the current index.
+     * when the module is not part of the current index. Browsing sets [allowCache] to false.
      */
-    fun loadDetail(id: String): DetailLoad {
+    fun loadDetail(id: String, allowCache: Boolean = true): DetailLoad {
         // A catalog loaded right here is as fresh as a re-read would be.
         var refreshed = current == null
-        val catalog = catalog()
+        val catalog = catalog(allowCache)
         val summary = catalog.find(id) ?: throw ModuleNotInIndexException(id)
         try {
             val (text, detail) = fetchDetail(summary)
@@ -165,6 +169,7 @@ class RegistryClient(
             }
             // A refresh above may already have advanced the catalog: only fall back to a cached
             // detail of the build the client is on now, for a module that is still listed there.
+            if (!allowCache) throw e
             val latest = current ?: catalog
             if (latest.find(id) == null) throw e
             val cached = readCachedDetail(id)?.takeIf { it.buildId == latest.buildId && it.id == id }
@@ -173,8 +178,8 @@ class RegistryClient(
         }
     }
 
-    /** Loads the README HTML, or null if the module has none. Falls back to a cached copy of the same build. */
-    fun loadReadme(detail: ApiModuleDetail): Readme? {
+    /** Loads README HTML, or null if absent. The optional fallback must belong to the same build. */
+    fun loadReadme(detail: ApiModuleDetail, allowCache: Boolean = true): Readme? {
         val path = detail.readme ?: return null
         val key = "readme-${detail.id}"
         return try {
@@ -182,6 +187,7 @@ class RegistryClient(
             runCatching { cache.write(key, detail.buildId + "\n" + html) }
             Readme(html)
         } catch (e: Exception) {
+            if (!allowCache) throw e
             val cached = runCatching { cache.read(key) }.getOrNull() ?: throw e
             val buildId = cached.substringBefore('\n')
             if (buildId != detail.buildId) throw e

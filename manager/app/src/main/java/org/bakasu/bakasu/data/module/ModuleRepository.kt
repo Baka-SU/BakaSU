@@ -28,6 +28,9 @@ class ModuleRepository(
     private val ksuCliRepository: KsuCliRepository,
 ) {
     private val refreshMutex = Mutex()
+
+    // Serialize local snapshots and mutations without holding commands behind network checks.
+    private val mutationMutex = Mutex()
     private val mutableInstalledModules = MutableStateFlow(InstalledModulesState())
     val installedModules: StateFlow<InstalledModulesState> =
         mutableInstalledModules.asStateFlow()
@@ -39,54 +42,46 @@ class ModuleRepository(
         withContext(Dispatchers.IO) {
             mutableInstalledModules.update { it.copy(refreshing = true) }
             runCatching {
-                val previous = mutableInstalledModules.value.modules
-                val previousVersionKeys = if (manual) {
-                    emptySet()
-                } else {
-                    previous.mapTo(mutableSetOf()) { it.id + it.versionCode }
+                val modules = mutationMutex.withLock {
+                    val previous = mutableInstalledModules.value.modules.associateBy { it.dirId }
+                    val modules = parseModules(ksuCliRepository.listModules()).map { module ->
+                        module.withCachedUpdate(previous[module.dirId].takeIf { checkUpdates })
+                    }
+                    val requiresMount = coroutineScope {
+                        modules.map { module ->
+                            async(Dispatchers.IO) {
+                                val directory = "/data/adb/modules/${module.dirId}"
+                                SuFile.open("$directory/system").exists() &&
+                                    !SuFile.open("$directory/skip_mount").exists() &&
+                                    !SuFile.open("$directory/disable").exists() &&
+                                    !SuFile.open("$directory/remove").exists()
+                            }
+                        }.awaitAll().any { it }
+                    }
+                    mutableInstalledModules.value = InstalledModulesState(
+                        modules = modules,
+                        refreshing = false,
+                        hasModuleRequireMount = requiresMount,
+                        hasMagisk = ksuCliRepository.hasMagisk(),
+                        metaModuleStatus = getMetaModuleStatus(),
+                    )
+                    modules
                 }
-                val modules = parseModules(ksuCliRepository.listModules())
-                val requiresMount = coroutineScope {
-                    modules.map { module ->
-                        async(Dispatchers.IO) {
-                            val directory = "/data/adb/modules/${module.id}"
-                            SuFile.open("$directory/system").exists() &&
-                                !SuFile.open("$directory/skip_mount").exists() &&
-                                !SuFile.open("$directory/disable").exists() &&
-                                !SuFile.open("$directory/remove").exists()
-                        }
-                    }.awaitAll().any { it }
-                }
-                mutableInstalledModules.value = InstalledModulesState(
-                    modules = modules,
-                    refreshing = false,
-                    hasModuleRequireMount = requiresMount,
-                    hasMagisk = ksuCliRepository.hasMagisk(),
-                    metaModuleStatus = getMetaModuleStatus(),
-                )
 
                 if (checkUpdates && networkStatusRepository.isAvailable()) {
                     val withUpdates = coroutineScope {
                         modules.map { module ->
                             async(Dispatchers.IO) {
-                                val shouldCheck =
-                                    module.id + module.versionCode !in previousVersionKeys ||
-                                        module.updateJson.isEmpty() ||
-                                        module.remove || module.update || !module.enabled
-                                module.copy(
-                                    moduleUpdate = if (shouldCheck) {
-                                        checkUpdate(
-                                            module.updateJson,
-                                            module.versionCode,
-                                        ).getOrNull()
-                                    } else {
-                                        null
-                                    },
-                                )
+                                module.refreshUpdate(manual, ::checkUpdate)
                             }
                         }.awaitAll()
                     }
-                    mutableInstalledModules.update { current -> current.copy(modules = withUpdates) }
+                    // Network results must not overwrite enable/remove changes made while
+                    // checking updates. Merge only metadata for the same installed release.
+                    val updates = withUpdates.associateBy { it.dirId }
+                    mutableInstalledModules.update { current ->
+                        current.copy(modules = current.modules.map { module -> module.withCachedUpdate(updates[module.dirId]) })
+                    }
                 }
             }.onFailure {
                 mutableInstalledModules.update { current -> current.copy(refreshing = false) }
@@ -119,19 +114,36 @@ class ModuleRepository(
     }
 
     suspend fun setModuleEnabled(moduleId: String, enabled: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching { check(ksuCliRepository.toggleModule(moduleId, enabled)) }
-            .onSuccess { updateCachedEnabled(moduleId, enabled) }
+        mutationMutex.withLock {
+            runCatching { check(ksuCliRepository.toggleModule(moduleId, enabled)) }
+                .onSuccess { updateCachedEnabled(moduleId, enabled) }
+        }
     }
 
     suspend fun setModuleRemoved(moduleId: String, removed: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
-            check(
-                if (removed) {
-                    ksuCliRepository.uninstallModule(moduleId)
-                } else {
-                    ksuCliRepository.undoUninstallModule(moduleId)
-                },
-            )
+        mutationMutex.withLock {
+            runCatching {
+                check(
+                    if (removed) {
+                        ksuCliRepository.uninstallModule(moduleId)
+                    } else {
+                        ksuCliRepository.undoUninstallModule(moduleId)
+                    },
+                )
+            }.onSuccess {
+                mutableInstalledModules.update { current ->
+                    current.copy(
+                        modules = current.modules.map { module ->
+                            if (module.dirId == moduleId) module.copy(remove = removed) else module
+                        },
+                        metaModuleStatus = if (current.modules.any { it.dirId == moduleId && it.metamodule }) {
+                            if (removed) MetaModuleStatus.REMOVED else getMetaModuleStatus()
+                        } else {
+                            current.metaModuleStatus
+                        },
+                    )
+                }
+            }
         }
     }
 
@@ -196,6 +208,22 @@ class ModuleRepository(
             else -> MetaModuleStatus.ACTIVE
         }
     }
+}
+
+/** Enabling or disabling a module does not change which release it can update to. */
+internal fun InstalledModule.withCachedUpdate(previous: InstalledModule?): InstalledModule = copy(
+    moduleUpdate = previous?.takeIf {
+        it.id == id && it.versionCode == versionCode && it.updateJson == updateJson
+    }?.moduleUpdate,
+)
+
+internal suspend fun InstalledModule.refreshUpdate(
+    manual: Boolean,
+    checkUpdate: suspend (String, Int) -> Result<ModuleUpdateMetadata?>,
+): InstalledModule {
+    if (updateJson.isBlank() || (!manual && moduleUpdate != null)) return this
+    // A failed request cannot invalidate an already known update; a successful empty result can.
+    return copy(moduleUpdate = checkUpdate(updateJson, versionCode).getOrElse { moduleUpdate })
 }
 
 private fun JSONObject.getBooleanCompat(key: String, default: Boolean = false): Boolean = if (!has(key)) {

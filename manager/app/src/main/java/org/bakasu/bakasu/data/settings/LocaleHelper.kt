@@ -2,12 +2,15 @@ package org.bakasu.bakasu.data.settings
 
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
+import android.app.LocaleManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
+import android.os.LocaleList
 import android.provider.Settings
+import androidx.datastore.preferences.core.stringPreferencesKey
 import java.util.Locale
 import org.bakasu.bakasu.data.AppSettingsRepository
 
@@ -33,6 +36,15 @@ fun launchSystemLanguageSettings(context: Context) {
 class LocaleHelper(
     private val settings: AppSettingsRepository,
 ) {
+    suspend fun setApplicationLanguage(context: Context, tag: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val locales = if (tag == "system") LocaleList.getEmptyLocaleList() else LocaleList(parseLocaleTag(tag))
+            context.getSystemService(LocaleManager::class.java).applicationLocales = locales
+        } else {
+            settings.editBlocking { it[stringPreferencesKey("app_locale")] = tag }
+        }
+    }
+
     fun applyLanguage(context: Context): Context {
         // On Android 13+, language is handled by system
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -84,17 +96,7 @@ class LocaleHelper(
      * Parse locale tag to Locale object
      */
     private fun parseLocaleTag(tag: String): Locale = try {
-        if (tag.contains("_")) {
-            val parts = tag.split("_")
-            Locale.Builder()
-                .setLanguage(parts[0])
-                .setRegion(parts.getOrNull(1) ?: "")
-                .build()
-        } else {
-            Locale.Builder()
-                .setLanguage(tag)
-                .build()
-        }
+        Locale.Builder().setLanguageTag(tag.replace('_', '-')).build()
     } catch (_: Exception) {
         Locale.getDefault()
     }

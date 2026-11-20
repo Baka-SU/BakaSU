@@ -3,6 +3,7 @@ package org.bakasu.bakasu.ui.viewmodel
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -30,9 +31,12 @@ data class DynamicManagerUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val isSubmitting: Boolean = false,
+    val loadFailed: Boolean = false,
 )
 
 sealed interface DynamicManagerUiAction {
+    data object Load : DynamicManagerUiAction
+    data object Retry : DynamicManagerUiAction
     data object Refresh : DynamicManagerUiAction
     data class Search(val query: String) : DynamicManagerUiAction
     data class SelectApp(val app: DynamicManagerApp) : DynamicManagerUiAction
@@ -56,13 +60,18 @@ class DynamicManagerViewModel(
     private val setManualDynamicManager: SetManualDynamicManagerUseCase,
     private val clearDynamicManager: ClearDynamicManagerUseCase,
 ) : ViewModel() {
+    private var submitJob: Job? = null
+    private var refreshJob: Job? = null
+    private val loadFailed = MutableStateFlow(false)
+    private val pageLoading = MutableStateFlow(false)
     private val search = MutableStateFlow("")
     private val mutableEvents = MutableSharedFlow<DynamicManagerUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<DynamicManagerUiEvent> = mutableEvents.asSharedFlow()
 
-    val state: StateFlow<DynamicManagerUiState> = combine(observeState(), search) { source, query ->
+    val state: StateFlow<DynamicManagerUiState> = combine(observeState(), search, loadFailed, pageLoading) { source, query, failed, loading ->
         val normalized = query.trim()
         DynamicManagerUiState(
+            loadFailed = failed,
             config = source.config,
             apps = if (normalized.isEmpty()) {
                 source.apps
@@ -73,8 +82,8 @@ class DynamicManagerViewModel(
                 }
             },
             search = query,
-            isLoading = source.isLoading,
-            isRefreshing = source.isRefreshing,
+            isLoading = source.isLoading || loading,
+            isRefreshing = source.isRefreshing && !loading,
             isSubmitting = source.isSubmitting,
         )
     }.stateIn(
@@ -86,7 +95,16 @@ class DynamicManagerViewModel(
 
     fun dispatch(action: DynamicManagerUiAction) {
         when (action) {
-            DynamicManagerUiAction.Refresh -> viewModelScope.launch { refresh() }
+            DynamicManagerUiAction.Load, DynamicManagerUiAction.Retry, DynamicManagerUiAction.Refresh -> if (refreshJob?.isActive != true) {
+                pageLoading.value = action != DynamicManagerUiAction.Refresh
+                refreshJob = viewModelScope.launch {
+                    try {
+                        refresh()
+                    } finally {
+                        pageLoading.value = false
+                    }
+                }
+            }
 
             is DynamicManagerUiAction.Search -> search.value = action.query
 
@@ -104,13 +122,17 @@ class DynamicManagerViewModel(
         }
     }
 
-    suspend fun refresh(): Result<Unit> = refreshDynamicManager()
+    suspend fun refresh(): Result<Unit> {
+        loadFailed.value = false
+        return refreshDynamicManager().also { loadFailed.value = it.isFailure }
+    }
 
     private fun submit(
         operation: DynamicManagerOperation,
         command: suspend () -> Result<Unit>,
     ) {
-        viewModelScope.launch {
+        if (submitJob?.isActive == true) return
+        submitJob = viewModelScope.launch {
             val success = command().isSuccess
             mutableEvents.emit(DynamicManagerUiEvent.OperationCompleted(operation, success))
         }

@@ -114,5 +114,5 @@ sealed interface ModuleCatalogFailure {
 
 sealed interface ModuleCatalogResult<out T> {
     data class Success<T>(val value: T) : ModuleCatalogResult<T>
-    data class Failure(val reason: ModuleCatalogFailure) : ModuleCatalogResult<Nothing>
+    data class Failure(val reason: ModuleCatalogFailure, val repositoryFailure: RepositoryFailure? = null) : ModuleCatalogResult<Nothing>
 }

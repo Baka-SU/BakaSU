@@ -18,6 +18,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.AllowlistOperationResult
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.domain.model.SuperUserLoadFailure
+import org.bakasu.bakasu.domain.model.SuperUserState
 import org.bakasu.bakasu.domain.usecase.BackupAllowlistUseCase
 import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetManagerRuntimeInfoUseCase
@@ -142,7 +143,7 @@ class SuperUserViewModel(
 
     fun dispatch(action: SuperUserUiAction) {
         when (action) {
-            SuperUserUiAction.LoadInitialData -> if (refreshJob == null || sourceState.value.loadFailure != null) refresh()
+            SuperUserUiAction.LoadInitialData -> if (sourceState.value.needsInitialLoad(refreshJob)) refresh()
 
             SuperUserUiAction.Refresh -> refresh()
 
@@ -265,3 +266,5 @@ class SuperUserViewModel(
         const val KEY_REVERSE_ORDER = "reverse_order"
     }
 }
+
+internal fun SuperUserState.needsInitialLoad(refreshJob: Job?): Boolean = (!hasLoaded || loadFailure != null) && !refreshing && refreshJob?.isActive != true

@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.viewmodel
 
+import android.os.Build
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +21,7 @@ import org.bakasu.bakasu.domain.model.PlatformSetting
 import org.bakasu.bakasu.domain.model.SettingsPlatformSnapshot
 import org.bakasu.bakasu.domain.model.coerceCompatibleWith
 import org.bakasu.bakasu.domain.usecase.ConfigureSuLogUseCase
+import org.bakasu.bakasu.domain.usecase.GetCurrentAppLocaleUseCase
 import org.bakasu.bakasu.domain.usecase.GetKernelFeatureSettingsUseCase
 import org.bakasu.bakasu.domain.usecase.GetPlatformFeatureStatusUseCase
 import org.bakasu.bakasu.domain.usecase.LoadSettingsPlatformUseCase
@@ -107,6 +109,7 @@ data class SettingsUiState(
     val useSoftReboot: Boolean = false,
     val enableSwipeDismiss: Boolean = true,
     val pagerInterceptionMode: Int = 1,
+    val applyingThemeColor: Boolean = false,
 )
 
 sealed interface SettingsUiAction {
@@ -115,6 +118,7 @@ sealed interface SettingsUiAction {
     data object LoadFeatureSettings : SettingsUiAction
     data class SetThemeMode(val index: Int) : SettingsUiAction
     data class SetThemeColor(val color: Int) : SettingsUiAction
+    data class ApplyWearThemeColor(val hex: String) : SettingsUiAction
     data class SetThemeColorDialogVisible(val visible: Boolean) : SettingsUiAction
     data class SetPredictiveBackAnimation(val animation: PredictiveBackAnimation) : SettingsUiAction
     data class SetPredictiveBackExitDirection(
@@ -132,6 +136,7 @@ sealed interface SettingsUiAction {
     data object SaveCardConfig : SettingsUiAction
     data class SetLanguageDialogVisible(val visible: Boolean) : SettingsUiAction
     data class SetLanguage(val localeTag: String) : SettingsUiAction
+    data object RefreshLanguage : SettingsUiAction
     data object RestartActivity : SettingsUiAction
     data object ApplyDpi : SettingsUiAction
     data class SetTempDpi(val dpi: Int) : SettingsUiAction
@@ -160,6 +165,7 @@ sealed interface SettingsUiEvent {
 
 class SettingsViewModel(
     private val loadSettings: LoadSettingsPlatformUseCase,
+    private val getCurrentAppLocale: GetCurrentAppLocaleUseCase,
     private val updateAppearance: UpdateAppearanceUseCase,
     private val updatePlatform: UpdatePlatformSettingUseCase,
     private val getPlatformFeatureStatus: GetPlatformFeatureStatusUseCase,
@@ -254,7 +260,14 @@ class SettingsViewModel(
 
     fun setLanguageDialogVisible(visible: Boolean) = mutableState.update { it.copy(showLanguageDialog = visible) }
     fun handleLanguageChange(localeTag: String) {
-        updatePlatformAsync(PlatformSetting.Locale(localeTag))
+        viewModelScope.launch {
+            updatePlatform(PlatformSetting.Locale(localeTag))
+                .onSuccess {
+                    applySnapshot(it, resetTempDpi = false)
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) restartActivityForLanguage()
+                }
+                .onFailure(::emitError)
+        }
     }
 
     fun restartActivityForLanguage() {
@@ -469,6 +482,8 @@ class SettingsViewModel(
 
             is SettingsUiAction.SetThemeColor -> handleThemeColorChange(action.color)
 
+            is SettingsUiAction.ApplyWearThemeColor -> applyWearThemeColor(action.hex)
+
             is SettingsUiAction.SetThemeColorDialogVisible ->
                 setThemeColorDialogVisible(action.visible)
 
@@ -500,6 +515,11 @@ class SettingsViewModel(
             is SettingsUiAction.SetLanguageDialogVisible -> setLanguageDialogVisible(action.visible)
 
             is SettingsUiAction.SetLanguage -> handleLanguageChange(action.localeTag)
+
+            SettingsUiAction.RefreshLanguage -> {
+                val locale = getCurrentAppLocale()
+                mutableState.update { it.copy(currentAppLocale = locale) }
+            }
 
             SettingsUiAction.RestartActivity -> restartActivityForLanguage()
 
@@ -555,6 +575,35 @@ class SettingsViewModel(
         val coerced = index.coerceIn(0, 2)
         mutableState.update { it.copy(pagerInterceptionMode = coerced) }
         updatePlatformAsync(PlatformSetting.PagerInterceptionMode(coerced))
+    }
+
+    private fun applyWearThemeColor(input: String) {
+        if (mutableState.value.applyingThemeColor) return
+        val hex = input.trim().removePrefix("#")
+        if (hex.length < 6) return
+        if (!hex.matches(Regex("[0-9a-fA-F]{6}"))) {
+            mutableEvents.tryEmit(SettingsUiEvent.Message(R.string.wear_invalid_color))
+            return
+        }
+        mutableState.update { it.copy(applyingThemeColor = true) }
+        viewModelScope.launch {
+            try {
+                updateAppearance(AppearanceSetting.SeedColor(hex.toLong(16).toInt() or 0xFF000000.toInt())).fold(
+                    onSuccess = {
+                        updateAppearance(AppearanceSetting.DynamicColor(false)).fold(
+                            onSuccess = {
+                                applySnapshot(it, resetTempDpi = false)
+                                mutableEvents.emit(SettingsUiEvent.Message(R.string.wear_theme_color_applied))
+                            },
+                            onFailure = ::emitError,
+                        )
+                    },
+                    onFailure = ::emitError,
+                )
+            } finally {
+                mutableState.update { it.copy(applyingThemeColor = false) }
+            }
+        }
     }
 
     private fun updateAppearanceAsync(setting: AppearanceSetting) {

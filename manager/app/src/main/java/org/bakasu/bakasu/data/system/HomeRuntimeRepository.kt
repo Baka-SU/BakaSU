@@ -18,6 +18,7 @@ class HomeRuntimeRepository(
     ): HomeBasicInfo = withContext(Dispatchers.IO) {
         val uname = runCatching { Os.uname() }.getOrNull()
         HomeBasicInfo(
+            architecture = uname?.machine.orEmpty(),
             kernelRelease = uname?.release ?: "Unknown",
             androidVersion = Build.VERSION.RELEASE ?: "Unknown",
             deviceModel = getDeviceModel(),

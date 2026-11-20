@@ -85,8 +85,9 @@ class KernelRepository(
         ksuCliRepository.execKsud("feature set shell_su_adb_only ${if (enabled) 1 else 0}", true)
     }
 
-    suspend fun setSuLogEnabled(enabled: Boolean): Boolean = saveFeature {
-        Natives.setSuLogEnabled(enabled)
+    suspend fun setSuLogEnabled(enabled: Boolean): Boolean = withContext(Dispatchers.IO) {
+        ksuCliRepository.execKsud("feature set sulog ${if (enabled) 1 else 0}", true) &&
+            ksuCliRepository.execKsud("feature save", true)
     }
 
     suspend fun setSelinuxHideEnabled(enabled: Boolean): Int = withContext(Dispatchers.IO) {

@@ -2,6 +2,8 @@ package org.bakasu.bakasu.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -17,6 +19,8 @@ import org.bakasu.bakasu.domain.usecase.RebootUseCase
 data class InstallUiState(
     val environment: InstallEnvironment = InstallEnvironment(),
     val loading: Boolean = true,
+    val refreshVersion: Int = 0,
+    val error: String? = null,
 )
 
 sealed interface InstallUiAction {
@@ -41,6 +45,7 @@ class InstallViewModel(
 
     val state: StateFlow<InstallUiState> = mutableState.asStateFlow()
     val events: SharedFlow<InstallUiEvent> = mutableEvents.asSharedFlow()
+    private var loadJob: Job? = null
 
     init {
         if (mutableState.value.loading) load(forceRefresh = false)
@@ -59,14 +64,16 @@ class InstallViewModel(
     }
 
     private fun load(forceRefresh: Boolean) {
-        viewModelScope.launch {
-            mutableState.update { it.copy(loading = true) }
+        loadJob?.cancel()
+        mutableState.update { it.copy(loading = true, error = null) }
+        loadJob = viewModelScope.launch {
             runCatching { getInstallEnvironment(forceRefresh) }
                 .onSuccess { environment ->
-                    mutableState.value = InstallUiState(environment = environment, loading = false)
+                    mutableState.update { it.copy(environment = environment, loading = false, refreshVersion = it.refreshVersion + if (forceRefresh) 1 else 0) }
                 }
                 .onFailure { error ->
-                    mutableState.update { it.copy(loading = false) }
+                    if (error is CancellationException) throw error
+                    mutableState.update { it.copy(loading = false, error = error.message.orEmpty(), refreshVersion = it.refreshVersion + if (forceRefresh) 1 else 0) }
                     mutableEvents.tryEmit(InstallUiEvent.Error(error.message.orEmpty()))
                 }
         }

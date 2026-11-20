@@ -27,7 +27,8 @@
     <string name="sulog_failed_to_load">載入日誌檔案失敗</string>
     <string name="sulog_disabled_title">超級用戶日誌訪問已被停用</string>
     <string name="sulog_unsupported_title">內核不支援超級用戶訪問日誌</string>
-    <string name="sulog_enable_action">已啟用</string>
+    <string name="sulog_enable_action">啟用</string>
+    <string name="wear_sulog_disabled_title">SULog未啟用</string>
     <string name="sulog_filter_title">按類型過濾</string>
     <string name="sulog_clean_title">清除日誌</string>
     <string name="sulog_filter_root_execve">執行 Root 進程</string>

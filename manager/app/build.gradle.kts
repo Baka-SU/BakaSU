@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.lsplugin.apksign)
     alias(libs.plugins.aboutLibraries)
     id("kotlin-parcelize")
+    id("cc.star0.wear.lib.cnwearoverlay") version "1.2.2"
 }
 
 val androidCompileSdkVersion = rootProject.extra["androidCompileSdkVersion"] as Int
@@ -219,6 +220,12 @@ dependencies {
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.wear.compose.foundation)
+    implementation(libs.androidx.wear.compose.material3)
+    implementation(libs.androidx.wear.compose.navigation3)
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
     implementation(libs.androidx.compose.runtime.tracing)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
@@ -259,6 +266,7 @@ dependencies {
     implementation(libs.markdown)
     implementation(libs.markwon.tables)
     implementation(libs.androidx.webkit)
+    implementation(libs.androidx.wear.input)
 
     implementation(libs.lsposed.cxx)
 

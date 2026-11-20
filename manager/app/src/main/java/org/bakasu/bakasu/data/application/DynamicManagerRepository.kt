@@ -73,23 +73,25 @@ class DynamicManagerRepository(
         ksuCliRepository.setDynamicManagerApk(apkPath)
     }
 
-    suspend fun setManual(size: Int, hash: String): Result<Unit> = submit {
+    suspend fun setManual(size: Int, hash: String): Result<Unit> = submit(verify = { it.size == size && it.hash.equals(hash, ignoreCase = true) }) {
         ksuCliRepository.setDynamicManager(size, hash)
     }
 
-    suspend fun clear(): Result<Unit> = submit(ksuCliRepository::clearDynamicManager)
+    suspend fun clear(): Result<Unit> = submit(verify = { !it.isValid }, command = ksuCliRepository::clearDynamicManager)
 
-    private suspend fun submit(command: () -> Boolean): Result<Unit> = mutex.withLock {
+    private suspend fun submit(verify: (DynamicManagerConfig) -> Boolean = { it.isValid }, command: () -> Boolean): Result<Unit> = mutex.withLock {
         withContext(Dispatchers.IO) {
             mutableState.update { it.copy(isSubmitting = true) }
             runCatching {
                 check(command())
+                val actual = checkNotNull(ksuCliRepository.getDynamicManagerConfig()).let {
+                    DynamicManagerConfig(size = it.size, hash = it.hash)
+                }
+                check(verify(actual))
                 val signatureIndexes = managerSignatureIndexes()
                 mutableState.update { current ->
                     current.copy(
-                        config = ksuCliRepository.getDynamicManagerConfig()?.let {
-                            DynamicManagerConfig(size = it.size, hash = it.hash)
-                        },
+                        config = actual,
                         apps = current.apps.map { app ->
                             val signatureIndex = signatureIndexes[app.uid % PER_USER_RANGE]
                             app.copy(

@@ -1,7 +1,14 @@
 package org.bakasu.bakasu.domain.usecase
 
+import android.graphics.Bitmap
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flowOn
 import org.bakasu.bakasu.data.module.ModuleCatalogRepository
 import org.bakasu.bakasu.data.module.ModuleIconRepository
 import org.bakasu.bakasu.data.module.ModuleReleaseRepository
@@ -32,12 +39,23 @@ class GetCatalogModuleUseCase(private val repository: ModuleCatalogRepository) {
     suspend operator fun invoke(moduleId: String, sourceUrl: String, forceDetail: Boolean = false) = repository.get(moduleId, sourceUrl, forceDetail)
 }
 
+class FindModuleUpdateSourceUseCase(private val repository: ModuleCatalogRepository) {
+    suspend operator fun invoke(moduleId: String, updateJson: String, zipUrl: String): CatalogModule? = try {
+        repository.findUpdateSource(moduleId, updateJson, zipUrl)
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: Exception) {
+        // Optional artwork never prevents a module update.
+        null
+    }
+}
+
 class IsCatalogModuleCurrentUseCase(private val repository: ModuleCatalogRepository) {
     operator fun invoke(module: CatalogModule): Boolean = repository.isCurrent(module)
 }
 
 class GetModuleReadmeUseCase(private val repository: ModuleCatalogRepository) {
-    suspend operator fun invoke(module: CatalogModule, retry: Boolean = false) = repository.readme(module, retry)
+    suspend operator fun invoke(module: CatalogModule) = repository.readme(module)
 }
 
 class GetModuleReleaseDetailsUseCase(private val repository: ModuleReleaseRepository) {
@@ -49,6 +67,34 @@ class GetModuleReleaseDetailsUseCase(private val repository: ModuleReleaseReposi
 class LoadModuleIconUseCase(private val repository: ModuleIconRepository) {
     fun cached(url: String, origin: String?) = repository.cached(url, origin)
     suspend operator fun invoke(url: String, origin: String?) = repository.load(url, origin)
+
+    /** Keep the completed bitmaps with the list, even if the shared LRU evicts them. */
+    suspend fun loadAll(modules: List<CatalogModule>): Map<String, Bitmap?> = coroutineScope {
+        val sources = modules.associate { module ->
+            module.catalogId to (
+                (module.iconUrl?.takeIf { it.isNotBlank() } ?: module.registryMetadata?.iconUrl) to
+                    module.repositoryUrl.takeIf { module.registryMetadata != null }
+                )
+        }
+        val loaded = mutableMapOf<Pair<String?, String?>, Bitmap?>()
+        // Bound queued work as well as active downloads when the page is closed or replaced.
+        sources.values.distinct().chunked(4).forEach { batch ->
+            batch.map { source ->
+                async {
+                    val (url, origin) = source
+                    val bitmap = try {
+                        if (url.isNullOrBlank()) null else repository.load(url, origin)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        null
+                    }
+                    source to bitmap
+                }
+            }.awaitAll().forEach { (source, bitmap) -> loaded[source] = bitmap }
+        }
+        sources.mapValues { (_, source) -> loaded[source] }
+    }
 }
 
 class ResolveModuleUpdateUseCase(private val repository: KernelSuRegistryRepository) {
@@ -90,4 +136,11 @@ class RenameModuleRepositoryUseCase(private val repository: ModuleCatalogReposit
 
 class RemoveModuleRepositoryUseCase(private val repository: ModuleCatalogRepository) {
     suspend operator fun invoke(url: String) = repository.remove(url)
+}
+
+/** Resolves artwork from the already loaded catalog without making repository requests. */
+class ResolveInstalledModuleIconUseCase(private val repository: ModuleCatalogRepository) {
+    operator fun invoke() = combine(repository.sources, repository.modules) { sources, modules ->
+        repository.cachedIconModules(sources).associateBy { it.moduleId } + modules.associateBy { it.moduleId }
+    }.flowOn(Dispatchers.IO)
 }

@@ -31,7 +31,7 @@ sealed interface UmountManagerUiAction {
 }
 
 sealed interface UmountManagerUiEvent {
-    data class Message(val message: String) : UmountManagerUiEvent
+    data class Message(val message: String, val success: Boolean = true, val added: Boolean = false) : UmountManagerUiEvent
 }
 
 class UmountManagerScreenViewModel(
@@ -67,6 +67,7 @@ class UmountManagerScreenViewModel(
             is UmountManagerUiAction.Add -> submit(
                 command = { addPath(action.path, action.flags) },
                 successMessage = R.string.umount_path_added,
+                added = true,
             )
         }
     }
@@ -74,10 +75,12 @@ class UmountManagerScreenViewModel(
     private fun submit(
         command: suspend () -> Result<Unit>,
         successMessage: Int,
+        added: Boolean = false,
     ) {
         viewModelScope.launch {
-            val message = if (command().isSuccess) successMessage else R.string.operation_failed
-            mutableEvents.emit(UmountManagerUiEvent.Message(context.getString(message)))
+            val success = command().isSuccess
+            val message = if (success) successMessage else R.string.operation_failed
+            mutableEvents.emit(UmountManagerUiEvent.Message(context.getString(message), success, added))
         }
     }
 }

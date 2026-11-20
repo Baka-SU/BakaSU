@@ -9,6 +9,7 @@ data class HomeBasicInfo(
     val managerVersion: Triple<String, Int, Int> = Triple("", 0, 0),
     val selinuxStatus: String = "",
     val seccompStatus: Int = -1,
+    val architecture: String = "",
 )
 
 data class HomeModuleOverview(
@@ -34,6 +35,7 @@ data class HomeSystemInfo(
     val zygiskImplement: String = "",
     val metaModuleImplement: String = "",
     val seccompStatus: Int = -1,
+    val architecture: String = "",
 )
 
 data class HomeDashboardState(

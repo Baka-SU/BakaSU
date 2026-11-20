@@ -514,8 +514,8 @@ private fun ReadmeTab(
     val layoutDirection = LocalLayoutDirection.current
     val documentUrl = module.readmeUrl.ifBlank { module.sourceUrl }
     val document = state.documents[documentUrl]
-    LaunchedEffect(module.catalogId, documentUrl, module.detailLoaded, module.registryMetadata?.buildId) {
-        if (module.detailLoaded) viewModel.loadReadme()
+    LaunchedEffect(module.catalogId, documentUrl, module.detailLoaded, module.registryMetadata?.buildId, state.loading) {
+        if (!state.loading && module.detailLoaded) viewModel.loadReadme()
     }
     val readme = document?.document
     val content = readme?.content.orEmpty()

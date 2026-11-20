@@ -25,7 +25,6 @@ import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
 import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
-import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
 
 data class ModuleDetailUiState(
     val module: CatalogModule? = null,
@@ -46,6 +45,7 @@ data class ModuleDocumentState(
     val document: ModuleReadme? = null,
     val loading: Boolean = true,
     val failed: Boolean = false,
+    val failure: RepositoryFailure? = null,
 )
 
 sealed interface ModuleDetailUiAction {
@@ -61,14 +61,8 @@ class ModuleDetailViewModel(
     private val observeModules: ObserveCatalogModulesUseCase,
     private val observeSources: ObserveRepositorySourcesUseCase,
     private val isCurrent: IsCatalogModuleCurrentUseCase,
-    private val refreshCatalog: RefreshModuleCatalogUseCase,
 ) : ViewModel() {
-    private val mutableState = MutableStateFlow(
-        observeModules().value.firstOrNull { module ->
-            module.moduleId == moduleId && module.repositoryUrl == repositoryUrl &&
-                observeSources.sources.value.any { it.url == repositoryUrl }
-        }?.let { ModuleDetailUiState(module = it, loading = false, repositoryFailure = observeSources.failures.value[repositoryUrl]) } ?: ModuleDetailUiState(),
-    )
+    private val mutableState = MutableStateFlow(ModuleDetailUiState())
 
     val state: StateFlow<ModuleDetailUiState> = mutableState.asStateFlow()
     private var detailJob: Job? = null
@@ -82,28 +76,33 @@ class ModuleDetailViewModel(
     }
 
     init {
-        if (mutableState.value.module?.let { isCurrent(it) } != true) load()
+        refresh()
         viewModelScope.launch {
             combine(observeModules(), observeSources.sources, observeSources.failures) { modules, sources, failures ->
                 val configured = sources.any { it.url == repositoryUrl }
                 Triple(configured, modules.firstOrNull { it.moduleId == moduleId && it.repositoryUrl == repositoryUrl }, failures[repositoryUrl])
             }.collect { (configured, module, failure) ->
-                if (!configured || (module == null && mutableState.value.module != null)) {
+                if (!configured) {
                     mutableState.value = ModuleDetailUiState(loading = false, error = ModuleCatalogFailure.NotFound)
-                } else if (module != null) {
+                } else if (mutableState.value.loading) {
+                    // The request owns loading and its result; an index emission is not a loaded detail.
+                    return@collect
+                } else if (failure != null) {
+                    mutableState.value = ModuleDetailUiState(loading = false, error = ModuleCatalogFailure.Network(""), repositoryFailure = failure)
+                } else if (module == null && mutableState.value.module != null) {
+                    mutableState.value = ModuleDetailUiState(loading = false, error = ModuleCatalogFailure.NotFound)
+                } else if (module != null && mutableState.value.error == null) {
                     val previous = mutableState.value.module
                     val changedBuild = previous?.registryMetadata?.buildId != module.registryMetadata?.buildId
                     mutableState.update {
                         it.copy(
                             module = module,
-                            loading = if (module.detailLoaded) false else it.loading,
-                            error = if (module.detailLoaded) null else it.error,
                             documents = if (changedBuild) emptyMap() else it.documents,
                             releaseDetails = if (previous != module) emptyMap() else it.releaseDetails,
                             repositoryFailure = failure,
                         )
                     }
-                    if (previous?.detailLoaded == true && !module.detailLoaded) load()
+                    if (previous?.detailLoaded == true && !module.detailLoaded) refresh()
                 }
             }
         }
@@ -111,48 +110,51 @@ class ModuleDetailViewModel(
 
     fun dispatch(action: ModuleDetailUiAction) {
         when (action) {
-            ModuleDetailUiAction.Retry -> load(forceDetail = true)
+            ModuleDetailUiAction.Retry -> refresh()
         }
     }
 
-    private fun load(forceDetail: Boolean = false) {
-        if (detailJob?.isActive == true && !forceDetail) return
-        detailJob?.cancel()
+    fun refresh() {
+        if (detailJob?.isActive == true) return
         detailJob = viewModelScope.launch {
-            mutableState.update { it.copy(loading = true, error = null) }
-            if (forceDetail) refreshCatalog(repositoryUrl)
-            when (val result = getModule(moduleId, repositoryUrl, forceDetail)) {
+            mutableState.update { it.copy(loading = true, error = null, repositoryFailure = null) }
+            when (val result = getModule(moduleId, repositoryUrl, forceDetail = true)) {
                 is ModuleCatalogResult.Success -> mutableState.update {
                     if (observeSources.sources.value.none { source -> source.url == repositoryUrl }) {
                         return@update ModuleDetailUiState(loading = false, error = ModuleCatalogFailure.NotFound)
                     }
                     val current = observeModules().value.firstOrNull { module -> module.catalogId == result.value.catalogId }
                         ?: return@update ModuleDetailUiState(loading = false, error = ModuleCatalogFailure.NotFound)
-                    if (!current.detailLoaded || current.registryMetadata?.buildId != result.value.registryMetadata?.buildId) return@update it
-                    it.copy(module = current, loading = false, error = null)
+                    if (!current.detailLoaded || current.registryMetadata?.buildId != result.value.registryMetadata?.buildId) {
+                        return@update ModuleDetailUiState(loading = false, error = ModuleCatalogFailure.Network(""))
+                    }
+                    it.copy(
+                        module = current,
+                        loading = false,
+                        error = null,
+                        repositoryFailure = null,
+                        documents = if (it.module?.registryMetadata?.buildId == current.registryMetadata?.buildId) it.documents else emptyMap(),
+                        releaseDetails = emptyMap(),
+                    )
                 }
 
                 is ModuleCatalogResult.Failure -> {
-                    mutableState.update {
-                        if (result.reason == ModuleCatalogFailure.NotFound) {
-                            ModuleDetailUiState(loading = false, error = result.reason)
-                        } else {
-                            it.copy(loading = false, error = result.reason)
-                        }
-                    }
+                    mutableState.value = ModuleDetailUiState(loading = false, error = result.reason, repositoryFailure = result.repositoryFailure ?: observeSources.failures.value[repositoryUrl])
                 }
             }
+            if (mutableState.value.documents.isNotEmpty()) loadReadme(retry = true)
         }
     }
 
     fun loadReadme(retry: Boolean = false) {
+        if (mutableState.value.loading || mutableState.value.error != null) return
         val module = mutableState.value.module?.takeIf { it.detailLoaded } ?: return
         if (!isCurrent(module)) {
-            load(forceDetail = true)
+            refresh()
             return
         }
         val url = module.readmeUrl.ifBlank { module.sourceUrl }
-        loadDocument(url, retry) { getReadme(module, retry) }
+        loadDocument(url, retry) { getReadme(module) }
     }
 
     fun loadReleaseDetails(release: ModuleRelease, retry: Boolean = false) {
@@ -189,7 +191,7 @@ class ModuleDetailViewModel(
     private fun loadDocument(url: String, retry: Boolean, fetch: suspend () -> Result<ModuleReadme?>) {
         val document = mutableState.value.documents[url]
         if (document?.loading == true || (!retry && document != null)) return
-        val pending = ModuleDocumentState()
+        val pending = ModuleDocumentState(document = document?.document)
         mutableState.update { it.copy(documents = it.documents + (url to pending)) }
         viewModelScope.launch {
             val result = fetch()
@@ -202,6 +204,7 @@ class ModuleDetailViewModel(
                             document = result.getOrNull(),
                             loading = false,
                             failed = result.isFailure,
+                            failure = result.exceptionOrNull()?.let(RepositoryFailure::from),
                         )
                         ),
                 )

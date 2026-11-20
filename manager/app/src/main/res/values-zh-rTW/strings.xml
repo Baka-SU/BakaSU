@@ -27,7 +27,8 @@
     <string name="sulog_failed_to_load">載入 SU日誌失敗</string>
     <string name="sulog_disabled_title">SU 日誌功能未啟用</string>
     <string name="sulog_unsupported_title">SU 日誌記錄功能尚未被支援</string>
-    <string name="sulog_enable_action">已啟用</string>
+    <string name="sulog_enable_action">啟用</string>
+    <string name="wear_sulog_disabled_title">SULog未啟用</string>
     <string name="sulog_filter_title">按類型篩選</string>
     <string name="sulog_clean_title">清空日誌檔案</string>
     <string name="sulog_filter_root_execve">執行 Root 進程</string>

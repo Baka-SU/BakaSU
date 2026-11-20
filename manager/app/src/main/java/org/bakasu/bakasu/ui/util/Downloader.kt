@@ -52,7 +52,11 @@ fun download(
 
         CoroutineScope(Dispatchers.Main).launch {
             observeDownload(downloadId).collect { state ->
-                state ?: return@collect
+                if (state == null) {
+                    onFailed(DownloadState(downloadId, fileName, url, status = DownloadStatus.FAILED))
+                    cancel()
+                    return@collect
+                }
                 onProgress(state.progress)
                 if (state.status == DownloadStatus.COMPLETED ||
                     state.status == DownloadStatus.FAILED

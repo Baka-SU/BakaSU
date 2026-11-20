@@ -1,12 +1,19 @@
 package org.bakasu.bakasu.data.module
 
+import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.SystemClock
 import android.util.LruCache
+import java.io.File
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -16,39 +23,71 @@ import okhttp3.Request
 import org.bakasu.bakasu.data.module.registry.RegistryUrls
 
 /** Bounded raster loading adapted from tiann/KernelSU's ModuleRepoScreen.kt. */
-class ModuleIconRepository(httpClient: OkHttpClient) {
+class ModuleIconRepository(httpClient: OkHttpClient, application: Application, private val applicationScope: CoroutineScope) {
     private val client = httpClient.newBuilder().followRedirects(false).followSslRedirects(false).build()
     private val downloads = Semaphore(4)
     private val failures = LruCache<String, Long>(128)
+    private val directory = File(application.cacheDir, "module-icons")
+    private val requestLock = Any()
+    private val requests = mutableMapOf<String, Deferred<Bitmap?>>()
     private val cache = object : LruCache<String, Bitmap>(4 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount
     }
 
     fun cached(url: String, origin: String?): Bitmap? = if (allowed(url, origin)) cache.get(key(url, origin)) else null
 
-    suspend fun load(url: String, origin: String?): Bitmap? = withContext(Dispatchers.IO) {
-        if (!allowed(url, origin)) return@withContext null
+    suspend fun load(url: String, origin: String?): Bitmap? {
+        if (!allowed(url, origin)) return null
         val key = key(url, origin)
-        cache.get(key)?.let { return@withContext it }
-        if ((failures.get(key) ?: 0L) > SystemClock.elapsedRealtime()) return@withContext null
-        downloads.withPermit {
-            cache.get(key)?.let { return@withPermit it }
-            if ((failures.get(key) ?: 0L) > SystemClock.elapsedRealtime()) return@withPermit null
-            val bitmap = try {
-                fetch(url, origin)
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Exception) {
-                null
+        cache.get(key)?.let { return it }
+        return synchronized(requestLock) {
+            requests[key] ?: applicationScope.async(Dispatchers.IO, start = CoroutineStart.LAZY) {
+                loadBitmap(url, origin, key)
+            }.also { request ->
+                requests[key] = request
+                request.invokeOnCompletion { synchronized(requestLock) { requests.remove(key) } }
+                request.start()
             }
-            if (bitmap != null) {
-                cache.put(key, bitmap)
-                failures.remove(key)
-            } else {
-                failures.put(key, SystemClock.elapsedRealtime() + 60_000)
-            }
-            bitmap
+        }.await()
+    }
+
+    private suspend fun loadBitmap(url: String, origin: String?, key: String): Bitmap? = downloads.withPermit {
+        cache.get(key)?.let { return@withPermit it }
+        val file = File(directory, MessageDigest.getInstance("SHA-256").digest(key.toByteArray()).joinToString("") { "%02x".format(it) })
+        BitmapFactory.decodeFile(file.path)?.let {
+            file.setLastModified(System.currentTimeMillis())
+            cache.put(key, it)
+            return@withPermit it
         }
+        if ((failures.get(key) ?: 0L) > SystemClock.elapsedRealtime()) return@withPermit null
+        val bitmap = try {
+            fetch(url, origin)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        }
+        if (bitmap != null) {
+            cache.put(key, bitmap)
+            failures.remove(key)
+            try {
+                directory.mkdirs()
+                file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                var size = directory.listFiles().orEmpty().sumOf { it.length() }
+                directory.listFiles().orEmpty().sortedBy { it.lastModified() }.forEach {
+                    if (size > 16L * 1024 * 1024 && it != file) {
+                        val length = it.length()
+                        if (it.delete()) size -= length
+                    }
+                }
+            } catch (_: java.io.IOException) {
+                // Artwork remains available in memory if the optional disk cache is full.
+                file.delete()
+            }
+        } else {
+            failures.put(key, SystemClock.elapsedRealtime() + 60_000)
+        }
+        bitmap
     }
 
     private fun key(url: String, origin: String?) = origin.orEmpty() + "|" + url
