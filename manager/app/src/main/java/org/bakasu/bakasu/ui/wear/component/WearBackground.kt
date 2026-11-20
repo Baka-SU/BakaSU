@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawBehind
@@ -89,12 +90,12 @@ fun WearBackground(content: @Composable BoxScope.() -> Unit) {
  * backdrop, so it is transparent; the content scrim still dims the page while it is swiped away.
  */
 @Composable
-fun WearSwipeToDismissBox(onDismissed: () -> Unit, content: @Composable BoxScope.(isBackground: Boolean) -> Unit) {
+fun WearSwipeToDismissBox(onDismissed: () -> Unit, userSwipeEnabled: Boolean = true, content: @Composable BoxScope.(isBackground: Boolean) -> Unit) {
     // Wear API 36+ delivers predictive back through the platform, just like the Navigation 3
     // Wear scene strategy. A second touch-driven dismiss box competes with back-to-home.
     if (Build.VERSION.SDK_INT >= 36 || !LocalWearSwipeEnabled.current) {
         Box(Modifier.fillMaxSize()) { content(false) }
     } else {
-        SwipeToDismissBox(onDismissed = onDismissed, backgroundScrimColor = Color.Transparent, content = content)
+        SwipeToDismissBox(onDismissed = onDismissed, userSwipeEnabled = userSwipeEnabled, backgroundScrimColor = Color.Transparent, content = content)
     }
 }

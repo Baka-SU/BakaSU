@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -76,8 +77,8 @@ class WearNavigator internal constructor(
 }
 
 @Composable
-internal fun rememberWearNavigator(onChange: () -> Unit, onLeave: (WearRoute) -> Unit, onExit: () -> Unit): WearNavigator {
-    val backStack = rememberNavBackStack(WearRoute.Main)
+internal fun rememberWearNavigator(onChange: () -> Unit = {}, onLeave: (WearRoute) -> Unit = {}, onExit: () -> Unit, initialRoute: WearRoute = WearRoute.Main): WearNavigator {
+    val backStack = rememberNavBackStack(initialRoute)
     val change by rememberUpdatedState(onChange)
     val leave by rememberUpdatedState(onLeave)
     val exit by rememberUpdatedState(onExit)

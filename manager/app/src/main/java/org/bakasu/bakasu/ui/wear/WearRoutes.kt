@@ -324,6 +324,91 @@ sealed interface WearRoute : NavKey {
 
     @Serializable
     data class Browser(val url: String) : WearRoute
+
+    /** Destinations in a feature's Navigation 3 stack; its owner retains drafts and operations. */
+    @Serializable
+    sealed interface SubPage : WearRoute
+
+    @Serializable
+    data object ProfileFields : SubPage
+
+    @Serializable
+    data class ProfileField(val field: Int) : SubPage
+
+    @Serializable
+    data class TemplateField(val field: Int) : SubPage
+
+    @Serializable
+    data object RepositoryUrl : SubPage
+
+    @Serializable
+    data object RepositoryApi : SubPage
+
+    @Serializable
+    data object RepositoryName : SubPage
+
+    @Serializable
+    data object UmountPath : SubPage
+
+    @Serializable
+    data object UmountFlags : SubPage
+
+    @Serializable
+    data object LkmPartition : SubPage
+
+    @Serializable
+    data object LkmKmi : SubPage
+
+    @Serializable
+    data object SuSFSStatus : SubPage
+
+    @Serializable
+    data object SuSFSCapabilities : SubPage
+
+    @Serializable
+    data class SuSFSSection(val section: String) : SubPage
+
+    @Serializable
+    data class SuSFSAdd(val section: String) : SubPage
+
+    @Serializable
+    data class SuSFSDetail(val section: String, val path: String) : SubPage
+
+    @Serializable
+    data object SuSFSUname : SubPage
+
+    @Serializable
+    data object SuSFSSlots : SubPage
+
+    @Serializable
+    data object SuSFSCmdline : SubPage
+
+    @Serializable
+    data class SuSFSStandardField(val field: String) : SubPage
+
+    @Serializable
+    data class SuSFSEntryField(val index: Int) : SubPage
+
+    @Serializable
+    data class SuSFSEntryChoice(val choice: String) : SubPage
+
+    @Serializable
+    data object OperationStatus : SubPage
+
+    @Serializable
+    data object OperationLog : SubPage
+
+    @Serializable
+    data object FilePicker : SubPage
+
+    @Serializable
+    data object FileName : SubPage
+
+    @Serializable
+    data object WebUI : SubPage
+
+    @Serializable
+    data class WebPrompt(val message: String, val defaultValue: String) : SubPage
 }
 
 /** A destination that needs a full-featured root manager; it closes when root goes away. */

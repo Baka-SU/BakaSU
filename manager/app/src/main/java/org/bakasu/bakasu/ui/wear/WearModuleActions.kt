@@ -1,9 +1,5 @@
 package org.bakasu.bakasu.ui.wear
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -11,7 +7,6 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Save
-import androidx.compose.material.icons.rounded.Update
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,12 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.material3.ButtonDefaults
@@ -45,19 +35,17 @@ import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ExecuteModuleActionViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleChangelogViewModel
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
-import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearFeedbackEffect
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
-import org.bakasu.bakasu.ui.wear.component.WearInfoRow
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLogPage
 import org.bakasu.bakasu.ui.wear.component.WearModuleHeader
-import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
+import org.bakasu.bakasu.ui.wear.component.WearSubNavigation
 import org.bakasu.bakasu.ui.wear.component.toLogLines
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -214,7 +202,7 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
     val viewModel = koinViewModel<ExecuteModuleActionViewModel>(parameters = { parametersOf(moduleId) })
     val state by viewModel.state.collectAsStateWithLifecycle()
     var successful by rememberSaveable { mutableStateOf<Boolean?>(null) }
-    var showLog by rememberSaveable { mutableStateOf(false) }
+    val navigator = rememberWearNavigator(onExit = onBack, initialRoute = WearRoute.OperationStatus)
     var result by remember { mutableStateOf<String?>(null) }
     val saved = stringResource(R.string.log_saved)
     val failed = stringResource(R.string.operation_failed)
@@ -235,53 +223,55 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
     val lines = remember(state.output) { state.output.toLogLines() }
     val fullLog = stringResource(R.string.wear_full_log)
 
-    if (showLog) {
-        WearLogPage(fullLog, lines, following = state.running) { showLog = false }
-        return
-    }
+    WearSubNavigation(navigator) { route ->
+        if (route == WearRoute.OperationLog) {
+            WearLogPage(fullLog, lines, following = state.running) { navigator.back() }
+            return@WearSubNavigation
+        }
 
-    WearList(onBack = onBack) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.wear_execute_action)) }
-        item { WearSectionHeader(spec, stringResource(R.string.wear_execution_status)) }
-        item {
-            WearChip(
-                spec,
-                stringResource(
-                    when (successful) {
-                        true -> R.string.module_action_success
-                        false -> R.string.operation_failed
-                        null -> R.string.wear_running
+        WearList(onBack = onBack) { spec ->
+            item { WearPageHeader(spec, stringResource(R.string.wear_execute_action)) }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_execution_status)) }
+            item {
+                WearChip(
+                    spec,
+                    stringResource(
+                        when (successful) {
+                            true -> R.string.module_action_success
+                            false -> R.string.operation_failed
+                            null -> R.string.wear_running
+                        },
+                    ),
+                    secondaryLabel = lines.lastOrNull { it.isNotBlank() },
+                    icon = when (successful) {
+                        true -> Icons.Rounded.CheckCircle
+                        false -> Icons.Rounded.Error
+                        null -> Icons.Rounded.PlayArrow
                     },
-                ),
-                secondaryLabel = lines.lastOrNull { it.isNotBlank() },
-                icon = when (successful) {
-                    true -> Icons.Rounded.CheckCircle
-                    false -> Icons.Rounded.Error
-                    null -> Icons.Rounded.PlayArrow
-                },
-            )
+                )
+            }
+            item {
+                WearActionButton(
+                    spec,
+                    Icons.Rounded.Article,
+                    fullLog,
+                    { navigator.open(WearRoute.OperationLog) },
+                    secondaryText = stringResource(R.string.wear_install_log_summary),
+                )
+            }
+            item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
+            // The view model saves the log only after the script has finished, as on the phone.
+            item {
+                WearActionButton(
+                    spec,
+                    Icons.Rounded.Save,
+                    stringResource(R.string.wear_save_output),
+                    { viewModel.dispatch(ExecuteModuleActionUiAction.SaveLog) },
+                    enabled = !state.running,
+                    secondaryText = stringResource(R.string.wear_save_output_summary),
+                )
+            }
         }
-        item {
-            WearActionButton(
-                spec,
-                Icons.Rounded.Article,
-                fullLog,
-                { showLog = true },
-                secondaryText = stringResource(R.string.wear_install_log_summary),
-            )
-        }
-        item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
-        // The view model saves the log only after the script has finished, as on the phone.
-        item {
-            WearActionButton(
-                spec,
-                Icons.Rounded.Save,
-                stringResource(R.string.wear_save_output),
-                { viewModel.dispatch(ExecuteModuleActionUiAction.SaveLog) },
-                enabled = !state.running,
-                secondaryText = stringResource(R.string.wear_save_output_summary),
-            )
-        }
+        WearFeedbackEffect(result) { result = null }
     }
-    WearFeedbackEffect(result) { result = null }
 }

@@ -28,10 +28,8 @@ import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -71,12 +69,10 @@ import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ListHeaderDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
-import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.ResponsiveTransformationSpec
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.TransformationVariableSpec
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
-import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 
@@ -148,6 +144,8 @@ fun WearList(
     content: TransformingLazyColumnScope.(TransformationSpec) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val subPageTitle = LocalWearSubPageTitle.current
+    val screenTimeText: (@Composable () -> Unit)? = timeText ?: subPageTitle?.let { title -> { WearTimeText(title) } }
     val timeMode = LocalWearTimeOptions.current.mode
     val timeTitleBottom = LocalWearTimeTitleBottom.current
     val configuration = LocalConfiguration.current
@@ -481,7 +479,7 @@ fun WearList(
             ScreenScaffold(
                 scrollState = listState,
                 modifier = pageModifier,
-                timeText = timeText,
+                timeText = screenTimeText,
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
                 edgeButton = {
                     // Keep this scaffold and its list alive throughout refresh. Hiding only the
@@ -512,7 +510,7 @@ fun WearList(
             ScreenScaffold(
                 scrollState = listState,
                 modifier = pageModifier,
-                timeText = timeText,
+                timeText = screenTimeText,
                 scrollIndicator = { if (!LocalScrollCaptureInProgress.current) WearScrollIndicator(listState) },
             ) { listContent(it) }
         }

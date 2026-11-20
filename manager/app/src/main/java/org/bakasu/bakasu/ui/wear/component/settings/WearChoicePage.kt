@@ -5,18 +5,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
-import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearList
-import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
 
 @Composable
@@ -32,12 +29,15 @@ fun WearChoicePage(
     isRefreshing: Boolean = false,
     onOpenPanel: (() -> Unit)? = null,
     hasOperationsPanel: Boolean = false,
+    onConfirm: (() -> Unit)? = null,
     extraContent: TransformingLazyColumnScope.(TransformationSpec) -> Unit = {},
     onChoose: (String) -> Unit,
 ) {
     WearList(
         pageTitle = title,
         onBack = onBack,
+        onConfirm = onConfirm,
+        confirmEnabled = enabled,
         snap = true,
         isLoading = isLoading,
         onRefresh = onRefresh,

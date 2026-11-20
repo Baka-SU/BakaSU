@@ -61,7 +61,7 @@ import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
-import org.bakasu.bakasu.ui.wear.component.WearSubPage
+import org.bakasu.bakasu.ui.wear.component.WearSubNavigation
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
 import org.bakasu.bakasu.ui.wear.component.wearGroupGap
@@ -95,7 +95,7 @@ internal fun WearFilePage(
             if (event is WearFileEvent.Picked) onPicked(event.uri.toUri())
         }
     }
-    var editingName by rememberSaveable { mutableStateOf(false) }
+    val navigator = rememberWearNavigator(onExit = onBack, initialRoute = WearRoute.FilePicker)
     // The last directory or file operation, so a failure can be retried as it was requested.
     var lastOperation by remember { mutableStateOf<(() -> Unit)?>(null) }
     fun perform(operation: () -> Unit) {
@@ -198,87 +198,87 @@ internal fun WearFilePage(
     }
     val failedText = stringResource(R.string.operation_failed)
     WearFeedbackEffect(failedText.takeIf { permissionFailed }) { permissionFailed = false }
-    if (editingName) {
-        WearSubPage({ editingName = false }) {
+    WearSubNavigation(navigator) { route ->
+        if (route == WearRoute.FileName) {
             WearTextInputPage(stringResource(R.string.wear_file_name), state.name) {
                 viewModel.setName(it)
-                editingName = false
+                navigator.back()
             }
-        }
-    } else {
-        val directory = state.directory
-        WearList(
-            isLoading = state.loading || directory == null && !state.failed,
-            onBack = onBack,
-            snap = true,
-            onConfirm = if (saving && directory?.writable == true) ({ perform { viewModel.create() } }) else null,
-        ) { spec ->
-            item { WearPageHeader(spec, stringResource(R.string.wear_picker_mode)) }
-            directory?.let {
-                item {
-                    WearScaledItem(spec) {
-                        Text(
-                            it.path,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                            style = MaterialTheme.typography.bodyExtraSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            maxLines = 2,
-                            overflow = TextOverflow.StartEllipsis,
+        } else {
+            val directory = state.directory
+            WearList(
+                isLoading = state.loading || directory == null && !state.failed,
+                onBack = onBack,
+                snap = true,
+                onConfirm = if (saving && directory?.writable == true) ({ perform { viewModel.create() } }) else null,
+            ) { spec ->
+                item { WearPageHeader(spec, stringResource(R.string.wear_picker_mode)) }
+                directory?.let {
+                    item {
+                        WearScaledItem(spec) {
+                            Text(
+                                it.path,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                                style = MaterialTheme.typography.bodyExtraSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.StartEllipsis,
+                            )
+                        }
+                    }
+                }
+                directory?.parent?.let { parent ->
+                    item {
+                        WearChip(
+                            spec,
+                            stringResource(R.string.wear_parent_directory),
+                            icon = Icons.Rounded.SubdirectoryArrowLeft,
+                            emphasis = WearChipEmphasis.HIGH,
+                            onClick = { perform { viewModel.load(parent, mimeTypes, saving) } },
                         )
                     }
                 }
-            }
-            directory?.parent?.let { parent ->
-                item {
-                    WearChip(
-                        spec,
-                        stringResource(R.string.wear_parent_directory),
-                        icon = Icons.Rounded.SubdirectoryArrowLeft,
-                        emphasis = WearChipEmphasis.HIGH,
-                        onClick = { perform { viewModel.load(parent, mimeTypes, saving) } },
-                    )
-                }
-            }
-            if (directory != null && directory.entries.isEmpty()) {
-                item {
-                    WearEmptyState(spec, Icons.Rounded.FolderOff, stringResource(R.string.wear_directory_empty))
-                }
-            }
-            items(directory?.entries.orEmpty(), key = { it.path }) { entry ->
-                val mimeType = wearFileMimeType(entry.name)
-                WearActionButton(
-                    spec,
-                    icon = when {
-                        entry.directory -> Icons.Rounded.Folder
-                        matchesMimeType(mimeType, listOf("image/*")) -> Icons.Rounded.Image
-                        mimeType == "application/zip" -> Icons.Rounded.FolderZip
-                        else -> Icons.Rounded.FilePresent
-                    },
-                    label = entry.name,
-                    onClick = {
-                        perform { if (entry.directory) viewModel.load(entry.path, mimeTypes, saving) else viewModel.select(entry.path) }
-                    },
-                    secondaryText = if (entry.directory) null else Formatter.formatShortFileSize(context, entry.size),
-                    colors = ButtonDefaults.filledTonalButtonColors(),
-                )
-            }
-            if (saving) {
-                wearGroupGap("save-gap")
-                if (directory?.writable == false) {
+                if (directory != null && directory.entries.isEmpty()) {
                     item {
-                        WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_directory_unavailable), tone = WearStatusTone.ERROR)
+                        WearEmptyState(spec, Icons.Rounded.FolderOff, stringResource(R.string.wear_directory_empty))
                     }
                 }
-                item {
+                items(directory?.entries.orEmpty(), key = { it.path }) { entry ->
+                    val mimeType = wearFileMimeType(entry.name)
                     WearActionButton(
                         spec,
-                        Icons.Rounded.DriveFileRenameOutline,
-                        state.name,
-                        { editingName = true },
-                        secondaryText = stringResource(R.string.wear_file_name),
+                        icon = when {
+                            entry.directory -> Icons.Rounded.Folder
+                            matchesMimeType(mimeType, listOf("image/*")) -> Icons.Rounded.Image
+                            mimeType == "application/zip" -> Icons.Rounded.FolderZip
+                            else -> Icons.Rounded.FilePresent
+                        },
+                        label = entry.name,
+                        onClick = {
+                            perform { if (entry.directory) viewModel.load(entry.path, mimeTypes, saving) else viewModel.select(entry.path) }
+                        },
+                        secondaryText = if (entry.directory) null else Formatter.formatShortFileSize(context, entry.size),
                         colors = ButtonDefaults.filledTonalButtonColors(),
                     )
+                }
+                if (saving) {
+                    wearGroupGap("save-gap")
+                    if (directory?.writable == false) {
+                        item {
+                            WearStatusItem(spec, Icons.Rounded.Error, stringResource(R.string.wear_directory_unavailable), tone = WearStatusTone.ERROR)
+                        }
+                    }
+                    item {
+                        WearActionButton(
+                            spec,
+                            Icons.Rounded.DriveFileRenameOutline,
+                            state.name,
+                            { navigator.open(WearRoute.FileName) },
+                            secondaryText = stringResource(R.string.wear_file_name),
+                            colors = ButtonDefaults.filledTonalButtonColors(),
+                        )
+                    }
                 }
             }
         }

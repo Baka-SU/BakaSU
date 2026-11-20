@@ -28,7 +28,7 @@ import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
-import org.bakasu.bakasu.ui.wear.component.WearSubPage
+import org.bakasu.bakasu.ui.wear.component.WearSubNavigation
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
@@ -47,8 +47,7 @@ internal fun WearSuSFSStandardPage(
     onBack: () -> Unit,
     onCommand: (WearSuSFSCommand, () -> Unit) -> Unit,
 ) {
-    var page by rememberSaveable { mutableStateOf("") }
-    var field by rememberSaveable { mutableStateOf("") }
+    val navigator = rememberWearNavigator(onExit = onBack, initialRoute = WearRoute.SuSFSSection(WearSuSFSSection.Standard.name))
     var release by rememberSaveable { mutableStateOf(config.uname.release) }
     var version by rememberSaveable { mutableStateOf(config.uname.version) }
     var cmdline by rememberSaveable { mutableStateOf(config.cmdline_or_bootconfig) }
@@ -57,11 +56,9 @@ internal fun WearSuSFSStandardPage(
     val scope = rememberCoroutineScope()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val unset = stringResource(R.string.susfs_standard_not_set)
-    val route = if (field.isNotEmpty()) "field:$field" else page
-    val shownPage = route
-    if (shownPage.startsWith("field:")) {
-        val shownField = shownPage.removePrefix("field:")
-        WearSubPage({ field = "" }) {
+    WearSubNavigation(navigator) { route ->
+        if (route is WearRoute.SuSFSStandardField) {
+            val shownField = route.field
             WearTextInputPage(
                 stringResource(
                     when (shownField) {
@@ -81,12 +78,15 @@ internal fun WearSuSFSStandardPage(
                     "version" -> version = it.trim()
                     else -> cmdline = it.trim()
                 }
-                field = ""
+                navigator.back()
             }
-        }
-    } else if (shownPage.isNotEmpty()) {
-        val back = { page = if (shownPage == "slots") "uname" else "" }
-        WearSubPage(back) {
+        } else if (route == WearRoute.SuSFSUname || route == WearRoute.SuSFSSlots || route == WearRoute.SuSFSCmdline) {
+            val shownPage = when (route) {
+                WearRoute.SuSFSUname -> "uname"
+                WearRoute.SuSFSSlots -> "slots"
+                else -> "cmdline"
+            }
+            val back = navigator::back
             WearList(
                 isLoading = busy || slotLoading,
                 onBack = back,
@@ -100,7 +100,7 @@ internal fun WearSuSFSStandardPage(
                             } else {
                                 ({ SuSFSUiAction.SetCmdlineOrBootconfig(cmdline, it) })
                             }
-                            onCommand(command) { page = "" }
+                            onCommand(command) { while (navigator.backStack.size > 1) navigator.back() }
                         }
                         )
                 },
@@ -128,14 +128,14 @@ internal fun WearSuSFSStandardPage(
                                     R.string.susfs_standard_uname_version
                                 },
                             ),
-                            { field = name },
+                            { navigator.open(WearRoute.SuSFSStandardField(name)) },
                             icon = if (name == "release") Icons.Rounded.Memory else Icons.Rounded.Info,
                             description = (if (name == "release") release else version).ifBlank { unset },
                         )
                     }
                     item {
                         WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_standard_uname_tab_slot_info), {
-                            page = "slots"
+                            navigator.open(WearRoute.SuSFSSlots)
                             slotLoading = true
                             slotFailed = false
                             scope.launch {
@@ -161,7 +161,7 @@ internal fun WearSuSFSStandardPage(
                     state.slotInfo?.takeUnless { slotFailed }?.sortedBy { it.slotName }?.forEach { slot ->
                         item {
                             WearSettingsJumpPageWidget(spec, slot.slotName, {
-                                onCommand({ SuSFSUiAction.SetUname(slot.uname.trim(), slot.buildTime.trim(), it) }) { page = "" }
+                                onCommand({ SuSFSUiAction.SetUname(slot.uname.trim(), slot.buildTime.trim(), it) }) { while (navigator.backStack.size > 1) navigator.back() }
                             }, icon = Icons.Rounded.Storage, description = stringResource(R.string.wear_joined, slot.uname, slot.buildTime))
                         }
                     }
@@ -170,60 +170,60 @@ internal fun WearSuSFSStandardPage(
                         WearSettingsJumpPageWidget(
                             spec,
                             stringResource(R.string.susfs_standard_cmdline_path),
-                            { field = "cmdline" },
+                            { navigator.open(WearRoute.SuSFSStandardField("cmdline")) },
                             icon = Icons.Rounded.Terminal,
                             description = cmdline.ifBlank { unset },
                         )
                     }
                 }
             }
-        }
-    } else {
-        WearList(isLoading = busy, onBack = onBack) { spec ->
-            item { WearPageHeader(spec, stringResource(R.string.susfs_tab_standard)) }
-            item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_logging_hiding)) }
-            SegmentedColumn(
-                listOf(
-                    Triple(R.string.susfs_standard_logging, R.string.susfs_standard_logging_desc, config.logging),
-                    Triple(R.string.susfs_standard_avc_log_spoofing, R.string.susfs_standard_avc_log_spoofing_desc, config.avc_log_spoofing),
-                    Triple(R.string.susfs_standard_hide_sus_mnts, R.string.susfs_standard_hide_sus_mnts_desc, config.hide_sus_mnts_for_non_su_procs),
-                ),
-                { it.first },
-            ) { (label, summary, value) ->
-                WearSettingsSwitchWidget(
-                    spec,
-                    stringResource(label),
-                    value,
-                    { checked ->
-                        onCommand({ reply ->
-                            when (label) {
-                                R.string.susfs_standard_logging -> SuSFSUiAction.EnableLog(checked, reply)
-                                R.string.susfs_standard_avc_log_spoofing -> SuSFSUiAction.EnableAvcLogSpoofing(checked, reply)
-                                else -> SuSFSUiAction.HideSusMnts(checked, reply)
-                            }
-                        }, {})
-                    },
-                    icon = when (label) {
-                        R.string.susfs_standard_logging -> Icons.Rounded.Article
-                        R.string.susfs_standard_avc_log_spoofing -> Icons.Rounded.Policy
-                        else -> Icons.Rounded.FolderOff
-                    },
-                    secondaryLabel = stringResource(summary),
-                )
-            }
-            item { WearSectionHeader(spec, stringResource(R.string.wear_system_information)) }
-            item {
-                WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_standard_uname), {
-                    release = config.uname.release
-                    version = config.uname.version
-                    page = "uname"
-                }, icon = Icons.Rounded.Memory, description = stringResource(R.string.wear_joined, config.uname.release, config.uname.version))
-            }
-            item {
-                WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_standard_cmdline_or_bootconfig), {
-                    cmdline = config.cmdline_or_bootconfig
-                    page = "cmdline"
-                }, icon = Icons.Rounded.Terminal, description = config.cmdline_or_bootconfig.ifBlank { unset })
+        } else {
+            WearList(isLoading = busy, onBack = onBack) { spec ->
+                item { WearPageHeader(spec, stringResource(R.string.susfs_tab_standard)) }
+                item { WearSectionHeader(spec, stringResource(R.string.wear_susfs_logging_hiding)) }
+                SegmentedColumn(
+                    listOf(
+                        Triple(R.string.susfs_standard_logging, R.string.susfs_standard_logging_desc, config.logging),
+                        Triple(R.string.susfs_standard_avc_log_spoofing, R.string.susfs_standard_avc_log_spoofing_desc, config.avc_log_spoofing),
+                        Triple(R.string.susfs_standard_hide_sus_mnts, R.string.susfs_standard_hide_sus_mnts_desc, config.hide_sus_mnts_for_non_su_procs),
+                    ),
+                    { it.first },
+                ) { (label, summary, value) ->
+                    WearSettingsSwitchWidget(
+                        spec,
+                        stringResource(label),
+                        value,
+                        { checked ->
+                            onCommand({ reply ->
+                                when (label) {
+                                    R.string.susfs_standard_logging -> SuSFSUiAction.EnableLog(checked, reply)
+                                    R.string.susfs_standard_avc_log_spoofing -> SuSFSUiAction.EnableAvcLogSpoofing(checked, reply)
+                                    else -> SuSFSUiAction.HideSusMnts(checked, reply)
+                                }
+                            }, {})
+                        },
+                        icon = when (label) {
+                            R.string.susfs_standard_logging -> Icons.Rounded.Article
+                            R.string.susfs_standard_avc_log_spoofing -> Icons.Rounded.Policy
+                            else -> Icons.Rounded.FolderOff
+                        },
+                        secondaryLabel = stringResource(summary),
+                    )
+                }
+                item { WearSectionHeader(spec, stringResource(R.string.wear_system_information)) }
+                item {
+                    WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_standard_uname), {
+                        release = config.uname.release
+                        version = config.uname.version
+                        navigator.open(WearRoute.SuSFSUname)
+                    }, icon = Icons.Rounded.Memory, description = stringResource(R.string.wear_joined, config.uname.release, config.uname.version))
+                }
+                item {
+                    WearSettingsJumpPageWidget(spec, stringResource(R.string.susfs_standard_cmdline_or_bootconfig), {
+                        cmdline = config.cmdline_or_bootconfig
+                        navigator.open(WearRoute.SuSFSCmdline)
+                    }, icon = Icons.Rounded.Terminal, description = config.cmdline_or_bootconfig.ifBlank { unset })
+                }
             }
         }
     }

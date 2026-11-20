@@ -5,7 +5,6 @@ import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Error
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,7 +15,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.wear.compose.material3.ButtonDefaults
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
@@ -33,6 +31,7 @@ import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLogPage
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
+import org.bakasu.bakasu.ui.wear.component.WearSubNavigation
 import org.bakasu.bakasu.ui.wear.component.rememberWearLogSaver
 import org.bakasu.bakasu.ui.wear.component.toLogLines
 import org.koin.compose.koinInject
@@ -100,93 +99,60 @@ internal fun WearFlashPage(operation: FlashOperation, state: FlashUiState, fileE
         },
     )
     val logTitle = if (isModule) stringResource(R.string.wear_install_log) else title
-    var showLog by rememberSaveable { mutableStateOf(false) }
+    val navigator = rememberWearNavigator(onExit = onBack, initialRoute = WearRoute.OperationStatus)
     val saveLog = rememberWearLogSaver("KernelSU_install_log") { state.output }
 
-    if (showLog) {
-        WearLogPage(logTitle, lines, following = status == WearFlashStatus.RUNNING) { showLog = false }
-        return
-    }
+    WearSubNavigation(navigator) { route ->
+        if (route == WearRoute.OperationLog) {
+            WearLogPage(logTitle, lines, following = status == WearFlashStatus.RUNNING) { navigator.back() }
+            return@WearSubNavigation
+        }
 
-    WearList(
-        onBack = onBack,
-        onConfirm = onReboot.takeIf { status == WearFlashStatus.SUCCESS && state.showReboot },
-        confirmLabel = stringResource(R.string.wear_reboot_device),
-    ) { spec ->
-        item { WearPageHeader(spec, title) }
-        when (status) {
-            WearFlashStatus.RUNNING -> {
-                if (showStatusHeading) item { WearSectionHeader(spec, stringResource(R.string.wear_install_status)) }
-                item {
-                    WearChip(
-                        spec,
-                        stringResource(if (isModule) R.string.wear_installing_module else R.string.flashing),
-                        secondaryLabel = currentStep,
-                        icon = Icons.Rounded.Download,
-                    )
-                }
-                item {
-                    WearActionButton(
-                        spec,
-                        Icons.Rounded.Article,
-                        logTitle,
-                        { showLog = true },
-                        secondaryText = stringResource(R.string.wear_install_log_summary),
-                    )
-                }
-            }
-
-            WearFlashStatus.SUCCESS -> {
-                if (showStatusHeading) item { WearSectionHeader(spec, stringResource(R.string.wear_result)) }
-                item {
-                    WearChip(
-                        spec,
-                        stringResource(R.string.flash_success),
-                        secondaryLabel = currentStep,
-                        icon = Icons.Rounded.CheckCircle,
-                    )
-                }
-                item {
-                    WearActionButton(
-                        spec,
-                        Icons.Rounded.Article,
-                        logTitle,
-                        { showLog = true },
-                        secondaryText = stringResource(R.string.wear_install_log_summary),
-                    )
-                }
-                item {
-                    WearActionButton(
-                        spec,
-                        Icons.Rounded.Save,
-                        stringResource(R.string.save_log),
-                        saveLog,
-                        secondaryText = stringResource(R.string.wear_save_log_summary),
-                    )
-                }
-            }
-
-            WearFlashStatus.FAILED -> {
-                if (showStatusHeading) item { WearSectionHeader(spec, stringResource(R.string.wear_result)) }
-                item {
-                    WearChip(
-                        spec,
-                        stringResource(if (fileError) R.string.wear_module_file_unreadable else R.string.flash_failed),
-                        secondaryLabel = state.exitCode?.takeIf { !fileError }?.let {
-                            stringResource(R.string.wear_labeled_value, stringResource(R.string.error_code), it.toString())
-                        },
-                        icon = Icons.Rounded.Error,
-                    )
-                }
-                // An unreadable ZIP never reaches the installer, so there is no log to check or save.
-                if (!fileError) {
+        WearList(
+            onBack = onBack,
+            onConfirm = onReboot.takeIf { status == WearFlashStatus.SUCCESS && state.showReboot },
+            confirmLabel = stringResource(R.string.wear_reboot_device),
+        ) { spec ->
+            item { WearPageHeader(spec, title) }
+            when (status) {
+                WearFlashStatus.RUNNING -> {
+                    if (showStatusHeading) item { WearSectionHeader(spec, stringResource(R.string.wear_install_status)) }
+                    item {
+                        WearChip(
+                            spec,
+                            stringResource(if (isModule) R.string.wear_installing_module else R.string.flashing),
+                            secondaryLabel = currentStep,
+                            icon = Icons.Rounded.Download,
+                        )
+                    }
                     item {
                         WearActionButton(
                             spec,
                             Icons.Rounded.Article,
-                            stringResource(R.string.wear_check_log),
-                            { showLog = true },
-                            secondaryText = stringResource(R.string.wear_check_log_summary),
+                            logTitle,
+                            { navigator.open(WearRoute.OperationLog) },
+                            secondaryText = stringResource(R.string.wear_install_log_summary),
+                        )
+                    }
+                }
+
+                WearFlashStatus.SUCCESS -> {
+                    if (showStatusHeading) item { WearSectionHeader(spec, stringResource(R.string.wear_result)) }
+                    item {
+                        WearChip(
+                            spec,
+                            stringResource(R.string.flash_success),
+                            secondaryLabel = currentStep,
+                            icon = Icons.Rounded.CheckCircle,
+                        )
+                    }
+                    item {
+                        WearActionButton(
+                            spec,
+                            Icons.Rounded.Article,
+                            logTitle,
+                            { navigator.open(WearRoute.OperationLog) },
+                            secondaryText = stringResource(R.string.wear_install_log_summary),
                         )
                     }
                     item {
@@ -197,6 +163,41 @@ internal fun WearFlashPage(operation: FlashOperation, state: FlashUiState, fileE
                             saveLog,
                             secondaryText = stringResource(R.string.wear_save_log_summary),
                         )
+                    }
+                }
+
+                WearFlashStatus.FAILED -> {
+                    if (showStatusHeading) item { WearSectionHeader(spec, stringResource(R.string.wear_result)) }
+                    item {
+                        WearChip(
+                            spec,
+                            stringResource(if (fileError) R.string.wear_module_file_unreadable else R.string.flash_failed),
+                            secondaryLabel = state.exitCode?.takeIf { !fileError }?.let {
+                                stringResource(R.string.wear_labeled_value, stringResource(R.string.error_code), it.toString())
+                            },
+                            icon = Icons.Rounded.Error,
+                        )
+                    }
+                    // An unreadable ZIP never reaches the installer, so there is no log to check or save.
+                    if (!fileError) {
+                        item {
+                            WearActionButton(
+                                spec,
+                                Icons.Rounded.Article,
+                                stringResource(R.string.wear_check_log),
+                                { navigator.open(WearRoute.OperationLog) },
+                                secondaryText = stringResource(R.string.wear_check_log_summary),
+                            )
+                        }
+                        item {
+                            WearActionButton(
+                                spec,
+                                Icons.Rounded.Save,
+                                stringResource(R.string.save_log),
+                                saveLog,
+                                secondaryText = stringResource(R.string.wear_save_log_summary),
+                            )
+                        }
                     }
                 }
             }

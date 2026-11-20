@@ -69,13 +69,11 @@ fun WearFollowLog(listState: TransformingLazyColumnState, lineCount: Int, follow
 /** The full output of a run on its own page, following the newest line while [following]. */
 @Composable
 fun WearLogPage(title: String, lines: List<String>, following: Boolean, onBack: () -> Unit) {
-    WearSubPage(onBack) {
-        val listState = rememberTransformingLazyColumnState()
-        WearFollowLog(listState, lines.size, following)
-        WearList(onBack = onBack, listState = listState) { spec ->
-            item { WearPageHeader(spec, title) }
-            wearLogLines(spec, lines)
-        }
+    val listState = rememberTransformingLazyColumnState()
+    WearFollowLog(listState, lines.size, following)
+    WearList(onBack = onBack, listState = listState) { spec ->
+        item { WearPageHeader(spec, title) }
+        wearLogLines(spec, lines)
     }
 }
 

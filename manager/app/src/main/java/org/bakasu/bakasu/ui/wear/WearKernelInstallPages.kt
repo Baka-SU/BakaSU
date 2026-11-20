@@ -25,19 +25,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.LocalScreenIsActive
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
-import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.InstallEnvironment
@@ -58,13 +55,12 @@ import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
-import org.bakasu.bakasu.ui.wear.component.WearSubPage
+import org.bakasu.bakasu.ui.wear.component.WearSubNavigation
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.rememberWearLogSaver
 import org.bakasu.bakasu.ui.wear.component.settings.WearChoicePage
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
-import org.bakasu.bakasu.ui.wear.component.wearGroupGap
 import org.koin.compose.viewmodel.koinViewModel
 
 /** The phone's LKM install methods: patch a selected image, patch the current slot, or the inactive slot after OTA. */
@@ -133,7 +129,7 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
     var allowShell by rememberSaveable { mutableStateOf(false) }
     var enableAdb by rememberSaveable { mutableStateOf(false) }
     var forceBackup by rememberSaveable { mutableStateOf(false) }
-    var choosing by rememberSaveable { mutableStateOf<String?>(null) }
+    val navigator = rememberWearNavigator(onExit = onBack, initialRoute = WearRoute.LkmInstall)
 
     val selectBoot = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -181,146 +177,148 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
         WearLoadFailureScreen(installState.error.ifBlank { stringResource(R.string.wear_load_failed) }, onBack, onRetry = { viewModel.dispatch(InstallUiAction.Refresh) })
         return
     }
-    when (choosing) {
-        "partition" -> WearSubPage({ choosing = null }) {
-            WearChoicePage(
-                stringResource(R.string.install_select_partition),
-                environment.availablePartitions.map { it to it },
-                shownPartition.orEmpty(),
-                { choosing = null },
-            ) {
-                partition = it
-                choosing = null
+    WearSubNavigation(navigator) { route ->
+        when (route) {
+            WearRoute.LkmPartition -> {
+                WearChoicePage(
+                    stringResource(R.string.install_select_partition),
+                    environment.availablePartitions.map { it to it },
+                    shownPartition.orEmpty(),
+                    { navigator.back() },
+                ) {
+                    partition = it
+                    navigator.back()
+                }
             }
-        }
 
-        "kmi" -> WearSubPage({ choosing = null }) {
-            WearChoicePage(
-                stringResource(R.string.select_kmi),
-                environment.supportedKmis.map { it to it },
-                "",
-                { choosing = null },
-                enabled = ready,
-            ) {
-                choosing = null
-                flash(it)
+            WearRoute.LkmKmi -> {
+                WearChoicePage(
+                    stringResource(R.string.select_kmi),
+                    environment.supportedKmis.map { it to it },
+                    "",
+                    { navigator.back() },
+                    enabled = ready,
+                ) {
+                    navigator.back()
+                    flash(it)
+                }
             }
-        }
 
-        else -> WearList(
-            isLoading = installState.loading,
-            onBack = onBack,
-            snap = true,
-            onConfirm = {
-                if (environment.isGki && lkmUri == null && environment.currentKmi.isBlank()) choosing = "kmi" else flash(null)
-            },
-            confirmEnabled = ready,
-            confirmLabel = stringResource(R.string.install_next),
-            confirmIcon = Icons.Rounded.ArrowForward,
-        ) { spec ->
-            item { WearPageHeader(spec, stringResource(R.string.Lkm_install_methods)) }
-            methods.forEach { option ->
-                item(key = option) {
-                    RadioButton(
-                        selected = method == option,
-                        onSelect = {
-                            when (option) {
-                                LkmMethod.SELECT_FILE -> selectBoot.launch(arrayOf("application/octet-stream"))
-                                LkmMethod.DIRECT -> method = option
-                                LkmMethod.INACTIVE_SLOT -> inactiveSlotDialog.show()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
-                            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
-                        transformation = SurfaceTransformation(spec),
-                        secondaryLabel = if (option == LkmMethod.SELECT_FILE) {
-                            {
+            else -> WearList(
+                isLoading = installState.loading,
+                onBack = onBack,
+                snap = true,
+                onConfirm = {
+                    if (environment.isGki && lkmUri == null && environment.currentKmi.isBlank()) navigator.open(WearRoute.LkmKmi) else flash(null)
+                },
+                confirmEnabled = ready,
+                confirmLabel = stringResource(R.string.install_next),
+                confirmIcon = Icons.Rounded.ArrowForward,
+            ) { spec ->
+                item { WearPageHeader(spec, stringResource(R.string.Lkm_install_methods)) }
+                methods.forEach { option ->
+                    item(key = option) {
+                        RadioButton(
+                            selected = method == option,
+                            onSelect = {
+                                when (option) {
+                                    LkmMethod.SELECT_FILE -> selectBoot.launch(arrayOf("application/octet-stream"))
+                                    LkmMethod.DIRECT -> method = option
+                                    LkmMethod.INACTIVE_SLOT -> inactiveSlotDialog.show()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
+                                .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
+                            transformation = SurfaceTransformation(spec),
+                            secondaryLabel = if (option == LkmMethod.SELECT_FILE) {
+                                {
+                                    WearAutoMarqueeText(
+                                        bootUri?.toUri()?.fileName()
+                                            ?: stringResource(R.string.select_file_tip, environment.defaultPartition),
+                                        maxLines = 2,
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                            label = {
                                 WearAutoMarqueeText(
-                                    bootUri?.toUri()?.fileName()
-                                        ?: stringResource(R.string.select_file_tip, environment.defaultPartition),
-                                    maxLines = 2,
+                                    stringResource(
+                                        when (option) {
+                                            LkmMethod.SELECT_FILE -> R.string.select_file
+                                            LkmMethod.DIRECT -> R.string.direct_install
+                                            LkmMethod.INACTIVE_SLOT -> R.string.install_inactive_slot
+                                        },
+                                    ),
                                 )
-                            }
-                        } else {
-                            null
-                        },
-                        label = {
-                            WearAutoMarqueeText(
-                                stringResource(
-                                    when (option) {
-                                        LkmMethod.SELECT_FILE -> R.string.select_file
-                                        LkmMethod.DIRECT -> R.string.direct_install
-                                        LkmMethod.INACTIVE_SLOT -> R.string.install_inactive_slot
-                                    },
-                                ),
-                            )
-                        },
-                    )
+                            },
+                        )
+                    }
                 }
-            }
-            item { WearSectionHeader(spec, stringResource(R.string.advanced_options)) }
-            if (canSelectPartition && environment.availablePartitions.isNotEmpty()) {
-                item {
-                    WearSettingsJumpPageWidget(
-                        spec,
-                        stringResource(R.string.install_select_partition),
-                        { choosing = "partition" },
-                        icon = Icons.Rounded.AutoFixHigh,
-                        description = "$shownPartition ($suffix)",
-                    )
+                item { WearSectionHeader(spec, stringResource(R.string.advanced_options)) }
+                if (canSelectPartition && environment.availablePartitions.isNotEmpty()) {
+                    item {
+                        WearSettingsJumpPageWidget(
+                            spec,
+                            stringResource(R.string.install_select_partition),
+                            { navigator.open(WearRoute.LkmPartition) },
+                            icon = Icons.Rounded.AutoFixHigh,
+                            description = "$shownPartition ($suffix)",
+                        )
+                    }
                 }
-            }
-            item {
-                WearSettingsSwitchWidget(
-                    spec,
-                    stringResource(R.string.install_upload_lkm_file),
-                    lkmUri != null,
-                    { if (it) selectLkm.launch(arrayOf("application/octet-stream")) else lkmUri = null },
-                    icon = Icons.Rounded.FileOpen,
-                    secondaryLabel = lkmUri?.toUri()?.fileName()
-                        ?: stringResource(R.string.install_upload_lkm_file_summary),
-                )
-            }
-            if (lkmRejected) {
-                item {
-                    WearStatusItem(
-                        spec,
-                        Icons.Rounded.Warning,
-                        stringResource(R.string.install_only_support_ko_file),
-                        tone = WearStatusTone.ERROR,
-                    )
-                }
-            }
-            item {
-                WearSettingsSwitchWidget(
-                    spec,
-                    stringResource(R.string.allow_shell),
-                    allowShell,
-                    { allowShell = it },
-                    secondaryLabel = stringResource(R.string.allow_shell_summary),
-                    icon = Icons.Rounded.Terminal,
-                )
-            }
-            item {
-                WearSettingsSwitchWidget(
-                    spec,
-                    stringResource(R.string.enable_adb),
-                    enableAdb,
-                    { enableAdb = it },
-                    secondaryLabel = stringResource(R.string.enable_adb_summary),
-                    icon = Icons.Rounded.Adb,
-                )
-            }
-            if (method == LkmMethod.SELECT_FILE) {
                 item {
                     WearSettingsSwitchWidget(
                         spec,
-                        stringResource(R.string.install_force_backup),
-                        forceBackup,
-                        { forceBackup = it },
-                        secondaryLabel = stringResource(R.string.install_force_backup_summary),
-                        icon = Icons.Rounded.Backup,
+                        stringResource(R.string.install_upload_lkm_file),
+                        lkmUri != null,
+                        { if (it) selectLkm.launch(arrayOf("application/octet-stream")) else lkmUri = null },
+                        icon = Icons.Rounded.FileOpen,
+                        secondaryLabel = lkmUri?.toUri()?.fileName()
+                            ?: stringResource(R.string.install_upload_lkm_file_summary),
                     )
+                }
+                if (lkmRejected) {
+                    item {
+                        WearStatusItem(
+                            spec,
+                            Icons.Rounded.Warning,
+                            stringResource(R.string.install_only_support_ko_file),
+                            tone = WearStatusTone.ERROR,
+                        )
+                    }
+                }
+                item {
+                    WearSettingsSwitchWidget(
+                        spec,
+                        stringResource(R.string.allow_shell),
+                        allowShell,
+                        { allowShell = it },
+                        secondaryLabel = stringResource(R.string.allow_shell_summary),
+                        icon = Icons.Rounded.Terminal,
+                    )
+                }
+                item {
+                    WearSettingsSwitchWidget(
+                        spec,
+                        stringResource(R.string.enable_adb),
+                        enableAdb,
+                        { enableAdb = it },
+                        secondaryLabel = stringResource(R.string.enable_adb_summary),
+                        icon = Icons.Rounded.Adb,
+                    )
+                }
+                if (method == LkmMethod.SELECT_FILE) {
+                    item {
+                        WearSettingsSwitchWidget(
+                            spec,
+                            stringResource(R.string.install_force_backup),
+                            forceBackup,
+                            { forceBackup = it },
+                            secondaryLabel = stringResource(R.string.install_force_backup_summary),
+                            icon = Icons.Rounded.Backup,
+                        )
+                    }
                 }
             }
         }
@@ -424,7 +422,7 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
     val state by viewModel.state.collectAsStateWithLifecycle()
     val flash = state.flash
     var error by rememberSaveable { mutableStateOf<String?>(null) }
-    var showLog by rememberSaveable { mutableStateOf(false) }
+    val navigator = rememberWearNavigator(onExit = onBack, initialRoute = WearRoute.OperationStatus)
     // Starting again would restart the flash, so the page starts it once, as the phone does.
     var started by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -450,119 +448,121 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
     val logTitle = stringResource(R.string.wear_full_log)
     val saveLog = rememberWearLogSaver("KernelSU_kernel_flash_log") { state.fullLog }
 
-    if (showLog) {
-        WearLogPage(logTitle, flash.logs, following = status == WearFlashStatus.RUNNING) { showLog = false }
-        return
-    }
-
-    WearList(
-        onBack = onBack,
-        onConfirm = ({ viewModel.dispatch(KernelFlashUiAction.Reboot) }).takeIf { status == WearFlashStatus.SUCCESS },
-        confirmLabel = stringResource(R.string.wear_reboot_device),
-    ) { spec ->
-        item {
-            WearPageHeader(
-                spec,
-                stringResource(
-                    when (status) {
-                        WearFlashStatus.RUNNING -> R.string.wear_kernel_flash
-                        WearFlashStatus.SUCCESS -> R.string.wear_flash_result
-                        WearFlashStatus.FAILED -> R.string.flash_failed
-                    },
-                ),
-            )
+    WearSubNavigation(navigator) { route ->
+        if (route == WearRoute.OperationLog) {
+            WearLogPage(logTitle, flash.logs, following = status == WearFlashStatus.RUNNING) { navigator.back() }
+            return@WearSubNavigation
         }
-        item {
-            WearSectionHeader(
-                spec,
-                stringResource(
-                    when (status) {
-                        WearFlashStatus.RUNNING -> R.string.wear_flash_status
-                        WearFlashStatus.SUCCESS -> R.string.wear_complete_status
-                        WearFlashStatus.FAILED -> R.string.wear_failed_status
-                    },
-                ),
-            )
-        }
-        when (status) {
-            WearFlashStatus.RUNNING -> item {
-                WearChip(
-                    spec,
-                    stringResource(R.string.flashing),
-                    secondaryLabel = flash.currentStep.ifBlank { null },
-                    icon = Icons.Rounded.Download,
-                    onClick = { showLog = true },
-                )
-            }
 
-            WearFlashStatus.SUCCESS -> {
-                item {
-                    WearChip(
-                        spec,
-                        stringResource(R.string.horizon_flash_complete),
-                        secondaryLabel = stringResource(R.string.wear_kernel_complete_summary),
-                        icon = Icons.Rounded.CheckCircle,
-                    )
-                }
-                item {
-                    WearActionButton(
-                        spec,
-                        Icons.Rounded.Save,
-                        stringResource(R.string.save_log),
-                        saveLog,
-                        secondaryText = stringResource(R.string.wear_save_log_summary),
-                    )
-                }
-            }
-
-            WearFlashStatus.FAILED -> {
-                item {
-                    WearChip(
-                        spec,
-                        stringResource(R.string.flash_failed),
-                        secondaryLabel = flash.error,
-                        icon = Icons.Rounded.Error,
-                    )
-                }
-                item {
-                    WearActionButton(
-                        spec,
-                        Icons.Rounded.Article,
-                        stringResource(R.string.wear_check_log),
-                        { showLog = true },
-                        secondaryText = stringResource(R.string.wear_check_log_summary),
-                    )
-                }
-                item {
-                    WearActionButton(
-                        spec,
-                        Icons.Rounded.Save,
-                        stringResource(R.string.save_log),
-                        saveLog,
-                        secondaryText = stringResource(R.string.wear_save_log_summary),
-                    )
-                }
-                // Retrying returns to the install options, where the method and file are chosen again.
-                item {
-                    WearActionButton(
-                        spec,
-                        Icons.Rounded.Refresh,
-                        stringResource(R.string.wear_retry),
-                        onBack,
-                        secondaryText = stringResource(R.string.wear_retry_install_summary),
-                        colors = ButtonDefaults.buttonColors(),
-                    )
-                }
-            }
-        }
-        error?.let { message ->
+        WearList(
+            onBack = onBack,
+            onConfirm = ({ viewModel.dispatch(KernelFlashUiAction.Reboot) }).takeIf { status == WearFlashStatus.SUCCESS },
+            confirmLabel = stringResource(R.string.wear_reboot_device),
+        ) { spec ->
             item {
-                WearStatusItem(
+                WearPageHeader(
                     spec,
-                    Icons.Rounded.Warning,
-                    message.ifBlank { stringResource(R.string.failed_reboot) },
-                    tone = WearStatusTone.ERROR,
+                    stringResource(
+                        when (status) {
+                            WearFlashStatus.RUNNING -> R.string.wear_kernel_flash
+                            WearFlashStatus.SUCCESS -> R.string.wear_flash_result
+                            WearFlashStatus.FAILED -> R.string.flash_failed
+                        },
+                    ),
                 )
+            }
+            item {
+                WearSectionHeader(
+                    spec,
+                    stringResource(
+                        when (status) {
+                            WearFlashStatus.RUNNING -> R.string.wear_flash_status
+                            WearFlashStatus.SUCCESS -> R.string.wear_complete_status
+                            WearFlashStatus.FAILED -> R.string.wear_failed_status
+                        },
+                    ),
+                )
+            }
+            when (status) {
+                WearFlashStatus.RUNNING -> item {
+                    WearChip(
+                        spec,
+                        stringResource(R.string.flashing),
+                        secondaryLabel = flash.currentStep.ifBlank { null },
+                        icon = Icons.Rounded.Download,
+                        onClick = { navigator.open(WearRoute.OperationLog) },
+                    )
+                }
+
+                WearFlashStatus.SUCCESS -> {
+                    item {
+                        WearChip(
+                            spec,
+                            stringResource(R.string.horizon_flash_complete),
+                            secondaryLabel = stringResource(R.string.wear_kernel_complete_summary),
+                            icon = Icons.Rounded.CheckCircle,
+                        )
+                    }
+                    item {
+                        WearActionButton(
+                            spec,
+                            Icons.Rounded.Save,
+                            stringResource(R.string.save_log),
+                            saveLog,
+                            secondaryText = stringResource(R.string.wear_save_log_summary),
+                        )
+                    }
+                }
+
+                WearFlashStatus.FAILED -> {
+                    item {
+                        WearChip(
+                            spec,
+                            stringResource(R.string.flash_failed),
+                            secondaryLabel = flash.error,
+                            icon = Icons.Rounded.Error,
+                        )
+                    }
+                    item {
+                        WearActionButton(
+                            spec,
+                            Icons.Rounded.Article,
+                            stringResource(R.string.wear_check_log),
+                            { navigator.open(WearRoute.OperationLog) },
+                            secondaryText = stringResource(R.string.wear_check_log_summary),
+                        )
+                    }
+                    item {
+                        WearActionButton(
+                            spec,
+                            Icons.Rounded.Save,
+                            stringResource(R.string.save_log),
+                            saveLog,
+                            secondaryText = stringResource(R.string.wear_save_log_summary),
+                        )
+                    }
+                    // Retrying returns to the install options, where the method and file are chosen again.
+                    item {
+                        WearActionButton(
+                            spec,
+                            Icons.Rounded.Refresh,
+                            stringResource(R.string.wear_retry),
+                            onBack,
+                            secondaryText = stringResource(R.string.wear_retry_install_summary),
+                            colors = ButtonDefaults.buttonColors(),
+                        )
+                    }
+                }
+            }
+            error?.let { message ->
+                item {
+                    WearStatusItem(
+                        spec,
+                        Icons.Rounded.Warning,
+                        message.ifBlank { stringResource(R.string.failed_reboot) },
+                        tone = WearStatusTone.ERROR,
+                    )
+                }
             }
         }
     }

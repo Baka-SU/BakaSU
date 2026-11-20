@@ -32,7 +32,6 @@ import androidx.core.net.toUri
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AppScaffold
-import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.Text
 import com.materialkolor.dynamicColorScheme
 import org.bakasu.bakasu.R
@@ -49,7 +48,7 @@ import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
 import org.bakasu.bakasu.ui.wear.component.WearDialogVerticalArrangement
 import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
-import org.bakasu.bakasu.ui.wear.component.WearSubPage
+import org.bakasu.bakasu.ui.wear.component.WearSubNavigation
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.WearWatchOpenFailureDialog
@@ -150,33 +149,45 @@ internal fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
             }
         }
     }
-    BackHandler { back() }
+    val navigator = rememberWearNavigator(
+        onExit = back,
+        onLeave = { if (it is WearRoute.WebPrompt) state.onPromptResult(null) },
+        initialRoute = WearRoute.WebUI,
+    )
+    val event = state.uiEvent
+    LaunchedEffect(event) {
+        if (event is WebUIEvent.ShowPrompt) {
+            navigator.open(WearRoute.WebPrompt(event.message, event.defaultValue))
+        } else if (navigator.top is WearRoute.WebPrompt) {
+            navigator.back()
+        }
+    }
+    BackHandler(navigator.backStack.size == 1) { back() }
     AppScaffold(timeText = {}, containerColor = Color.Transparent) {
-        WearSwipeToDismissBox(onDismissed = back) { background ->
+        // Web history/Activity exit keeps the legacy edge gesture; prompts own their Navigation 3 gesture.
+        WearSwipeToDismissBox(onDismissed = back, userSwipeEnabled = navigator.backStack.size == 1) { background ->
             if (!background) {
-                when (val event = state.uiEvent) {
-                    is WebUIEvent.Error -> WearWatchOpenFailureDialog(stringResource(R.string.wear_link_open_failed), onFinish)
+                Box(Modifier.fillMaxSize()) {
+                    when (event) {
+                        is WebUIEvent.Error -> WearWatchOpenFailureDialog(stringResource(R.string.wear_link_open_failed), onFinish)
 
-                    // A waiting spinner; the branded loading screen is only shown at app startup.
-                    WebUIEvent.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        WearLoadingIndicator()
-                    }
+                        WebUIEvent.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { WearLoadingIndicator() }
 
-                    else -> Box(Modifier.fillMaxSize()) {
-                        // Keep the WebView attached while a prompt is open, including its history,
-                        // file result launcher and lifecycle observer.
-                        WearModuleWebView(state)
-                        // Pages over the WebView take the opaque app backdrop so it does not show through.
-                        if (!state.pageLoaded) {
-                            WearBackground {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    WearLoadingIndicator()
+                        else -> {
+                            // The WebView stays attached while Navigation 3 displays a prompt above it.
+                            WearModuleWebView(state)
+                            if (!state.pageLoaded) {
+                                WearBackground {
+                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { WearLoadingIndicator() }
                                 }
                             }
                         }
-                        if (event is WebUIEvent.ShowPrompt) {
-                            WearSubPage({ state.onPromptResult(null) }) {
-                                WearBackground { WearTextInputPage(event.message, event.defaultValue) { state.onPromptResult(it) } }
+                    }
+                    WearSubNavigation(navigator, transparentRoot = true) { route ->
+                        if (route is WearRoute.WebPrompt) {
+                            WearTextInputPage(route.message, route.defaultValue) {
+                                state.onPromptResult(it)
+                                if (navigator.top == route) navigator.back()
                             }
                         }
                     }

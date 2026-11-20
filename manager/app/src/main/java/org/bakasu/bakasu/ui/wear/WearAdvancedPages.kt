@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.ui.wear
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,7 +14,6 @@ import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FormatSize
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Undo
@@ -65,7 +63,7 @@ import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearModuleSwipeActions
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
-import org.bakasu.bakasu.ui.wear.component.WearSubPage
+import org.bakasu.bakasu.ui.wear.component.WearSubNavigation
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
@@ -334,7 +332,7 @@ internal fun WearAddUmountPage(onBack: () -> Unit, viewModel: UmountManagerScree
     WearFeedbackEffect(result) { result = null }
     val failed = stringResource(R.string.operation_failed)
     var submitting by rememberSaveable { mutableStateOf(false) }
-    var input by rememberSaveable { mutableStateOf<UmountInput?>(null) }
+    val navigator = rememberWearNavigator(onExit = onBack, initialRoute = WearRoute.AddUmount)
     var path by rememberSaveable { mutableStateOf("") }
     var flags by rememberSaveable { mutableStateOf("0") }
     LaunchedEffect(viewModel) {
@@ -345,47 +343,46 @@ internal fun WearAddUmountPage(onBack: () -> Unit, viewModel: UmountManagerScree
             }
         }
     }
-    val editing = input
-    if (editing != null) {
-        WearSubPage({ input = null }) {
+    WearSubNavigation(navigator) { route ->
+        if (route != WearRoute.AddUmount) {
             WearTextInputPage(
-                stringResource(if (editing == UmountInput.Path) R.string.add_umount_path else R.string.umount_flags),
-                if (editing == UmountInput.Path) path else flags,
+                stringResource(if (route == WearRoute.UmountPath) R.string.add_umount_path else R.string.umount_flags),
+                if (route == WearRoute.UmountPath) path else flags,
             ) {
-                if (editing == UmountInput.Path) path = it else flags = it
-                input = null
+                if (route == WearRoute.UmountPath) path = it else flags = it
+                navigator.back()
             }
+            return@WearSubNavigation
         }
-        return
-    }
-    WearList(onBack = onBack, isBusy = submitting, confirmLabel = stringResource(R.string.add), confirmEnabled = !submitting, onConfirm = {
-        val parsed = flags.toIntOrNull()
-        if (!path.startsWith('/') || parsed == null) {
-            result = failed
-        } else {
-            submitting = true
-            viewModel.dispatch(UmountManagerUiAction.Add(path, parsed))
-        }
-    }) { spec ->
-        item { WearPageHeader(spec, stringResource(R.string.add_umount_path)) }
-        SegmentedColumn(UmountInput.entries, { it }) { field ->
-            WearSettingsJumpPageWidget(
-                spec,
-                stringResource(if (field == UmountInput.Path) R.string.add_umount_path else R.string.umount_flags),
-                { input = field },
-                icon = if (field == UmountInput.Path) Icons.Rounded.Folder else Icons.Rounded.Flag,
-                description = if (field == UmountInput.Path) path.ifEmpty { null } else flags,
-                enabled = !submitting,
-            )
-        }
-        item {
-            Text(
-                stringResource(R.string.umount_flags_hint),
-                modifier = Modifier.fillMaxWidth().transformedHeight(this, spec).padding(horizontal = 8.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
+        WearList(onBack = onBack, isBusy = submitting, confirmLabel = stringResource(R.string.add), confirmEnabled = !submitting, onConfirm = {
+            val parsed = flags.toIntOrNull()
+            if (!path.startsWith('/') || parsed == null) {
+                result = failed
+            } else {
+                submitting = true
+                viewModel.dispatch(UmountManagerUiAction.Add(path, parsed))
+            }
+        }) { spec ->
+            item { WearPageHeader(spec, stringResource(R.string.add_umount_path)) }
+            SegmentedColumn(UmountInput.entries, { it }) { field ->
+                WearSettingsJumpPageWidget(
+                    spec,
+                    stringResource(if (field == UmountInput.Path) R.string.add_umount_path else R.string.umount_flags),
+                    { navigator.open(if (field == UmountInput.Path) WearRoute.UmountPath else WearRoute.UmountFlags) },
+                    icon = if (field == UmountInput.Path) Icons.Rounded.Folder else Icons.Rounded.Flag,
+                    description = if (field == UmountInput.Path) path.ifEmpty { null } else flags,
+                    enabled = !submitting,
+                )
+            }
+            item {
+                Text(
+                    stringResource(R.string.umount_flags_hint),
+                    modifier = Modifier.fillMaxWidth().transformedHeight(this, spec).padding(horizontal = 8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }

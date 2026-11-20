@@ -8,24 +8,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Error
-import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Group
-import androidx.compose.material.icons.rounded.Numbers
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Save
-import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,7 +25,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
-import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.ProfileTemplate
@@ -61,13 +51,14 @@ import org.bakasu.bakasu.ui.wear.component.WearOperationsHost
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
-import org.bakasu.bakasu.ui.wear.component.WearSubPage
+import org.bakasu.bakasu.ui.wear.component.WearSubNavigation
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDelete
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
+import org.bakasu.bakasu.ui.wear.component.wearProfileFieldIcon
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -330,7 +321,7 @@ internal fun WearOnlineTemplateDetail(
                 item {
                     WearInfoCard(spec) {
                         WearDetailField(stringResource(field), selected.field(field)) {
-                            Icon(templateFieldIcon(field), contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Icon(wearProfileFieldIcon(field), contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                         }
                     }
                 }
@@ -362,15 +353,13 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
     }
     val template = state.template
     val fields = TEMPLATE_FIELDS
-    var input by rememberSaveable { mutableIntStateOf(0) }
+    val navigator = rememberWearNavigator(onExit = onBack, initialRoute = WearRoute.TemplateEditor(id, readOnly, creation))
     val delete = rememberWearConfirmDialog(stringResource(R.string.app_profile_template_delete), stringResource(R.string.wear_template_delete_message, template.name.ifBlank { template.id }), destructive = true) {
         viewModel.dispatch(TemplateEditorUiAction.Delete)
     }
     val leave by rememberUpdatedState<() -> Unit> {
-        if (input != 0) {
-            input = 0
-        } else if (!creation && !readOnly && state.dirty) {
-            viewModel.dispatch(TemplateEditorUiAction.Save)
+        if (navigator.backStack.size > 1) {
+            navigator.back()
         } else {
             onBack()
         }
@@ -379,11 +368,11 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
         registerBack { leave() }
         onDispose { registerBack(null) }
     }
-    val shownInput = input
-    if (shownInput != 0) {
-        WearSubPage({ input = 0 }) {
+    WearSubNavigation(navigator) { route ->
+        val shownInput = (route as? WearRoute.TemplateField)?.field
+        if (shownInput != null) {
             if (readOnly || shownInput == R.string.app_profile_template_id && !creation) {
-                WearList(onBack = { input = 0 }) { spec ->
+                WearList(onBack = navigator::back) { spec ->
                     item { WearPageHeader(spec, stringResource(shownInput)) }
                     template.field(shownInput).chunked(350).forEach { chunk ->
                         item { WearInfoCard(spec) { Text(chunk) } }
@@ -391,33 +380,36 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
                 }
             } else {
                 WearTextInputPage(stringResource(shownInput), template.field(shownInput), multiline = shownInput == R.string.profile_selinux_rules) { text ->
-                    runCatching { template.withField(shownInput, text) }.fold(onSuccess = { viewModel.dispatch(TemplateEditorUiAction.Update(it, autoSave = !creation && !readOnly)) }, onFailure = { toast.show(failed) })
-                    input = 0
+                    runCatching { template.withField(shownInput, text) }.fold(onSuccess = {
+                        viewModel.dispatch(TemplateEditorUiAction.Update(it))
+                        navigator.back()
+                    }, onFailure = { toast.show(failed) })
                 }
             }
-        }
-    } else {
-        WearList(
-            isLoading = state.loading,
-            onBack = { leave() },
-            confirmEnabled = !state.saving && (creation || state.dirty),
-            onConfirm = if (!readOnly && state.loadFailure == null) ({ viewModel.dispatch(TemplateEditorUiAction.Save) }) else null,
-            confirmLabel = stringResource(R.string.app_profile_template_save),
-        ) { spec ->
-            item { WearPageHeader(spec, stringResource(if (readOnly) R.string.app_profile_template_view else R.string.app_profile_template_edit)) }
-            if (state.loadFailure != null) item { WearStatusItem(spec, Icons.Rounded.Error, failed, tone = WearStatusTone.ERROR) }
-            if (state.loadFailure == null) {
-                // A TransformingLazyColumn item places only its last child, so the value is the widget's description.
-                SegmentedColumn(fields, { it }) { field ->
-                    WearSettingsJumpPageWidget(
-                        spec,
-                        stringResource(field),
-                        { input = field },
-                        icon = templateFieldIcon(field),
-                        description = template.field(field).ifEmpty { null },
-                    )
+        } else {
+            WearList(
+                isLoading = state.loading,
+                onBack = { leave() },
+                confirmEnabled = !state.saving && (creation || state.dirty),
+                onConfirm = if (!readOnly && state.loadFailure == null) ({ viewModel.dispatch(TemplateEditorUiAction.Save) }) else null,
+                confirmLabel = stringResource(R.string.app_profile_template_save),
+                confirmIcon = Icons.Rounded.Save,
+            ) { spec ->
+                item { WearPageHeader(spec, stringResource(if (readOnly) R.string.app_profile_template_view else R.string.app_profile_template_edit)) }
+                if (state.loadFailure != null) item { WearStatusItem(spec, Icons.Rounded.Error, failed, tone = WearStatusTone.ERROR) }
+                if (state.loadFailure == null) {
+                    // A TransformingLazyColumn item places only its last child, so the value is the widget's description.
+                    SegmentedColumn(fields, { it }) { field ->
+                        WearSettingsJumpPageWidget(
+                            spec,
+                            stringResource(field),
+                            { navigator.open(WearRoute.TemplateField(field)) },
+                            icon = wearProfileFieldIcon(field),
+                            description = template.field(field).ifEmpty { null },
+                        )
+                    }
+                    if (!creation && !state.loading) item { WearActionButton(spec, Icons.Rounded.Delete, stringResource(R.string.app_profile_template_delete), delete::show) }
                 }
-                if (!creation && !state.loading) item { WearActionButton(spec, Icons.Rounded.Delete, stringResource(R.string.app_profile_template_delete), delete::show) }
             }
         }
     }
@@ -429,17 +421,6 @@ private val TEMPLATE_FIELDS = listOf(
     R.string.profile_namespace, R.string.profile_groups, R.string.profile_capabilities,
     R.string.profile_selinux_context, R.string.profile_selinux_rules, R.string.profile_flags,
 )
-
-private fun templateFieldIcon(field: Int) = when (field) {
-    R.string.app_profile_template_id, R.string.wear_uid, R.string.wear_gid -> Icons.Rounded.Numbers
-    R.string.app_profile_template_name -> Icons.Rounded.Edit
-    R.string.app_profile_template_description -> Icons.Rounded.Description
-    R.string.module_author -> Icons.Rounded.Person
-    R.string.profile_namespace -> Icons.Rounded.Storage
-    R.string.profile_groups -> Icons.Rounded.Group
-    R.string.profile_flags -> Icons.Rounded.Flag
-    else -> Icons.Rounded.Security
-}
 
 private fun ProfileTemplate.field(field: Int): String = when (field) {
     R.string.app_profile_template_id -> id

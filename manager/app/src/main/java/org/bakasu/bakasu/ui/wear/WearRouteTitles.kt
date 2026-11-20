@@ -127,4 +127,30 @@ internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {
     WearRoute.Licenses, is WearRoute.LicenseDetail -> R.string.open_source_license
 
     is WearRoute.Browser -> R.string.wear_web_page
+
+    is WearRoute.SubPage -> when (this) {
+        WearRoute.ProfileFields -> R.string.profile_custom
+        is WearRoute.ProfileField -> field
+        is WearRoute.TemplateField -> field
+        WearRoute.RepositoryUrl -> R.string.repo_server_url
+        WearRoute.RepositoryApi -> R.string.repo_api_type
+        WearRoute.RepositoryName -> R.string.repo_display_name
+        WearRoute.UmountPath -> R.string.add_umount_path
+        WearRoute.UmountFlags -> R.string.umount_flags
+        WearRoute.LkmPartition -> R.string.install_select_partition
+        WearRoute.LkmKmi -> R.string.select_kmi
+        WearRoute.SuSFSStatus -> R.string.susfs_tab_status
+        WearRoute.SuSFSCapabilities -> R.string.susfs_status_enabled_features
+        is WearRoute.SuSFSSection -> WearSuSFSSection.valueOf(section).title
+        is WearRoute.SuSFSAdd, is WearRoute.SuSFSDetail -> R.string.susfs_config_title
+        WearRoute.SuSFSUname -> R.string.susfs_standard_uname
+        WearRoute.SuSFSSlots -> R.string.susfs_standard_uname_tab_slot_info
+        WearRoute.SuSFSCmdline -> R.string.susfs_standard_cmdline_or_bootconfig
+        is WearRoute.SuSFSStandardField, is WearRoute.SuSFSEntryField, is WearRoute.SuSFSEntryChoice -> R.string.susfs_config_title
+        WearRoute.OperationStatus -> R.string.install
+        WearRoute.OperationLog -> R.string.wear_full_log
+        WearRoute.FilePicker -> R.string.wear_picker_mode
+        WearRoute.FileName -> R.string.wear_file_name
+        WearRoute.WebUI, is WearRoute.WebPrompt -> R.string.wear_web_page
+    }
 }
