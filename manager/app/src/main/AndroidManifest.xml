@@ -126,6 +126,26 @@
                 <data android:mimeType="application/zip" />
                 <data android:mimeType="application/vnd.android.package-archive" />
             </intent-filter>
+            <!-- Mirrors MainActivity: when the alternative icon is enabled this alias replaces
+                 MainActivity, so the ksu:// deep links must stay resolvable here as well. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
+                    android:host="action"
+                    android:scheme="ksu" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
+                    android:host="webui"
+                    android:scheme="ksu" />
+            </intent-filter>
         </activity-alias>
 
         <activity
