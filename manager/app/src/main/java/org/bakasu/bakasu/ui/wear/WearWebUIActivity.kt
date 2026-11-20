@@ -34,12 +34,15 @@ import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.Text
+import com.materialkolor.dynamicColorScheme
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.AppSettingsRepository
 import org.bakasu.bakasu.data.packageinfo.AppIconDataSource
 import org.bakasu.bakasu.data.packageinfo.InstalledPackageRepository
 import org.bakasu.bakasu.data.webui.WebUiRepository
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
+import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
+import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearBackground
@@ -89,7 +92,15 @@ private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) 
     val packageRepository = koinInject<InstalledPackageRepository>()
     val appIconDataSource = koinInject<AppIconDataSource>()
     val webUiRepository = koinInject<WebUiRepository>()
-    val colorsCss = koinInject<MonetColorsProvider>().getColorsCss()
+    val themeConfig = koinInject<ThemeConfig>()
+    val seed = wearThemeSeedColor(themeConfig, LocalBackgroundRenderState.current.seedColor)
+    val style = themeConfig.dynamicPaletteStyle
+    val colorSpec = themeConfig.dynamicColorSpec
+    // WebUI CSS uses Material 3 roles, generated from the same palette as the Wear theme.
+    val webUiColors = remember(seed, style, colorSpec) {
+        dynamicColorScheme(Color(seed), isDark = true, style = style, specVersion = colorSpec)
+    }
+    val colorsCss = koinInject<MonetColorsProvider>().getColorsCss(webUiColors)
     val currentColorsCss = rememberUpdatedState(colorsCss)
 
     LaunchedEffect(moduleId) {
