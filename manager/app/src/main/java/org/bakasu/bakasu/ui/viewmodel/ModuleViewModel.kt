@@ -190,12 +190,13 @@ class ModuleViewModel(
         viewModelScope.launch { refreshNow(manual) }
     }
 
+    fun isModuleUpdateCheckEnabled(): Boolean = getBooleanPreference(
+        PREF_CHECK_MODULE_UPDATE,
+        getBooleanPreference(PREF_CHECK_UPDATE, true),
+    )
+
     private suspend fun refreshNow(manual: Boolean) {
-        val checkUpdates = getBooleanPreference(
-            PREF_CHECK_MODULE_UPDATE,
-            getBooleanPreference(PREF_CHECK_UPDATE, true),
-        )
-        refreshInstalledModules(manual, checkUpdates)
+        refreshInstalledModules(manual, isModuleUpdateCheckEnabled())
             .onSuccess {
                 controls.update { it.copy(isNeedRefresh = false) }
                 mutableEvents.tryEmit(ModuleUiEvent.RefreshCompleted)
