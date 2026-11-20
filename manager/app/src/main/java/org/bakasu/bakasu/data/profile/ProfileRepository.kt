@@ -93,7 +93,11 @@ class ProfileRepository(
         runCatching {
             when (action) {
                 AppControlAction.LAUNCH -> ksuCliRepository.launchApp(packageName)
-                AppControlAction.FORCE_STOP -> ksuCliRepository.forceStopApp(packageName)
+
+                AppControlAction.FORCE_STOP -> check(ksuCliRepository.forceStopApp(packageName)) {
+                    "Failed to force stop $packageName"
+                }
+
                 AppControlAction.RESTART -> ksuCliRepository.restartApp(packageName)
             }
         }

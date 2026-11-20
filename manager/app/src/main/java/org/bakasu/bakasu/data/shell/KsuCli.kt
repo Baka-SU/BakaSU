@@ -655,10 +655,11 @@ class KsuCliRepository(context: Context) {
         .exec().out
         .joinToString("\n")
 
-    fun forceStopApp(packageName: String) {
+    fun forceStopApp(packageName: String): Boolean {
         val shell = getRootShell()
         val result = shell.newJob().add("am force-stop $packageName").exec()
         Log.i(TAG, "force stop $packageName result: $result")
+        return result.isSuccess
     }
 
     fun launchApp(packageName: String) {

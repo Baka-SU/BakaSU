@@ -140,6 +140,7 @@
     <string name="new_version_available">发现新版本：%s，点击升级</string>
     <string name="launch_app">启动</string>
     <string name="force_stop_app" formatted="false">强制停止</string>
+    <string name="force_stop_app_success">已强制停止应用</string>
     <string name="restart_app">重新启动</string>
     <string name="failed_to_update_sepolicy">为：%s 更新 SELinux 规则失败</string>
     <string name="module_changelog">更新日志</string>

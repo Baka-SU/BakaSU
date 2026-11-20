@@ -66,6 +66,7 @@ import org.bakasu.bakasu.ui.viewmodel.AppProfileUiEvent
 import org.bakasu.bakasu.ui.viewmodel.AppProfileUiState
 import org.bakasu.bakasu.ui.viewmodel.AppProfileViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
+import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileConfig
 import org.bakasu.bakasu.ui.wear.component.WearAppProfileModePage
@@ -285,6 +286,8 @@ internal fun WearAppProfileModeRoute(
                     destinationAfterSave = null
                     if (destination != null) navigate(destination)
                 }
+
+                AppProfileUiEvent.ForceStopped -> Unit
             }
         }
     }
@@ -364,6 +367,8 @@ internal fun WearAppProfileTemplateChoiceRoute(
                     error = null
                     onSaved()
                 }
+
+                AppProfileUiEvent.ForceStopped -> Unit
             }
         }
     }
@@ -450,7 +455,7 @@ internal fun WearAppProfileCustomRoute(
             error = when (event) {
                 is AppProfileUiEvent.Error -> failed
                 AppProfileUiEvent.SepolicyUpdateFailed -> failedSepolicy
-                AppProfileUiEvent.Saved -> null
+                AppProfileUiEvent.Saved, AppProfileUiEvent.ForceStopped -> null
             }
         }
     }
@@ -546,7 +551,7 @@ internal fun WearAppDetail(
             error = when (event) {
                 is AppProfileUiEvent.Error -> failed
                 AppProfileUiEvent.SepolicyUpdateFailed -> failedSepolicy
-                AppProfileUiEvent.Saved -> null
+                AppProfileUiEvent.Saved, AppProfileUiEvent.ForceStopped -> null
             }
         }
     }
@@ -696,9 +701,12 @@ internal fun WearAppActionsRoute(uid: Int, packageName: String, onBack: () -> Un
     )
     var error by remember { mutableStateOf<String?>(null) }
     val failed = stringResource(R.string.operation_failed)
+    val forceStopped = stringResource(R.string.force_stop_app_success)
+    val toast = LocalWearToast.current
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             if (event is AppProfileUiEvent.Error) error = failed
+            if (event == AppProfileUiEvent.ForceStopped) toast.show(forceStopped)
         }
     }
     WearFeedbackEffect(error) { error = null }

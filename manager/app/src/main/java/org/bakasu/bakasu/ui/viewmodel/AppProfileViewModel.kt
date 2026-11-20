@@ -43,6 +43,7 @@ sealed interface AppProfileUiAction {
 
 sealed interface AppProfileUiEvent {
     data object Saved : AppProfileUiEvent
+    data object ForceStopped : AppProfileUiEvent
     data class Error(val cause: Throwable? = null) : AppProfileUiEvent
     data object SepolicyUpdateFailed : AppProfileUiEvent
 }
@@ -148,6 +149,11 @@ class AppProfileViewModel(
 
             is AppProfileUiAction.ControlApp -> viewModelScope.launch {
                 controlApp(packageName, action.action)
+                    .onSuccess {
+                        if (action.action == AppControlAction.FORCE_STOP) {
+                            mutableEvents.emit(AppProfileUiEvent.ForceStopped)
+                        }
+                    }
                     .onFailure { mutableEvents.tryEmit(AppProfileUiEvent.Error(it)) }
             }
 
