@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.screen.main
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity.CLIPBOARD_SERVICE
 import android.app.Activity.RESULT_OK
@@ -7,7 +8,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -135,6 +138,7 @@ import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
 import org.bakasu.bakasu.domain.usecase.TakeModuleUriPermissionUseCase
+import org.bakasu.bakasu.ui.activity.PermissionRequestInterface
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.InstallConfirmationDialog
 import org.bakasu.bakasu.ui.component.SearchAppBar
@@ -197,6 +201,7 @@ fun ModulePage(bottomPadding: Dp) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val homeState by koinViewModel<HomeViewModel>().uiState.collectAsStateWithLifecycle()
     val snackBarHost = LocalSnackbarHost.current
+    val permissionRequestInterface = LocalPermissionRequestInterface.current
     val scope = rememberCoroutineScope()
     var lastClickTime by remember { mutableStateOf(0L) }
 
@@ -316,7 +321,7 @@ fun ModulePage(bottomPadding: Dp) {
     LaunchedEffect(Unit) {
         viewModel.dispatch(ModuleUiAction.Search(""))
         if (uiState.moduleList.isEmpty() || uiState.isNeedRefresh) {
-            viewModel.dispatch(ModuleUiAction.Refresh())
+            refreshModules(context, viewModel, permissionRequestInterface, manual = false)
         }
     }
 
@@ -507,6 +512,26 @@ fun ModulePage(bottomPadding: Dp) {
             }
         }
     }
+}
+
+// Android 17 blocks local network hosts (e.g. a LAN-hosted module updateJson) without
+// ACCESS_LOCAL_NETWORK, so ask for it when the module update check runs and re-check on grant.
+private fun refreshModules(
+    context: Context,
+    viewModel: ModuleViewModel,
+    permissionRequestInterface: PermissionRequestInterface,
+    manual: Boolean,
+) {
+    viewModel.dispatch(ModuleUiAction.Refresh(manual))
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN || !viewModel.isModuleUpdateCheckEnabled()) return
+    if (context.checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) == PackageManager.PERMISSION_GRANTED) return
+    permissionRequestInterface.requestPermission(
+        permission = Manifest.permission.ACCESS_LOCAL_NETWORK,
+        callback = { granted ->
+            if (granted) viewModel.dispatch(ModuleUiAction.Refresh(manual = true))
+        },
+        requestDescription = context.getString(R.string.local_network_permission_description),
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -902,7 +927,7 @@ private fun ModuleList(
     PullToRefreshBox(
         state = pullRefreshState,
         onRefresh = {
-            viewModel.dispatch(ModuleUiAction.Refresh(manual = true))
+            refreshModules(context, viewModel, permissionRequestInterface, manual = true)
         },
         modifier = boxModifier
             .fillMaxSize()
