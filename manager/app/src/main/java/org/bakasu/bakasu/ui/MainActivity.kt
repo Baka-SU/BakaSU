@@ -1,13 +1,16 @@
 package org.bakasu.bakasu.ui
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,6 +55,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private val intentChannel = Channel<Intent>(capacity = Channel.BUFFERED)
+
+    private val localNetworkPermissionRequest =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) moduleViewModel.dispatch(ModuleUiAction.Refresh(manual = true))
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
@@ -108,6 +116,8 @@ class MainActivity : ComponentActivity() {
 
             if (savedInstanceState == null) intent?.let { intentChannel.trySend(it) }
 
+            if (savedInstanceState == null) requestLocalNetworkPermission()
+
             setContent {
                 KernelSUTheme {
                     when (val state = startupState.collectAsStateWithLifecycle().value) {
@@ -138,6 +148,13 @@ class MainActivity : ComponentActivity() {
 
         // Initialize theme settings.
         themeUtils.initializeThemeSettings(settingsViewModel)
+    }
+
+    // Android 17 blocks LAN addresses (e.g. a LAN-hosted module updateJson) without this permission.
+    private fun requestLocalNetworkPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) return
+        if (checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) == PackageManager.PERMISSION_GRANTED) return
+        localNetworkPermissionRequest.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
     }
 
     override fun onResume() {
