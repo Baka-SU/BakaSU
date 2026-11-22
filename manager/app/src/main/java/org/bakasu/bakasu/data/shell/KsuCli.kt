@@ -28,6 +28,8 @@ import org.bakasu.bakasu.domain.model.LkmSelection
 import org.json.JSONArray
 import org.json.JSONObject
 
+class KsudUnavailableException(message: String) : IllegalStateException(message)
+
 /**
  * @author weishu
  * @date 2023/1/1.
@@ -43,13 +45,19 @@ class KsuCliRepository(context: Context) {
     private var rootShell: Shell? = null
     private var globalMountShell: Shell? = null
 
-    private fun getNativeLibraryPath(name: String): String {
+    private fun findNativeLibrary(name: String): String? {
         val library = File(nativeLibraryDir, System.mapLibraryName(name))
-        require(library.isFile) {
-            "${library.name} was not found in the application native library path"
-        }
-        return library.absolutePath
+        return if (library.isFile) library.absolutePath else null
     }
+
+    private fun getNativeLibraryPath(name: String): String {
+        val libraryName = System.mapLibraryName(name)
+        return findNativeLibrary(name) ?: throw KsudUnavailableException(
+            "$libraryName was not found in the application native library path",
+        )
+    }
+
+    fun isKsudAvailable(): Boolean = findNativeLibrary("ksud") != null
 
     fun getKsuDaemonPath(): String = getNativeLibraryPath("ksud")
 
@@ -206,23 +214,34 @@ class KsuCliRepository(context: Context) {
         Log.w(TAG, "install result: $result, cost: ${SystemClock.elapsedRealtime() - start}ms")
     }
 
-    fun listModules(): String {
+    fun listModules(): String = try {
         val shell = getRootShell()
 
         val out = shell.newJob()
             .add("${getKsuDaemonPath()} module list").to(ArrayList(), null).exec().out
-        return out.joinToString("\n").ifBlank { "[]" }
+        out.joinToString("\n").ifBlank { "[]" }
+    } catch (e: KsudUnavailableException) {
+        Log.w(TAG, "module list skipped: ${e.message}")
+        "[]"
     }
 
     fun getModuleCount(): Int {
-        val result = listModules()
-        runCatching {
-            val array = JSONArray(result)
-            return array.length()
-        }.getOrElse { return 0 }
+        if (!isKsudAvailable()) {
+            Log.i(TAG, "libksud.so missing; module count defaults to 0")
+            return 0
+        }
+        return runCatching {
+            JSONArray(listModules()).length()
+        }.getOrElse {
+            Log.w(TAG, "module count unavailable", it)
+            0
+        }
     }
 
-    fun getSuperuserCount(): Int = Natives.getSuperuserCount()
+    fun getSuperuserCount(): Int = runCatching { Natives.getSuperuserCount() }.getOrElse {
+        Log.w(TAG, "superuser count unavailable", it)
+        0
+    }
 
     fun toggleModule(id: String, enable: Boolean): Boolean {
         val cmd = if (enable) {
