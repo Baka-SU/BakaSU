@@ -62,6 +62,7 @@ sealed interface ModuleUiAction {
 sealed interface ModuleUiEvent {
     data class Error(val message: String) : ModuleUiEvent
     data object RefreshCompleted : ModuleUiEvent
+    data object LocalNetworkPermissionRequired : ModuleUiEvent
     data class EnabledChanged(
         val moduleId: String,
         val enabled: Boolean,
@@ -190,16 +191,17 @@ class ModuleViewModel(
         viewModelScope.launch { refreshNow(manual) }
     }
 
-    fun isModuleUpdateCheckEnabled(): Boolean = getBooleanPreference(
+    private fun isModuleUpdateCheckEnabled(): Boolean = getBooleanPreference(
         PREF_CHECK_MODULE_UPDATE,
         getBooleanPreference(PREF_CHECK_UPDATE, true),
     )
 
     private suspend fun refreshNow(manual: Boolean) {
         refreshInstalledModules(manual, isModuleUpdateCheckEnabled())
-            .onSuccess {
+            .onSuccess { needsLocalNetworkPermission ->
                 controls.update { it.copy(isNeedRefresh = false) }
                 mutableEvents.tryEmit(ModuleUiEvent.RefreshCompleted)
+                if (needsLocalNetworkPermission) mutableEvents.emit(ModuleUiEvent.LocalNetworkPermissionRequired)
             }
             .onFailure { error ->
                 mutableEvents.tryEmit(ModuleUiEvent.Error(error.message.orEmpty()))
