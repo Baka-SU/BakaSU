@@ -30,7 +30,7 @@ class ManagerUpdateRepository(
     }
 
     private val managerApkPattern = Regex(
-        "^BakaSU_(.+)_(\\d+)-(arm64-v8a|armeabi-v7a|x86_64|universal)-release\\.apk$",
+        "^BakaSU_(.+)_(\\d+)-(normal|wear)-(arm64-v8a|armeabi-v7a|x86_64|riscv64|universal)-release\\.apk$",
     )
     private val commitCountLinkPattern = Regex("""[?&]page=(\d+)>; rel="last"""")
 
@@ -84,7 +84,7 @@ class ManagerUpdateRepository(
             versionName = headSha.take(SHORT_SHA_LENGTH),
             abi = preferredAbi,
             fileName = "BakaSU_${headSha.take(SHORT_SHA_LENGTH)}_" +
-                "$versionCode-$preferredAbi-release.apk",
+                "$versionCode-${BuildConfig.FLAVOR}-$preferredAbi-release.apk",
             source = ManagerApkSource.NightlyArtifact(
                 url = "https://nightly.link/$REPOSITORY/actions/runs/$runId/$RELEASE_ARTIFACT.zip",
                 preferredAbi = preferredAbi,
@@ -142,11 +142,12 @@ class ManagerUpdateRepository(
 
     private fun parseApkName(fileName: String): ParsedApkName? {
         val match = managerApkPattern.matchEntire(fileName) ?: return null
+        if (match.groupValues[3] != BuildConfig.FLAVOR) return null
         val versionCode = match.groupValues[2].toIntOrNull() ?: return null
         return ParsedApkName(
             versionName = match.groupValues[1],
             versionCode = versionCode,
-            abi = match.groupValues[3],
+            abi = match.groupValues[4],
             fileName = fileName,
         )
     }

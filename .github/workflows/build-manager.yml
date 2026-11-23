@@ -186,14 +186,16 @@ jobs:
         with:
           name: Manager-gradle-${{ matrix.build_type }}
           path: |
-            manager/app/build/outputs/apk/release/*.apk
-            manager/app/build/outputs/apk/debug/*.apk
+            manager/app/build/outputs/apk/normal/${{ matrix.build_type }}/*.apk
+            manager/app/build/outputs/apk/wear/${{ matrix.build_type }}/*.apk
 
       - name: Upload mappings
         uses: actions/upload-artifact@v7
         with:
-          name: "Manager-mappings"
-          path: "manager/app/build/outputs/mapping/release/"
+          name: "Manager-mappings-${{ matrix.build_type }}"
+          path: |
+            manager/app/build/outputs/mapping/normalRelease/
+            manager/app/build/outputs/mapping/wearRelease/
           if-no-files-found: ignore
 
   repack-manager:
