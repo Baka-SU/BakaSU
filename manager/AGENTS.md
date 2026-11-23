@@ -69,16 +69,20 @@ repository depend on a ViewModel or UI component, and do not move repository wor
 
 ## Wear Manager structure
 
-The phone and the watch are one Gradle module (`:app`), one package (`org.bakasu.bakasu`) and one
-Koin container. The Wear Manager shares `data/`, `domain/` and the ViewModels with the phone; only
-its UI and a few Wear-only data sources are separate.
+The phone and the watch use the `normal` and `wear` product flavors in one Gradle module (`:app`),
+one package (`org.bakasu.bakasu`) and one Koin container. Shared code lives in `app/src/main`;
+phone entry code lives in `app/src/normal`; Wear UI, data sources, ViewModels and resources live in
+`app/src/wear`. Keep package responsibilities unchanged when moving between source sets.
 
 ### Entry points
 
 * `KernelSUApplication` starts Koin and runs `InitializeApplicationUseCase` for both form factors.
-* `ui/MainActivity.kt` checks `PackageManager.FEATURE_WATCH` and hands watches over to
-  `ui/wear/WearMainActivity.kt` by component name, so phone code imports nothing from `ui.wear`.
-  Do not add further watch branches to phone activities.
+* Each flavor provides `ui/MainActivity.kt`. The normal implementation renders the phone UI;
+  the Wear implementation inherits `ui/wear/WearMainActivity.kt` directly. Both keep the same
+  launcher component, alternate icon alias, shortcut and incoming Intent contracts. Do not restore
+  runtime forwarding from the phone entry point to a class absent from the normal APK.
+* Flavor-specific `di/PlatformModules.kt` registers dedicated repositories, use cases and
+  ViewModels inside the existing shared Koin module groups.
 * `WearMainActivity` applies the language, initializes the manager, refreshes the home and app
   lists, and shows loading, error or `WearManagerScreen` according to `StartupState`.
 * `WearActivity` is the shared base of the Wear activities; it only intercepts `KEYCODE_BACK` when
@@ -90,15 +94,17 @@ its UI and a few Wear-only data sources are separate.
 
 * `data/file`: `WearFileRepository` (uses `SuFile` with root, plain `File` otherwise, still limited
   by the process permissions) and `WearFileProvider`.
-* `data/webui`: `WearWebUiBridge` and `WearWebUiService`, the Data Layer bridge that lets the phone
-  run a watch module WebUI.
+* `data/network/WearLinkRepository` and `OpenWearExternalLinkUseCase` belong to the wear source set.
+  The authenticated RFCOMM companion bridge in `data/webui` remains shared; the phone-side
+  `WearBridgeSetupActivity` and `RemoteWebUIActivity` must remain available in normal builds.
 * `WearPreferencesViewModel` holds the watch-only preferences (pickers, links, screen shape, long
   press feedback, keep screen on, back handling). Other Wear pages reuse the phone ViewModels, such
   as `HomeViewModel`, `SuperUserViewModel`, `ModuleViewModel`, `SettingsViewModel`,
   `SulogViewModel`, `SuSFSViewModel`, `FlashViewModel`, `KernelFlashViewModel` and
   `ExecuteModuleActionViewModel`.
-* `play-services-wearable` is still used by phone links, the WebUI Data Layer messages and online
-  templates; keep it while those features call it.
+* `MANAGE_EXTERNAL_STORAGE`, the built-in file picker and its no-root fallback remain in Wear.
+  Wear Compose, Navigation 3, Wear input and cnwearoverlay runtime/instrumentation are scoped to
+  Wear variants. Do not reintroduce them as shared runtime dependencies.
 
 ### Wear UI
 
@@ -128,6 +134,12 @@ its UI and a few Wear-only data sources are separate.
 
 Gradle builds do not cover SU authorization, SUSFS kernels, round and square layouts, predictive
 back or the phone connection; check those on a watch when a change touches them.
+
+Use `assembleNormalRelease` or `assembleWearRelease` for one device type; `assembleRelease` builds
+both. Run the applicable lint tasks for both variants. Baseline and startup profiles are generated
+separately with `generateNormalReleaseBaselineProfile` and `generateWearReleaseBaselineProfile`,
+selecting the corresponding device with `ANDROID_SERIAL`. Do not merge their profiles into main.
+See `../docs/manager-apk-variants.md` for packaging, updates and distribution.
 
 ---
 
