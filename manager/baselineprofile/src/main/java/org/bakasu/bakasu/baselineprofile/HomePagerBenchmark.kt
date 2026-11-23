@@ -19,7 +19,7 @@ class HomePagerBenchmark(
 
     @Test
     fun userScroll() = benchmarkRule.measureRepeated(
-        packageName = "com.resukisu.resukisu",
+        packageName = BuildConfig.TARGET_PACKAGE,
         metrics = listOf(FrameTimingMetric()),
         compilationMode = compilationMode,
         iterations = 10,
