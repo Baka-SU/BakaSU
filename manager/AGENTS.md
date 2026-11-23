@@ -137,8 +137,9 @@ back or the phone connection; check those on a watch when a change touches them.
 
 Use `assembleNormalRelease` or `assembleWearRelease` for one device type; `assembleRelease` builds
 both. Run the applicable lint tasks for both variants. Baseline and startup profiles are generated
-separately with `generateNormalReleaseBaselineProfile` and `generateWearReleaseBaselineProfile`,
-selecting the corresponding device with `ANDROID_SERIAL`. Do not merge their profiles into main.
+separately with `copyBaselineProfileIntoSrc` and `generateWearReleaseBaselineProfile`, selecting
+the corresponding device with `ANDROID_SERIAL`. Normal uses the upstream path under `src/main`;
+keep the Wear profiles under `src/wearRelease`.
 See `../docs/manager-apk-variants.md` for packaging, updates and distribution.
 
 ---

@@ -184,9 +184,13 @@ android {
 }
 
 baselineProfile {
-    mergeIntoMain = false
+    mergeIntoMain = true
     saveInSrc = true
     automaticGenerationDuringBuild = false
+
+    variants {
+        create("wear") { mergeIntoMain = false }
+    }
 }
 
 // Plugin 1.2.2 applies to every variant. Reuse its task and visitor only for Wear.
