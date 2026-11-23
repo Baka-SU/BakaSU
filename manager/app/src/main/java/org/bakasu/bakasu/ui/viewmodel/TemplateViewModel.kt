@@ -45,7 +45,7 @@ sealed interface TemplateUiEvent {
     data object ImportCompleted : TemplateUiEvent
     data class Exported(val json: String) : TemplateUiEvent
     data object ExportEmpty : TemplateUiEvent
-    data class Error(val message: String, val fromClipboard: Boolean = false) : TemplateUiEvent
+    data class Error(val message: String) : TemplateUiEvent
 }
 
 class TemplateViewModel(
@@ -111,7 +111,7 @@ class TemplateViewModel(
                 val result = importTemplatesUseCase(action.json)
                 result.fold(
                     onSuccess = { mutableEvents.emit(TemplateUiEvent.ImportCompleted) },
-                    onFailure = { mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty(), fromClipboard = true)) },
+                    onFailure = { mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty())) },
                 )
             }
 

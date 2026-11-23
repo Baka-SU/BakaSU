@@ -694,13 +694,9 @@
     <!-- Wear OS -->
     <string name="wear_enabled">已启用</string>
     <string name="wear_disabled">已禁用</string>
-    <string name="wear_pending_removal">等待卸载</string>
     <string name="wear_no_logs">暂无 SU 日志</string>
-    <string name="wear_enable_sulog">开启 SU 日志</string>
     <string name="wear_refresh">刷新</string>
     <string name="wear_module_file_unreadable">无法读取所选模块 ZIP</string>
-    <string name="wear_general">常规</string>
-    <string name="wear_security">安全</string>
     <string name="scroll_to_top">回到顶部</string>
     <string name="wear_display">显示</string>
     <string name="wear_link_mode">网页与模块 WebUI 打开方式</string>
@@ -720,12 +716,8 @@
     <string name="wear_remove_background">移除背景</string>
     <string name="wear_custom_color">自定义颜色</string>
     <string name="wear_directory_empty">此文件夹中没有匹配的文件</string>
-    <string name="wear_clear_search">清除搜索</string>
     <string name="wear_loading">正在加载</string>
-    <string name="wear_phone_disconnected">手机未连接</string>
-    <string name="wear_phone_app_missing">请安装配套手机端</string>
     <string name="wear_close_panel">收起菜单</string>
-    <string name="wear_phone_open_failed">无法在手机上打开</string>
     <string name="wear_display_scaling">显示与缩放</string>
     <string name="wear_screen_shape">屏幕形状</string>
     <string name="wear_shape_round">圆形</string>
@@ -743,11 +735,9 @@
     <string name="wear_settings_manager_mounts">管理器与挂载</string>
     <string name="wear_settings_kernel_maintenance">内核维护</string>
     <string name="wear_susfs_status_controls">状态与开关</string>
-    <string name="wear_susfs_features">功能配置</string>
     <string name="wear_susfs_backup_restore">备份与恢复</string>
     <string name="wear_filter_sort">筛选与排序</string>
     <string name="wear_sort">排序</string>
-    <string name="wear_template_offline">无网络连接</string>
     <string name="wear_details">详细信息</string>
     <string name="wear_enable_module">启用模块</string>
     <string name="wear_root_access">Root 授权</string>
@@ -794,7 +784,6 @@
     <string name="wear_webui_load_failed">无法加载手表模块页面，请检查手机连接和模块 WebUI 文件。</string>
     <string name="wear_catalog_summary">%1$s · %2$s</string>
     <string name="wear_labeled_value">%1$s: %2$s</string>
-    <string name="wear_version_code">版本代码</string>
     <string name="wear_susfs_logging_hiding">日志与隐藏</string>
     <string name="wear_susfs_entries">路径列表</string>
     <string name="wear_system_information">系统信息</string>
@@ -802,7 +791,6 @@
     <string name="wear_save_configuration">保存配置</string>
     <string name="wear_save_path">保存路径</string>
     <string name="wear_add_susfs_entry">新增%1$s</string>
-    <string name="wear_install_target">安装目标</string>
     <string name="wear_install_module">安装模块</string>
     <string name="wear_install_complete">安装完成</string>
     <string name="wear_install_failed">安装失败</string>
@@ -815,7 +803,6 @@
     <string name="wear_check_log_summary">查看失败原因</string>
     <string name="wear_save_log_summary">供排查使用</string>
     <string name="wear_reboot_device">重启设备</string>
-    <string name="wear_reboot_apply_module">应用新模块</string>
     <string name="wear_execute_action">执行动作</string>
     <string name="wear_execution_status">执行状态</string>
     <string name="wear_running">运行中</string>
@@ -828,7 +815,6 @@
     <string name="wear_complete_status">完成状态</string>
     <string name="wear_failed_status">失败状态</string>
     <string name="wear_kernel_complete_summary">可保存日志或重启</string>
-    <string name="wear_reboot_apply_kernel">应用内核变更</string>
     <string name="wear_retry">重试</string>
     <string name="wear_retry_install_summary">重新选择安装方式</string>
     <string name="wear_allowlist_backup">授权备份</string>
@@ -846,7 +832,6 @@
     <string name="wear_storage_permission_message">未获得 Root 时，文件选择器需要所有文件访问权限才能显示内部存储中的文件。</string>
     <string name="wear_link_open_failed">无法打开链接</string>
     <string name="wear_tap_to_view">点击查看</string>
-    <string name="wear_repo_connect_failed">连接服务器失败</string>
     <string name="wear_no_internet">未连接到互联网</string>
     <string name="wear_repo_unreachable">无法连接到模块仓库</string>
     <string name="wear_load_failed">加载失败</string>
@@ -854,7 +839,6 @@
     <string name="wear_release_summary">Release 记录</string>
     <string name="wear_info_summary">ID · 简介 · 作者</string>
     <string name="wear_author_link_summary">打开作者链接</string>
-    <string name="wear_source_summary">打开项目页面</string>
     <string name="wear_download">下载</string>
     <string name="wear_downloading">下载中</string>
     <string name="wear_verifying_download">正在校验文件</string>
@@ -864,9 +848,7 @@
     <string name="wear_update_to">更新到 %1$s</string>
     <string name="wear_update_download">下载更新</string>
     <string name="wear_update_changelog_summary">点击加载更新日志</string>
-    <string name="wear_update_reading_changelog">正在读取更新日志</string>
     <string name="wear_update_changelog_unavailable">无法读取更新日志</string>
-    <string name="wear_module_repo_summary">浏览与下载在线模块</string>
     <string name="wear_download_confirm_title">下载此模块？</string>
     <string name="wear_download_then_install">下载后确认安装</string>
     <string name="wear_browser_open_failed">无法打开浏览器</string>
@@ -914,12 +896,6 @@
     <string name="wear_bridge_receiving">正在接收手表的请求</string>
     <string name="wear_bridge_background_help">请保持接收服务开启。后台请求会显示通知，点击后继续；系统后台恢复为可选功能，支持情况取决于手机。</string>
     <string name="wear_bridge_app_settings">手机应用设置</string>
-    <string name="wear_bridge_pair_watch">配对手表</string>
-    <string name="wear_bridge_no_peers">没有已配对的蓝牙设备，请先在系统设置中配对手表。</string>
-    <string name="wear_bridge_allow_access">允许手机端 Manager 访问手表</string>
-    <string name="wear_bridge_allow_access_summary">打开手表的模块 WebUI 并读取其模块文件</string>
-    <string name="wear_bridge_allow_access_title">允许手表访问？</string>
-    <string name="wear_bridge_allow_access_message">授权后，手表可以在本机 Manager 中打开其模块 WebUI、读取模块文件，并在手表上执行模块命令。</string>
     <string name="wear_bridge_waiting">等待手表连接</string>
     <string name="wear_bridge_access_off">尚未允许访问</string>
     <string name="wear_bridge_phone_help">启用接收服务并授予附近设备权限后，系统已配对的手表即可请求打开 WebUI 或网页。每次请求均需确认，除非你选择记住该手表。</string>
@@ -931,7 +907,6 @@
     <string name="wear_phone_result_unknown">未能确认手机打开结果，请查看手机。</string>
     <string name="wear_bridge_active_connection">已连接 %1$s</string>
     <string name="wear_repository_url_hint">请输入仓库服务器地址</string>
-    <string name="wear_check_phone">请查看手机</string>
     <string name="wear_bridge_not_paired">请先在蓝牙设置中配对手机。</string>
     <string name="wear_bridge_rejected">手机已拒绝请求</string>
     <string name="wear_bridge_receiver">接收手表请求</string>
@@ -968,9 +943,6 @@
     <string name="wear_download_record_missing">下载记录已丢失。</string>
     <string name="wear_download_file">文件</string>
     <string name="wear_download_started">开始时间</string>
-    <string name="wear_round_toast">圆形 Toast（仅适合圆屏）</string>
-    <string name="wear_round_toast_summary">沿屏幕底部弧线显示简短消息。</string>
-    <string name="wear_round_toast_square">仅圆屏布局可用。</string>
     <string name="wear_theme_color_applied">主题颜色已应用。</string>
     <string name="wear_webui_exit_again">再次返回以关闭 WebUI。</string>
     <string name="wear_browser_load_failed">无法加载此页面。</string>
