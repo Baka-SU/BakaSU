@@ -80,7 +80,7 @@ class CompanionBridgeService : Service() {
         }
         try {
             repository.adapter()
-            val destination = if (repository.isWatch) "org.bakasu.bakasu.ui.wear.WearMainActivity" else "org.bakasu.bakasu.ui.webui.WearBridgeSetupActivity"
+            val destination = if (repository.isWatch) "org.bakasu.bakasu.ui.MainActivity" else "org.bakasu.bakasu.ui.webui.WearBridgeSetupActivity"
             val content = PendingIntent.getActivity(this, ONGOING_ID, Intent().setClassName(this, destination), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val notification = NotificationCompat.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_sys_upload)

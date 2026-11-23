@@ -1,5 +1,9 @@
 @file:Suppress("UnstableApiUsage")
 
+import cc.star0.wear.lib.cnwearoverlay.gradle.CnWearOverlayPlugin.ExtractRuntimeJars
+import cc.star0.wear.lib.cnwearoverlay.gradle.asm.CnWearOverlayClassVisitorFactory
+import com.android.build.api.instrumentation.InstrumentationScope
+
 plugins {
     alias(libs.plugins.agp.app)
     alias(libs.plugins.androidx.baselineprofile)
@@ -8,7 +12,7 @@ plugins {
     alias(libs.plugins.lsplugin.apksign)
     alias(libs.plugins.aboutLibraries)
     id("kotlin-parcelize")
-    id("cc.star0.wear.lib.cnwearoverlay") version "1.2.2"
+    id("cc.star0.wear.lib.cnwearoverlay") version "1.2.2" apply false
 }
 
 val androidCompileSdkVersion = rootProject.extra["androidCompileSdkVersion"] as Int
@@ -42,6 +46,12 @@ val isReleaseTask =
 
 android {
     namespace = "org.bakasu.bakasu"
+
+    flavorDimensions += "device"
+    productFlavors {
+        create("normal") { dimension = "device" }
+        create("wear") { dimension = "device" }
+    }
 
     buildTypes {
         debug {
@@ -174,9 +184,29 @@ android {
 }
 
 baselineProfile {
-    mergeIntoMain = true
+    mergeIntoMain = false
     saveInSrc = true
     automaticGenerationDuringBuild = false
+}
+
+// Plugin 1.2.2 applies to every variant. Reuse its task and visitor only for Wear.
+val wearOverlayRuntime = tasks.register<ExtractRuntimeJars>("extractWearOverlayRuntime") {
+    outputDir.set(layout.buildDirectory.dir("cnwearoverlay/wear"))
+    resources.set(listOf("/cnwearoverlay-runtime.jar", "/cnwearoverlay-stub.jar"))
+}
+
+androidComponents {
+    onVariants(selector().withFlavor("device" to "wear")) { variant ->
+        variant.instrumentation.transformClassesWith(
+            CnWearOverlayClassVisitorFactory::class.java,
+            InstrumentationScope.ALL,
+        ) { parameters ->
+            parameters.enabled.set(true)
+            parameters.patchHapticsKt.set(true)
+            parameters.injectHasWearSdk.set(true)
+            parameters.remapXiaomiConstants.set(true)
+        }
+    }
 }
 
 base {
@@ -220,12 +250,18 @@ dependencies {
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.compose.foundation)
-    implementation(libs.androidx.wear.compose.foundation)
-    implementation(libs.androidx.wear.compose.material3)
-    implementation(libs.androidx.wear.compose.navigation3)
-    implementation(libs.androidx.navigation3.runtime)
-    implementation(libs.androidx.navigation3.ui)
-    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+    "wearImplementation"(libs.androidx.wear.compose.foundation)
+    "wearImplementation"(libs.androidx.wear.compose.material3)
+    "wearImplementation"(libs.androidx.wear.compose.navigation3)
+    "wearImplementation"(libs.androidx.navigation3.runtime)
+    "wearImplementation"(libs.androidx.navigation3.ui)
+    "wearImplementation"(libs.androidx.lifecycle.viewmodel.navigation3)
+    "wearImplementation"(
+        files(wearOverlayRuntime.map { it.outputDir.file("cnwearoverlay-runtime.jar") }).builtBy(wearOverlayRuntime),
+    )
+    "wearImplementation"(
+        files(wearOverlayRuntime.map { it.outputDir.file("cnwearoverlay-stub.jar") }).builtBy(wearOverlayRuntime),
+    )
 
     implementation(libs.androidx.compose.runtime.tracing)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
@@ -266,7 +302,7 @@ dependencies {
     implementation(libs.markdown)
     implementation(libs.markwon.tables)
     implementation(libs.androidx.webkit)
-    implementation(libs.androidx.wear.input)
+    "wearImplementation"(libs.androidx.wear.input)
 
     implementation(libs.lsposed.cxx)
 

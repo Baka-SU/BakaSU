@@ -10,6 +10,7 @@ val androidMinSdkVersion = rootProject.extra["androidMinSdkVersion"] as Int
 val androidTargetSdkVersion = rootProject.extra["androidTargetSdkVersion"] as Int
 val androidSourceCompatibility = rootProject.extra["androidSourceCompatibility"] as JavaVersion
 val androidTargetCompatibility = rootProject.extra["androidTargetCompatibility"] as JavaVersion
+val managerPackageName = rootProject.extra["managerPackageName"] as String
 
 android {
     namespace = "org.bakasu.bakasu.baselineprofile"
@@ -19,6 +20,14 @@ android {
         minSdk = androidMinSdkVersion
         targetSdk = androidTargetSdkVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "TARGET_PACKAGE", "\"$managerPackageName\"")
+    }
+
+    buildFeatures { buildConfig = true }
+    flavorDimensions += "device"
+    productFlavors {
+        create("normal") { dimension = "device" }
+        create("wear") { dimension = "device" }
     }
 
     targetProjectPath = ":app"

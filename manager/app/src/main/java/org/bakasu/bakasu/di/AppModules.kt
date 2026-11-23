@@ -19,7 +19,6 @@ import org.bakasu.bakasu.data.count.CountRepository
 import org.bakasu.bakasu.data.download.DownloadRepository
 import org.bakasu.bakasu.data.file.ModuleFileRepository
 import org.bakasu.bakasu.data.file.ModuleUtils
-import org.bakasu.bakasu.data.file.WearFileRepository
 import org.bakasu.bakasu.data.flash.FlashRepository
 import org.bakasu.bakasu.data.kernel.KernelRepository
 import org.bakasu.bakasu.data.kernel.UmountRepository
@@ -35,7 +34,6 @@ import org.bakasu.bakasu.data.module.RepositorySourceStore
 import org.bakasu.bakasu.data.module.registry.KernelSuRegistryRepository
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
-import org.bakasu.bakasu.data.network.WearLinkRepository
 import org.bakasu.bakasu.data.network.WebResourceRepository
 import org.bakasu.bakasu.data.packageinfo.AppIconDataSource
 import org.bakasu.bakasu.data.packageinfo.InstalledPackageCache
@@ -142,7 +140,6 @@ import org.bakasu.bakasu.domain.usecase.ObserveStartupStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveSulogStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveSuperUserStateUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveUmountStateUseCase
-import org.bakasu.bakasu.domain.usecase.OpenWearExternalLinkUseCase
 import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
 import org.bakasu.bakasu.domain.usecase.PrepareScriptUseCase
 import org.bakasu.bakasu.domain.usecase.RebootUseCase
@@ -201,12 +198,9 @@ import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
 import org.bakasu.bakasu.ui.viewmodel.InstallViewModel
 import org.bakasu.bakasu.ui.viewmodel.KernelFlashViewModel
 import org.bakasu.bakasu.ui.viewmodel.MainIntentViewModel
-import org.bakasu.bakasu.ui.viewmodel.ModuleChangelogViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
-import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
-import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
 import org.bakasu.bakasu.ui.viewmodel.ScriptRunViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
@@ -216,11 +210,6 @@ import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateEditorViewModel
 import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.UmountManagerScreenViewModel
-import org.bakasu.bakasu.ui.viewmodel.WearDownloadsViewModel
-import org.bakasu.bakasu.ui.viewmodel.WearFileViewModel
-import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
-import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
-import org.bakasu.bakasu.ui.viewmodel.WearSearchViewModel
 import org.bakasu.bakasu.ui.webui.MonetColorsProvider
 import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.factoryOf
@@ -266,6 +255,7 @@ val coreModule = module {
 }
 
 val repositoryModule = module {
+    platformRepositories()
     single { KsuCliRepository(androidApplication()) }
     singleOf(::CountRepository)
     singleOf(::InstalledPackageCache)
@@ -328,8 +318,6 @@ val repositoryModule = module {
     singleOf(::SuSFSRepository)
     singleOf(::MonetCompatColorSource)
     singleOf(::ThemeRepository)
-    singleOf(::WearFileRepository)
-    singleOf(::WearLinkRepository)
     single { CompanionBridgeRepository(androidApplication(), get(), get(applicationScopeQualifier)) }
     single {
         val themeRepository = get<ThemeRepository>()
@@ -349,6 +337,7 @@ val repositoryModule = module {
 }
 
 val useCaseModule = module {
+    platformUseCases()
     factoryOf(::InitializeApplicationUseCase)
     factoryOf(::GetHomeBasicInfoUseCase)
     factoryOf(::IsNetworkAvailableUseCase)
@@ -408,7 +397,6 @@ val useCaseModule = module {
     factoryOf(::GetModuleReadmeUseCase)
     factoryOf(::GetModuleReleaseDetailsUseCase)
     factoryOf(::ResolveInstalledModuleIconUseCase)
-    factoryOf(::OpenWearExternalLinkUseCase)
     factoryOf(::LoadModuleIconUseCase)
     factoryOf(::ResolveModuleUpdateUseCase)
     factoryOf(::GetModuleUpdateChangelogUseCase)
@@ -476,6 +464,7 @@ val useCaseModule = module {
 }
 
 val viewModelModule = module {
+    platformViewModels()
     viewModel { parameters -> ScriptRunViewModel(parameters[0], get(), get(), get(), get(), get()) }
     viewModel { parameters ->
         AppProfileViewModel(
@@ -497,17 +486,12 @@ val viewModelModule = module {
     viewModelOf(::KernelFlashViewModel)
     viewModelOf(::SettingsViewModel)
     viewModelOf(::ModuleViewModel)
-    viewModel { parameters -> ModuleChangelogViewModel(parameters.get(), get()) }
     viewModelOf(::SuperUserViewModel)
     viewModelOf(::SuSFSViewModel)
-    viewModelOf(::ModuleDownloadViewModel)
-    viewModelOf(::WearDownloadsViewModel)
-    viewModel { parameters -> WearSearchViewModel(parameters[0], get(), get()) }
     viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
     viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get()) }
     viewModelOf(::RepositorySourcesViewModel)
     viewModelOf(::TemplateViewModel)
-    viewModelOf(::OnlineTemplateViewModel)
     viewModel { parameters ->
         TemplateEditorViewModel(
             templateId = parameters[0],
@@ -522,10 +506,7 @@ val viewModelModule = module {
     viewModelOf(::DynamicManagerViewModel)
     viewModelOf(::FlashViewModel)
     viewModelOf(::UmountManagerScreenViewModel)
-    viewModelOf(::WearFileViewModel)
-    viewModelOf(::WearLinkViewModel)
     viewModelOf(::CompanionBridgeViewModel)
-    viewModelOf(::WearPreferencesViewModel)
     viewModel { parameters ->
         ExecuteModuleActionViewModel(
             moduleId = parameters[0],

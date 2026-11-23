@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.channels.Channel
@@ -19,8 +20,8 @@ import org.bakasu.bakasu.ui.viewmodel.SuperUserViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
-/** The Manager on watches; [org.bakasu.bakasu.ui.MainActivity] hands watch launches over to it. */
-class WearMainActivity : WearActivity() {
+/** Wear implementation behind the variant's stable MainActivity launcher component. */
+open class WearMainActivity : WearActivity() {
     private val homeViewModel: HomeViewModel by viewModel()
     private val superUserViewModel: SuperUserViewModel by viewModel()
     private val observeStartupState: ObserveStartupStateUseCase by inject()
@@ -33,6 +34,7 @@ class WearMainActivity : WearActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         // Compose owns the page base, including its predictive-back alpha. An opaque window
         // background would keep that base black after the Compose layer becomes transparent.
