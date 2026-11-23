@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.bakasu.bakasu.data.network.LocalNetworkPermissionRequiredException
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.data.shell.KsuCliRepository
@@ -35,7 +36,7 @@ class ModuleRepository(
     suspend fun refreshInstalledModules(
         manual: Boolean,
         checkUpdates: Boolean,
-    ): Result<Unit> = refreshMutex.withLock {
+    ): Result<Boolean> = refreshMutex.withLock {
         withContext(Dispatchers.IO) {
             mutableInstalledModules.update { it.copy(refreshing = true) }
             runCatching {
@@ -65,29 +66,27 @@ class ModuleRepository(
                     metaModuleStatus = getMetaModuleStatus(),
                 )
 
-                if (checkUpdates && networkStatusRepository.isAvailable()) {
-                    val withUpdates = coroutineScope {
-                        modules.map { module ->
-                            async(Dispatchers.IO) {
-                                val shouldCheck =
-                                    module.id + module.versionCode !in previousVersionKeys ||
-                                        module.updateJson.isEmpty() ||
-                                        module.remove || module.update || !module.enabled
-                                module.copy(
-                                    moduleUpdate = if (shouldCheck) {
-                                        checkUpdate(
-                                            module.updateJson,
-                                            module.versionCode,
-                                        ).getOrNull()
-                                    } else {
-                                        null
-                                    },
-                                )
-                            }
-                        }.awaitAll()
-                    }
-                    mutableInstalledModules.update { current -> current.copy(modules = withUpdates) }
+                if (!checkUpdates || !networkStatusRepository.isAvailable()) return@runCatching false
+
+                val updateResults = coroutineScope {
+                    modules.map { module ->
+                        async(Dispatchers.IO) {
+                            val shouldCheck =
+                                module.id + module.versionCode !in previousVersionKeys ||
+                                    module.updateJson.isEmpty() ||
+                                    module.remove || module.update || !module.enabled
+                            if (shouldCheck) checkUpdate(module.updateJson, module.versionCode) else Result.success(null)
+                        }
+                    }.awaitAll()
                 }
+                mutableInstalledModules.update { current ->
+                    current.copy(
+                        modules = modules.zip(updateResults) { module, result ->
+                            module.copy(moduleUpdate = result.getOrNull())
+                        },
+                    )
+                }
+                updateResults.any { it.exceptionOrNull() is LocalNetworkPermissionRequiredException }
             }.onFailure {
                 mutableInstalledModules.update { current -> current.copy(refreshing = false) }
             }
@@ -140,7 +139,7 @@ class ModuleRepository(
         currentVersionCode: Int,
     ): Result<ModuleUpdateMetadata?> {
         if (url.isBlank()) return Result.success(null)
-        return networkRequestRepository.fetch(url).mapCatching { body ->
+        return networkRequestRepository.fetch(url, detectLocalNetworkPermission = true).mapCatching { body ->
             val json = JSONObject(body)
             val onlineVersionCode = json.optInt("versionCode")
             val zipUrl = json.optString("zipUrl")

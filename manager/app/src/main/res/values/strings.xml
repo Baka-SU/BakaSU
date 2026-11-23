@@ -460,6 +460,7 @@
     <string name="notification_permission_denied">Download failed: Notification permission is required</string>
     <string name="storage_permission_description">External Storage permission is needed to write file.</string>
     <string name="storage_permission_denied">Download failed: External Storage permission is required</string>
+    <string name="local_network_permission_description">Local network permission is needed to check module updates from local network hosts.</string>
     <string name="susfs_tab_status">Status</string>
     <string name="susfs_tab_standard">Standard</string>
     <string name="susfs_tab_sus_path">SUS Path</string>

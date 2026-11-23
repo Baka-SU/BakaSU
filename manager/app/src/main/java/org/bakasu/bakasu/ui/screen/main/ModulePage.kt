@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.screen.main
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity.CLIPBOARD_SERVICE
 import android.app.Activity.RESULT_OK
@@ -7,7 +8,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -609,6 +612,8 @@ private fun ModuleList(
     val enqueueDownload = koinInject<EnqueueDownloadUseCase>()
     val observeDownload = koinInject<ObserveDownloadUseCase>()
     val permissionRequestInterface = LocalPermissionRequestInterface.current
+    var requestingLocalNetworkPermission by remember { mutableStateOf(false) }
+    val localNetworkPermissionDescription = stringResource(R.string.local_network_permission_description)
     val scope = rememberCoroutineScope()
     val pullRefreshState = rememberPullToRefreshState()
     val failedEnable = stringResource(R.string.module_failed_to_enable)
@@ -675,6 +680,23 @@ private fun ModuleList(
                 }
 
                 ModuleUiEvent.RefreshCompleted -> Unit
+
+                ModuleUiEvent.LocalNetworkPermissionRequired -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN &&
+                        context.checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) != PackageManager.PERMISSION_GRANTED &&
+                        !requestingLocalNetworkPermission
+                    ) {
+                        requestingLocalNetworkPermission = true
+                        permissionRequestInterface.requestPermission(
+                            permission = Manifest.permission.ACCESS_LOCAL_NETWORK,
+                            callback = { granted ->
+                                requestingLocalNetworkPermission = false
+                                if (granted) viewModel.dispatch(ModuleUiAction.Refresh(manual = true))
+                            },
+                            requestDescription = localNetworkPermissionDescription,
+                        )
+                    }
+                }
             }
         }
     }
