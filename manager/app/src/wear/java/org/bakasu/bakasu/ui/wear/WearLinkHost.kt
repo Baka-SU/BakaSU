@@ -80,8 +80,3 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, showLoading: Boolean, on
     WearWatchOpenFailureDialog(failureText.takeIf { failed?.onWatch == true }, viewModel::dismissResult)
     WearErrorDialog(failureText.takeIf { failed != null && !failed.automaticLink && !failed.onWatch }, viewModel::dismissResult)
 }
-
-@Composable
-internal fun wearBridgeFailureText(failure: BridgeFailure): String = stringResource(
-    if (failure == BridgeFailure.CONNECTION) R.string.wear_phone_connection_failed else failure.resId,
-)

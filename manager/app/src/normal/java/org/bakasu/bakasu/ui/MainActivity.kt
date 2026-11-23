@@ -35,7 +35,7 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
-open class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity() {
     private val homeViewModel: HomeViewModel by viewModel()
     private val moduleViewModel: ModuleViewModel by viewModel()
     private val settingsViewModel: SettingsViewModel by viewModel()
