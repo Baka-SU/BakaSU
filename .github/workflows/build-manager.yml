@@ -165,20 +165,22 @@ jobs:
 
       - name: Build APK
         run: |
-          export BUILD_EXTRA_ARGS=""
+          build_args=("-Pcommit=${{ steps.commit.outputs.COMMIT_SHA }}")
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             export KSU_PACKAGE_NAME="com.resukisu.resukisu.pr${{github.event.pull_request.number}}"
-            export BUILD_EXTRA_ARGS="-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME"
+            build_args+=(-PIS_PR_BUILD=true "-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME")
           elif [ "${{ github.ref_type }}" != "tag" ] && [ "${{ github.ref_name }}" != "main" ]; then
             export KSU_PACKAGE_NAME="com.resukisu.resukisu.dev"
             export KSU_NAME="BakaSU-DEV"
-            export BUILD_EXTRA_ARGS="-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME -PKSU_NAME=$KSU_NAME"
+            build_args+=("-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME" "-PKSU_NAME=$KSU_NAME")
           fi
 
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            ./gradlew assemble${{ matrix.build_type }} -Pcommit=${{ steps.commit.outputs.COMMIT_SHA }} -PIS_PR_BUILD=true $BUILD_EXTRA_ARGS
+          if [ "${{ matrix.build_type }}" == "release" ]; then
+            # Keep the Release variants' R8 tasks from competing for the Gradle heap.
+            ./gradlew :app:assembleNormalRelease "${build_args[@]}"
+            ./gradlew :app:assembleWearRelease "${build_args[@]}"
           else
-            ./gradlew assemble${{ matrix.build_type }} -Pcommit=${{ steps.commit.outputs.COMMIT_SHA }} $BUILD_EXTRA_ARGS
+            ./gradlew assemble${{ matrix.build_type }} "${build_args[@]}"
           fi
 
       - name: Upload artifact
