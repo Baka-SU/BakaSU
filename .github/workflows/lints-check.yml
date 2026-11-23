@@ -129,4 +129,4 @@ jobs:
 
       - name: Check Manager Lint
         run: |
-          ./gradlew lintDebug
+          ./gradlew lintNormalDebug lintWearDebug
