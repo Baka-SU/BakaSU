@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.ui.viewmodel
 
 import androidx.annotation.StringRes
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -91,10 +92,12 @@ class SuperUserViewModel(
     private val setStringPreference: SetStringPreferenceUseCase,
     private val transliterateText: TransliterateTextUseCase,
     private val getManagerRuntimeInfo: GetManagerRuntimeInfoUseCase,
+    private val savedState: SavedStateHandle,
 ) : ViewModel() {
     private val sourceState = observeSuperUserState()
     private val controls = MutableStateFlow(
         SuperUserControls(
+            search = savedState["app-search"] ?: "",
             showSystemApps = getBooleanPreference(KEY_SHOW_SYSTEM_APPS, false),
             sortType = SortType.fromPersistKey(
                 getStringPreference(KEY_CURRENT_SORT_TYPE, SortType.NAME.persistKey)
@@ -169,9 +172,10 @@ class SuperUserViewModel(
                 )
             }
 
-            is SuperUserUiAction.Search ->
-                controls.value =
-                    controls.value.copy(search = action.query)
+            is SuperUserUiAction.Search -> {
+                savedState["app-search"] = action.query
+                controls.value = controls.value.copy(search = action.query)
+            }
 
             is SuperUserUiAction.SetShowSystemApps -> {
                 setBooleanPreference(KEY_SHOW_SYSTEM_APPS, action.enabled)

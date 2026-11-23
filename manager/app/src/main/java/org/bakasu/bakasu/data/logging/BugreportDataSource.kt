@@ -108,9 +108,11 @@ fun getBugreportFile(context: Context, ksuCliRepository: KsuCliRepository): File
         pw.println("LKM: $lkmMode")
     }
 
-    // modules
-    val modulesFile = File(bugreportDir, "modules.json")
-    modulesFile.writeText(ksuCliRepository.listModules())
+    // A failed module query must still leave the other diagnostics available for export.
+    runCatching { ksuCliRepository.listModules() }.fold(
+        onSuccess = { File(bugreportDir, "modules.json").writeText(it) },
+        onFailure = { File(bugreportDir, "modules-error.txt").writeText(it.stackTraceToString()) },
+    )
 
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm")
     val current = LocalDateTime.now().format(formatter)

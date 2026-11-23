@@ -740,4 +740,5 @@
     <string name="wear_bridge_request_link">Open this link in the phone browser?</string>
     <string name="wear_bridge_background_restore">System background reconnection (optional)</string>
     <string name="wear_theme_color_applied">Theme color applied.</string>
+    <string name="module_load_failed">Could not read installed modules. Refresh and try again.</string>
 </resources>

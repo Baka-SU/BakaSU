@@ -1,9 +1,11 @@
 package org.bakasu.bakasu.ui.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import java.text.Collator
 import java.util.Locale
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -51,6 +53,7 @@ data class ModuleUiState(
 )
 
 sealed interface ModuleUiAction {
+    data object LoadInitialData : ModuleUiAction
     data class Refresh(val manual: Boolean = false) : ModuleUiAction
     data object ReloadSettings : ModuleUiAction
     data class Search(val query: String) : ModuleUiAction
@@ -88,7 +91,7 @@ private data class ModuleControls(
 )
 
 class ModuleViewModel(
-    private val observeInstalledModules: ObserveInstalledModulesUseCase,
+    observeInstalledModules: ObserveInstalledModulesUseCase,
     private val modulePreferences: ModulePreferencesRepository,
     private val refreshInstalledModules: RefreshInstalledModulesUseCase,
     private val calculateModuleSize: CalculateInstalledModuleSizeUseCase,
@@ -103,13 +106,16 @@ class ModuleViewModel(
     private val getModuleUpdateChangelog: GetModuleUpdateChangelogUseCase,
     private val findModuleUpdateSource: FindModuleUpdateSourceUseCase,
     resolveIcons: ResolveInstalledModuleIconUseCase,
+    private val savedState: SavedStateHandle,
 ) : ViewModel() {
-    private val controls = MutableStateFlow(ModuleControls())
+    private val sourceState = observeInstalledModules()
+    private var refreshJob: Job? = null
+    private val controls = MutableStateFlow(ModuleControls(search = savedState["module-search"] ?: ""))
     private val mutableEvents = MutableSharedFlow<ModuleUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<ModuleUiEvent> = mutableEvents.asSharedFlow()
 
     val state: StateFlow<ModuleUiState> = combine(
-        observeInstalledModules(),
+        sourceState,
         controls,
         modulePreferences.preferences,
         resolveIcons(),
@@ -148,18 +154,28 @@ class ModuleViewModel(
 
     suspend fun loadUpdateChangelog(url: String, configuredSource: String) = getModuleUpdateChangelog(url, configuredSource)
 
-    fun isUpdateCurrent(module: InstalledModule, update: ModuleUpdateVerification.Registry): Boolean = resolveModuleUpdate.isCurrent(update) && observeInstalledModules().value.modules.any {
+    fun isUpdateCurrent(module: InstalledModule, update: ModuleUpdateVerification.Registry): Boolean = resolveModuleUpdate.isCurrent(update) && sourceState.value.modules.any {
         it.id == module.id && !it.remove && it.versionCode == module.versionCode &&
             it.updateJson == module.updateJson && it.moduleUpdate == module.moduleUpdate
     }
 
     fun dispatch(action: ModuleUiAction) {
         when (action) {
+            ModuleUiAction.LoadInitialData -> if (
+                (!sourceState.value.hasLoaded || controls.value.isNeedRefresh) &&
+                !sourceState.value.refreshing && refreshJob?.isActive != true
+            ) {
+                refresh(false)
+            }
+
             is ModuleUiAction.Refresh -> refresh(action.manual)
 
             ModuleUiAction.ReloadSettings -> modulePreferences.reload()
 
-            is ModuleUiAction.Search -> controls.update { it.copy(search = action.query) }
+            is ModuleUiAction.Search -> {
+                savedState["module-search"] = action.query
+                controls.update { it.copy(search = action.query) }
+            }
 
             is ModuleUiAction.Sort -> {
                 modulePreferences.setSort(action.enabledFirst, action.actionFirst)
@@ -208,7 +224,7 @@ class ModuleViewModel(
         }
     }
     private fun refresh(manual: Boolean) {
-        viewModelScope.launch { refreshNow(manual) }
+        refreshJob = viewModelScope.launch { refreshNow(manual) }
     }
 
     private suspend fun refreshNow(manual: Boolean) {

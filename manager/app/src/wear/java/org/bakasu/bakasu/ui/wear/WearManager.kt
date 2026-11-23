@@ -267,6 +267,13 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         superUserViewModel.dispatch(SuperUserUiAction.LoadInitialData)
         settingsViewModel.dispatch(SettingsUiAction.RefreshLanguage)
     }
+    // A restored detail or search route can be visible without composing the main pager.
+    // Load once per process snapshot; resume and palette changes keep the existing list and query.
+    ActivityResumeEffect(moduleViewModel, home.isInitialDataLoaded, home.systemStatus.isFullFeatured) {
+        if (home.isInitialDataLoaded && home.systemStatus.isFullFeatured) {
+            moduleViewModel.dispatch(ModuleUiAction.LoadInitialData)
+        }
+    }
     // Restored detail/filter/search destinations also need the process-local log repository.
     val logsActive = navigator.backStack.any { it == WearRoute.Logs || it == WearRoute.LogSearchResults }
     ActivityResumeEffect(sulogViewModel, logsActive) {
@@ -436,7 +443,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                             open(if (home.canOpenPatchDirectly()) WearRoute.LkmInstall else WearRoute.KernelInstall)
                                         },
                                         onTitleChange = { mainTitle = it },
-                                        onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
+                                        onWebUi = { linkViewModel.openWebUi(it.dirId, it.name) },
                                     )
                                 }
                                 entry<WearRoute.Module> { route ->
@@ -447,8 +454,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         onBack = ::back,
                                         onEnabledChange = { id, enabled -> moduleViewModel.dispatch(ModuleUiAction.SetEnabled(id, enabled)) },
                                         onRemove = { id, removed -> moduleViewModel.dispatch(ModuleUiAction.SetRemoved(id, removed)) },
-                                        onWebUi = { linkViewModel.openWebUi(it.id, it.name) },
-                                        onExecute = { open(WearRoute.ModuleAction(it.id)) },
+                                        onWebUi = { linkViewModel.openWebUi(it.dirId, it.name) },
+                                        onExecute = { open(WearRoute.ModuleAction(it.dirId)) },
                                         onUpdate = { open(WearRoute.ModuleUpdate(it.id)) },
                                         onErrorShown = { moduleError = null },
                                         removalPending = modules.moduleList.firstOrNull { it.id == route.id }?.dirId in modules.pendingRemovals,
@@ -1232,7 +1239,7 @@ private fun WearMainPages(
         when (pages.getOrNull(pagerState.currentPage)) {
             HOME -> onHome(HomeUiAction.Refresh(showIndicator = false))
             SUPERUSER -> onSuperUser(SuperUserUiAction.LoadInitialData)
-            MODULES -> if ((modules.moduleList.isEmpty() || modules.isNeedRefresh) && !modules.isRefreshing) onModule(ModuleUiAction.Refresh())
+            MODULES -> onModule(ModuleUiAction.LoadInitialData)
         }
     }
     val homeListState = rememberTransformingLazyColumnState()
@@ -1293,7 +1300,7 @@ private fun WearMainPages(
                                 listState = moduleListState,
                                 onModuleClick = { onOpen(WearRoute.Module(it)) },
                                 onWebUi = onWebUi,
-                                onExecute = { onOpen(WearRoute.ModuleAction(it.id)) },
+                                onExecute = { onOpen(WearRoute.ModuleAction(it.dirId)) },
                             )
 
                             SETTINGS -> WearSettingsPage(

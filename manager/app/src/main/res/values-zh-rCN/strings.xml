@@ -724,4 +724,5 @@
     <string name="wear_bridge_request_link">在手机浏览器打开此链接？</string>
     <string name="wear_bridge_background_restore">系统后台恢复（可选）</string>
     <string name="wear_theme_color_applied">主题颜色已应用。</string>
+    <string name="module_load_failed">无法读取已安装的模组，请刷新后重试。</string>
 </resources>

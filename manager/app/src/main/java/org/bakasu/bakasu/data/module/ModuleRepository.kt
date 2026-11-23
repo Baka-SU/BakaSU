@@ -59,6 +59,7 @@ class ModuleRepository(
                         }.awaitAll().any { it }
                     }
                     mutableInstalledModules.value = InstalledModulesState(
+                        hasLoaded = true,
                         modules = modules,
                         refreshing = false,
                         hasModuleRequireMount = requiresMount,

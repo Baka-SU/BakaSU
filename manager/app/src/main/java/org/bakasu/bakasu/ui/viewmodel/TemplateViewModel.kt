@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -56,11 +57,12 @@ class TemplateViewModel(
     private val importTemplatesUseCase: ImportProfileTemplatesUseCase,
     private val exportTemplatesUseCase: ExportProfileTemplatesUseCase,
     private val deleteTemplateUseCase: DeleteProfileTemplateUseCase,
+    private val savedState: SavedStateHandle,
 ) : ViewModel() {
     private val mutableEvents = MutableSharedFlow<TemplateUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<TemplateUiEvent> = mutableEvents.asSharedFlow()
 
-    private val search = MutableStateFlow("")
+    private val search = savedState.getStateFlow("template-search", "")
     private val lastLoad = MutableStateFlow<Result<Unit>?>(null)
 
     private val templatesSource = observeTemplates()
@@ -103,7 +105,7 @@ class TemplateViewModel(
     }
     fun dispatch(action: TemplateUiAction) {
         when (action) {
-            is TemplateUiAction.Search -> search.value = action.query.trim()
+            is TemplateUiAction.Search -> savedState["template-search"] = action.query.trim()
 
             is TemplateUiAction.Refresh -> viewModelScope.launch { fetchTemplates(action.synchronize) }
 

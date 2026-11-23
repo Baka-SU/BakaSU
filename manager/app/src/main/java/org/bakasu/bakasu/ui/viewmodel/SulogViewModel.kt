@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineStart
@@ -96,10 +97,11 @@ class SulogViewModel(
     private val cleanSulog: CleanSulogUseCase,
     getStringSetPreference: GetStringSetPreferenceUseCase,
     private val setStringSetPreference: SetStringSetPreferenceUseCase,
+    private val savedState: SavedStateHandle,
 ) : ViewModel() {
     private val sourceState = observeState()
     private val enabling = MutableStateFlow(false)
-    private val search = MutableStateFlow("")
+    private val search = savedState.getStateFlow("log-search", "")
     private val filters = MutableStateFlow(
         getStringSetPreference(PREF_SULOG_FILTERS)
             .mapNotNull { raw -> SulogEventFilter.entries.firstOrNull { it.name == raw } }
@@ -159,7 +161,7 @@ class SulogViewModel(
 
             is SulogUiAction.CleanPath -> clean(action.path)
 
-            is SulogUiAction.Search -> search.value = action.query
+            is SulogUiAction.Search -> savedState["log-search"] = action.query
 
             is SulogUiAction.ToggleFilter -> {
                 filters.value = filters.value.toMutableSet().apply {

@@ -38,6 +38,7 @@ class KsuCliRepository(context: Context) {
         val MODULE_ID_REGEX = Regex("^[a-zA-Z][a-zA-Z0-9._-]+$")
     }
 
+    private val appContext = context.applicationContext
     private val nativeLibraryDir = context.applicationInfo.nativeLibraryDir
     private val shellLock = Any()
     private var rootShell: Shell? = null
@@ -210,15 +211,19 @@ class KsuCliRepository(context: Context) {
     fun listModules(): String {
         val shell = getRootShell()
 
-        val out = shell.newJob()
-            .add("${getKsuDaemonPath()} module list").to(ArrayList(), null).exec().out
-        return out.joinToString("\n").ifBlank { "[]" }
+        val result = shell.newJob()
+            .add("${getKsuDaemonPath()} module list").to(ArrayList(), ArrayList()).exec()
+        val output = result.out.joinToString("\n")
+        if (!result.isSuccess || output.isBlank()) {
+            Log.w(TAG, "Module list failed (${result.code}): ${result.err.joinToString("\n")}")
+            throw IOException(appContext.getString(R.string.module_load_failed))
+        }
+        return output
     }
 
     fun getModuleCount(): Int {
-        val result = listModules()
         runCatching {
-            val array = JSONArray(result)
+            val array = JSONArray(listModules())
             return array.length()
         }.getOrElse { return 0 }
     }
