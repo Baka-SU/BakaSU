@@ -1370,7 +1370,15 @@ retry:
         goto out_unlock;
 
     // update backup sidtab first
-    rc = sidtab_context_to_sid(backup_sidtabp, &context, &backup_sid);
+#ifdef KSU_COMPAT_HAS_CONTEXT_ADD_HASH
+    rc = context_add_hash(backup_pol, &context);
+    if (!rc)
+#endif
+        rc = sidtab_context_to_sid(backup_sidtabp, &context, &backup_sid);
+#ifdef KSU_COMPAT_HAS_CONTEXT_ADD_HASH
+    if (!rc)
+        rc = context_add_hash(live_pol, &context);
+#endif
     if (!rc)
         rc = sidtab_context_to_sid(live_sidtab, &context, sid);
     context_destroy(&context);
