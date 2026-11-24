@@ -15,7 +15,6 @@ A [`tiann/KernelSU`](https://github.com/tiann/KernelSU)'s downstream, added some
 
 ## Features
 
-For phone (`normal`) and watch (`wear`) Manager builds, see [APK variants and distribution](manager-apk-variants.md).
 
 1. Kernel-based `su` and root access management
 2. Module system based on [metamodules](https://kernelsu.org/guide/metamodule.html): Pluggable infrastructure for systemless modifications.
