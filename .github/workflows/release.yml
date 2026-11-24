@@ -14,12 +14,17 @@ jobs:
       - build-manager
     runs-on: ubuntu-latest
     steps:
-      - name: Download Manager artifacts
+      - name: Download Mobile Manager artifact
         uses: actions/download-artifact@v8
         with:
           path: manager
-          name: "Manager-release"
-          merge-multiple: true
+          name: Manager-mobile-release
+
+      - name: Download Wear Manager artifact
+        uses: actions/download-artifact@v8
+        with:
+          path: manager
+          name: Manager-wear-release
 
       - name: Check is rc tags
         id: is_rc_tag

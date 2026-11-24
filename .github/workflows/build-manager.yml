@@ -107,6 +107,7 @@ jobs:
       fail-fast: false
       matrix:
         build_type: [ "release", "debug" ]
+        build_variant: [ "mobile", "wear" ]
     defaults:
       run:
         working-directory: ./manager
@@ -164,6 +165,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build APK
+        env:
+          BUILD_TYPE: ${{ matrix.build_type }}
+          BUILD_VARIANT: ${{ matrix.build_variant }}
         run: |
           build_args=("-Pcommit=${{ steps.commit.outputs.COMMIT_SHA }}")
           if [ "${{ github.event_name }}" == "pull_request" ]; then
@@ -175,29 +179,20 @@ jobs:
             build_args+=("-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME" "-PKSU_NAME=$KSU_NAME")
           fi
 
-          if [ "${{ matrix.build_type }}" == "release" ]; then
-            # Keep the Release variants' R8 tasks from competing for the Gradle heap.
-            ./gradlew :app:assembleMobileRelease "${build_args[@]}"
-            ./gradlew :app:assembleWearRelease "${build_args[@]}"
-          else
-            ./gradlew assemble${{ matrix.build_type }} "${build_args[@]}"
-          fi
+          ./gradlew ":app:assemble${BUILD_VARIANT^}${BUILD_TYPE^}" "${build_args[@]}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Manager-gradle-${{ matrix.build_type }}
-          path: |
-            manager/app/build/outputs/apk/mobile/${{ matrix.build_type }}/*.apk
-            manager/app/build/outputs/apk/wear/${{ matrix.build_type }}/*.apk
+          name: Manager-gradle-${{ matrix.build_variant }}-${{ matrix.build_type }}
+          path: manager/app/build/outputs/apk/${{ matrix.build_variant }}/${{ matrix.build_type }}/*.apk
 
       - name: Upload mappings
+        if: matrix.build_type == 'release'
         uses: actions/upload-artifact@v7
         with:
-          name: "Manager-mappings-${{ matrix.build_type }}"
-          path: |
-            manager/app/build/outputs/mapping/mobileRelease/
-            manager/app/build/outputs/mapping/wearRelease/
+          name: Manager-mappings-${{ matrix.build_variant }}-release
+          path: manager/app/build/outputs/mapping/${{ matrix.build_variant }}Release/
           if-no-files-found: ignore
 
   repack-manager:
@@ -208,6 +203,7 @@ jobs:
       fail-fast: false
       matrix:
         build_type: [ "release", "debug" ]
+        build_variant: [ "mobile", "wear" ]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -217,8 +213,8 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v8
         with:
-            name: Manager-gradle-${{ matrix.build_type }}
-            path: artifacts/Manager-gradle-${{ matrix.build_type }}
+          name: Manager-gradle-${{ matrix.build_variant }}-${{ matrix.build_type }}
+          path: artifacts/manager
       
       - name: Download arm64 ksud
         uses: actions/download-artifact@v8
@@ -248,10 +244,7 @@ jobs:
       - name: Place manager apk and ksud artifacts
         run: |
           mkdir -p manager/app/build/outputs/apk/${{ matrix.build_type }}
-          APKS=$(find artifacts/Manager-gradle-${{ matrix.build_type }} -type f -name "*.apk")
-          APKS=$(echo "$APKS" | tr '\n' ' ')
-          test -n "$APKS"
-          cp -f $APKS manager/app/build/outputs/apk/${{ matrix.build_type }}/
+          cp -f artifacts/manager/*.apk manager/app/build/outputs/apk/${{ matrix.build_type }}/
 
           mkdir -p target/aarch64-linux-android/release
           mkdir -p target/armv7-linux-androideabi/release
@@ -313,13 +306,25 @@ jobs:
       - name: Delete gradle build
         uses: GeekyEggo/delete-artifact@v6
         with:
-          name: Manager-gradle-${{ matrix.build_type }}
+          name: Manager-gradle-${{ matrix.build_variant }}-${{ matrix.build_type }}
         
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Manager-${{ matrix.build_type }}
+          name: Manager-${{ matrix.build_variant }}-${{ matrix.build_type }}
           path: dist/*.apk
+
+  merge-beta-artifact:
+    needs: repack-manager
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      # Installed Managers use this artifact name for in-app Beta updates.
+      - name: Upload Beta update artifact
+        uses: actions/upload-artifact/merge@v7
+        with:
+          name: Manager-release
+          pattern: 'Manager-{mobile,wear}-release'
 
   telegram-bot-api:
     name: Telegram Bot API
@@ -386,10 +391,16 @@ jobs:
             echo "topicid=${{ vars.MESSAGE_DEVELOPING_MANAGER_THREAD_ID }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Download Release artifact
+      - name: Download Mobile Release artifact
         uses: actions/download-artifact@v8
         with:
-          name: Manager-release
+          name: Manager-mobile-release
+          path: ./apk/release
+
+      - name: Download Wear Release artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: Manager-wear-release
           path: ./apk/release
 
       - name: Download Telegram Bot API Binary
