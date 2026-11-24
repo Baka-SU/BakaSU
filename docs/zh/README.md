@@ -15,7 +15,6 @@
 
 ## 特性
 
-手机（`normal`）与手表（`wear`）管理器的构建、更新和分发方式见[APK 分包说明](../manager-apk-variants.md)。
 
 1. 基于内核的 `su` 和权限管理。
 2. 基于 [metamodules](https://kernelsu.org/zh_CN/guide/metamodule.html) 的模块系统：可插拔的模块架构。
