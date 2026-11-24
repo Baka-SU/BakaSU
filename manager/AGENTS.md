@@ -67,20 +67,24 @@ repository depend on a ViewModel or UI component, and do not move repository wor
 
 ---
 
-## Wear Manager structure
+## Mobile and Wear Manager variants
 
-The phone and the watch use the `normal` and `wear` product flavors in one Gradle module (`:app`),
-one package (`org.bakasu.bakasu`) and one Koin container. Shared code lives in `app/src/main`;
-phone entry code lives in `app/src/normal`; Wear UI, data sources, ViewModels and resources live in
-`app/src/wear`. Keep package responsibilities unchanged when moving between source sets.
+The `:app` module defines the `mobile` and `wear` product flavors in the `device` dimension. Both use
+the same application ID and Koin setup.
+
+* `app/src/main` contains code and resources shared by both flavors.
+* `app/src/mobile` contains the phone UI and other mobile-only code and resources.
+* `app/src/wear` contains the watch UI and other Wear-only code and resources.
+
+Keep package responsibilities unchanged when moving code between source sets.
 
 ### Entry points
 
 * `KernelSUApplication` starts Koin and runs `InitializeApplicationUseCase` for both form factors.
-* Each flavor provides `ui/MainActivity.kt`. The normal implementation renders the phone UI;
+* Each flavor provides `ui/MainActivity.kt`. The mobile implementation renders the phone UI;
   the Wear implementation inherits `ui/wear/WearMainActivity.kt` directly. Both keep the same
   launcher component, alternate icon alias, shortcut and incoming Intent contracts. Do not restore
-  runtime forwarding from the phone entry point to a class absent from the normal APK.
+  runtime forwarding from the phone entry point to a class absent from the mobile APK.
 * Flavor-specific `di/PlatformModules.kt` registers dedicated repositories, use cases and
   ViewModels inside the existing shared Koin module groups.
 * `WearMainActivity` applies the language, initializes the manager, refreshes the home and app
@@ -96,9 +100,9 @@ phone entry code lives in `app/src/normal`; Wear UI, data sources, ViewModels an
   by the process permissions) and `WearFileProvider`.
 * `data/network/WearLinkRepository` and `OpenWearExternalLinkUseCase` belong to the wear source set.
   The authenticated RFCOMM companion bridge in `data/webui` remains shared; the phone-side
-  `WearBridgeSetupActivity` and `RemoteWebUIActivity` must remain available in normal builds.
+  `WearBridgeSetupActivity` and `RemoteWebUIActivity` must remain available in mobile builds.
 * `WearPreferencesViewModel` holds the watch-only preferences (pickers, links, screen shape, long
-  press feedback, keep screen on, back handling). Other Wear pages reuse the phone ViewModels, such
+  press feedback, keep screen on, back handling). Other Wear pages reuse shared ViewModels, such
   as `HomeViewModel`, `SuperUserViewModel`, `ModuleViewModel`, `SettingsViewModel`,
   `SulogViewModel`, `SuSFSViewModel`, `FlashViewModel`, `KernelFlashViewModel` and
   `ExecuteModuleActionViewModel`.
@@ -130,17 +134,27 @@ phone entry code lives in `app/src/normal`; Wear UI, data sources, ViewModels an
 * Below API 36 `WearSwipeToDismissBox` provides the in-app swipe back; from API 36 the platform
   predictive back and Wear Navigation 3 handle it.
 
-### Wear verification
+### Builds and distribution
 
-Gradle builds do not cover SU authorization, SUSFS kernels, round and square layouts, predictive
-back or the phone connection; check those on a watch when a change touches them.
+Use `assembleMobileRelease` or `assembleWearRelease` for a single flavor. `assembleRelease` builds
+both. Run `lintMobileDebug` and `lintWearDebug` to match the Manager CI lint checks.
 
-Use `assembleNormalRelease` or `assembleWearRelease` for one device type; `assembleRelease` builds
-both. Run the applicable lint tasks for both variants. Baseline and startup profiles are generated
-separately with `copyBaselineProfileIntoSrc` and `generateWearReleaseBaselineProfile`, selecting
-the corresponding device with `ANDROID_SERIAL`. Normal uses the upstream path under `src/main`;
-keep the Wear profiles under `src/wearRelease`.
-See `../docs/manager-apk-variants.md` for packaging, updates and distribution.
+CI builds and repacks the flavors separately as `Manager-mobile-release` and `Manager-wear-release`
+for Release. On `main`, CI also merges both into `Manager-release` for in-app Beta updates.
+See the [Manager build workflow](../.github/workflows/build-manager.yml).
+
+The updater selects the APK by flavor and ABI. Mobile also accepts the legacy `-normal-` APK
+filename segment for older releases.
+
+### Baseline profiles and Wear verification
+
+Select the corresponding device with `ANDROID_SERIAL` when generating baseline and startup profiles.
+Mobile uses `:app:copyBaselineProfileIntoSrc` and the upstream profile files under
+`app/src/main/generated/baselineProfiles/`. Wear uses `:app:generateWearReleaseBaselineProfile`
+and stores its profiles under `app/src/wearRelease/generated/baselineProfiles/`.
+
+Check SU authorization, SUSFS kernels, round and square layouts, predictive back and the phone
+connection on a watch when a change touches those behaviors.
 
 ---
 
@@ -151,8 +165,8 @@ See `../docs/manager-apk-variants.md` for packaging, updates and distribution.
 Place reusable UI components according to their intended scope:
 
 ```text
-org.bakasu.bakasu.ui.component        # shared components and phone UI components
-org.bakasu.bakasu.ui.wear.component   # Wear-only UI components
+org.bakasu.bakasu.ui.component        # shared in app/src/main, phone-only in app/src/mobile
+org.bakasu.bakasu.ui.wear.component   # Wear-only in app/src/wear
 ```
 
 Do not create parallel reusable-component packages inside individual pages, features, or view
