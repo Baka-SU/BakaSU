@@ -275,7 +275,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
-    implementation(libs.miuix.blur)
+    "mobileImplementation"(libs.miuix.blur)
     implementation(libs.miuix.nav)
 
     implementation(libs.aboutlibraries.core)
@@ -294,7 +294,7 @@ dependencies {
     implementation(libs.dev.rikka.rikkax.parcelablelist)
 
     implementation(libs.io.coil.kt.coil.compose)
-    implementation(libs.ucrop)
+    "mobileImplementation"(libs.ucrop)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)

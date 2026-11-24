@@ -21,6 +21,13 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.webkit.WebViewAssetLoader
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -290,4 +297,32 @@ internal fun createWebView(
     webUIState.webView = webView
     webView.addJavascriptInterface(webviewInterface, "ksu")
     webUIState.uiEvent = WebUIEvent.WebViewReady
+}
+
+@Composable
+internal fun HandleWebViewLifecycle(webUIState: WebUIState) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, webUIState) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> webUIState.webView?.onResume()
+                Lifecycle.Event.ON_PAUSE -> webUIState.webView?.onPause()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+}
+
+@Composable
+internal fun HandleConfigurationChanges(webUIState: WebUIState) {
+    val configuration = LocalConfiguration.current
+    LaunchedEffect(configuration.fontScale, webUIState.webView) {
+        webUIState.webView?.settings?.textZoom = (configuration.fontScale * 100).toInt()
+    }
 }

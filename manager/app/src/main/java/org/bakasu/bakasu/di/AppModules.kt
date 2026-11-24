@@ -184,11 +184,9 @@ import org.bakasu.bakasu.domain.usecase.UpdateCachedModuleEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.UpdatePlatformSettingUseCase
 import org.bakasu.bakasu.domain.usecase.ValidateSepolicyUseCase
 import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
-import org.bakasu.bakasu.ui.activity.util.ThemeUtils
 import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
-import org.bakasu.bakasu.ui.util.Shortcut
 import org.bakasu.bakasu.ui.viewmodel.AppProfileViewModel
 import org.bakasu.bakasu.ui.viewmodel.CompanionBridgeViewModel
 import org.bakasu.bakasu.ui.viewmodel.DynamicManagerViewModel
@@ -202,7 +200,6 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
 import org.bakasu.bakasu.ui.viewmodel.RepositorySourcesViewModel
-import org.bakasu.bakasu.ui.viewmodel.ScriptRunViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.SulogViewModel
@@ -325,12 +322,10 @@ val repositoryModule = module {
     }
     singleOf(::CardConfig)
     singleOf(::BackgroundManager)
-    singleOf(::ThemeUtils)
     singleOf(::LocaleHelper)
     singleOf(::LocaleRepository)
     singleOf(::SettingsPlatformRepository)
     singleOf(::ShortcutRepository)
-    singleOf(::Shortcut)
     singleOf(::MonetColorsProvider)
     singleOf(::ModuleUtils)
     single { HanziToPinyin.create() } bind TextTransliterator::class
@@ -465,7 +460,6 @@ val useCaseModule = module {
 
 val viewModelModule = module {
     platformViewModels()
-    viewModel { parameters -> ScriptRunViewModel(parameters[0], get(), get(), get(), get(), get()) }
     viewModel { parameters ->
         AppProfileViewModel(
             uid = parameters[0],

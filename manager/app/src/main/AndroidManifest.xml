@@ -136,40 +136,12 @@
             </intent-filter>
         </activity-alias>
 
-        <activity
-            android:name=".ui.webui.WebUIActivity"
-            android:autoRemoveFromRecents="true"
-            android:documentLaunchMode="intoExisting"
-            android:taskAffinity="${applicationId}.webui"
-            android:exported="false"
-            android:theme="@style/Theme.KernelSU.WebUI"
-            android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden"
-            />
-
-
-
-        <!-- Opened internally after Bluetooth app authentication, never by an exported deep link. -->
-        <activity
-            android:name=".ui.webui.RemoteWebUIActivity"
-            android:launchMode="singleTask"
-            android:autoRemoveFromRecents="true"
-            android:taskAffinity="${applicationId}.webui"
-            android:exported="false"
-            android:theme="@style/Theme.KernelSU.WebUI"
-            android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden" />
-        <activity android:name=".ui.webui.BridgeRequestActivity" android:exported="false" android:theme="@style/Theme.KernelSU" />
-        <activity android:name=".ui.webui.WearBridgeSetupActivity" android:exported="false" android:theme="@style/Theme.KernelSU" />
         <service android:name=".data.webui.CompanionBridgeService" android:exported="false" android:foregroundServiceType="connectedDevice" />
         <service android:name=".data.webui.BridgeCompanionDeviceService" android:exported="true" android:permission="android.permission.BIND_COMPANION_DEVICE_SERVICE">
             <intent-filter><action android:name="android.companion.CompanionDeviceService" /></intent-filter>
         </service>
 
 
-
-        <activity
-            android:name=".ui.screen.themeSettings.crop.BackgroundCropActivity"
-            android:exported="false"
-            android:theme="@style/Theme.KernelSU" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
