@@ -242,5 +242,5 @@
     <string name="wear_color_hex">Hex color</string>
     <string name="wear_script_unsupported">One-shot scripts cannot be run or installed from the watch repository yet.</string>
     <string name="wear_non_watch_title">Watch build on this device</string>
-    <string name="wear_non_watch_message">This APK is the Wear OS build of BakaSU and only works on watches. Install the Mobile APK on phones and tablets.</string>
+    <string name="wear_non_watch_message">This APK is the Wear OS build of BakaSU, designed for watches. Install the Mobile APK on phones and tablets.</string>
 </resources>

@@ -232,5 +232,5 @@
     <string name="wear_color_hex">十六进制颜色</string>
     <string name="wear_script_unsupported">暂不支持从手表仓库运行或安装一次性脚本。</string>
     <string name="wear_non_watch_title">此设备运行的是手表版</string>
-    <string name="wear_non_watch_message">此 APK 是 BakaSU 的 Wear OS 手表版本，仅能在手表上运行。手机和平板请改装 Mobile 版 APK。</string>
+    <string name="wear_non_watch_message">此 APK 是 BakaSU 的 Wear OS 手表版本，为手表设计。手机和平板请改装 Mobile 版 APK。</string>
 </resources>

@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear.screen.main
 
+import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Android
@@ -26,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
@@ -95,6 +97,11 @@ internal fun WearHomePage(
     val managers = managerSignatures(state)
     // Build notices are warnings; missing root or incompatible interfaces block features and are errors.
     val warnings = buildList {
+        // The Wear APK can be sideloaded onto phones; it still runs there, so only warn like the
+        // unofficial-manager notice and point the user at the Mobile APK.
+        if (!LocalContext.current.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) {
+            add(WearHomeWarning(R.string.wear_non_watch_title, stringResource(R.string.wear_non_watch_message), WearStatusTone.WARNING))
+        }
         if (status.ksuVersion != null && !status.isRootAvailable) {
             add(WearHomeWarning(R.string.wear_warning_root, stringResource(R.string.grant_root_failed), WearStatusTone.ERROR))
         }
