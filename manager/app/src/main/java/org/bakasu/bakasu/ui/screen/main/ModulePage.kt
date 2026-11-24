@@ -1086,7 +1086,8 @@ private fun ModuleList(
                                 drawable = ContextCompat.getDrawable(
                                     LocalContext.current,
                                     R.mipmap.ic_launcher,
-                                )),
+                                ),
+                            ),
                             contentDescription = null,
                             contentScale = FixedScale(1.5f),
                         )
