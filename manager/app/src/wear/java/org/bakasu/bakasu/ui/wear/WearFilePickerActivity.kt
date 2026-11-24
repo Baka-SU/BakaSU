@@ -10,7 +10,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.MaterialTheme
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.data.file.WearFileProvider
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
+import org.bakasu.bakasu.ui.wear.screen.file.WearFilePage
 
 /**
  * The app's own document picker for watches without a usable DocumentsUI. It answers the standard

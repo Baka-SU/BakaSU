@@ -19,6 +19,7 @@ import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
+import org.bakasu.bakasu.ui.wear.screen.module.asset
 
 /** [VERIFYING] follows a finished transfer while the file is checked; nothing is downloading then. */
 enum class ModuleDownloadPhase { DOWNLOADING, VERIFYING, FAILED, VERIFY_FAILED, COMPLETED }

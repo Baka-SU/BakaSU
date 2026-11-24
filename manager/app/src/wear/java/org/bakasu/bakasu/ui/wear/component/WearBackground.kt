@@ -31,6 +31,7 @@ import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.theme.extractSeedColor
+import org.bakasu.bakasu.ui.wear.WearManagerTheme
 import org.koin.compose.koinInject
 
 /**

@@ -1,6 +1,8 @@
 package org.bakasu.bakasu.ui.wear
 
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.wear.screen.main.settingsCategoryTitle
+import org.bakasu.bakasu.ui.wear.screen.susfs.WearSuSFSSection
 
 /** Titles come from navigation, including when a restored list starts below its header. */
 internal fun WearRoute.titleResource(mainTitle: Int): Int = when (this) {

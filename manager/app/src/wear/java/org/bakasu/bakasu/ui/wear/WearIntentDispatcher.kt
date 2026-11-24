@@ -12,6 +12,7 @@ import org.bakasu.bakasu.data.file.ModuleUtils
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
 import org.bakasu.bakasu.ui.navigation.LaunchAction
 import org.bakasu.bakasu.ui.navigation.resolveLaunchIntent
+import org.bakasu.bakasu.ui.wear.screen.module.WearModuleInstaller
 import org.koin.compose.koinInject
 
 /** Consumes forwarded launches with the same validation as the phone, using Wear destinations. */
