@@ -139,8 +139,9 @@ Keep package responsibilities unchanged when moving code between source sets.
 Use `assembleMobileRelease` or `assembleWearRelease` for a single flavor. `assembleRelease` builds
 both. Run `lintMobileDebug` and `lintWearDebug` to match the Manager CI lint checks.
 
-CI builds and repacks the flavors separately as `Manager-mobile-release` and `Manager-wear-release`
-for Release. On `main`, CI also merges both into `Manager-release` for in-app Beta updates.
+CI builds and repacks the flavors separately as `Manager-release` (mobile) and `Wear-Manager-release`
+for Release. Installed Managers fetch the artifact matching their flavor for in-app Beta updates;
+the mobile artifact keeps its legacy name for compatibility with already installed versions.
 See the [Manager build workflow](../.github/workflows/build-manager.yml).
 
 The updater selects the APK by flavor and ABI. Mobile also accepts the legacy `-normal-` APK

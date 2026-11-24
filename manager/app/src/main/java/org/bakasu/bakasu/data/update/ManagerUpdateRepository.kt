@@ -20,7 +20,10 @@ class ManagerUpdateRepository(
         const val REPOSITORY = "Baka-SU/BakaSU"
         const val WORKFLOW_FILE = "build-manager.yml"
         const val BRANCH = "main"
-        const val RELEASE_ARTIFACT = "Manager-release"
+
+        // Keep in sync with the artifact upload names in .github/workflows/build-manager.yml.
+        // Mobile keeps the legacy name used by already installed Managers.
+        val releaseArtifact = if (BuildConfig.FLAVOR == "wear") "Wear-Manager-release" else "Manager-release"
         val GITHUB_HEADERS = mapOf("Accept" to "application/vnd.github+json")
 
         // sync with build.gradle.kts
@@ -86,7 +89,7 @@ class ManagerUpdateRepository(
             fileName = "BakaSU_${headSha.take(SHORT_SHA_LENGTH)}_" +
                 "$versionCode-${BuildConfig.FLAVOR}-$preferredAbi-release.apk",
             source = ManagerApkSource.NightlyArtifact(
-                url = "https://nightly.link/$REPOSITORY/actions/runs/$runId/$RELEASE_ARTIFACT.zip",
+                url = "https://nightly.link/$REPOSITORY/actions/runs/$runId/$releaseArtifact.zip",
                 preferredAbi = preferredAbi,
                 expectedVersionCode = versionCode,
             ),

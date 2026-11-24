@@ -308,23 +308,13 @@ jobs:
         with:
           name: Manager-gradle-${{ matrix.build_variant }}-${{ matrix.build_type }}
         
+      # Installed Managers fetch "Manager-release" for in-app Beta updates, so the mobile
+      # artifact keeps that legacy name; wear gets its own artifact.
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Manager-${{ matrix.build_variant }}-${{ matrix.build_type }}
+          name: ${{ matrix.build_variant == 'wear' && format('Wear-Manager-{0}', matrix.build_type) || format('Manager-{0}', matrix.build_type) }}
           path: dist/*.apk
-
-  merge-beta-artifact:
-    needs: repack-manager
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      # Installed Managers use this artifact name for in-app Beta updates.
-      - name: Upload Beta update artifact
-        uses: actions/upload-artifact/merge@v7
-        with:
-          name: Manager-release
-          pattern: 'Manager-{mobile,wear}-release'
 
   telegram-bot-api:
     name: Telegram Bot API
@@ -394,13 +384,13 @@ jobs:
       - name: Download Mobile Release artifact
         uses: actions/download-artifact@v8
         with:
-          name: Manager-mobile-release
+          name: Manager-release
           path: ./apk/release
 
       - name: Download Wear Release artifact
         uses: actions/download-artifact@v8
         with:
-          name: Manager-wear-release
+          name: Wear-Manager-release
           path: ./apk/release
 
       - name: Download Telegram Bot API Binary

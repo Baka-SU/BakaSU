@@ -18,13 +18,13 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: manager
-          name: Manager-mobile-release
+          name: Manager-release
 
       - name: Download Wear Manager artifact
         uses: actions/download-artifact@v8
         with:
           path: manager
-          name: Manager-wear-release
+          name: Wear-Manager-release
 
       - name: Check is rc tags
         id: is_rc_tag

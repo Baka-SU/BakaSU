@@ -108,8 +108,8 @@ Branch: {branch}
 ```
 {commit_line}
 [Workflow run]({run_url})
-[Mobile Debug](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main/Manager-mobile-debug.zip)
-[Wear Debug](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main/Manager-wear-debug.zip)
+[Mobile Debug](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main/Manager-debug.zip)
+[Wear Debug](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main/Wear-Manager-debug.zip)
 """.strip()
 
 MAIN_UPDATED_MSG ="""
