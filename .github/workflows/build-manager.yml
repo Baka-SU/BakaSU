@@ -177,7 +177,7 @@ jobs:
 
           if [ "${{ matrix.build_type }}" == "release" ]; then
             # Keep the Release variants' R8 tasks from competing for the Gradle heap.
-            ./gradlew :app:assembleNormalRelease "${build_args[@]}"
+            ./gradlew :app:assembleMobileRelease "${build_args[@]}"
             ./gradlew :app:assembleWearRelease "${build_args[@]}"
           else
             ./gradlew assemble${{ matrix.build_type }} "${build_args[@]}"
@@ -188,7 +188,7 @@ jobs:
         with:
           name: Manager-gradle-${{ matrix.build_type }}
           path: |
-            manager/app/build/outputs/apk/normal/${{ matrix.build_type }}/*.apk
+            manager/app/build/outputs/apk/mobile/${{ matrix.build_type }}/*.apk
             manager/app/build/outputs/apk/wear/${{ matrix.build_type }}/*.apk
 
       - name: Upload mappings
@@ -196,7 +196,7 @@ jobs:
         with:
           name: "Manager-mappings-${{ matrix.build_type }}"
           path: |
-            manager/app/build/outputs/mapping/normalRelease/
+            manager/app/build/outputs/mapping/mobileRelease/
             manager/app/build/outputs/mapping/wearRelease/
           if-no-files-found: ignore
 

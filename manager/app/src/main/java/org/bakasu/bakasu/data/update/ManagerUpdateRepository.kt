@@ -30,7 +30,7 @@ class ManagerUpdateRepository(
     }
 
     private val managerApkPattern = Regex(
-        "^BakaSU_(.+)_(\\d+)-(normal|wear)-(arm64-v8a|armeabi-v7a|x86_64|riscv64|universal)-release\\.apk$",
+        "^BakaSU_(.+)_(\\d+)-(mobile|normal|wear)-(arm64-v8a|armeabi-v7a|x86_64|riscv64|universal)-release\\.apk$",
     )
     private val commitCountLinkPattern = Regex("""[?&]page=(\d+)>; rel="last"""")
 
@@ -142,7 +142,12 @@ class ManagerUpdateRepository(
 
     private fun parseApkName(fileName: String): ParsedApkName? {
         val match = managerApkPattern.matchEntire(fileName) ?: return null
-        if (match.groupValues[3] != BuildConfig.FLAVOR) return null
+        val flavor = match.groupValues[3]
+        // "normal" is the legacy name of the mobile flavor; assets published before the
+        // rename must stay selectable for mobile clients.
+        val matchesFlavor = flavor == BuildConfig.FLAVOR ||
+            (BuildConfig.FLAVOR == "mobile" && flavor == "normal")
+        if (!matchesFlavor) return null
         val versionCode = match.groupValues[2].toIntOrNull() ?: return null
         return ParsedApkName(
             versionName = match.groupValues[1],

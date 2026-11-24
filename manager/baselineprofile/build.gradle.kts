@@ -26,7 +26,7 @@ android {
     buildFeatures { buildConfig = true }
     flavorDimensions += "device"
     productFlavors {
-        create("normal") { dimension = "device" }
+        create("mobile") { dimension = "device" }
         create("wear") { dimension = "device" }
     }
 

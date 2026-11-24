@@ -9,7 +9,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 /**
- * Run :app:copyBaselineProfileIntoSrc for normal or :app:generateWearReleaseBaselineProfile for Wear
+ * Run :app:copyBaselineProfileIntoSrc for mobile or :app:generateWearReleaseBaselineProfile for Wear
  * with only the corresponding device selected through ANDROID_SERIAL.
  * Match the app language to the device language for the resource-backed Wear selectors.
  * Superuser and Modules require a working KernelSU environment on the watch.

@@ -108,7 +108,7 @@ Branch: {branch}
 ```
 {commit_line}
 [Workflow run]({run_url})
-[Get latest main Debug builds: normal and wear](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main/Manager-debug.zip)
+[Get latest main Debug builds: mobile and wear](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main/Manager-debug.zip)
 """.strip()
 
 MAIN_UPDATED_MSG ="""
@@ -226,9 +226,9 @@ async def send_media_group(bot: Bot, chat_id: int, media: list, message_thread_i
     except:
         raise
 
-MANAGER_FLAVORS = {"normal": "Phone / 手机 normal", "wear": "Watch / 手表 wear"}
+MANAGER_FLAVORS = {"mobile": "Phone / 手机 mobile", "wear": "Watch / 手表 wear"}
 MANAGER_APK = re.compile(
-    r"^BakaSU_(.+)_(\d+)-(normal|wear)-(arm64-v8a|armeabi-v7a|x86_64|riscv64|universal)-release\.apk$"
+    r"^BakaSU_(.+)_(\d+)-(mobile|wear)-(arm64-v8a|armeabi-v7a|x86_64|riscv64|universal)-release\.apk$"
 )
 
 
