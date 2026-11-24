@@ -4,7 +4,9 @@ import android.content.res.Configuration
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Error
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -34,6 +36,7 @@ import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.MotionScheme
+import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import com.materialkolor.PaletteStyle
 import com.materialkolor.ktx.toColor
@@ -48,6 +51,7 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearSwipeEnabled
 import org.bakasu.bakasu.ui.wear.component.LocalWearTimeOptions
+import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearLoadingScreen
@@ -218,6 +222,32 @@ fun WearStartupStatus(error: String? = null) {
             WearList { spec ->
                 item { WearPageHeader(spec, stringResource(R.string.app_name)) }
                 item { WearStatusItem(spec, Icons.Rounded.Error, error, tone = WearStatusTone.ERROR) }
+            }
+        }
+    }
+}
+
+/** Blocking notice shown when the Wear APK is sideloaded onto a device without the watch feature. */
+@Composable
+fun WearNonWatchWarning(onClose: () -> Unit) {
+    AppScaffold(timeText = { WearTimeText() }, containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface) {
+        WearList { spec ->
+            item { WearPageHeader(spec, stringResource(R.string.wear_non_watch_title)) }
+            item {
+                WearStatusItem(
+                    spec,
+                    Icons.Rounded.Warning,
+                    stringResource(R.string.wear_non_watch_message),
+                    tone = WearStatusTone.WARNING,
+                )
+            }
+            item {
+                WearActionButton(
+                    icon = Icons.Rounded.Close,
+                    label = stringResource(R.string.close),
+                    onClick = onClose,
+                    transformation = SurfaceTransformation(spec),
+                )
             }
         }
     }

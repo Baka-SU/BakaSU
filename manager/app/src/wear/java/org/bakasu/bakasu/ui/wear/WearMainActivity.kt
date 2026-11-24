@@ -2,6 +2,7 @@ package org.bakasu.bakasu.ui.wear
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -39,6 +40,12 @@ open class WearMainActivity : WearActivity() {
         // Compose owns the page base, including its predictive-back alpha. An opaque window
         // background would keep that base black after the Compose layer becomes transparent.
         window.setBackgroundDrawableResource(android.R.color.transparent)
+        // The Wear APK can be sideloaded onto phones. Block Wear navigation and incoming
+        // intents there and point the user at the Mobile APK instead.
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) {
+            setContent { WearManagerTheme { WearNonWatchWarning(onClose = ::finish) } }
+            return
+        }
         lifecycleScope.launch { ensureManagerInstalled() }
         // Repository data is not restored with the Activity's saved state.
         superUserViewModel.dispatch(SuperUserUiAction.LoadInitialData)
