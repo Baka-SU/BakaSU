@@ -293,17 +293,6 @@ fun UmountManagerScreen() {
 }
 
 @Composable
-internal fun Int.toUmountFlagName(): String = when (this) {
-    -1 -> stringResource(R.string.unknown)
-    0 -> "UMOUNT_UNUSED"
-    1 -> "MNT_FORCE"
-    2 -> "MNT_DETACH"
-    4 -> "MNT_EXPIRE"
-    8 -> "UMOUNT_NOFOLLOW"
-    else -> toString()
-}
-
-@Composable
 fun AddUmountPathDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, Int) -> Unit,
