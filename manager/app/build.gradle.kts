@@ -3,6 +3,7 @@
 import cc.star0.wear.lib.cnwearoverlay.gradle.CnWearOverlayPlugin.ExtractRuntimeJars
 import cc.star0.wear.lib.cnwearoverlay.gradle.asm.CnWearOverlayClassVisitorFactory
 import com.android.build.api.instrumentation.InstrumentationScope
+import com.android.build.api.variant.FilterConfiguration
 
 plugins {
     alias(libs.plugins.agp.app)
@@ -209,6 +210,22 @@ androidComponents {
             parameters.patchHapticsKt.set(true)
             parameters.injectHasWearSdk.set(true)
             parameters.remapXiaomiConstants.set(true)
+        }
+    }
+
+    // Mobile APKs keep the legacy flavorless file name so Managers installed before the
+    // mobile/wear split can still match them in Beta artifacts and release assets.
+    onVariants(selector().withFlavor("device" to "mobile")) { variant ->
+        variant.outputs.forEach { output ->
+            val abi = output.filters.firstOrNull { it.filterType == FilterConfiguration.FilterType.ABI }?.identifier
+            val abiSegment = when {
+                abi != null -> "-$abi"
+                variant.outputs.size > 1 -> "-universal"
+                else -> ""
+            }
+            output.outputFileName.set(
+                "BakaSU_${managerVersionName}_${managerVersionCode}$abiSegment-${variant.buildType}.apk",
+            )
         }
     }
 }

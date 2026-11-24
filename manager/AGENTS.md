@@ -144,8 +144,10 @@ for Release. Installed Managers fetch the artifact matching their flavor for in-
 the mobile artifact keeps its legacy name for compatibility with already installed versions.
 See the [Manager build workflow](../.github/workflows/build-manager.yml).
 
-The updater selects the APK by flavor and ABI. Mobile also accepts the legacy `-normal-` APK
-filename segment for older releases.
+The updater selects the APK by flavor and ABI. Mobile APKs keep the legacy flavorless filename
+(`BakaSU_<version>_<code>-<abi>-release.apk`) so Managers installed before the mobile/wear split
+can still match them; the `-mobile-` and legacy `-normal-` segments are also accepted. Wear APKs
+carry the `-wear-` segment.
 
 ### Baseline profiles and Wear verification
 

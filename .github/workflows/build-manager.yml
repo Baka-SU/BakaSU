@@ -165,9 +165,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build APK
-        env:
-          BUILD_TYPE: ${{ matrix.build_type }}
-          BUILD_VARIANT: ${{ matrix.build_variant }}
         run: |
           build_args=("-Pcommit=${{ steps.commit.outputs.COMMIT_SHA }}")
           if [ "${{ github.event_name }}" == "pull_request" ]; then
@@ -179,7 +176,7 @@ jobs:
             build_args+=("-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME" "-PKSU_NAME=$KSU_NAME")
           fi
 
-          ./gradlew ":app:assemble${BUILD_VARIANT^}${BUILD_TYPE^}" "${build_args[@]}"
+          ./gradlew assemble${{ matrix.build_variant }}${{ matrix.build_type }} "${build_args[@]}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7

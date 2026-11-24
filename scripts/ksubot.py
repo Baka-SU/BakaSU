@@ -229,7 +229,7 @@ async def send_media_group(bot: Bot, chat_id: int, media: list, message_thread_i
 
 MANAGER_FLAVORS = {"mobile": "Phone / 手机 mobile", "wear": "Watch / 手表 wear"}
 MANAGER_APK = re.compile(
-    r"^BakaSU_(.+)_(\d+)-(mobile|wear)-(arm64-v8a|armeabi-v7a|x86_64|riscv64|universal)-release\.apk$"
+    r"^BakaSU_(.+)_(\d+)-(?:(mobile|wear)-)?(arm64-v8a|armeabi-v7a|x86_64|riscv64|universal)-release\.apk$"
 )
 
 
@@ -244,7 +244,7 @@ def group_release_files(files):
             raise ValueError(f"Unrecognized Manager release APK: {name}")
         if not os.path.isfile(file):
             raise FileNotFoundError(file)
-        groups[match.group(3)].append(file)
+        groups[match.group(3) or "mobile"].append(file)
     missing = [flavor for flavor, paths in groups.items() if not paths]
     if missing:
         raise ValueError(f"Missing Manager release APKs: {', '.join(missing)}")

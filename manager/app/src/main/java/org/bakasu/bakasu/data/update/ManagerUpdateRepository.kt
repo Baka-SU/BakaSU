@@ -33,7 +33,7 @@ class ManagerUpdateRepository(
     }
 
     private val managerApkPattern = Regex(
-        "^BakaSU_(.+)_(\\d+)-(mobile|normal|wear)-(arm64-v8a|armeabi-v7a|x86_64|riscv64|universal)-release\\.apk$",
+        "^BakaSU_(.+)_(\\d+)-(?:(mobile|normal|wear)-)?(arm64-v8a|armeabi-v7a|x86_64|riscv64|universal)-release\\.apk$",
     )
     private val commitCountLinkPattern = Regex("""[?&]page=(\d+)>; rel="last"""")
 
@@ -81,13 +81,15 @@ class ManagerUpdateRepository(
         if (versionCode <= currentVersionCode) return@withContext null
 
         val preferredAbi = supportedAbis.firstOrNull() ?: UNIVERSAL_ABI
+        // Mobile APKs keep the legacy flavorless name (see managerApkPattern).
+        val flavorSegment = if (BuildConfig.FLAVOR == "wear") "wear-" else ""
         return@withContext ManagerUpdateInfo(
             channel = ManagerUpdateChannel.BETA,
             versionCode = versionCode,
             versionName = headSha.take(SHORT_SHA_LENGTH),
             abi = preferredAbi,
             fileName = "BakaSU_${headSha.take(SHORT_SHA_LENGTH)}_" +
-                "$versionCode-${BuildConfig.FLAVOR}-$preferredAbi-release.apk",
+                "$versionCode-$flavorSegment$preferredAbi-release.apk",
             source = ManagerApkSource.NightlyArtifact(
                 url = "https://nightly.link/$REPOSITORY/actions/runs/$runId/$releaseArtifact.zip",
                 preferredAbi = preferredAbi,
@@ -145,9 +147,9 @@ class ManagerUpdateRepository(
 
     private fun parseApkName(fileName: String): ParsedApkName? {
         val match = managerApkPattern.matchEntire(fileName) ?: return null
-        val flavor = match.groupValues[3]
-        // "normal" is the legacy name of the mobile flavor; assets published before the
-        // rename must stay selectable for mobile clients.
+        // Mobile APKs keep the legacy flavorless name, and "normal" is the legacy name of
+        // the mobile flavor; both must stay selectable for mobile clients.
+        val flavor = match.groupValues[3].ifEmpty { "mobile" }
         val matchesFlavor = flavor == BuildConfig.FLAVOR ||
             (BuildConfig.FLAVOR == "mobile" && flavor == "normal")
         if (!matchesFlavor) return null
