@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.visible
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -1286,6 +1287,7 @@ fun ModuleItem(
                 .run {
                     if (module.hasActionScript || module.hasWebUi) {
                         combinedClickable(
+                            enabled = (!module.remove && isEnabled),
                             onClick = {
                                 if (module.hasWebUi) {
                                     onClick(module)
@@ -1467,6 +1469,7 @@ fun ModuleItem(
                         modifier = Modifier
                             .padding(vertical = 5.dp)
                             .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
+                            .visible(!module.remove && isEnabled)
                             .clip(ButtonDefaults.filledTonalShape)
                             .combinedClickable(
                                 onClick = {
@@ -1477,17 +1480,8 @@ fun ModuleItem(
                                     onModuleAddShortcut(module, ShortcutType.Action)
                                 },
                             ),
-                        color =
-                            if (!module.remove && isEnabled) {
-                                ButtonDefaults.filledTonalButtonColors().containerColor
-                            } else {
-                                ButtonDefaults.filledTonalButtonColors().disabledContainerColor
-                            },
-                        contentColor = if (!module.remove && isEnabled) {
-                            ButtonDefaults.filledTonalButtonColors().contentColor
-                        } else {
-                            ButtonDefaults.filledTonalButtonColors().disabledContentColor
-                        },
+                        color = ButtonDefaults.filledTonalButtonColors().containerColor,
+                        contentColor = ButtonDefaults.filledTonalButtonColors().contentColor,
                     ) {
                         Icon(
                             modifier = Modifier
@@ -1503,6 +1497,7 @@ fun ModuleItem(
                     Surface(
                         modifier = Modifier
                             .padding(vertical = 5.dp)
+                            .visible(!module.remove && isEnabled)
                             .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
                             .clip(ButtonDefaults.filledTonalShape)
                             .combinedClickable(
@@ -1511,17 +1506,8 @@ fun ModuleItem(
                                     onModuleAddShortcut(module, ShortcutType.WebUI)
                                 },
                             ),
-                        color =
-                            if (!module.remove && isEnabled) {
-                                ButtonDefaults.filledTonalButtonColors().containerColor
-                            } else {
-                                ButtonDefaults.filledTonalButtonColors().disabledContainerColor
-                            },
-                        contentColor = if (!module.remove && isEnabled) {
-                            ButtonDefaults.filledTonalButtonColors().contentColor
-                        } else {
-                            ButtonDefaults.filledTonalButtonColors().disabledContentColor
-                        },
+                        color = ButtonDefaults.filledTonalButtonColors().containerColor,
+                        contentColor = ButtonDefaults.filledTonalButtonColors().contentColor,
                     ) {
                         Icon(
                             modifier = Modifier
@@ -1538,23 +1524,15 @@ fun ModuleItem(
                 if (updateUrl.isNotEmpty()) {
                     Surface(
                         modifier = Modifier
+                            .visible(!module.remove)
                             .padding(vertical = 5.dp)
                             .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
                             .clip(ButtonDefaults.filledTonalShape)
                             .clickable {
                                 onUpdate(module)
                             },
-                        color =
-                            if (!module.remove) {
-                                ButtonDefaults.filledTonalButtonColors().containerColor
-                            } else {
-                                ButtonDefaults.filledTonalButtonColors().disabledContainerColor
-                            },
-                        contentColor = if (!module.remove) {
-                            ButtonDefaults.filledTonalButtonColors().contentColor
-                        } else {
-                            ButtonDefaults.filledTonalButtonColors().disabledContentColor
-                        },
+                        color = ButtonDefaults.filledTonalButtonColors().containerColor,
+                        contentColor = ButtonDefaults.filledTonalButtonColors().contentColor,
                     ) {
                         Icon(
                             modifier = Modifier
