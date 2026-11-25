@@ -80,6 +80,7 @@ private data class ModuleControls(
     val search: String = "",
     val isNeedRefresh: Boolean = false,
     val moduleSizes: Map<String, String> = emptyMap(),
+    val sortEnabledSnapshot: Map<String, Boolean> = emptyMap(),
 )
 
 class ModuleViewModel(
@@ -112,6 +113,7 @@ class ModuleViewModel(
                 search = local.search,
                 sortEnabledFirst = preferences.sortEnabledFirst,
                 sortActionFirst = preferences.sortActionFirst,
+                enabledSnapshot = local.sortEnabledSnapshot,
             ),
             moduleSizes = local.moduleSizes,
             isRefreshing = source.refreshing,
@@ -149,6 +151,7 @@ class ModuleViewModel(
 
             is ModuleUiAction.Sort -> {
                 modulePreferences.setSort(action.enabledFirst, action.actionFirst)
+                controls.update { it.copy(sortEnabledSnapshot = currentEnabledSnapshot()) }
             }
 
             is ModuleUiAction.SetShowMoreInfo -> {
@@ -199,7 +202,12 @@ class ModuleViewModel(
     private suspend fun refreshNow(manual: Boolean) {
         refreshInstalledModules(manual, isModuleUpdateCheckEnabled())
             .onSuccess { needsLocalNetworkPermission ->
-                controls.update { it.copy(isNeedRefresh = false) }
+                controls.update {
+                    it.copy(
+                        isNeedRefresh = false,
+                        sortEnabledSnapshot = currentEnabledSnapshot(),
+                    )
+                }
                 mutableEvents.tryEmit(ModuleUiEvent.RefreshCompleted)
                 if (needsLocalNetworkPermission) mutableEvents.emit(ModuleUiEvent.LocalNetworkPermissionRequired)
             }
@@ -208,33 +216,38 @@ class ModuleViewModel(
             }
     }
 
+    private fun currentEnabledSnapshot(): Map<String, Boolean> =
+        observeInstalledModules().value.modules.associate { it.dirId to it.enabled }
+
     private fun buildModuleList(
         modules: List<InstalledModule>,
         search: String,
         sortEnabledFirst: Boolean,
         sortActionFirst: Boolean,
+        enabledSnapshot: Map<String, Boolean>,
     ): List<InstalledModule> {
         val comparator = compareBy<InstalledModule>(
             {
                 val executable = it.hasWebUi || it.hasActionScript
+                val enabled = enabledSnapshot[it.dirId] ?: it.enabled
                 when {
-                    it.metamodule && it.enabled -> 0
+                    it.metamodule -> 0
 
                     sortEnabledFirst && sortActionFirst -> when {
-                        it.enabled && executable -> 1
-                        it.enabled -> 2
+                        enabled && executable -> 1
+                        enabled -> 2
                         executable -> 3
                         else -> 4
                     }
 
-                    sortEnabledFirst -> if (it.enabled) 1 else 2
+                    sortEnabledFirst -> if (enabled) 1 else 2
 
                     sortActionFirst -> if (executable) 1 else 2
 
                     else -> 1
                 }
             },
-            { if (sortEnabledFirst) !it.enabled else false },
+            { if (sortEnabledFirst) !(enabledSnapshot[it.dirId] ?: it.enabled) else false },
             { if (sortActionFirst) !(it.hasWebUi || it.hasActionScript) else false },
         ).thenBy(Collator.getInstance(Locale.getDefault()), InstalledModule::id)
 
