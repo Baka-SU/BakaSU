@@ -16,13 +16,9 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -182,20 +178,6 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
 import org.bakasu.bakasu.ui.webui.WebUIActivity
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-
-private const val ModuleButtonAnimDuration = 300
-
-private val moduleButtonEnter = fadeIn(
-    tween(ModuleButtonAnimDuration, easing = FastOutSlowInEasing),
-) + expandHorizontally(
-    animationSpec = tween(ModuleButtonAnimDuration, easing = FastOutSlowInEasing),
-)
-
-private val moduleButtonExit = fadeOut(
-    tween(ModuleButtonAnimDuration, easing = FastOutSlowInEasing),
-) + shrinkHorizontally(
-    animationSpec = tween(ModuleButtonAnimDuration, easing = FastOutSlowInEasing),
-)
 
 enum class ShortcutType {
     Action,
@@ -1008,7 +990,7 @@ private fun ModuleList(
 
             items(
                 items = uiState.moduleList,
-                key = { "module-$it.id" },
+                key = { it.id },
             ) { module ->
                 ModuleItem(
                     viewModel = viewModel,
@@ -1492,8 +1474,8 @@ fun ModuleItem(
                 if (module.hasActionScript) {
                     AnimatedVisibility(
                         visible = !module.remove && isEnabled,
-                        enter = moduleButtonEnter,
-                        exit = moduleButtonExit,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
                     ) {
                         Surface(
                             modifier = Modifier
@@ -1525,8 +1507,8 @@ fun ModuleItem(
                 if (module.hasWebUi) {
                     AnimatedVisibility(
                         visible = !module.remove && isEnabled,
-                        enter = moduleButtonEnter,
-                        exit = moduleButtonExit,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
                     ) {
                         Surface(
                             modifier = Modifier
@@ -1558,8 +1540,8 @@ fun ModuleItem(
                 if (updateUrl.isNotEmpty()) {
                     AnimatedVisibility(
                         visible = !module.remove,
-                        enter = moduleButtonEnter,
-                        exit = moduleButtonExit,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
                     ) {
                         Surface(
                             modifier = Modifier
