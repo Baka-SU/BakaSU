@@ -1472,7 +1472,11 @@ fun ModuleItem(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (module.hasActionScript) {
-                    AnimatedVisibility(!module.remove && isEnabled) {
+                    AnimatedVisibility(
+                        visible = !module.remove && isEnabled,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
                         Surface(
                             modifier = Modifier
                                 .padding(vertical = 5.dp)
@@ -1501,7 +1505,11 @@ fun ModuleItem(
                 }
 
                 if (module.hasWebUi) {
-                    AnimatedVisibility(!module.remove && isEnabled) {
+                    AnimatedVisibility(
+                        visible = !module.remove && isEnabled,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
                         Surface(
                             modifier = Modifier
                                 .padding(vertical = 5.dp)
@@ -1530,7 +1538,11 @@ fun ModuleItem(
                 Spacer(modifier = Modifier.weight(1f, true))
 
                 if (updateUrl.isNotEmpty()) {
-                    AnimatedVisibility(!module.remove) {
+                    AnimatedVisibility(
+                        visible = !module.remove,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
                         Surface(
                             modifier = Modifier
                                 .padding(vertical = 5.dp)
