@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,7 +18,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -34,12 +32,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.LocalReduceMotion
-import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.drawCircularProgressIndicator
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.DownloadFailureReason
 import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
@@ -144,27 +139,16 @@ internal fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState
                 }
             }
         }
-        val ringColors = ProgressIndicatorDefaults.colors(indicatorColor = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-        val ringStroke = CircularProgressIndicatorDefaults.smallStrokeWidth
-        // Use the M3 custom-animation API: its animated wrapper retains the first progress lambda
-        // and adds its own animation, which would hide this attempt's failure transition.
-        Spacer(
-            Modifier.fillMaxSize().padding(CircularProgressIndicatorDefaults.FullScreenPadding)
-                .testTag("module-download-ring").semantics {
-                    if (failed) {
-                        contentDescription = failureTitle
-                    } else {
-                        progressBarRangeInfo = state.fraction?.let { ProgressBarRangeInfo(it, 0f..1f) } ?: ProgressBarRangeInfo.Indeterminate
-                    }
-                }.drawBehind {
-                    drawCircularProgressIndicator(
-                        progress = if (failed) failedProgress.value else fraction(),
-                        colors = ringColors,
-                        strokeWidth = ringStroke,
-                        startAngle = 300f,
-                        endAngle = 240f,
-                    )
-                },
+        WearEdgeProgressIndicator(
+            progress = { if (failed) failedProgress.value else fraction() },
+            modifier = Modifier.testTag("module-download-ring").semantics {
+                if (failed) {
+                    contentDescription = failureTitle
+                } else {
+                    progressBarRangeInfo = state.fraction?.let { ProgressBarRangeInfo(it, 0f..1f) } ?: ProgressBarRangeInfo.Indeterminate
+                }
+            },
+            indicatorColor = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
         )
     }
 }

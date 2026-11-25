@@ -1,9 +1,9 @@
 package org.bakasu.bakasu.ui.wear.screen.webui
 
 import android.annotation.SuppressLint
-import android.graphics.Bitmap
 import android.view.View
 import android.webkit.RenderProcessGoneDetail
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -11,10 +11,12 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.progressSemantics
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -27,6 +29,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.usecase.OpenWearExternalLinkUseCase
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearBackground
+import org.bakasu.bakasu.ui.wear.component.WearEdgeProgressIndicator
 import org.bakasu.bakasu.ui.wear.component.WearLoadFailureScreen
 import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 import org.bakasu.bakasu.ui.wear.component.WearViewportWebView
@@ -42,8 +45,9 @@ import org.koin.compose.koinInject
 @Composable
 internal fun WearBrowserPage(url: String, onBack: () -> Unit, onOpened: () -> Unit = {}, onUnavailable: () -> Unit) {
     val context = LocalContext.current
-    var attempt by remember(url) { androidx.compose.runtime.mutableIntStateOf(0) }
-    var loading by remember(url, attempt) { mutableStateOf(true) }
+    var attempt by remember(url) { mutableIntStateOf(0) }
+    var loadProgress by remember(url, attempt) { mutableIntStateOf(0) }
+    var opened by remember(url, attempt) { mutableStateOf(false) }
     var pageFailed by remember(url, attempt) { mutableStateOf(false) }
     val openExternal = koinInject<OpenWearExternalLinkUseCase>()
     val toast = LocalWearToast.current
@@ -56,15 +60,19 @@ internal fun WearBrowserPage(url: String, onBack: () -> Unit, onOpened: () -> Un
             WearViewportWebView(context).apply {
                 setBackgroundColor(android.graphics.Color.BLACK)
                 settings.javaScriptEnabled = true
+                webChromeClient = object : WebChromeClient() {
+                    override fun onProgressChanged(view: WebView, newProgress: Int) {
+                        loadProgress = newProgress
+                    }
+                }
                 webViewClient = WearBrowserClient(
-                    onOpened = { currentOnOpened() },
+                    onOpened = {
+                        opened = true
+                        currentOnOpened()
+                    },
                     onUnavailable = { unavailable = true },
                     onRendererGone = { renderGone = true },
-                    onLoading = { loading = it },
-                    onFailed = {
-                        loading = false
-                        pageFailed = true
-                    },
+                    onFailed = { pageFailed = true },
                     onExternal = { openExternal(it).onFailure { toast.show(failedMessage) } },
                 )
             }
@@ -95,8 +103,13 @@ internal fun WearBrowserPage(url: String, onBack: () -> Unit, onOpened: () -> Un
             WearBackground {
                 WearLoadFailureScreen(stringResource(R.string.wear_browser_load_failed), onBack, { attempt++ }, retryInEdgeButton = true)
             }
-        } else if (loading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { WearLoadingIndicator() }
+        } else if (loadProgress < 100) {
+            if (opened) {
+                val fraction = loadProgress / 100f
+                WearEdgeProgressIndicator({ fraction }, Modifier.progressSemantics(fraction))
+            } else {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { WearLoadingIndicator() }
+            }
         }
     }
 }
@@ -105,7 +118,6 @@ internal class WearBrowserClient(
     private val onOpened: () -> Unit,
     private val onUnavailable: () -> Unit,
     private val onRendererGone: () -> Unit,
-    private val onLoading: (Boolean) -> Unit = {},
     private val onFailed: () -> Unit = {},
     private val onExternal: (String) -> Unit = {},
 ) : WebViewClient() {
@@ -118,16 +130,7 @@ internal class WearBrowserClient(
         return true
     }
 
-    override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
-        onLoading(true)
-    }
-
-    override fun onPageFinished(view: WebView, url: String) {
-        onLoading(false)
-    }
-
     override fun onPageCommitVisible(view: WebView, url: String) {
-        onLoading(false)
         if (!opened && !failed) {
             opened = true
             onOpened()
