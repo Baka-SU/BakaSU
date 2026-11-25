@@ -1472,84 +1472,87 @@ fun ModuleItem(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (module.hasActionScript) {
-                    Surface(
-                        modifier = Modifier
-                            .padding(vertical = 5.dp)
-                            .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
-                            .visible(!module.remove && isEnabled)
-                            .clip(ButtonDefaults.filledTonalShape)
-                            .combinedClickable(
-                                onClick = {
-                                    navigator.push(Route.ExecuteModuleAction(module.dirId, false))
-                                    viewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
-                                },
-                                onLongClick = {
-                                    onModuleAddShortcut(module, ShortcutType.Action)
-                                },
-                            ),
-                        color = ButtonDefaults.filledTonalButtonColors().containerColor,
-                        contentColor = ButtonDefaults.filledTonalButtonColors().contentColor,
-                    ) {
-                        Icon(
+                    AnimatedVisibility(!module.remove && isEnabled) {
+                        Surface(
                             modifier = Modifier
-                                .size(20.dp)
-                                .padding(12.dp, 7.dp, 12.dp, 7.dp),
-                            imageVector = Icons.TwoTone.PlayArrow,
-                            contentDescription = null,
-                        )
-                    }
+                                .padding(vertical = 5.dp)
+                                .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
+                                .clip(ButtonDefaults.filledTonalShape)
+                                .combinedClickable(
+                                    onClick = {
+                                        navigator.push(Route.ExecuteModuleAction(module.dirId, false))
+                                        viewModel.dispatch(ModuleUiAction.MarkNeedRefresh)
+                                    },
+                                    onLongClick = {
+                                        onModuleAddShortcut(module, ShortcutType.Action)
+                                    },
+                                ),
+                            color = ButtonDefaults.filledTonalButtonColors().containerColor,
+                            contentColor = ButtonDefaults.filledTonalButtonColors().contentColor,
+                        ) {
+                            Icon(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .padding(12.dp, 7.dp, 12.dp, 7.dp),
+                                imageVector = Icons.TwoTone.PlayArrow,
+                                contentDescription = null,
+                            )
+                        }}
                 }
 
                 if (module.hasWebUi) {
-                    Surface(
-                        modifier = Modifier
-                            .padding(vertical = 5.dp)
-                            .visible(!module.remove && isEnabled)
-                            .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
-                            .clip(ButtonDefaults.filledTonalShape)
-                            .combinedClickable(
-                                onClick = { onClick(module) },
-                                onLongClick = {
-                                    onModuleAddShortcut(module, ShortcutType.WebUI)
-                                },
-                            ),
-                        color = ButtonDefaults.filledTonalButtonColors().containerColor,
-                        contentColor = ButtonDefaults.filledTonalButtonColors().contentColor,
-                    ) {
-                        Icon(
+                    AnimatedVisibility(!module.remove && isEnabled) {
+                        Surface(
                             modifier = Modifier
-                                .size(20.dp)
-                                .padding(12.dp, 7.dp, 12.dp, 7.dp),
-                            imageVector = Icons.AutoMirrored.TwoTone.Wysiwyg,
-                            contentDescription = null,
-                        )
+                                .padding(vertical = 5.dp)
+                                .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
+                                .clip(ButtonDefaults.filledTonalShape)
+                                .combinedClickable(
+                                    onClick = { onClick(module) },
+                                    onLongClick = {
+                                        onModuleAddShortcut(module, ShortcutType.WebUI)
+                                    },
+                                ),
+                            color = ButtonDefaults.filledTonalButtonColors().containerColor,
+                            contentColor = ButtonDefaults.filledTonalButtonColors().contentColor,
+                        ) {
+                            Icon(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .padding(12.dp, 7.dp, 12.dp, 7.dp),
+                                imageVector = Icons.AutoMirrored.TwoTone.Wysiwyg,
+                                contentDescription = null,
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.weight(1f, true))
 
                 if (updateUrl.isNotEmpty()) {
-                    Surface(
-                        modifier = Modifier
-                            .visible(!module.remove)
-                            .padding(vertical = 5.dp)
-                            .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
-                            .clip(ButtonDefaults.filledTonalShape)
-                            .clickable {
-                                onUpdate(module)
-                            },
-                        color = ButtonDefaults.filledTonalButtonColors().containerColor,
-                        contentColor = ButtonDefaults.filledTonalButtonColors().contentColor,
-                    ) {
-                        Icon(
+                    AnimatedVisibility(!module.remove) {
+                        Surface(
                             modifier = Modifier
-                                .size(20.dp)
-                                .padding(12.dp, 7.dp, 12.dp, 7.dp),
-                            imageVector = Icons.TwoTone.Download,
-                            contentDescription = null,
-                        )
+                                .padding(vertical = 5.dp)
+                                .defaultMinSize(minWidth = 52.dp, minHeight = 32.dp)
+                                .clip(ButtonDefaults.filledTonalShape)
+                                .clickable {
+                                    onUpdate(module)
+                                },
+                            color = ButtonDefaults.filledTonalButtonColors().containerColor,
+                            contentColor = ButtonDefaults.filledTonalButtonColors().contentColor,
+                        ) {
+                            Icon(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .padding(12.dp, 7.dp, 12.dp, 7.dp),
+                                imageVector = Icons.TwoTone.Download,
+                                contentDescription = null,
+                            )
+                        }
                     }
-                }
+                    }
+
 
                 Surface(
                     modifier = Modifier
@@ -1559,17 +1562,8 @@ fun ModuleItem(
                         .clickable {
                             onUninstallClicked(module)
                         },
-                    color =
-                        if (!module.remove) {
-                            ButtonDefaults.filledTonalButtonColors().containerColor
-                        } else {
-                            ButtonDefaults.filledTonalButtonColors().disabledContainerColor
-                        },
-                    contentColor = if (!module.remove) {
-                        ButtonDefaults.filledTonalButtonColors().contentColor
-                    } else {
-                        ButtonDefaults.filledTonalButtonColors().disabledContentColor
-                    },
+                    color = ButtonDefaults.filledTonalButtonColors().containerColor,
+                    contentColor = ButtonDefaults.filledTonalButtonColors().contentColor,
                 ) {
                     if (!module.remove) {
                         Icon(
