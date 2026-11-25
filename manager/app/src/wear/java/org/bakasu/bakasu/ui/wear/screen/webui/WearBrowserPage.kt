@@ -29,6 +29,7 @@ import org.bakasu.bakasu.ui.wear.component.LocalWearToast
 import org.bakasu.bakasu.ui.wear.component.WearBackground
 import org.bakasu.bakasu.ui.wear.component.WearLoadFailureScreen
 import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
+import org.bakasu.bakasu.ui.wear.component.WearViewportWebView
 import org.bakasu.bakasu.ui.wear.component.WearWebView
 import org.koin.compose.koinInject
 
@@ -52,7 +53,7 @@ internal fun WearBrowserPage(url: String, onBack: () -> Unit, onOpened: () -> Un
     val currentOnOpened by rememberUpdatedState(onOpened)
     val webView = remember(url, attempt) {
         runCatching {
-            WebView(context).apply {
+            WearViewportWebView(context).apply {
                 setBackgroundColor(android.graphics.Color.BLACK)
                 settings.javaScriptEnabled = true
                 webViewClient = WearBrowserClient(

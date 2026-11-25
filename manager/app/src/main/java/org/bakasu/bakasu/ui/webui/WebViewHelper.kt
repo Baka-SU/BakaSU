@@ -56,6 +56,7 @@ internal suspend fun prepareWebView(
     webUiRepository: WebUiRepository,
     colorsCssProvider: () -> String,
     recoverFromRenderCrash: Boolean = false,
+    webViewFactory: (Activity) -> WebView = ::WebView,
 ) {
     withContext(Dispatchers.IO) {
         val moduleInfo = try {
@@ -97,6 +98,7 @@ internal suspend fun prepareWebView(
                 settingsRepository,
                 colorsCssProvider = colorsCssProvider,
                 recoverFromRenderCrash = recoverFromRenderCrash,
+                webViewFactory = webViewFactory,
             )
         }
     }
@@ -125,6 +127,7 @@ internal fun createWebView(
     colorsCssProvider: () -> String,
     recoverFromRenderCrash: Boolean = false,
     onPageLoaded: (() -> Unit)? = null,
+    webViewFactory: (Activity) -> WebView = ::WebView,
 ) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         @Suppress("DEPRECATION")
@@ -136,7 +139,7 @@ internal fun createWebView(
         activity.setTaskDescription(taskDescription)
     }
 
-    val webView = WebView(activity)
+    val webView = webViewFactory(activity)
     Log.i(TAG, "Opening ${webUIState.modDir}, remote=$restrictToModule, WebView=${WebView.getCurrentWebViewPackage()?.versionName}")
     webView.setBackgroundColor(Color.TRANSPARENT)
 

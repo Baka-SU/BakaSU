@@ -51,6 +51,7 @@ import org.bakasu.bakasu.ui.wear.component.WearLoadingIndicator
 import org.bakasu.bakasu.ui.wear.component.WearSubNavigation
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDismissBox
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
+import org.bakasu.bakasu.ui.wear.component.WearViewportWebView
 import org.bakasu.bakasu.ui.wear.component.WearWatchOpenFailureDialog
 import org.bakasu.bakasu.ui.wear.component.WearWebView
 import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
@@ -118,6 +119,7 @@ private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) 
             webUiRepository,
             { currentColorsCss.value },
             recoverFromRenderCrash = true,
+            webViewFactory = ::WearViewportWebView,
         )
     }
     DisposableEffect(Unit) {

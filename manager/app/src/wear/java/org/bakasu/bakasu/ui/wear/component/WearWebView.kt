@@ -266,6 +266,23 @@ private fun WearWebViewContent(
 
 private const val WebPageBaseScale = 0.6f
 
+internal class WearViewportWebView(context: Context) : WebView(context) {
+    private val heightOverflow: Int get() = (parent as? WearWebViewViewport)?.let { height - it.height } ?: 0
+
+    override fun getLocationInWindow(outLocation: IntArray) {
+        super.getLocationInWindow(outLocation)
+        // Chromium compares the unscaled bottom with the window to size visualViewport.
+        // Account for the extra layout height already fitted inside the viewport by scaling.
+        outLocation[1] -= heightOverflow
+    }
+
+    override fun getLocationOnScreen(outLocation: IntArray) {
+        super.getLocationOnScreen(outLocation)
+        // Android calls getLocationInWindow above. Restore the actual origin for accessibility.
+        outLocation[1] += heightOverflow
+    }
+}
+
 /** Fixed page dimensions per window and explicit zoom setting; gestures only translate the page. */
 @SuppressLint("ViewConstructor")
 internal class WearWebViewViewport(context: Context, private val webView: WebView) : ViewGroup(context) {
