@@ -10,7 +10,6 @@
     <string name="wear_disable_swipe_back">Disable swipe back</string>
     <string name="wear_disable_swipe_back_summary">Use system back instead of the app swipe gesture.</string>
     <string name="wear_icon_author" translatable="false">OukaroMF</string>
-    <string name="wear_sulog_disabled_title">SULog is disabled</string>
     <string name="wear_mode_lkm">LKM</string>
     <string name="wear_enabled">Enabled</string>
     <string name="wear_disabled">Disabled</string>

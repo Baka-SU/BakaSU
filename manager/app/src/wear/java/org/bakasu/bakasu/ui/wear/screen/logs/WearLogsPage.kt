@@ -137,7 +137,7 @@ internal fun WearLogsPage(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            stringResource(R.string.wear_sulog_disabled_title),
+                            stringResource(R.string.sulog_disabled_title),
                             modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer,
