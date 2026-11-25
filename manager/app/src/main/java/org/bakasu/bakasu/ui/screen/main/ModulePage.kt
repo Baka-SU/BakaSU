@@ -1501,7 +1501,8 @@ fun ModuleItem(
                                 imageVector = Icons.TwoTone.PlayArrow,
                                 contentDescription = null,
                             )
-                        }}
+                        }
+                    }
                 }
 
                 if (module.hasWebUi) {
@@ -1563,8 +1564,7 @@ fun ModuleItem(
                             )
                         }
                     }
-                    }
-
+                }
 
                 Surface(
                     modifier = Modifier

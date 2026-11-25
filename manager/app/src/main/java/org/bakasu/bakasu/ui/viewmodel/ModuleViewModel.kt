@@ -216,8 +216,7 @@ class ModuleViewModel(
             }
     }
 
-    private fun currentEnabledSnapshot(): Map<String, Boolean> =
-        observeInstalledModules().value.modules.associate { it.dirId to it.enabled }
+    private fun currentEnabledSnapshot(): Map<String, Boolean> = observeInstalledModules().value.modules.associate { it.dirId to it.enabled }
 
     private fun buildModuleList(
         modules: List<InstalledModule>,
