@@ -154,6 +154,8 @@ internal fun Modifier.wearRefreshGesture(
             var crossed = false
             var canceled = !active
             var dragging = false
+            var canPullDown = false
+            var canPullUp = false
             val slop = viewConfiguration.touchSlop
             // Only a gesture that starts at a boundary pulls past it, so a fling that scrolls back
             // to the top does not open the panel with the rest of its travel.
@@ -181,12 +183,10 @@ internal fun Modifier.wearRefreshGesture(
                         if (abs(total.x) <= slop && abs(total.y) <= slop) continue
                         // A settling panel can be caught from either direction. An ordinary
                         // boundary pull still starts only towards its own action.
-                        val canPull = when {
-                            resumingPanel > 0f -> downAction != null && startedAtTop && listState.isAtWearListStart(topTolerance)
-                            resumingPanel < 0f -> upAction != null && startedAtEnd && !listState.canScrollForward
-                            total.y > 0f -> downAction != null && startedAtTop && listState.isAtWearListStart(topTolerance)
-                            else -> upAction != null && startedAtEnd && !listState.canScrollForward
-                        }
+                        canPullDown = downAction != null && startedAtTop && listState.isAtWearListStart(topTolerance)
+                        canPullUp = upAction != null && startedAtEnd && !listState.canScrollForward
+                        val direction = if (resumingPanel != 0f) resumingPanel else total.y
+                        val canPull = if (direction > 0f) canPullDown else canPullUp
                         if (pointer.isConsumed || abs(total.x) >= abs(total.y) || !canPull) {
                             canceled = true
                         } else {
@@ -199,15 +199,16 @@ internal fun Modifier.wearRefreshGesture(
                             pullUp = (-initialPull).coerceAtLeast(0f)
                         }
                     }
-                    // A pull grows only while its boundary is held, and moving back shrinks it.
-                    pullDown = if (downAction != null && startedAtTop && listState.isAtWearListStart(topTolerance)) (pullDown + dy).coerceAtLeast(0f) else 0f
-                    pullUp = if (upAction != null && startedAtEnd && !listState.canScrollForward) (pullUp - dy).coerceAtLeast(0f) else 0f
                     if (canceled) {
                         displacement.floatValue = 0f
                         pullProgress.floatValue = 0f
                         pullEnd()
                         continue
                     }
+                    // The panel owns this drag. A pending list snap can move the boundary
+                    // after the drag starts, but must not reset the pull under the finger.
+                    if (canPullDown) pullDown = (pullDown + dy).coerceAtLeast(0f)
+                    if (canPullUp) pullUp = (pullUp - dy).coerceAtLeast(0f)
                     val pull = maxOf(pullDown, pullUp)
                     if (pull >= threshold && !crossed) haptic.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
                     crossed = pull >= threshold
