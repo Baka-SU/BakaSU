@@ -16,9 +16,11 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -1474,8 +1476,8 @@ fun ModuleItem(
                 if (module.hasActionScript) {
                     AnimatedVisibility(
                         visible = !module.remove && isEnabled,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
+                        enter = fadeIn() + expandHorizontally(),
+                        exit = fadeOut() + shrinkHorizontally(),
                     ) {
                         Surface(
                             modifier = Modifier
@@ -1507,8 +1509,8 @@ fun ModuleItem(
                 if (module.hasWebUi) {
                     AnimatedVisibility(
                         visible = !module.remove && isEnabled,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
+                        enter = fadeIn() + expandHorizontally(),
+                        exit = fadeOut() + shrinkHorizontally(),
                     ) {
                         Surface(
                             modifier = Modifier
@@ -1540,8 +1542,8 @@ fun ModuleItem(
                 if (updateUrl.isNotEmpty()) {
                     AnimatedVisibility(
                         visible = !module.remove,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
+                        enter = fadeIn() + expandHorizontally(),
+                        exit = fadeOut() + shrinkHorizontally(),
                     ) {
                         Surface(
                             modifier = Modifier
