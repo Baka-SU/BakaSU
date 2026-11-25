@@ -518,7 +518,7 @@ private fun TopBar(
         actions = {
             if (uiState.isCoreDataLoaded) {
                 // SuSFS 配置按钮
-                if (uiState.systemInfo.susfsVersionSupported) {
+                if (uiState.systemInfo.susfsVersionSupported && uiState.systemStatus.isFullFeatured) {
                     IconButton(onClick = {
                         navigator.push(Route.SuSFSConfig)
                     }) {
