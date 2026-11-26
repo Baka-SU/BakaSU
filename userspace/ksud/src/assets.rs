@@ -4,6 +4,7 @@ use rust_embed::RustEmbed;
 #[cfg(target_os = "android")]
 mod android {
     use const_format::concatcp;
+    use std::path::Path;
 
     use crate::{
         android::utils::ensure_binary,
@@ -69,9 +70,16 @@ mod android {
                 // don't extract internal executables and kernel modules
                 continue;
             }
+            let path = format!("{BINARY_DIR}{file}");
+            // Asset::get() inflates the embedded file on every call (rust-embed
+            // "compression"). Skip it when the binary is already there: this runs
+            // at every boot in post-fs-data, before any module script.
+            if ignore_if_exist && Path::new(&path).exists() {
+                continue;
+            }
             let asset =
                 Asset::get(&file).ok_or_else(|| anyhow::anyhow!("asset not found: {file}"))?;
-            ensure_binary(format!("{BINARY_DIR}{file}"), &asset.data, ignore_if_exist)?;
+            ensure_binary(path, &asset.data, ignore_if_exist)?;
         }
 
         // Create resetprop -> ksud symlink (resetprop is now built into ksud)
