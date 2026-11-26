@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.Natives
 import org.bakasu.bakasu.data.shell.KsuCliRepository
 import org.bakasu.bakasu.domain.model.AllowlistRestoreResult
@@ -94,8 +95,9 @@ class ProfileRepository(
             when (action) {
                 AppControlAction.LAUNCH -> ksuCliRepository.launchApp(packageName)
 
-                AppControlAction.FORCE_STOP -> check(ksuCliRepository.forceStopApp(packageName)) {
-                    "Failed to force stop $packageName"
+                AppControlAction.FORCE_STOP -> {
+                    val stopped = ksuCliRepository.forceStopApp(packageName)
+                    if (BuildConfig.FLAVOR == "wear") check(stopped) { "Failed to force stop $packageName" }
                 }
 
                 AppControlAction.RESTART -> ksuCliRepository.restartApp(packageName)

@@ -1,6 +1,5 @@
 package org.bakasu.bakasu.ui.screen
 
-import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -53,7 +52,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -109,7 +107,6 @@ fun AppProfileScreen(
     packageName: String,
 ) {
     val cardConfig: CardConfig = koinInject()
-    val context = LocalContext.current
     val navigator = LocalNavigator.current
     val snackBarHost = LocalSnackbarHost.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -126,7 +123,6 @@ fun AppProfileScreen(
     val failToUpdateSepolicy =
         stringResource(R.string.failed_to_update_sepolicy).format(appLabel)
     val suNotAllowed = stringResource(R.string.su_not_allowed).format(appLabel)
-    val forceStopped = stringResource(R.string.force_stop_app_success)
 
     LaunchedEffect(viewModel) {
         viewModel.events.collectLatest { event ->
@@ -138,9 +134,7 @@ fun AppProfileScreen(
                 AppProfileUiEvent.SepolicyUpdateFailed ->
                     snackBarHost.showReplacingSnackbar(failToUpdateSepolicy)
 
-                AppProfileUiEvent.Saved -> Unit
-
-                AppProfileUiEvent.ForceStopped -> Toast.makeText(context, forceStopped, Toast.LENGTH_SHORT).show()
+                AppProfileUiEvent.Saved, AppProfileUiEvent.ForceStopped -> Unit
             }
         }
     }

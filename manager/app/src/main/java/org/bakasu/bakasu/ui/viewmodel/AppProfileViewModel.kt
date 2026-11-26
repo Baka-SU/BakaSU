@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.domain.model.AppControlAction
 import org.bakasu.bakasu.domain.model.AppProfile
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
@@ -150,7 +151,7 @@ class AppProfileViewModel(
             is AppProfileUiAction.ControlApp -> viewModelScope.launch {
                 controlApp(packageName, action.action)
                     .onSuccess {
-                        if (action.action == AppControlAction.FORCE_STOP) {
+                        if (BuildConfig.FLAVOR == "wear" && action.action == AppControlAction.FORCE_STOP) {
                             mutableEvents.emit(AppProfileUiEvent.ForceStopped)
                         }
                     }
