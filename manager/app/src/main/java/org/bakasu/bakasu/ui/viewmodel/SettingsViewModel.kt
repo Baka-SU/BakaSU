@@ -136,6 +136,7 @@ sealed interface SettingsUiAction {
     data object SaveCardConfig : SettingsUiAction
     data class SetLanguageDialogVisible(val visible: Boolean) : SettingsUiAction
     data class SetLanguage(val localeTag: String) : SettingsUiAction
+    data class SetWearLanguage(val localeTag: String) : SettingsUiAction
     data object RefreshLanguage : SettingsUiAction
     data object RestartActivity : SettingsUiAction
     data object ApplyDpi : SettingsUiAction
@@ -259,9 +260,9 @@ class SettingsViewModel(
     fun setThemeColorDialogVisible(visible: Boolean) = mutableState.update { it.copy(showThemeColorDialog = visible) }
 
     fun setLanguageDialogVisible(visible: Boolean) = mutableState.update { it.copy(showLanguageDialog = visible) }
-    fun handleLanguageChange(localeTag: String) {
+    private fun handleWearLanguageChange(localeTag: String) {
         viewModelScope.launch {
-            updatePlatform(PlatformSetting.Locale(localeTag))
+            updatePlatform(PlatformSetting.AppLanguage(localeTag))
                 .onSuccess {
                     applySnapshot(it, resetTempDpi = false)
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) restartActivityForLanguage()
@@ -514,7 +515,9 @@ class SettingsViewModel(
 
             is SettingsUiAction.SetLanguageDialogVisible -> setLanguageDialogVisible(action.visible)
 
-            is SettingsUiAction.SetLanguage -> handleLanguageChange(action.localeTag)
+            is SettingsUiAction.SetLanguage -> updatePlatformAsync(PlatformSetting.Locale(action.localeTag))
+
+            is SettingsUiAction.SetWearLanguage -> handleWearLanguageChange(action.localeTag)
 
             SettingsUiAction.RefreshLanguage -> {
                 val locale = getCurrentAppLocale()

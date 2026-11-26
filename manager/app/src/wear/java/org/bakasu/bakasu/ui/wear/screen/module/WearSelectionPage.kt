@@ -134,7 +134,7 @@ internal fun WearSelectionPage(
             LocalConfiguration.current
             val system = LocaleManagerCompat.getSystemLocales(LocalContext.current)
             WearLanguagePage(state.currentAppLocale, (0 until system.size()).mapNotNull { system[it] }, onBack) {
-                onAction(SettingsUiAction.SetLanguage(it))
+                onAction(SettingsUiAction.SetWearLanguage(it))
             }
         }
 

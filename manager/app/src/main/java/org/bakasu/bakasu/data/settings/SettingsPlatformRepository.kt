@@ -199,7 +199,9 @@ class SettingsPlatformRepository(
             is PlatformSetting.ModuleUpdateCheck ->
                 settings.putBoolean("check_module_update", setting.enabled)
 
-            is PlatformSetting.Locale -> localeHelper.setApplicationLanguage(application, setting.tag)
+            is PlatformSetting.Locale -> settings.putString("app_locale", setting.tag)
+
+            is PlatformSetting.AppLanguage -> localeHelper.setApplicationLanguage(application, setting.tag)
 
             is PlatformSetting.AutoJailbreak -> setAutoJailbreak(setting.enabled)
 

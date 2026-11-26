@@ -1140,6 +1140,7 @@ private fun LanguageSetting(state: SettingsUiState, viewModel: SettingsViewModel
             } ?: "system",
             onLanguageSelected = { localeTag ->
                 viewModel.dispatch(SettingsUiAction.SetLanguage(localeTag))
+                viewModel.dispatch(SettingsUiAction.RestartActivity)
             },
             onDismiss = {
                 viewModel.dispatch(SettingsUiAction.SetLanguageDialogVisible(false))
