@@ -58,6 +58,7 @@ import org.bakasu.bakasu.ui.wear.component.wearStatusColors
 @Composable
 internal fun WearModulesPage(
     state: ModuleUiState,
+    moduleIcons: Map<String, CatalogModule>,
     error: String?,
     onRefresh: () -> Unit,
     onModuleClick: (String) -> Unit,
@@ -89,7 +90,7 @@ internal fun WearModulesPage(
             }
         }
         items(state.moduleList, key = { it.id }) { module ->
-            WearModuleItem(spec, module, onModuleClick, listState.isScrollInProgress, onWebUi, onExecute, state.moduleIcons[module.id])
+            WearModuleItem(spec, module, onModuleClick, listState.isScrollInProgress, onWebUi, onExecute, moduleIcons[module.id])
         }
     }
 }

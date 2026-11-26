@@ -76,7 +76,7 @@ class ModuleDetailViewModel(
     }
 
     init {
-        refresh()
+        refresh(forceDetail = false)
         viewModelScope.launch {
             combine(observeModules(), observeSources.sources, observeSources.failures) { modules, sources, failures ->
                 val configured = sources.any { it.url == repositoryUrl }
@@ -87,8 +87,6 @@ class ModuleDetailViewModel(
                 } else if (mutableState.value.loading) {
                     // The request owns loading and its result; an index emission is not a loaded detail.
                     return@collect
-                } else if (failure != null) {
-                    mutableState.value = ModuleDetailUiState(loading = false, error = ModuleCatalogFailure.Network(""), repositoryFailure = failure)
                 } else if (module == null && mutableState.value.module != null) {
                     mutableState.value = ModuleDetailUiState(loading = false, error = ModuleCatalogFailure.NotFound)
                 } else if (module != null && mutableState.value.error == null) {
@@ -114,11 +112,11 @@ class ModuleDetailViewModel(
         }
     }
 
-    fun refresh() {
+    fun refresh(forceDetail: Boolean = true) {
         if (detailJob?.isActive == true) return
         detailJob = viewModelScope.launch {
             mutableState.update { it.copy(loading = true, error = null, repositoryFailure = null) }
-            when (val result = getModule(moduleId, repositoryUrl, forceDetail = true)) {
+            when (val result = getModule(moduleId, repositoryUrl, forceDetail)) {
                 is ModuleCatalogResult.Success -> mutableState.update {
                     if (observeSources.sources.value.none { source -> source.url == repositoryUrl }) {
                         return@update ModuleDetailUiState(loading = false, error = ModuleCatalogFailure.NotFound)
@@ -154,7 +152,7 @@ class ModuleDetailViewModel(
             return
         }
         val url = module.readmeUrl.ifBlank { module.sourceUrl }
-        loadDocument(url, retry) { getReadme(module) }
+        loadDocument(url, retry) { getReadme(module, retry) }
     }
 
     fun loadReleaseDetails(release: ModuleRelease, retry: Boolean = false) {

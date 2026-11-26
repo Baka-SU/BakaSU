@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.bakasu.bakasu.BuildConfig
+import org.bakasu.bakasu.data.network.LocalNetworkPermissionRequiredException
 import org.bakasu.bakasu.data.network.NetworkRequestRepository
 import org.bakasu.bakasu.data.network.NetworkStatusRepository
 import org.bakasu.bakasu.data.shell.KsuCliRepository
@@ -38,7 +40,7 @@ class ModuleRepository(
     suspend fun refreshInstalledModules(
         manual: Boolean,
         checkUpdates: Boolean,
-    ): Result<Unit> = refreshMutex.withLock {
+    ): Result<Boolean> = refreshMutex.withLock {
         withContext(Dispatchers.IO) {
             mutableInstalledModules.update { it.copy(refreshing = true) }
             runCatching {
@@ -69,21 +71,21 @@ class ModuleRepository(
                     modules
                 }
 
-                if (checkUpdates && networkStatusRepository.isAvailable()) {
-                    val withUpdates = coroutineScope {
-                        modules.map { module ->
-                            async(Dispatchers.IO) {
-                                module.refreshUpdate(manual, ::checkUpdate)
-                            }
-                        }.awaitAll()
-                    }
-                    // Network results must not overwrite enable/remove changes made while
-                    // checking updates. Merge only metadata for the same installed release.
-                    val updates = withUpdates.associateBy { it.dirId }
-                    mutableInstalledModules.update { current ->
-                        current.copy(modules = current.modules.map { module -> module.withCachedUpdate(updates[module.dirId]) })
-                    }
+                if (!checkUpdates || !networkStatusRepository.isAvailable()) return@runCatching false
+
+                val withUpdates = coroutineScope {
+                    modules.map { module ->
+                        async(Dispatchers.IO) {
+                            module.refreshUpdate(manual, ::checkUpdate)
+                        }
+                    }.awaitAll()
                 }
+                // Merge only update metadata for the same release, preserving concurrent mutations.
+                val updates = withUpdates.associate { (module, _) -> module.dirId to module }
+                mutableInstalledModules.update { current ->
+                    current.copy(modules = current.modules.map { module -> module.withCachedUpdate(updates[module.dirId]) })
+                }
+                withUpdates.any { (_, error) -> error is LocalNetworkPermissionRequiredException }
             }.onFailure {
                 mutableInstalledModules.update { current -> current.copy(refreshing = false) }
             }
@@ -153,7 +155,7 @@ class ModuleRepository(
         currentVersionCode: Int,
     ): Result<ModuleUpdateMetadata?> {
         if (url.isBlank()) return Result.success(null)
-        return networkRequestRepository.fetch(url).mapCatching { body ->
+        return networkRequestRepository.fetch(url, detectLocalNetworkPermission = BuildConfig.FLAVOR == "mobile").mapCatching { body ->
             val json = JSONObject(body)
             val onlineVersionCode = json.optInt("versionCode")
             val zipUrl = json.optString("zipUrl")
@@ -221,10 +223,11 @@ internal fun InstalledModule.withCachedUpdate(previous: InstalledModule?): Insta
 internal suspend fun InstalledModule.refreshUpdate(
     manual: Boolean,
     checkUpdate: suspend (String, Int) -> Result<ModuleUpdateMetadata?>,
-): InstalledModule {
-    if (updateJson.isBlank() || (!manual && moduleUpdate != null)) return this
+): Pair<InstalledModule, Throwable?> {
+    if (updateJson.isBlank() || (!manual && moduleUpdate != null)) return this to null
     // A failed request cannot invalidate an already known update; a successful empty result can.
-    return copy(moduleUpdate = checkUpdate(updateJson, versionCode).getOrElse { moduleUpdate })
+    val result = checkUpdate(updateJson, versionCode)
+    return copy(moduleUpdate = result.getOrElse { moduleUpdate }) to result.exceptionOrNull()
 }
 
 private fun JSONObject.getBooleanCompat(key: String, default: Boolean = false): Boolean = if (!has(key)) {

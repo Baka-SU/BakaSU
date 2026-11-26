@@ -226,7 +226,7 @@ fun ModuleRepoScreen(repositoryUrl: String? = null) {
     }
 
     LaunchedEffect(viewModel, uiState.repositoryUrl) {
-        viewModel.refresh()
+        viewModel.refresh(force = false)
     }
 
     Scaffold(

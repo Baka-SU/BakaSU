@@ -62,9 +62,8 @@ internal fun WearCatalogModuleIcon(
     }
 }
 
-/** Renders a completed batch result without starting another request for failed or evicted icons. */
 @Composable
-internal fun WearCatalogModuleIcon(
+private fun WearCatalogModuleIcon(
     bitmap: Bitmap?,
     size: Dp = 24.dp,
     fallbackContainerColor: Color = MaterialTheme.colorScheme.primaryContainer,

@@ -2,7 +2,9 @@ package org.bakasu.bakasu.di
 
 import org.bakasu.bakasu.data.file.WearFileRepository
 import org.bakasu.bakasu.data.network.WearLinkRepository
+import org.bakasu.bakasu.domain.usecase.FindModuleUpdateSourceUseCase
 import org.bakasu.bakasu.domain.usecase.OpenWearExternalLinkUseCase
+import org.bakasu.bakasu.domain.usecase.ResolveInstalledModuleIconUseCase
 import org.bakasu.bakasu.ui.viewmodel.ModuleChangelogViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadViewModel
 import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateViewModel
@@ -23,7 +25,9 @@ internal fun Module.platformRepositories() {
 }
 
 internal fun Module.platformUseCases() {
+    factoryOf(::FindModuleUpdateSourceUseCase)
     factoryOf(::OpenWearExternalLinkUseCase)
+    factoryOf(::ResolveInstalledModuleIconUseCase)
 }
 
 internal fun Module.platformViewModels() {

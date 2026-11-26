@@ -65,7 +65,6 @@ internal fun WearModuleUpdatePage(
     resolveUpdate: suspend (InstalledModule) -> ModuleUpdateVerification,
     isUpdateCurrent: (InstalledModule, ModuleUpdateVerification.Registry) -> Boolean,
     findSource: suspend (InstalledModule) -> CatalogModule? = { null },
-    artwork: CatalogModule? = null,
 ) {
     val scope = rememberCoroutineScope()
     val active by rememberUpdatedState(LocalScreenIsActive.current)
@@ -76,9 +75,11 @@ internal fun WearModuleUpdatePage(
     val verificationError = stringResource(R.string.repo_update_unverifiable)
     WearFeedbackEffect(if (verificationFailed) verificationError else null) { verificationFailed = false }
     val source = remember(module) { CompletableDeferred<CatalogModule?>() }
+    var artwork by remember(module) { mutableStateOf<CatalogModule?>(null) }
     LaunchedEffect(module) {
         try {
-            source.complete(module?.let { findSource(it) })
+            artwork = module?.let { findSource(it) }
+            source.complete(artwork)
         } finally {
             source.cancel()
         }

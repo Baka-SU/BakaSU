@@ -61,11 +61,14 @@ import androidx.wear.compose.material3.PagerScaffoldDefaults
 import androidx.wear.compose.navigation3.rememberSwipeDismissableSceneStrategy
 import kotlinx.coroutines.channels.ReceiveChannel
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.FlashOperation
 import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.LkmSelection
 import org.bakasu.bakasu.domain.model.SuperUserLoadFailure
+import org.bakasu.bakasu.domain.usecase.FindModuleUpdateSourceUseCase
+import org.bakasu.bakasu.domain.usecase.ResolveInstalledModuleIconUseCase
 import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.util.ActivityResumeEffect
@@ -229,6 +232,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val home by homeViewModel.uiState.collectAsStateWithLifecycle()
     val superuser by superUserViewModel.uiState.collectAsStateWithLifecycle()
     val modules by moduleViewModel.uiState.collectAsStateWithLifecycle()
+    val resolveInstalledModuleIcons = koinInject<ResolveInstalledModuleIconUseCase>()
+    val moduleIcons by remember(resolveInstalledModuleIcons) { resolveInstalledModuleIcons() }.collectAsStateWithLifecycle(emptyMap())
+    val findModuleUpdateSource = koinInject<FindModuleUpdateSourceUseCase>()
     val logs by sulogViewModel.uiState.collectAsStateWithLifecycle()
     val catalog by moduleRepoViewModel.state.collectAsStateWithLifecycle()
     val dynamicManager by dynamicManagerViewModel.uiState.collectAsStateWithLifecycle()
@@ -396,6 +402,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                 ModuleUiEvent.RefreshCompleted -> moduleError = null
 
+                ModuleUiEvent.LocalNetworkPermissionRequired -> Unit
+
                 is ModuleUiEvent.EnabledChanged -> {
                     if (event.successful) {
                         moduleViewModel.dispatch(ModuleUiAction.Refresh())
@@ -493,6 +501,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         home = home,
                                         superuser = superuser,
                                         modules = modules,
+                                        moduleIcons = moduleIcons,
                                         settings = settings,
                                         preferences = preferences,
                                         homeError = homeError,
@@ -519,7 +528,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 entry<WearRoute.Module> { route ->
                                     WearModuleDetail(
                                         module = modules.moduleList.firstOrNull { it.id == route.id },
-                                        artwork = modules.moduleIcons[route.id],
+                                        artwork = moduleIcons[route.id],
                                         error = moduleError,
                                         onBack = ::back,
                                         onEnabledChange = { id, enabled -> moduleViewModel.dispatch(ModuleUiAction.SetEnabled(id, enabled)) },
@@ -543,8 +552,9 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         onChangelog = { open(WearRoute.ModuleChangelog(route.id)) },
                                         resolveUpdate = moduleViewModel::resolveUpdate,
                                         isUpdateCurrent = moduleViewModel::isUpdateCurrent,
-                                        findSource = moduleViewModel::findUpdateSource,
-                                        artwork = modules.moduleIcons[route.id],
+                                        findSource = { module ->
+                                            module.moduleUpdate?.let { findModuleUpdateSource(module.id, module.updateJson, it.zipUrl) }
+                                        },
                                     )
                                 }
                                 entry<WearRoute.ModuleChangelog> { route ->
@@ -1263,6 +1273,7 @@ private fun WearMainPages(
     home: HomeDashboardState,
     superuser: SuperUserUiState,
     modules: ModuleUiState,
+    moduleIcons: Map<String, CatalogModule>,
     settings: SettingsUiState,
     preferences: WearPreferences,
     homeError: String?,
@@ -1363,6 +1374,7 @@ private fun WearMainPages(
 
                             MODULES -> WearModulesPage(
                                 state = modules,
+                                moduleIcons = moduleIcons,
                                 error = moduleError,
                                 onRefresh = { onModule(ModuleUiAction.Refresh(manual = true)) },
                                 onOpenPanel = { onOpen(WearRoute.Operations(WearOperationsPage.Modules)) },

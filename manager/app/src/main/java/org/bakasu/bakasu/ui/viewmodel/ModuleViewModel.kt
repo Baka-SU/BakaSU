@@ -17,19 +17,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.data.module.ModulePreferencesRepository
-import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.MetaModuleStatus
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
 import org.bakasu.bakasu.domain.usecase.CalculateInstalledModuleSizeUseCase
-import org.bakasu.bakasu.domain.usecase.FindModuleUpdateSourceUseCase
 import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetModuleUpdateChangelogUseCase
 import org.bakasu.bakasu.domain.usecase.IsSoftRebootPreferredUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveInstalledModulesUseCase
 import org.bakasu.bakasu.domain.usecase.RebootUseCase
 import org.bakasu.bakasu.domain.usecase.RefreshInstalledModulesUseCase
-import org.bakasu.bakasu.domain.usecase.ResolveInstalledModuleIconUseCase
 import org.bakasu.bakasu.domain.usecase.ResolveModuleUpdateUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.SetModuleRemovedUseCase
@@ -38,7 +35,6 @@ import org.bakasu.bakasu.domain.usecase.UpdateCachedModuleEnabledUseCase
 
 data class ModuleUiState(
     val moduleList: List<InstalledModule> = emptyList(),
-    val moduleIcons: Map<String, CatalogModule> = emptyMap(),
     val moduleSizes: Map<String, String> = emptyMap(),
     val isRefreshing: Boolean = false,
     val search: String = "",
@@ -70,6 +66,7 @@ sealed interface ModuleUiAction {
 sealed interface ModuleUiEvent {
     data class Error(val message: String) : ModuleUiEvent
     data object RefreshCompleted : ModuleUiEvent
+    data object LocalNetworkPermissionRequired : ModuleUiEvent
     data class EnabledChanged(
         val moduleId: String,
         val enabled: Boolean,
@@ -104,8 +101,6 @@ class ModuleViewModel(
     private val isSoftRebootPreferred: IsSoftRebootPreferredUseCase,
     private val resolveModuleUpdate: ResolveModuleUpdateUseCase,
     private val getModuleUpdateChangelog: GetModuleUpdateChangelogUseCase,
-    private val findModuleUpdateSource: FindModuleUpdateSourceUseCase,
-    resolveIcons: ResolveInstalledModuleIconUseCase,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
     private val sourceState = observeInstalledModules()
@@ -118,8 +113,7 @@ class ModuleViewModel(
         sourceState,
         controls,
         modulePreferences.preferences,
-        resolveIcons(),
-    ) { source, local, preferences, icons ->
+    ) { source, local, preferences ->
         ModuleUiState(
             moduleList = buildModuleList(
                 modules = source.modules,
@@ -128,7 +122,6 @@ class ModuleViewModel(
                 sortActionFirst = preferences.sortActionFirst,
             ),
             moduleSizes = local.moduleSizes,
-            moduleIcons = icons,
             isRefreshing = source.refreshing,
             search = local.search,
             sortEnabledFirst = preferences.sortEnabledFirst,
@@ -142,10 +135,6 @@ class ModuleViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ModuleUiState())
     val uiState: StateFlow<ModuleUiState> = state
-
-    suspend fun findUpdateSource(module: InstalledModule) = module.moduleUpdate?.let {
-        findModuleUpdateSource(module.id, module.updateJson, it.zipUrl)
-    }
 
     suspend fun resolveUpdate(module: InstalledModule): ModuleUpdateVerification {
         val update = module.moduleUpdate ?: return ModuleUpdateVerification.Rejected
@@ -233,9 +222,10 @@ class ModuleViewModel(
             getBooleanPreference(PREF_CHECK_UPDATE, true),
         )
         refreshInstalledModules(manual, checkUpdates)
-            .onSuccess {
+            .onSuccess { needsLocalNetworkPermission ->
                 controls.update { it.copy(isNeedRefresh = false) }
                 mutableEvents.tryEmit(ModuleUiEvent.RefreshCompleted)
+                if (needsLocalNetworkPermission) mutableEvents.emit(ModuleUiEvent.LocalNetworkPermissionRequired)
             }
             .onFailure { error ->
                 mutableEvents.tryEmit(ModuleUiEvent.Error(error.message.orEmpty()))

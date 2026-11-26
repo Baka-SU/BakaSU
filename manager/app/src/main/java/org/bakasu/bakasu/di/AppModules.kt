@@ -87,7 +87,6 @@ import org.bakasu.bakasu.domain.usecase.ExtractModuleIdUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleNameUseCase
 import org.bakasu.bakasu.domain.usecase.FetchOnlineProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
-import org.bakasu.bakasu.domain.usecase.FindModuleUpdateSourceUseCase
 import org.bakasu.bakasu.domain.usecase.GenerateBugreportUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppProfileUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppSepolicyUseCase
@@ -156,7 +155,6 @@ import org.bakasu.bakasu.domain.usecase.RemoveModuleRepositoryUseCase
 import org.bakasu.bakasu.domain.usecase.RemovePreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.RemoveUmountPathUseCase
 import org.bakasu.bakasu.domain.usecase.RenameModuleRepositoryUseCase
-import org.bakasu.bakasu.domain.usecase.ResolveInstalledModuleIconUseCase
 import org.bakasu.bakasu.domain.usecase.ResolveModuleUpdateUseCase
 import org.bakasu.bakasu.domain.usecase.RunScriptUseCase
 import org.bakasu.bakasu.domain.usecase.SaveModuleActionLogUseCase
@@ -300,7 +298,7 @@ val repositoryModule = module {
     singleOf(::ModuleCatalogRepository)
     single { ModuleReleaseRepository(get(), get(applicationScopeQualifier)) }
     single { ModuleIconRepository(get(), androidApplication(), get(applicationScopeQualifier)) }
-    single { KernelSuRegistryRepository(get(), get(), get()) }
+    single { KernelSuRegistryRepository(get(), get(), get(), get()) }
     singleOf(::RepositorySourceStore)
     singleOf(::ModuleRepository)
     singleOf(::ModulePreferencesRepository)
@@ -387,11 +385,9 @@ val useCaseModule = module {
     factoryOf(::ObserveModuleCatalogRefreshingUseCase)
     factoryOf(::RefreshModuleCatalogUseCase)
     factoryOf(::GetCatalogModuleUseCase)
-    factoryOf(::FindModuleUpdateSourceUseCase)
     factoryOf(::IsCatalogModuleCurrentUseCase)
     factoryOf(::GetModuleReadmeUseCase)
     factoryOf(::GetModuleReleaseDetailsUseCase)
-    factoryOf(::ResolveInstalledModuleIconUseCase)
     factoryOf(::LoadModuleIconUseCase)
     factoryOf(::ResolveModuleUpdateUseCase)
     factoryOf(::GetModuleUpdateChangelogUseCase)
@@ -482,7 +478,7 @@ val viewModelModule = module {
     viewModelOf(::ModuleViewModel)
     viewModelOf(::SuperUserViewModel)
     viewModelOf(::SuSFSViewModel)
-    viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
+    viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
     viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get()) }
     viewModelOf(::RepositorySourcesViewModel)
     viewModelOf(::TemplateViewModel)
