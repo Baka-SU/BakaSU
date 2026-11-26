@@ -626,7 +626,7 @@ class DownloadService : Service() {
     }
 
     private fun stopForegroundIfIdle() {
-        if (removingIds.isEmpty() && (activeJobs.isEmpty() || activeJobs.values.none { it.isActive })) {
+        if (removingIds.isEmpty() && activeJobs.values.none { it.isActive }) {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
