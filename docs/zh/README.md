@@ -15,7 +15,6 @@
 
 ## 特性
 
-
 1. 基于内核的 `su` 和权限管理。
 2. 基于 [metamodules](https://kernelsu.org/zh_CN/guide/metamodule.html) 的模块系统：可插拔的模块架构。
 3. [App Profile](https://kernelsu.org/zh_CN/guide/app-profile.html): 把 Root 权限关进笼子里。

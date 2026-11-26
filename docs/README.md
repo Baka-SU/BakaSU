@@ -15,7 +15,6 @@ A [`tiann/KernelSU`](https://github.com/tiann/KernelSU)'s downstream, added some
 
 ## Features
 
-
 1. Kernel-based `su` and root access management
 2. Module system based on [metamodules](https://kernelsu.org/guide/metamodule.html): Pluggable infrastructure for systemless modifications.
 3. [App Profile](https://kernelsu.org/guide/app-profile.html): Lock up the root power in a cage
