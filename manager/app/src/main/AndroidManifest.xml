@@ -43,18 +43,16 @@
         tools:targetApi="34"
         android:directBootAware="true"
         android:zygotePreloadName="org.bakasu.bakasu.magica.AppZygotePreload">
+        <!-- The real entry point. It is never disabled, so pinned shortcuts, notifications and
+             explicit intents keep resolving no matter which launcher icon is selected. -->
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".ui.UIActivity"
             android:exported="true"
             android:enabled="true"
             android:launchMode="standard"
             android:documentLaunchMode="intoExisting"
             android:autoRemoveFromRecents="true"
             android:theme="@style/Theme.KernelSU.Starting">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -94,10 +92,23 @@
                     android:scheme="ksu" />
             </intent-filter>
         </activity>
-        <!-- 切换图标 -->
+        <!-- 切换图标：两个 alias 指向同一个 UIActivity，只有图标不同，始终只启用其中一个。
+             所有 intent-filter 都由 UIActivity 自己声明，alias 只负责桌面入口和图标。 -->
+        <activity-alias
+            android:name=".ui.MainActivity"
+            android:targetActivity=".ui.UIActivity"
+            android:exported="true"
+            android:enabled="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias
             android:name=".ui.MainActivityAlias"
-            android:targetActivity=".ui.MainActivity"
+            android:targetActivity=".ui.UIActivity"
             android:exported="true"
             android:enabled="false"
             android:icon="@mipmap/ic_launcher_alt"
@@ -105,46 +116,6 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="content" />
-                <data android:mimeType="application/zip" />
-                <data android:mimeType="application/vnd.android.package-archive" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="application/zip" />
-                <data android:mimeType="application/vnd.android.package-archive" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="application/zip" />
-                <data android:mimeType="application/vnd.android.package-archive" />
-            </intent-filter>
-            <!-- Mirrors MainActivity: when the alternative icon is enabled this alias replaces
-                 MainActivity, so the ksu:// deep links must stay resolvable here as well. -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-
-                <data
-                    android:host="action"
-                    android:scheme="ksu" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-
-                <data
-                    android:host="webui"
-                    android:scheme="ksu" />
             </intent-filter>
         </activity-alias>
 

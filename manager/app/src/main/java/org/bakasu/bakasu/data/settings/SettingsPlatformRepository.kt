@@ -337,17 +337,21 @@ class SettingsPlatformRepository(
         }
     }
 
+    /**
+     * Both launcher entries are activity-aliases of the same activity, so switching the icon
+     * only swaps which alias is enabled and never touches the activity itself.
+     */
     private fun toggleLauncherIcon(useAlt: Boolean) {
         val packageName = application.packageName
-        val main = ComponentName(packageName, "org.bakasu.bakasu.ui.MainActivity")
-        val alias = ComponentName(packageName, "org.bakasu.bakasu.ui.MainActivityAlias")
+        val defaultEntry = ComponentName(packageName, "org.bakasu.bakasu.ui.MainActivity")
+        val altEntry = ComponentName(packageName, "org.bakasu.bakasu.ui.MainActivityAlias")
         application.packageManager.setComponentEnabledSetting(
-            if (useAlt) alias else main,
+            if (useAlt) altEntry else defaultEntry,
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
             PackageManager.DONT_KILL_APP,
         )
         application.packageManager.setComponentEnabledSetting(
-            if (useAlt) main else alias,
+            if (useAlt) defaultEntry else altEntry,
             PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
             PackageManager.DONT_KILL_APP,
         )

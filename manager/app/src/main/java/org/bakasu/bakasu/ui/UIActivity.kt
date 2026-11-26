@@ -35,7 +35,7 @@ import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
-class MainActivity : ComponentActivity() {
+class UIActivity : ComponentActivity() {
     private val homeViewModel: HomeViewModel by viewModel()
     private val moduleViewModel: ModuleViewModel by viewModel()
     private val settingsViewModel: SettingsViewModel by viewModel()
@@ -84,7 +84,7 @@ class MainActivity : ComponentActivity() {
                 settingsViewModel.events.collect { event ->
                     when (event) {
                         is SettingsUiEvent.Error -> if (event.message.isNotBlank()) {
-                            Toast.makeText(this@MainActivity, event.message, Toast.LENGTH_LONG)
+                            Toast.makeText(this@UIActivity, event.message, Toast.LENGTH_LONG)
                                 .show()
                         }
 
@@ -92,7 +92,7 @@ class MainActivity : ComponentActivity() {
                             val message = event.formatArg?.let {
                                 getString(event.stringResource, it)
                             } ?: getString(event.stringResource)
-                            Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@UIActivity, message, Toast.LENGTH_LONG).show()
                         }
 
                         SettingsUiEvent.RestartActivity -> recreate()

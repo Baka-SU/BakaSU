@@ -1,10 +1,8 @@
 package org.bakasu.bakasu.ui.util
 
 import android.app.AppOpsManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -18,7 +16,7 @@ import androidx.core.graphics.scale
 import androidx.core.net.toUri
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.shell.ShortcutRepository
-import org.bakasu.bakasu.ui.MainActivity
+import org.bakasu.bakasu.ui.UIActivity
 import org.bakasu.bakasu.ui.screen.main.ShortcutType
 
 class Shortcut(
@@ -45,25 +43,11 @@ class Shortcut(
     }
 
     /**
-     * Resolves the launcher entry that is enabled right now.
-     *
-     * The alternative icon is implemented as an activity-alias, and enabling it disables
-     * [MainActivity]. A pinned shortcut whose intent targets a disabled component cannot be
-     * launched, so every shortcut intent must point at the component that is currently enabled
-     * instead of assuming [MainActivity] is always available.
+     * Launcher shortcuts always target [UIActivity] directly instead of one of the launcher
+     * alias entries. The aliases only exist to switch the app icon, and whichever alias is
+     * disabled at pin time can never be revived, so a shortcut pinned against it would stay dead.
      */
-    private fun enabledLauncherComponent(context: Context): ComponentName {
-        val mainActivity = ComponentName(context, MainActivity::class.java.name)
-        val mainActivityAlias = ComponentName(context, "${MainActivity::class.java.name}Alias")
-        val mainState = context.packageManager.getComponentEnabledSetting(mainActivity)
-        val component = if (mainState == PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
-            mainActivityAlias
-        } else {
-            mainActivity
-        }
-        Log.d(TAG, "enabledLauncherComponent: mainState=$mainState, component=$component")
-        return component
-    }
+    private fun launchIntent(context: Context): Intent = Intent(context, UIActivity::class.java)
 
     fun createModuleActionShortcut(
         context: Context,
@@ -73,8 +57,7 @@ class Shortcut(
         intentToken: String,
     ) {
         val shortcutId = "module_action_$moduleId"
-        val shortcutIntent = Intent().apply {
-            component = enabledLauncherComponent(context)
+        val shortcutIntent = launchIntent(context).apply {
             action = Intent.ACTION_VIEW
             data = buildShortcutUri(moduleId, ShortcutType.Action, intentToken)
             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -98,8 +81,7 @@ class Shortcut(
         intentToken: String,
     ) {
         val shortcutId = "module_webui_$moduleId"
-        val shortcutIntent = Intent().apply {
-            component = enabledLauncherComponent(context)
+        val shortcutIntent = launchIntent(context).apply {
             action = Intent.ACTION_VIEW
             data = buildShortcutUri(moduleId, ShortcutType.WebUI, intentToken)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
