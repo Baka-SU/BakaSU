@@ -6,6 +6,7 @@ import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.internal.UiThreadHandler
 import com.topjohnwu.superuser.io.SuFile
 import com.topjohnwu.superuser.io.SuFileInputStream
+import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import org.bakasu.bakasu.data.shell.KsuCliRepository
 import org.bakasu.bakasu.domain.model.WebUiCommandResult
@@ -28,7 +29,11 @@ class WebUiRepository(
 
     fun spawn(command: String, globalMnt: Boolean = true): WebUiProcess = ShellWebUiProcess(ksuCliRepository.createRootShell(globalMnt), command)
 
-    fun listModules(): String = ksuCliRepository.listModules()
+    fun listModules(): String = try {
+        ksuCliRepository.listModules()
+    } catch (_: IOException) {
+        "[]"
+    }
 
     fun getModuleInfo(moduleId: String): WebUiModuleInfo? = ksuCliRepository.withNewRootShell(globalMnt = true) {
         val rootShell = this
