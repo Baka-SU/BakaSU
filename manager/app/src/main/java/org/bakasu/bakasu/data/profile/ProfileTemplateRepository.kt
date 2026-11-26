@@ -48,9 +48,11 @@ class ProfileTemplateRepository(
         try {
             withContext(Dispatchers.IO) {
                 runCatching {
-                    // Online templates are stored only when the user asks for it, never on a plain refresh.
-                    val synchronized = !synchronize || fetchRemoteTemplates()
-                    mutableOffline.value = synchronize && !synchronized
+                    val localIds = ksuCliRepository.listAppProfileTemplates()
+                    val shouldSynchronize = localIds.isEmpty() || synchronize
+                    val synchronized = !shouldSynchronize ||
+                        networkStatusRepository.isAvailable() && fetchRemoteTemplates()
+                    mutableOffline.value = shouldSynchronize && !synchronized
                     mutableTemplates.value = ksuCliRepository.listAppProfileTemplates()
                         .mapNotNull(::readTemplate)
                         .sortedWith(
@@ -193,10 +195,8 @@ class ProfileTemplateRepository(
                 )
     }
 
-    /** Preserves the phone UI's explicit synchronization using this device's network. */
     private suspend fun fetchRemoteTemplates(): Boolean = runCatching {
-        val bodies = fetchRemoteBodies()
-            ?: return false
+        val bodies = fetchRemoteBodies() ?: return false
         var fetchedAny = bodies.isEmpty()
         bodies.forEach { (id, body) ->
             val template =
@@ -210,7 +210,10 @@ class ProfileTemplateRepository(
             }
         }
         fetchedAny
-    }.getOrDefault(false)
+    }.getOrElse { error ->
+        if (error is CancellationException) throw error
+        false
+    }
 
     private fun readTemplate(id: String): ProfileTemplate? = runCatching {
         JSONObject(ksuCliRepository.getAppProfileTemplate(id)).toTemplate()
