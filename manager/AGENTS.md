@@ -115,7 +115,7 @@ Keep package responsibilities unchanged when moving code between source sets.
 * Pages live in `ui/wear/`; Wear-only reusable components live in `ui/wear/component/`, with Wear
   settings adapters in `ui/wear/component/settings/`. Shared UI components belong in
   `ui/component/`. Phone UI must not depend on Wear-only components, and Wear UI must not depend on
-  phone-only components; the `WearPhoneComponentBoundary` lint check warns about these violations.
+  phone-only components; the `WearPhoneComponentBoundary` lint check reports these violations as errors.
   The dialog API (`rememberCustomDialog`, `DialogHandle`) and `PackageIcon` are approved shared
   components. Non-UI helpers such as the `module.prop` parser `ZipFileDetector` belong in `data/`.
 * `WearManager.kt` owns one `AppScaffold`, the four-page main `WearHorizontalPager` and a Navigation 3 `NavDisplay`;

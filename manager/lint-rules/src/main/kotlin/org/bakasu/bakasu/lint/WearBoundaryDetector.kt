@@ -12,7 +12,7 @@ import com.android.tools.lint.detector.api.SourceCodeScanner
 import org.jetbrains.uast.UImportStatement
 
 /**
- * Keeps the phone and Wear sides apart, reported as warnings in both directions: phone code must
+ * Keeps the phone and Wear sides apart, reported as errors in both directions: phone code must
  * not import from the Wear package tree, and Wear screens must not import phone UI components.
  */
 class WearBoundaryDetector :
@@ -62,7 +62,7 @@ class WearBoundaryDetector :
                 "phone UI and the other way around.",
             category = Category.CORRECTNESS,
             priority = 6,
-            severity = Severity.WARNING,
+            severity = Severity.ERROR,
             implementation = Implementation(
                 WearBoundaryDetector::class.java,
                 Scope.JAVA_FILE_SCOPE,
