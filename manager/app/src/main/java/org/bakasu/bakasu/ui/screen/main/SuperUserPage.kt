@@ -7,13 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -28,7 +31,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
@@ -69,12 +71,17 @@ import org.bakasu.bakasu.domain.model.AllowlistOperationResult
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.domain.model.SuperUserLoadFailure
 import org.bakasu.bakasu.ui.component.ConfirmResult
+import org.bakasu.bakasu.ui.component.LocalTopBarSlot
 import org.bakasu.bakasu.ui.component.PackageIcon
+import org.bakasu.bakasu.ui.component.ProvideTopBar
 import org.bakasu.bakasu.ui.component.SearchAppBar
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
+import org.bakasu.bakasu.ui.component.TopBarIconEdgeInset
+import org.bakasu.bakasu.ui.component.TopBarIconPill
 import org.bakasu.bakasu.ui.component.WarningCard
 import org.bakasu.bakasu.ui.component.rememberConfirmDialog
 import org.bakasu.bakasu.ui.component.rememberSearchAppBarScrollBehavior
+import org.bakasu.bakasu.ui.component.rememberSearchFieldVisibleFraction
 import org.bakasu.bakasu.ui.component.settings.SettingsBaseWidget
 import org.bakasu.bakasu.ui.component.settings.lazySegmentColumn
 import org.bakasu.bakasu.ui.navigation.LocalNavigator
@@ -83,7 +90,9 @@ import org.bakasu.bakasu.ui.screen.LabelText
 import org.bakasu.bakasu.ui.theme.blurSource
 import org.bakasu.bakasu.ui.util.LocalPagerPage
 import org.bakasu.bakasu.ui.util.LocalPagerState
+import org.bakasu.bakasu.ui.util.LocalSelectedPage
 import org.bakasu.bakasu.ui.util.LocalSnackbarHost
+import org.bakasu.bakasu.ui.util.LocalTopBarOwner
 import org.bakasu.bakasu.ui.util.adaptiveScaffoldWindowInsets
 import org.bakasu.bakasu.ui.util.showReplacingSnackbar
 import org.bakasu.bakasu.ui.viewmodel.SortType
@@ -111,7 +120,7 @@ fun SuperUserPage(bottomPadding: Dp) {
     val scope = rememberCoroutineScope()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = rememberSearchAppBarScrollBehavior(
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState),
+        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState),
     )
     val listState = rememberLazyListState()
     val snackBarHostState = LocalSnackbarHost.current
@@ -185,47 +194,55 @@ fun SuperUserPage(bottomPadding: Dp) {
         if (isPageVisible) viewModel.dispatch(SuperUserUiAction.LoadInitialData)
     }
 
-    Scaffold(
-        topBar = {
-            SearchAppBar(
-                title = stringResource(R.string.superuser),
-                searchText = uiState.search,
-                onSearchTextChange = { viewModel.dispatch(SuperUserUiAction.Search(it)) },
-                dropdownContent = {
-                    IconButton(onClick = { showDropdown = true }) {
-                        Icon(
-                            imageVector = Icons.TwoTone.MoreVert,
-                            contentDescription = stringResource(id = R.string.settings),
-                        )
+    val topBarHeight = LocalTopBarSlot.current?.heightFor(LocalPagerPage.current) ?: 0.dp
 
-                        SuperUserDropdown(
-                            expanded = showDropdown,
-                            onDismissRequest = { showDropdown = false },
-                            viewModel = viewModel,
-                            uiState = uiState,
-                            onBackupAllowlist = {
-                                backupLauncher.launch(createAllowlistBackupFileName())
-                            },
-                            onRestoreAllowlist = {
-                                restoreLauncher.launch(arrayOf("application/octet-stream"))
-                            },
-                        )
-                    }
-                },
-                navigationContent = {
-                    IconButton(onClick = {
-                        navigator.push(Route.Sulog)
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.TwoTone.Article,
-                            contentDescription = stringResource(R.string.sulog),
-                        )
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                searchBarPlaceHolderText = stringResource(R.string.search_apps),
-            )
-        },
+    // Carries the field from the height it has here to the height it has on the page being
+    // swiped towards, so it runs up when that page's list is already scrolled.
+    val fieldVisibleFraction = rememberSearchFieldVisibleFraction(scrollBehavior)
+
+    ProvideTopBar(active = LocalPagerPage.current == LocalTopBarOwner.current) {
+        SearchAppBar(
+            title = stringResource(R.string.superuser),
+            searchText = uiState.search,
+            onSearchTextChange = { viewModel.dispatch(SuperUserUiAction.Search(it)) },
+            dropdownContent = {
+                TopBarIconPill(onClick = { navigator.push(Route.Sulog) }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.TwoTone.Article,
+                        contentDescription = stringResource(R.string.sulog),
+                    )
+                }
+                TopBarIconPill(onClick = { showDropdown = true }) {
+                    Icon(
+                        imageVector = Icons.TwoTone.MoreVert,
+                        contentDescription = stringResource(id = R.string.settings),
+                    )
+
+                    SuperUserDropdown(
+                        expanded = showDropdown,
+                        onDismissRequest = { showDropdown = false },
+                        viewModel = viewModel,
+                        uiState = uiState,
+                        onBackupAllowlist = {
+                            backupLauncher.launch(createAllowlistBackupFileName())
+                        },
+                        onRestoreAllowlist = {
+                            restoreLauncher.launch(arrayOf("application/octet-stream"))
+                        },
+                    )
+                }
+            },
+            scrollBehavior = scrollBehavior,
+            searchBarPlaceHolderText = stringResource(R.string.search_apps),
+            visibleFraction = fieldVisibleFraction,
+            contentScrolled = {
+                listState.firstVisibleItemIndex > 0 ||
+                    listState.firstVisibleItemScrollOffset > 0
+            },
+        )
+    }
+
+    Scaffold(
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
         snackbarHost = {
@@ -234,10 +251,11 @@ fun SuperUserPage(bottomPadding: Dp) {
                 hostState = snackBarHostState,
             )
         },
-        contentWindowInsets = adaptiveScaffoldWindowInsets(includeBottom = false),
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
     ) { innerPadding ->
         SuperUserContent(
-            innerPadding = innerPadding,
+            modifier = Modifier.padding(innerPadding),
+            topBarHeight = topBarHeight,
             viewModel = viewModel,
             uiState = uiState,
             listState = listState,
@@ -291,7 +309,8 @@ private fun createAllowlistBackupFileName(): String {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SuperUserContent(
-    innerPadding: PaddingValues,
+    modifier: Modifier = Modifier,
+    topBarHeight: Dp,
     viewModel: SuperUserViewModel,
     uiState: SuperUserUiState,
     listState: androidx.compose.foundation.lazy.LazyListState,
@@ -303,7 +322,7 @@ private fun SuperUserContent(
 
     if (uiState.appGroupList.isEmpty()) {
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .blurSource(),
             contentAlignment = Alignment.Center,
@@ -314,7 +333,9 @@ private fun SuperUserContent(
                 SuperUserLoadError(
                     failure = uiState.loadFailure ?: SuperUserLoadFailure.PACKAGE_LOAD_FAILED,
                     onRetry = { viewModel.dispatch(SuperUserUiAction.Refresh) },
-                    modifier = Modifier.padding(innerPadding).padding(16.dp),
+                    modifier = Modifier
+                        .padding(top = topBarHeight, bottom = bottomPadding)
+                        .padding(16.dp),
                 )
             } else {
                 Column(
@@ -344,13 +365,13 @@ private fun SuperUserContent(
         state = pullRefreshState,
         onRefresh = { viewModel.dispatch(SuperUserUiAction.Refresh) },
         isRefreshing = uiState.isRefreshing,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .blurSource(),
         indicator = {
             PullToRefreshDefaults.LoadingIndicator(
                 modifier = Modifier
-                    .padding(top = innerPadding.calculateTopPadding())
+                    .padding(top = topBarHeight)
                     .align(Alignment.TopCenter),
                 state = pullRefreshState,
                 isRefreshing = uiState.isRefreshing,
@@ -364,7 +385,7 @@ private fun SuperUserContent(
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
         ) {
             item {
-                Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
+                Spacer(modifier = Modifier.height(topBarHeight))
             }
             uiState.loadFailure?.let { failure ->
                 item(key = "load-error") {
@@ -389,7 +410,7 @@ private fun SuperUserContent(
             }
 
             item {
-                Spacer(modifier = Modifier.height(bottomPadding + innerPadding.calculateBottomPadding() + 15.dp))
+                Spacer(modifier = Modifier.height(bottomPadding + 15.dp))
             }
         }
     }
