@@ -27,10 +27,10 @@ bool ksu_enforce(struct policydb *db, const char *type);
 bool ksu_typeattribute(struct policydb *db, const char *type, const char *attr);
 bool ksu_exists(struct policydb *db, const char *type);
 
-// for selinux_hide speed up
-bool ksu_type_is_original(struct policydb *db, u32 policy_generation, u32 type_value);
-bool ksu_role_is_original(struct policydb *db, u32 policy_generation, u32 role_value);
-bool ksu_user_is_original(struct policydb *db, u32 policy_generation, u32 user_value);
+/* Return 1 for an original symbol, 0 for an added symbol, or -EAGAIN if metadata is unavailable. */
+int ksu_type_is_original(struct policydb *db, u32 policy_generation, u32 type_value);
+int ksu_role_is_original(struct policydb *db, u32 policy_generation, u32 role_value);
+int ksu_user_is_original(struct policydb *db, u32 policy_generation, u32 user_value);
 
 struct ksu_original_symbols;
 

@@ -256,11 +256,8 @@ retry:
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_POLICY_MUTEX)
     symbols = ksu_prepare_original_symbols(db, &old_pol->policydb, seqno);
-    if (!symbols) {
-        pr_err("failed to initialize original symbol metadata\n");
-        ksu_destroy_sepolicy(pol);
-        goto out_unlock;
-    }
+    if (!symbols)
+        pr_warn("failed to initialize original symbol metadata, use backup lookups\n");
 #endif
 
     ksu_type(db, KERNEL_SU_DOMAIN, "domain");
@@ -377,12 +374,8 @@ out_unlock:
     }
 #endif
     symbols = ksu_prepare_original_symbols(policydb_ptr, oldpolicydb, seqno);
-    if (!symbols) {
-        pr_err("failed to initialize original symbol metadata\n");
-        ksu_unlock_sepolicy_legacy();
-        ksu_destroy_policydb(newpolicydb);
-        goto out_free;
-    }
+    if (!symbols)
+        pr_warn("failed to initialize original symbol metadata, use backup lookups\n");
 #if defined(KSU_COMPAT_USE_SELINUX_STATE) && !defined(SELINUX_POLICY_INSTEAD_SELINUX_SS)
     selinux_state.ss->latest_granting = seqno;
 #else
@@ -798,11 +791,8 @@ retry:
         goto retry;
     }
     symbols = ksu_advance_original_symbols(db, &old_pol->policydb, old_pol->latest_granting, seqno);
-    if (!symbols) {
-        pr_err("failed to carry original symbol metadata\n");
-        ret = -EINVAL;
-        goto out_drop_new_policy;
-    }
+    if (!symbols)
+        pr_warn("failed to carry original symbol metadata, use backup lookups\n");
 
     rcu_assign_pointer(selinux_state.policy, pol);
     ksu_publish_original_symbols(symbols);
@@ -844,12 +834,8 @@ out_unlock:
     }
 #endif
     symbols = ksu_advance_original_symbols(policydb_ptr, policydb_ptr, seqno - 1, seqno);
-    if (!symbols) {
-        pr_err("failed to carry original symbol metadata\n");
-        ksu_unlock_sepolicy_legacy();
-        ret = -EINVAL;
-        goto out_drop_new_policy;
-    }
+    if (!symbols)
+        pr_warn("failed to carry original symbol metadata, use backup lookups\n");
 #if defined(KSU_COMPAT_USE_SELINUX_STATE) && !defined(SELINUX_POLICY_INSTEAD_SELINUX_SS)
     selinux_state.ss->latest_granting = seqno;
 #else

@@ -1129,7 +1129,7 @@ struct ksu_original_symbols *ksu_advance_original_symbols(struct policydb *db, s
 }
 
 /* The caller holds the policy's RCU read lock or legacy policy lock. */
-static bool ksu_symbol_is_original(struct policydb *db, u32 policy_generation, u32 value, u32 sym)
+static int ksu_symbol_is_original(struct policydb *db, u32 policy_generation, u32 value, u32 sym)
 {
     const struct ksu_original_symbols *snapshot;
     u32 limit = 0;
@@ -1140,20 +1140,22 @@ static bool ksu_symbol_is_original(struct policydb *db, u32 policy_generation, u
         limit = snapshot->limits[sym];
     rcu_read_unlock();
 
+    if (!limit)
+        return -EAGAIN;
     return value && value <= limit;
 }
 
-bool ksu_type_is_original(struct policydb *db, u32 policy_generation, u32 type_value)
+int ksu_type_is_original(struct policydb *db, u32 policy_generation, u32 type_value)
 {
     return ksu_symbol_is_original(db, policy_generation, type_value, SYM_TYPES);
 }
 
-bool ksu_role_is_original(struct policydb *db, u32 policy_generation, u32 role_value)
+int ksu_role_is_original(struct policydb *db, u32 policy_generation, u32 role_value)
 {
     return ksu_symbol_is_original(db, policy_generation, role_value, SYM_ROLES);
 }
 
-bool ksu_user_is_original(struct policydb *db, u32 policy_generation, u32 user_value)
+int ksu_user_is_original(struct policydb *db, u32 policy_generation, u32 user_value)
 {
     return ksu_symbol_is_original(db, policy_generation, user_value, SYM_USERS);
 }
