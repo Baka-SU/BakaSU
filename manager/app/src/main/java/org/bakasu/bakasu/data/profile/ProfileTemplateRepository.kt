@@ -29,9 +29,9 @@ class ProfileTemplateRepository(
     private val networkRequestRepository: NetworkRequestRepository,
     private val ksuCliRepository: KsuCliRepository,
 ) {
-    companion object {
-        private const val TEMPLATE_INDEX_URL = "https://kernelsu.org/templates/index.json"
-        private const val TEMPLATE_URL = "https://kernelsu.org/templates/%s"
+    private companion object {
+        const val TEMPLATE_INDEX_URL = "https://kernelsu.org/templates/index.json"
+        const val TEMPLATE_URL = "https://kernelsu.org/templates/%s"
     }
 
     private val refreshMutex = Mutex()

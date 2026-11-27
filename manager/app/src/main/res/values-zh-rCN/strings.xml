@@ -155,6 +155,7 @@
     <string name="app_profile_template_export_empty">没有可以导出的本地模板！</string>
     <string name="app_profile_template_import_success">导入成功</string>
     <string name="app_profile_template_sync">同步在线规则</string>
+    <string name="app_profile_template_empty">暂无可用模板</string>
     <string name="app_profile_template_save_failed">模版保存失败</string>
     <string name="app_profile_template_import_empty">剪切板为空！</string>
     <string name="affected_applications">受影响的应用</string>
@@ -445,11 +446,6 @@
     <string name="download_complete_title">下载完成</string>
     <string name="download_complete_content">%s 下载成功</string>
     <string name="download_failed_title">下载失败</string>
-    <string name="wear_download_error_network">无法连接网络</string>
-    <string name="wear_download_error_timeout">请求超时</string>
-    <string name="wear_download_error_http">HTTP %1$d</string>
-    <string name="wear_download_error_storage">无法保存文件</string>
-    <string name="wear_download_error_unknown">下载失败</string>
     <string name="download_failed_content">%s 下载失败</string>
     <string name="download_cancel">取消</string>
     <string name="download_install">安装</string>

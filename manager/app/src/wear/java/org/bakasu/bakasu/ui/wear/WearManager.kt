@@ -414,8 +414,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                 is ModuleUiEvent.RemovedChanged -> {
                     if (event.successful) {
-                        // Removal state is already published, without waiting for online updates.
                         moduleError = null
+                        moduleViewModel.dispatch(ModuleUiAction.Refresh())
                     } else {
                         moduleError = operationFailedText
                     }

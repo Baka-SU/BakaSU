@@ -18,7 +18,7 @@ import org.bakasu.bakasu.data.application.DynamicManagerRepository
 import org.bakasu.bakasu.data.count.CountRepository
 import org.bakasu.bakasu.data.download.DownloadRepository
 import org.bakasu.bakasu.data.file.ModuleFileRepository
-import org.bakasu.bakasu.data.file.ModuleUtils
+import org.bakasu.bakasu.data.file.ZipFileDetector
 import org.bakasu.bakasu.data.flash.FlashRepository
 import org.bakasu.bakasu.data.kernel.KernelRepository
 import org.bakasu.bakasu.data.kernel.UmountRepository
@@ -292,12 +292,12 @@ val repositoryModule = module {
     singleOf(::NetworkStatusRepository)
     singleOf(::NetworkRequestRepository)
     singleOf(::DynamicManagerRepository)
-    single { SulogRepository(get()) }
+    singleOf(::SulogRepository)
     singleOf(::BugreportRepository)
     singleOf(::UmountRepository)
     singleOf(::ModuleCatalogRepository)
     single { ModuleReleaseRepository(get(), get(applicationScopeQualifier)) }
-    single { ModuleIconRepository(get(), androidApplication(), get(applicationScopeQualifier)) }
+    singleOf(::ModuleIconRepository)
     single { KernelSuRegistryRepository(get(), get(), get(), get()) }
     singleOf(::RepositorySourceStore)
     singleOf(::ModuleRepository)
@@ -325,7 +325,7 @@ val repositoryModule = module {
     singleOf(::SettingsPlatformRepository)
     singleOf(::ShortcutRepository)
     singleOf(::MonetColorsProvider)
-    singleOf(::ModuleUtils)
+    singleOf(::ZipFileDetector)
     single { HanziToPinyin.create() } bind TextTransliterator::class
 }
 

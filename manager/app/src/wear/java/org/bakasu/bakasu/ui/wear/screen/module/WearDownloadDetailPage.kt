@@ -91,7 +91,6 @@ internal fun WearDownloadDetailContent(
                     )
                     Text(stringResource(R.string.wear_download_size, formatFileSize(task.downloadedBytes), if (task.totalBytes > 0) formatFileSize(task.totalBytes) else stringResource(R.string.unknown)))
                     if (task.totalBytes > 0) Text(stringResource(R.string.wear_download_percent, task.progress))
-                    task.failure?.let { Text(stringResource(it.reason.resId)) }
                     task.verificationFailure?.let { Text(stringResource(it.resId)) }
                 }
             }

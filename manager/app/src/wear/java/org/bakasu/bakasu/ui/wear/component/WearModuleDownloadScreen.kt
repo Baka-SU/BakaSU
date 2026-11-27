@@ -36,7 +36,6 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.domain.model.DownloadFailureReason
 import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadUiState
@@ -156,13 +155,10 @@ internal fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState
 @Composable
 private fun moduleDownloadFailureText(state: ModuleDownloadUiState): String {
     val verification = state.verificationFailure
-    val failure = state.failure
     return when {
         verification == DownloadVerificationFailure.URL_NOT_ALLOWED -> stringResource(R.string.wear_download_url_blocked)
         verification != null -> stringResource(R.string.wear_download_verify_failed)
         state.phase == ModuleDownloadPhase.VERIFY_FAILED -> stringResource(R.string.wear_download_verify_failed)
-        failure?.reason == DownloadFailureReason.HTTP && failure.httpStatus != null -> stringResource(R.string.wear_download_error_http, failure.httpStatus)
-        failure != null && failure.reason != DownloadFailureReason.HTTP -> stringResource(failure.reason.resId)
-        else -> stringResource(R.string.wear_download_error_unknown)
+        else -> stringResource(R.string.download_failed_title)
     }
 }

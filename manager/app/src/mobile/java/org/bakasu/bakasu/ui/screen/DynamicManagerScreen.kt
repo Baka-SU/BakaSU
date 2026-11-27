@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -48,7 +49,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.DynamicManagerConfig
-import org.bakasu.bakasu.ui.component.CenteredRefreshIndicator
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.DialogHandle
 import org.bakasu.bakasu.ui.component.PackageIcon
@@ -192,10 +192,12 @@ fun DynamicManagerScreen() {
                     }
                 },
                 indicator = {
-                    CenteredRefreshIndicator(
+                    PullToRefreshDefaults.LoadingIndicator(
                         state = pullToRefreshState,
                         isRefreshing = isUserRefreshing,
-                        contentPadding = paddingValues,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = paddingValues.calculateTopPadding()),
                     )
                 },
                 modifier = Modifier

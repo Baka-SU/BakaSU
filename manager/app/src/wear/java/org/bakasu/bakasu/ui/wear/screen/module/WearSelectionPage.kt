@@ -1,13 +1,11 @@
 package org.bakasu.bakasu.ui.wear.screen.module
 
-import android.os.Build
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.ChatBubble
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.FolderOpen
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.RemoveModerator
 import androidx.compose.material.icons.rounded.Schedule
@@ -21,20 +19,19 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.app.LocaleManagerCompat
 import androidx.core.os.LocaleListCompat
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SurfaceTransformation
-import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.transformedHeight
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import java.util.Locale
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.availablePaletteStyles
+import org.bakasu.bakasu.domain.model.supportedAppLocales
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.WearPreference
@@ -46,7 +43,6 @@ import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
-import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearChoicePage
@@ -149,18 +145,12 @@ internal fun WearSelectionPage(
     }
 }
 
-internal val wearLanguageLocales = listOf(
-    "en", "ar", "az", "be", "bn", "bn-BD", "bs", "da", "de", "es", "et", "fa", "fil", "fr", "gl", "hi", "hr", "hu",
-    "id", "it", "he", "ja", "kn", "ko", "lt", "lv", "mr", "ms", "nl", "pl", "pt", "pt-BR", "ro", "ru", "sl", "sr",
-    "te", "th", "tk", "tr", "uk", "vi", "zh-CN", "zh-HK", "zh-TW",
-).map(Locale::forLanguageTag)
-
 /** Prefer exact regions, then supported locales with the same language and script. */
 internal fun recommendedWearLanguages(system: List<Locale>): List<Locale> = system.mapNotNull { preferred ->
-    wearLanguageLocales.firstOrNull { it == preferred }
-        ?: wearLanguageLocales.firstOrNull { it.language == preferred.language && it.country == preferred.country && LocaleListCompat.matchesLanguageAndScript(it, preferred) }
-        ?: wearLanguageLocales.firstOrNull { it.country.isEmpty() && LocaleListCompat.matchesLanguageAndScript(it, preferred) }
-        ?: wearLanguageLocales.firstOrNull { LocaleListCompat.matchesLanguageAndScript(it, preferred) }
+    supportedAppLocales.firstOrNull { it == preferred }
+        ?: supportedAppLocales.firstOrNull { it.language == preferred.language && it.country == preferred.country && LocaleListCompat.matchesLanguageAndScript(it, preferred) }
+        ?: supportedAppLocales.firstOrNull { it.country.isEmpty() && LocaleListCompat.matchesLanguageAndScript(it, preferred) }
+        ?: supportedAppLocales.firstOrNull { LocaleListCompat.matchesLanguageAndScript(it, preferred) }
 }.distinct()
 
 @Composable
@@ -169,7 +159,7 @@ internal fun WearLanguagePage(selected: Locale?, system: List<Locale>, onBack: (
     fun Locale.choice() = settingTag() to getDisplayName(this)
     val groups = listOf(
         stringResource(R.string.wear_recommended_languages) to (listOf("system" to stringResource(R.string.language_system_default)) + recommended.map { it.choice() }),
-        stringResource(R.string.wear_other_languages) to (wearLanguageLocales - recommended.toSet()).map { it.choice() }.sortedBy { it.second },
+        stringResource(R.string.wear_other_languages) to (supportedAppLocales - recommended.toSet()).map { it.choice() }.sortedBy { it.second },
     )
     val selectedTag = selected?.let { recommendedWearLanguages(listOf(it)).firstOrNull() ?: it }?.settingTag() ?: "system"
     WearList(onBack = onBack, snap = true) { spec ->

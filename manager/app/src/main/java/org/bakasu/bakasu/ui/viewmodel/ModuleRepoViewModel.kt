@@ -153,13 +153,16 @@ class ModuleRepoViewModel(
     }
 
     fun resolveAsset(catalogId: String, asset: ModuleReleaseAsset): CatalogModule? = resolveModule(catalogId)?.takeIf { module ->
-        isCurrent(module) && module.latestAsset?.assets?.any { it.hasSameIdentity(asset) && it.hasSameVerification(asset) } == true
+        (module.registryMetadata != null || module.repositoryUrl !in observeSources.failures.value) &&
+            isCurrent(module) && module.latestAsset?.assets?.any { it.hasSameIdentity(asset) && it.hasSameVerification(asset) } == true
     }
 
     suspend fun resolveModuleForInstall(catalogId: String): CatalogModule? {
         val module = resolveModule(catalogId) ?: return null
         val loaded = (getModule(module.moduleId, module.repositoryUrl) as? ModuleCatalogResult.Success)?.value ?: return null
-        return resolveModule(loaded.catalogId)?.takeIf { it.detailLoaded && isCurrent(it) }
+        return resolveModule(loaded.catalogId)?.takeIf {
+            (it.registryMetadata != null || it.repositoryUrl !in observeSources.failures.value) && it.detailLoaded && isCurrent(it)
+        }
     }
 
     fun updateSearch(value: String) {

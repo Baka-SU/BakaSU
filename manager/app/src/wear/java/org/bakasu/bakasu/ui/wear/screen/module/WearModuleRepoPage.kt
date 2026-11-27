@@ -45,7 +45,6 @@ import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
 import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
-import org.bakasu.bakasu.ui.viewmodel.CatalogContent
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
@@ -124,8 +123,9 @@ internal fun WearModuleRepoPage(
     onRetry: () -> Unit = onRefresh,
     onOpen: (CatalogModule) -> Unit,
 ) {
-    val loading = state.modules.isEmpty() && (isPageLoading || state.isRefreshing && !state.isPullRefreshing)
-    val failed = !loading && !state.isRefreshing && state.content == CatalogContent.FAILED
+    val loading = isPageLoading || state.modules.isEmpty() && state.isRefreshing && !state.isPullRefreshing
+    val failure = state.failures[state.repositoryUrl]
+    val failed = !loading && !state.isRefreshing && failure != null
     WearList(
         pageTitle = stringResource(R.string.module_repo),
         isLoading = loading,
@@ -141,7 +141,7 @@ internal fun WearModuleRepoPage(
     ) { spec ->
         if (failed) {
             item {
-                WearLoadFailureContent(spec, wearRepositoryFailureText(state.failures[state.repositoryUrl]))
+                WearLoadFailureContent(spec, wearRepositoryFailureText(failure))
             }
         } else if (state.modules.isEmpty() && !state.isRefreshing) {
             item {

@@ -66,7 +66,9 @@ fun TemplateConfig(
         emptyDialogContent = if (profileTemplates.size == 1) {
             {
                 NetworkRefreshContent(
-                    offline = uiState.isOffline,
+                    offline = uiState.isOffline || uiState.loadFailed,
+                    isLoading = uiState.isLoading || uiState.isRefreshing,
+                    emptyMessage = stringResource(R.string.app_profile_template_empty),
                     onRetry = {
                         scope.launch {
                             viewModel.dispatch(TemplateUiAction.Refresh(synchronize = true))

@@ -2,6 +2,13 @@ package org.bakasu.bakasu.domain.model
 
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
+import java.util.Locale
+
+val supportedAppLocales = listOf(
+    "en", "ar", "az", "be", "bn", "bn-BD", "bs", "da", "de", "es", "et", "fa", "fil", "fr", "gl", "hi", "hr", "hu",
+    "id", "it", "he", "ja", "kn", "ko", "lt", "lv", "mr", "ms", "nl", "pl", "pt", "pt-BR", "ro", "ru", "sl", "sr",
+    "te", "th", "tk", "tr", "uk", "vi", "zh-CN", "zh-HK", "zh-TW",
+).map(Locale::forLanguageTag)
 
 data class SettingsPlatformSnapshot(
     val dpi: Int = 0,

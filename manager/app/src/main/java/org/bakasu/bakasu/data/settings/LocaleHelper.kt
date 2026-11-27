@@ -38,7 +38,7 @@ class LocaleHelper(
 ) {
     suspend fun setApplicationLanguage(context: Context, tag: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val locales = if (tag == "system") LocaleList.getEmptyLocaleList() else LocaleList(parseLocaleTag(tag))
+            val locales = if (tag == "system") LocaleList.getEmptyLocaleList() else LocaleList(Locale.Builder().setLanguageTag(tag.replace('_', '-')).build())
             context.getSystemService(LocaleManager::class.java).applicationLocales = locales
         } else {
             settings.editBlocking { it[stringPreferencesKey("app_locale")] = tag }
@@ -96,7 +96,17 @@ class LocaleHelper(
      * Parse locale tag to Locale object
      */
     private fun parseLocaleTag(tag: String): Locale = try {
-        Locale.Builder().setLanguageTag(tag.replace('_', '-')).build()
+        if (tag.contains("_")) {
+            val parts = tag.split("_")
+            Locale.Builder()
+                .setLanguage(parts[0])
+                .setRegion(parts.getOrNull(1) ?: "")
+                .build()
+        } else {
+            Locale.Builder()
+                .setLanguage(tag)
+                .build()
+        }
     } catch (_: Exception) {
         Locale.getDefault()
     }

@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.ui.wear.screen.main
 
 import android.content.pm.PackageManager
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.Block
@@ -25,32 +24,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
-import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
-import androidx.wear.compose.material3.lazy.transformedHeight
 import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.Natives.KernelPatchImplementation
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.HomeDashboardState
 import org.bakasu.bakasu.ui.component.rememberCustomDialog
 import org.bakasu.bakasu.ui.wear.WearManagerScreen
-import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearChip
 import org.bakasu.bakasu.ui.wear.component.WearChipEmphasis
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon
@@ -61,6 +53,7 @@ import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearStatusItem
 import org.bakasu.bakasu.ui.wear.component.WearStatusTone
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.wearDialogContentPadding
 import org.bakasu.bakasu.ui.wear.component.wearStatusColors
 
@@ -313,27 +306,19 @@ private fun TransformingLazyColumnItemScope.WearWarningBar(
     onClick: () -> Unit,
 ) {
     val (container, content) = wearStatusColors(warning.tone)
-    Button(
+    WearSettingsJumpPageWidget(
+        spec = spec,
+        title = stringResource(warning.title),
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
-            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
-        icon = {
-            Icon(
-                if (warning.tone == WearStatusTone.ERROR) Icons.Rounded.Error else Icons.Rounded.Warning,
-                contentDescription = null,
-            )
-        },
+        icon = if (warning.tone == WearStatusTone.ERROR) Icons.Rounded.Error else Icons.Rounded.Warning,
+        description = stringResource(R.string.wear_tap_to_view),
         colors = ButtonDefaults.buttonColors(
             containerColor = container ?: MaterialTheme.colorScheme.surfaceContainer,
             contentColor = content,
             secondaryContentColor = content,
             iconColor = content,
         ),
-        secondaryLabel = { WearAutoMarqueeText(stringResource(R.string.wear_tap_to_view), maxLines = 2) },
-        transformation = SurfaceTransformation(spec),
-    ) {
-        WearAutoMarqueeText(stringResource(warning.title))
-    }
+    )
 }
 
 @Composable

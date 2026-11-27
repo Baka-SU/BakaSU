@@ -15,6 +15,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import org.bakasu.bakasu.Natives
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.AppProfile
+import org.bakasu.bakasu.domain.model.isSELinuxDomainValid
 import org.bakasu.bakasu.profile.Capabilities
 import org.bakasu.bakasu.profile.Groups
 import org.bakasu.bakasu.toRawFlags
@@ -97,7 +98,7 @@ fun WearAppProfileConfig(
                     updateDraft(draft.copy(context = domain, rules = rules, rootUseDefault = false))
                     back()
                 },
-                confirmEnabled = domain.matches(Regex("^[a-z_]+:[a-z0-9_]+:[a-z0-9_]+(:[a-z0-9_]+)?$")) && sepolicyValid,
+                confirmEnabled = isSELinuxDomainValid(domain) && sepolicyValid,
             ) { spec ->
                 item { WearPageHeader(spec, stringResource(field)) }
                 SegmentedColumn(listOf(R.string.profile_selinux_domain, R.string.profile_selinux_rules), { it }) { child ->

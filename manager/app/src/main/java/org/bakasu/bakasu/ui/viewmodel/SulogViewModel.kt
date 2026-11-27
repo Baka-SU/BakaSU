@@ -170,10 +170,7 @@ class SulogViewModel(
                 setStringSetPreference(PREF_SULOG_FILTERS, filters.value.map { it.name }.toSet())
             }
 
-            is SulogUiAction.SelectFile -> {
-                refreshJob?.cancel()
-                refreshJob = load(SulogLoading.OPERATION) { reportFailure(refreshSulog.selectFile(action.path)) }
-            }
+            is SulogUiAction.SelectFile -> refresh(action.path, SulogLoading.OPERATION)
         }
     }
 
@@ -184,7 +181,7 @@ class SulogViewModel(
         }.distinctUntilChanged().collectLatest { idleAndEnabled ->
             if (idleAndEnabled) {
                 while (currentCoroutineContext().isActive) {
-                    refreshSulog.silently()
+                    refreshSulog(sourceState.value.selectedFilePath)
                     delay(1_000)
                 }
             }
@@ -197,6 +194,7 @@ class SulogViewModel(
             val result = cleanSulog(path)
             currentCoroutineContext().ensureActive()
             result.exceptionOrNull()?.let { mutableEvents.emit(SulogUiEvent.Error(it.message.orEmpty())) }
+                ?: read(path)
         }
     }
 

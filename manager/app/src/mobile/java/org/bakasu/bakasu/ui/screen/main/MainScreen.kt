@@ -188,7 +188,11 @@ fun MainScreen(
                 },
                 containerColor = Color.Transparent,
             ) { innerPadding ->
-                content(innerPadding.calculateBottomPadding())
+                Box(
+                    modifier = Modifier.blurSource(),
+                ) {
+                    content(innerPadding.calculateBottomPadding())
+                }
             }
         } else {
             var navWidth by remember { mutableIntStateOf(0) }

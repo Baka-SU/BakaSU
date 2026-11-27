@@ -19,3 +19,5 @@ data class AppProfile(
     val rules: String = "",
     val flags: Long = Natives.FLAG_KSU_NO_NEW_PRIVS,
 ) : java.io.Serializable
+
+fun isSELinuxDomainValid(value: String): Boolean = value.matches(Regex("^[a-z_]+:[a-z0-9_]+:[a-z0-9_]+(:[a-z0-9_]+)?$"))

@@ -7,33 +7,26 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.BackHand
-import androidx.compose.material.icons.rounded.ChatBubble
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Contrast
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.LayersClear
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Swipe
-import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,24 +39,17 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.IconToggleButton
 import androidx.wear.compose.material3.IconToggleButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.SurfaceTransformation
-import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.TransformationSpec
-import androidx.wear.compose.material3.lazy.transformedHeight
 import kotlin.math.roundToInt
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.ThemeConfig
-import org.bakasu.bakasu.ui.viewmodel.HomeUiAction
-import org.bakasu.bakasu.ui.viewmodel.HomeViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.WearPreference
@@ -73,16 +59,12 @@ import org.bakasu.bakasu.ui.viewmodel.resolvedToastStyle
 import org.bakasu.bakasu.ui.wear.WearRoute
 import org.bakasu.bakasu.ui.wear.WearSelection
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
-import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
-import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.WearSliderCard
 import org.bakasu.bakasu.ui.wear.component.WearTextInputPage
-import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
-import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
@@ -93,7 +75,6 @@ import org.bakasu.bakasu.ui.wear.screen.module.selectionIcon
 import org.bakasu.bakasu.ui.wear.screen.module.timeDisplayLabel
 import org.bakasu.bakasu.ui.wear.screen.module.toastDisplayLabel
 import org.koin.compose.koinInject
-import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * @author Hanhan_awa
@@ -286,16 +267,15 @@ private fun ColorSwatch(color: Color, selected: Boolean, onSelect: () -> Unit) {
  */
 @Composable
 private fun TransformingLazyColumnItemScope.HexColorButton(spec: TransformationSpec, hex: String, onClick: () -> Unit) {
-    FilledTonalButton(
+    WearSettingsJumpPageWidget(
+        spec = spec,
+        title = hex,
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)
-            .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding),
-        transformation = SurfaceTransformation(spec),
-        icon = {
+        description = stringResource(R.string.wear_color_hex),
+        iconContent = {
             Box(Modifier.size(ButtonDefaults.IconSize).background(Color(hex.toColorInt()), CircleShape))
         },
-        secondaryLabel = { WearAutoMarqueeText(stringResource(R.string.wear_color_hex), maxLines = 2) },
-    ) { WearAutoMarqueeText(hex) }
+    )
 }
 
 /**

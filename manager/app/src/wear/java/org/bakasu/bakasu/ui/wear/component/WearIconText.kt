@@ -10,6 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
@@ -47,16 +49,20 @@ fun WearDetailField(
     value: String,
     modifier: Modifier = Modifier,
     iconAlignment: Alignment.Vertical = Alignment.CenterVertically,
+    iconSpacing: Dp = 6.dp,
+    verticalSpacing: Dp = 2.dp,
+    labelStyle: TextStyle = MaterialTheme.typography.titleSmall,
+    valueStyle: TextStyle = MaterialTheme.typography.bodySmall,
     icon: @Composable () -> Unit,
 ) {
     Row(modifier = modifier, verticalAlignment = iconAlignment) {
         icon()
-        Spacer(Modifier.width(6.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(label, style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.width(iconSpacing))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(verticalSpacing)) {
+            Text(label, style = labelStyle)
             Text(
                 value,
-                style = MaterialTheme.typography.bodySmall,
+                style = valueStyle,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

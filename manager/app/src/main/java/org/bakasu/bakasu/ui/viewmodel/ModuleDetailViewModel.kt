@@ -71,6 +71,7 @@ class ModuleDetailViewModel(
         if (observeSources.sources.value.none { it.url == repositoryUrl }) return null
         return observeModules().value.firstOrNull { module ->
             module.moduleId == moduleId && module.repositoryUrl == repositoryUrl &&
+                (module.registryMetadata != null || repositoryUrl !in observeSources.failures.value) &&
                 isCurrent(module) && module.releases.any { release -> release.assets.any { it.hasSameIdentity(asset) && it.hasSameVerification(asset) } }
         }
     }

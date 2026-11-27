@@ -3,14 +3,18 @@ package org.bakasu.bakasu.data.download
 import android.app.Application
 import android.content.Intent
 import androidx.core.content.ContextCompat
+import androidx.core.net.toFile
+import androidx.core.net.toUri
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.data.module.registry.RegistryUrls
 import org.bakasu.bakasu.data.module.registry.canShareDownload
-import org.bakasu.bakasu.domain.model.DownloadFailure
+import org.bakasu.bakasu.data.module.registry.verifyFile
 import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
@@ -163,10 +167,14 @@ class DownloadRepository(
         }
     }
 
-    fun markFailed(id: Int, error: String, verificationFailure: DownloadVerificationFailure? = null, failure: DownloadFailure? = null) {
+    suspend fun verify(uri: String, expected: ExpectedFile): Boolean = withContext(Dispatchers.IO) {
+        runCatching { verifyFile(uri.toUri().toFile(), expected) }.isSuccess
+    }
+
+    fun markFailed(id: Int, error: String, verificationFailure: DownloadVerificationFailure? = null) {
         _downloads.update { map ->
             val state = map[id] ?: return@update map
-            map + (id to state.copy(status = DownloadStatus.FAILED, error = error, verificationFailure = verificationFailure, failure = failure))
+            map + (id to state.copy(status = DownloadStatus.FAILED, error = error, verificationFailure = verificationFailure))
         }
     }
 }

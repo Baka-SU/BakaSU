@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -54,7 +55,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.ui.component.CenteredRefreshIndicator
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.SwipeableSnackbarHost
 import org.bakasu.bakasu.ui.component.WarningCard
@@ -173,10 +173,12 @@ fun UmountManagerScreen() {
                     viewModel.dispatch(UmountManagerUiAction.Refresh())
                 },
                 indicator = {
-                    CenteredRefreshIndicator(
+                    PullToRefreshDefaults.LoadingIndicator(
                         state = pullToRefreshState,
                         isRefreshing = uiState.isRefreshing,
-                        contentPadding = paddingValues,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = paddingValues.calculateTopPadding()),
                     )
                 },
                 modifier = Modifier

@@ -34,7 +34,7 @@ import androidx.wear.compose.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.data.file.ModuleUtils
+import org.bakasu.bakasu.data.file.ZipFileDetector
 import org.bakasu.bakasu.data.file.ZipFileInfo
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.ExpectedFile
@@ -171,7 +171,7 @@ internal fun rememberWearModuleInstaller(navigator: WearNavigator, onPickFailed:
 internal fun WearModuleInstallConfirmDialog(installer: WearModuleInstaller) {
     val uri = installer.pendingConfirmation
     val context = LocalContext.current
-    val zipDetector = koinInject<ModuleUtils>()
+    val zipDetector = koinInject<ZipFileDetector>()
     var info by remember { mutableStateOf<ZipFileInfo?>(null) }
     LaunchedEffect(uri) {
         info = null

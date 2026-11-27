@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.domain.model.supportedAppLocales
 import org.bakasu.bakasu.domain.usecase.IsSystemLanguageSettingsUseCase
 import org.bakasu.bakasu.domain.usecase.LaunchSystemLanguageSettingsUseCase
 import org.bakasu.bakasu.ui.component.settings.SettingsChooseDialog
@@ -89,28 +90,8 @@ fun LanguageSelectionDialog(
             val locales = mutableListOf<java.util.Locale>()
             locales.add(java.util.Locale.ROOT)
 
-            val resourceDirs = listOf(
-                "ar", "bg", "de", "fa", "fr", "hu", "in", "it",
-                "ja", "ko", "pl", "pt-rBR", "ru", "th", "tr",
-                "uk", "vi", "zh-rCN", "zh-rTW",
-            )
-
-            resourceDirs.forEach { dir ->
+            supportedAppLocales.forEach { locale ->
                 try {
-                    val locale = when {
-                        dir.contains("-r") -> {
-                            val parts = dir.split("-r")
-                            java.util.Locale.Builder()
-                                .setLanguage(parts[0])
-                                .setRegion(parts[1])
-                                .build()
-                        }
-
-                        else -> java.util.Locale.Builder()
-                            .setLanguage(dir)
-                            .build()
-                    }
-
                     val config = android.content.res.Configuration()
                     config.setLocale(locale)
                     val localizedContext = context.createConfigurationContext(config)

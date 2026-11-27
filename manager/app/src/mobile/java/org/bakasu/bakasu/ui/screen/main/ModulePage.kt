@@ -84,6 +84,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
@@ -124,7 +125,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.data.file.ModuleUtils
+import org.bakasu.bakasu.data.file.ZipFileDetector
 import org.bakasu.bakasu.data.file.ZipFileInfo
 import org.bakasu.bakasu.data.file.ZipType
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
@@ -140,7 +141,6 @@ import org.bakasu.bakasu.domain.usecase.IsModuleUriAccessibleUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
 import org.bakasu.bakasu.domain.usecase.TakeModuleUriPermissionUseCase
-import org.bakasu.bakasu.ui.component.CenteredRefreshIndicator
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.InstallConfirmationDialog
 import org.bakasu.bakasu.ui.component.SearchAppBar
@@ -192,7 +192,7 @@ fun ModulePage(bottomPadding: Dp) {
     val isModuleUriAccessible = koinInject<IsModuleUriAccessibleUseCase>()
     val takeModuleUriPermission = koinInject<TakeModuleUriPermissionUseCase>()
     val extractModuleName = koinInject<ExtractModuleNameUseCase>()
-    val zipFileDetector = koinInject<ModuleUtils>()
+    val zipFileDetector = koinInject<ZipFileDetector>()
     val peekScript = koinInject<PeekOneshotScriptUseCase>()
     val navigator = LocalNavigator.current
     val context = LocalContext.current
@@ -930,10 +930,12 @@ private fun ModuleList(
             .fillMaxSize()
             .blurSource(),
         indicator = {
-            CenteredRefreshIndicator(
+            PullToRefreshDefaults.LoadingIndicator(
+                modifier = Modifier
+                    .padding(top = topPadding)
+                    .align(Alignment.TopCenter),
                 state = pullRefreshState,
                 isRefreshing = uiState.isRefreshing,
-                contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
             )
         },
         isRefreshing = uiState.isRefreshing,

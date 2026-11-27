@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.twotone.Inbox
 import androidx.compose.material.icons.twotone.SignalWifiOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -33,12 +34,16 @@ fun NetworkRefreshContent(
     offline: Boolean,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    isLoading: Boolean = !offline,
+    emptyMessage: String? = null,
 ) {
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center,
     ) {
-        if (offline) {
+        if (isLoading) {
+            LoadingIndicator()
+        } else {
             Column(
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
@@ -54,7 +59,7 @@ fun NetworkRefreshContent(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = Icons.TwoTone.SignalWifiOff,
+                        imageVector = if (offline) Icons.TwoTone.SignalWifiOff else Icons.TwoTone.Inbox,
                         contentDescription = null,
                         modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -63,17 +68,18 @@ fun NetworkRefreshContent(
                 Spacer(Modifier.height(12.dp))
 
                 Text(
-                    text = stringResource(R.string.network_offline),
+                    text = if (offline) stringResource(R.string.network_offline) else emptyMessage.orEmpty(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.titleMediumEmphasized,
                 )
-                Spacer(modifier = Modifier.height(1.dp))
-
-                Text(
-                    text = stringResource(R.string.please_check_network),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMediumEmphasized,
-                )
+                if (offline) {
+                    Spacer(modifier = Modifier.height(1.dp))
+                    Text(
+                        text = stringResource(R.string.please_check_network),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMediumEmphasized,
+                    )
+                }
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Button(
@@ -83,8 +89,6 @@ fun NetworkRefreshContent(
                     Text(text = stringResource(R.string.network_retry))
                 }
             }
-        } else {
-            LoadingIndicator()
         }
     }
 }

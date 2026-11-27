@@ -1,34 +1,20 @@
 package org.bakasu.bakasu.ui.wear.screen.module
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.Icon
-import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.DownloadState
 import org.bakasu.bakasu.domain.model.DownloadStatus
-import org.bakasu.bakasu.domain.usecase.LoadModuleIconUseCase
 import org.bakasu.bakasu.ui.viewmodel.WearDownloadsViewModel
 import org.bakasu.bakasu.ui.wear.WearRoute
 import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
@@ -39,7 +25,7 @@ import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSwipeToDelete
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
-import org.koin.compose.koinInject
+import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 import org.koin.compose.viewmodel.koinViewModel
 
 /** The shared download service keeps running when this page or a transfer page closes. */
@@ -90,14 +76,14 @@ internal fun WearDownloadsPage(
                 pendingRemoval = task.id
                 removeDialog.show()
             }) {
-                Button(
+                WearSettingsJumpPageWidget(
+                    spec = spec,
+                    title = task.module?.name?.takeIf { it.isNotBlank() } ?: task.fileName,
                     onClick = { onOpen(task) },
                     enabled = !verifying,
-                    colors = ButtonDefaults.filledTonalButtonColors(),
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = { DownloadModuleIcon(task) },
-                    label = { WearAutoMarqueeText(task.module?.name?.takeIf { it.isNotBlank() } ?: task.fileName) },
-                    secondaryLabel = {
+                    transformed = false,
+                    iconContent = { DownloadModuleIcon(task) },
+                    secondaryLabelContent = {
                         val active = task.status == DownloadStatus.PENDING || task.status == DownloadStatus.DOWNLOADING
                         WearAutoMarqueeText(
                             if (active && task.totalBytes > 0) {

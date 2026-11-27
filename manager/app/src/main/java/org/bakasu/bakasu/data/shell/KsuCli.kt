@@ -214,11 +214,11 @@ class KsuCliRepository(context: Context) {
         val result = shell.newJob()
             .add("${getKsuDaemonPath()} module list").to(ArrayList(), ArrayList()).exec()
         val output = result.out.joinToString("\n")
-        if (!result.isSuccess || output.isBlank()) {
+        if (BuildConfig.FLAVOR == "wear" && (!result.isSuccess || output.isBlank())) {
             Log.w(TAG, "Module list failed (${result.code}): ${result.err.joinToString("\n")}")
             throw IOException(appContext.getString(R.string.module_load_failed))
         }
-        return output
+        return output.ifBlank { "[]" }
     }
 
     fun getModuleCount(): Int {

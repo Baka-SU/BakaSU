@@ -33,6 +33,7 @@ import androidx.core.text.isDigitsOnly
 import org.bakasu.bakasu.Natives.Profile.RootProfileFlag
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.AppProfile
+import org.bakasu.bakasu.domain.model.isSELinuxDomainValid
 import org.bakasu.bakasu.profile.Capabilities
 import org.bakasu.bakasu.profile.Groups
 import org.bakasu.bakasu.toRawFlags
@@ -442,5 +443,3 @@ private fun isTextValidUid(text: String): Boolean = try {
 } catch (_: Throwable) {
     false
 }
-
-private fun isSELinuxDomainValid(value: String): Boolean = value.matches(Regex("^[a-z_]+:[a-z0-9_]+:[a-z0-9_]+(:[a-z0-9_]+)?$"))

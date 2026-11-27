@@ -44,6 +44,7 @@ import org.bakasu.bakasu.data.update.ZipRangeArchive
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
 import org.bakasu.bakasu.domain.model.ExpectedFile
+import org.bakasu.bakasu.domain.model.HttpStatusException
 import org.bakasu.bakasu.ui.MainActivity
 import org.koin.android.ext.android.inject
 
@@ -249,7 +250,7 @@ class DownloadService : Service() {
                 throw e
             } catch (e: Exception) {
                 ensureActive()
-                downloadRepository.markFailed(id, e.message ?: "Unknown error", failure = downloadFailure(e))
+                downloadRepository.markFailed(id, e.message ?: "Unknown error")
 
                 notificationManager.cancel(id)
                 notificationManager.notify(
@@ -281,7 +282,7 @@ class DownloadService : Service() {
                 activeCalls[id] = call
                 ensureActive()
                 val file = call.execute().use { response ->
-                    if (!response.isSuccessful) throw DownloadHttpException(response.code)
+                    if (!response.isSuccessful) throw HttpStatusException(response.code)
                     val body = response.body ?: throw IOException("Empty body")
                     RegistryDownloadStore.download(
                         input = body.byteStream(),
@@ -303,7 +304,7 @@ class DownloadService : Service() {
             } catch (error: Exception) {
                 if (!isActive) throw CancellationException("Registry download cancelled", error)
                 val reason = (error as? DownloadVerificationException)?.reason?.let { DownloadVerificationFailure.valueOf(it.name) }
-                downloadRepository.markFailed(id, error.message.orEmpty(), reason, downloadFailure(error))
+                downloadRepository.markFailed(id, error.message.orEmpty(), reason)
                 notificationManager.cancel(id)
                 notificationManager.notify(COMPLETION_NOTIFICATION_ID_BASE + id, buildFailureNotification(fileName, reason))
             } finally {
@@ -404,7 +405,7 @@ class DownloadService : Service() {
         try {
             currentCoroutineContext().ensureActive()
             call.execute().use { response ->
-                if (!response.isSuccessful) throw DownloadHttpException(response.code)
+                if (!response.isSuccessful) throw HttpStatusException(response.code)
                 val body = response.body ?: throw IOException("Empty body")
                 val total = body.contentLength()
                 body.byteStream().use { source ->

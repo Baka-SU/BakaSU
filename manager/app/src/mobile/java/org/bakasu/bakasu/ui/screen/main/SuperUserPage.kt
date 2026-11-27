@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -67,7 +68,6 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.AllowlistOperationResult
 import org.bakasu.bakasu.domain.model.InstalledAppGroup
 import org.bakasu.bakasu.domain.model.SuperUserLoadFailure
-import org.bakasu.bakasu.ui.component.CenteredRefreshIndicator
 import org.bakasu.bakasu.ui.component.ConfirmResult
 import org.bakasu.bakasu.ui.component.PackageIcon
 import org.bakasu.bakasu.ui.component.SearchAppBar
@@ -348,13 +348,12 @@ private fun SuperUserContent(
             .fillMaxSize()
             .blurSource(),
         indicator = {
-            CenteredRefreshIndicator(
+            PullToRefreshDefaults.LoadingIndicator(
+                modifier = Modifier
+                    .padding(top = innerPadding.calculateTopPadding())
+                    .align(Alignment.TopCenter),
                 state = pullRefreshState,
                 isRefreshing = uiState.isRefreshing,
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    bottom = bottomPadding + innerPadding.calculateBottomPadding(),
-                ),
             )
         },
     ) {

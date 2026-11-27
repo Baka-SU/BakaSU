@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.bakasu.bakasu.domain.model.DownloadFailure
 import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
@@ -32,7 +31,6 @@ data class ModuleDownloadUiState(
     /** The size the server announced, or -1 when it is unknown. */
     val totalBytes: Long = -1L,
     val resultUri: String? = null,
-    val failure: DownloadFailure? = null,
     val verificationFailure: DownloadVerificationFailure? = null,
 ) {
     /** The downloaded share from 0 to 1, or null when the size is unknown and no share can be given. */
@@ -71,7 +69,6 @@ class ModuleDownloadViewModel(
                                 it.copy(
                                     downloadedBytes = download.downloadedBytes,
                                     totalBytes = if (download.status == DownloadStatus.PENDING && download.totalBytes <= 0L) it.totalBytes else download.totalBytes,
-                                    failure = download.failure,
                                     verificationFailure = download.verificationFailure,
                                 )
                             }
