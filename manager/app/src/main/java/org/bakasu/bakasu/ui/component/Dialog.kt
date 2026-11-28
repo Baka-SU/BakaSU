@@ -354,7 +354,11 @@ fun rememberLoadingDialog(): LoadingDialogHandle {
 }
 
 @Composable
-private fun rememberConfirmDialog(visuals: ConfirmDialogVisuals, callback: ConfirmCallback): ConfirmDialogHandle {
+private fun rememberConfirmDialog(
+    visuals: ConfirmDialogVisuals,
+    callback: ConfirmCallback,
+    additionalContent: (@Composable () -> Unit)? = null,
+): ConfirmDialogHandle {
     val visible = rememberSaveable {
         mutableStateOf(false)
     }
@@ -375,6 +379,7 @@ private fun rememberConfirmDialog(visuals: ConfirmDialogVisuals, callback: Confi
             handle.visuals,
             confirm = { coroutineScope.launch { resultChannel.send(ConfirmResult.Confirmed) } },
             dismiss = { coroutineScope.launch { resultChannel.send(ConfirmResult.Canceled) } },
+            additionalContent = additionalContent,
         )
     }
 
@@ -394,7 +399,10 @@ fun rememberConfirmCallback(onConfirm: NullableCallback, onDismiss: NullableCall
 fun rememberConfirmDialog(onConfirm: NullableCallback = null, onDismiss: NullableCallback = null): ConfirmDialogHandle = rememberConfirmDialog(rememberConfirmCallback(onConfirm, onDismiss))
 
 @Composable
-fun rememberConfirmDialog(callback: ConfirmCallback): ConfirmDialogHandle = rememberConfirmDialog(ConfirmDialogVisualsImpl.Empty, callback)
+fun rememberConfirmDialog(
+    callback: ConfirmCallback,
+    additionalContent: (@Composable () -> Unit)? = null,
+): ConfirmDialogHandle = rememberConfirmDialog(ConfirmDialogVisualsImpl.Empty, callback, additionalContent)
 
 @Composable
 fun rememberCustomDialog(composable: @Composable (dismiss: () -> Unit) -> Unit): DialogHandle {
@@ -431,7 +439,12 @@ private fun LoadingDialog() {
 }
 
 @Composable
-private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, dismiss: () -> Unit) {
+private fun ConfirmDialog(
+    visuals: ConfirmDialogVisuals,
+    confirm: () -> Unit,
+    dismiss: () -> Unit,
+    additionalContent: (@Composable () -> Unit)? = null,
+) {
     AlertDialog(
         onDismissRequest = {
             dismiss()
@@ -461,6 +474,9 @@ private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, di
                     } else {
                         Text(text = visuals.content)
                     }
+                }
+                if (additionalContent != null) {
+                    item { additionalContent() }
                 }
             }
         },

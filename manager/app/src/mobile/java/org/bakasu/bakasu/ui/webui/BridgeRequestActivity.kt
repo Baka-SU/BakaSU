@@ -6,15 +6,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -31,7 +27,9 @@ import androidx.lifecycle.repeatOnLifecycle
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.webui.BridgeActivityLaunch
 import org.bakasu.bakasu.domain.model.BridgeAction
-import org.bakasu.bakasu.ui.component.rememberCustomDialog
+import org.bakasu.bakasu.ui.component.rememberConfirmCallback
+import org.bakasu.bakasu.ui.component.rememberConfirmDialog
+import org.bakasu.bakasu.ui.component.settings.SegmentedColumn
 import org.bakasu.bakasu.ui.component.settings.SettingsSwitchWidget
 import org.bakasu.bakasu.ui.theme.KernelSUTheme
 import org.bakasu.bakasu.ui.viewmodel.CompanionBridgeViewModel
@@ -61,41 +59,42 @@ class BridgeRequestActivity : ComponentActivity() {
                     finish()
                 }
                 BackHandler { reject() }
-                val dialog = rememberCustomDialog { _ ->
-                    AlertDialog(
-                        onDismissRequest = ::reject,
-                        title = { Text(stringResource(R.string.wear_bridge_request_title)) },
-                        text = {
-                            Column(Modifier.verticalScroll(rememberScrollState())) {
-                                Text(stringResource(R.string.wear_bridge_request_from, current?.peer?.name.orEmpty()))
-                                current?.action?.let { action ->
-                                    Text(
-                                        stringResource(
-                                            when (action) {
-                                                BridgeAction.WEB_UI -> R.string.wear_bridge_request_webui
-                                                BridgeAction.LINK -> R.string.wear_bridge_request_link
-                                            },
-                                        ),
-                                    )
-                                }
-                                Text(if (current?.action == BridgeAction.LINK) current.value else current?.title.orEmpty())
+                val dialog = rememberConfirmDialog(
+                    callback = rememberConfirmCallback(
+                        onConfirm = {
+                            approved = true
+                            viewModel.approve(id, remember)
+                        },
+                        onDismiss = ::reject,
+                    ),
+                    additionalContent = {
+                        SegmentedColumn(contentPadding = PaddingValues(top = 12.dp)) {
+                            item {
                                 SettingsSwitchWidget(
                                     title = stringResource(R.string.wear_bridge_remember),
                                     checked = remember,
                                     onCheckedChange = { remember = it },
                                 )
                             }
-                        },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                approved = true
-                                viewModel.approve(id, remember)
-                            }) { Text(stringResource(R.string.wear_bridge_allow_once)) }
-                        },
-                        dismissButton = { TextButton(onClick = ::reject) { Text(stringResource(R.string.cancel)) } },
-                    )
-                }
-                LaunchedEffect(current, approved) {
+                        }
+                    },
+                )
+                val title = stringResource(R.string.wear_bridge_request_title)
+                val content = listOfNotNull(
+                    stringResource(R.string.wear_bridge_request_from, current?.peer?.name.orEmpty()),
+                    current?.action?.let { action ->
+                        stringResource(
+                            when (action) {
+                                BridgeAction.WEB_UI -> R.string.wear_bridge_request_webui
+                                BridgeAction.LINK -> R.string.wear_bridge_request_link
+                            },
+                        )
+                    },
+                    if (current?.action == BridgeAction.LINK) current.value else current?.title,
+                ).joinToString("\n")
+                val confirm = stringResource(R.string.wear_bridge_allow_once)
+                val dismiss = stringResource(R.string.cancel)
+                LaunchedEffect(current, approved, title, content, confirm, dismiss) {
                     if (current == null) {
                         finish()
                         return@LaunchedEffect
@@ -105,7 +104,11 @@ class BridgeRequestActivity : ComponentActivity() {
                         approved = true
                         viewModel.approve(id, true)
                     }
-                    if (current.requiresConfirmation && !approved) dialog.show() else dialog.hide()
+                    if (current.requiresConfirmation && !approved) {
+                        dialog.showConfirm(title, content, confirm = confirm, dismiss = dismiss)
+                    } else {
+                        dialog.hide()
+                    }
                 }
                 LaunchedEffect(current?.readyToOpen) {
                     if (current?.readyToOpen != true) return@LaunchedEffect
