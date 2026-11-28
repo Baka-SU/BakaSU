@@ -188,7 +188,7 @@ fun AboutScreen() {
                             icon = Icons.TwoTone.Group,
                             title = stringResource(R.string.join_telegram_group),
                             description = stringResource(R.string.join_telegram_group_detail),
-                            onClick = { uriHandler.openUri("https://t.me/BakaSU") },
+                            onClick = { uriHandler.openUri("https://t.me/BakaSU_Grp") },
                         )
                     }
                     item {
