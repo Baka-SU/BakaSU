@@ -89,7 +89,6 @@ sealed interface PlatformSetting {
     data class BetaUpdateCheck(val enabled: Boolean) : PlatformSetting
     data class ModuleUpdateCheck(val enabled: Boolean) : PlatformSetting
     data class Locale(val tag: String) : PlatformSetting
-    data class AppLanguage(val tag: String) : PlatformSetting
     data class AutoJailbreak(val enabled: Boolean) : PlatformSetting
     data class AdbRoot(val enabled: Boolean) : PlatformSetting
     data class SuCompatMode(val value: Int) : PlatformSetting

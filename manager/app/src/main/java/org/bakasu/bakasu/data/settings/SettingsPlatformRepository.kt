@@ -169,7 +169,7 @@ class SettingsPlatformRepository(
         Result.failure(error)
     }
 
-    suspend fun updatePlatform(
+    fun updatePlatform(
         setting: PlatformSetting,
     ): Result<SettingsPlatformSnapshot> = try {
         when (setting) {
@@ -200,8 +200,6 @@ class SettingsPlatformRepository(
                 settings.putBoolean("check_module_update", setting.enabled)
 
             is PlatformSetting.Locale -> settings.putString("app_locale", setting.tag)
-
-            is PlatformSetting.AppLanguage -> localeHelper.setApplicationLanguage(application, setting.tag)
 
             is PlatformSetting.AutoJailbreak -> setAutoJailbreak(setting.enabled)
 

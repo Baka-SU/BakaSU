@@ -91,7 +91,6 @@ import org.bakasu.bakasu.domain.usecase.GetAppProfileUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppSepolicyUseCase
 import org.bakasu.bakasu.domain.usecase.GetBooleanPreferenceUseCase
 import org.bakasu.bakasu.domain.usecase.GetCatalogModuleUseCase
-import org.bakasu.bakasu.domain.usecase.GetCurrentAppLocaleUseCase
 import org.bakasu.bakasu.domain.usecase.GetDefaultUmountModulesUseCase
 import org.bakasu.bakasu.domain.usecase.GetHomeBasicInfoUseCase
 import org.bakasu.bakasu.domain.usecase.GetInstallEnvironmentUseCase
@@ -370,7 +369,6 @@ val useCaseModule = module {
     factoryOf(::GetSuSFSStatusUseCase)
     factoryOf(::SuSFSConfigUseCase)
     factoryOf(::ApplyLanguageUseCase)
-    factoryOf(::GetCurrentAppLocaleUseCase)
     factoryOf(::IsSystemLanguageSettingsUseCase)
     factoryOf(::LaunchSystemLanguageSettingsUseCase)
     factoryOf(::GenerateBugreportUseCase)

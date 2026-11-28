@@ -2,15 +2,12 @@ package org.bakasu.bakasu.data.settings
 
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
-import android.app.LocaleManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
-import android.os.LocaleList
 import android.provider.Settings
-import androidx.datastore.preferences.core.stringPreferencesKey
 import java.util.Locale
 import org.bakasu.bakasu.data.AppSettingsRepository
 
@@ -36,15 +33,6 @@ fun launchSystemLanguageSettings(context: Context) {
 class LocaleHelper(
     private val settings: AppSettingsRepository,
 ) {
-    suspend fun setApplicationLanguage(context: Context, tag: String) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val locales = if (tag == "system") LocaleList.getEmptyLocaleList() else LocaleList(Locale.Builder().setLanguageTag(tag.replace('_', '-')).build())
-            context.getSystemService(LocaleManager::class.java).applicationLocales = locales
-        } else {
-            settings.editBlocking { it[stringPreferencesKey("app_locale")] = tag }
-        }
-    }
-
     fun applyLanguage(context: Context): Context {
         // On Android 13+, language is handled by system
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

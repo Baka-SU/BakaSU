@@ -339,9 +339,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     LaunchedEffect(home.isInitialDataLoaded, home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled, home.systemStatus.isRootAvailable) {
         navigator.closeUnavailable(home)
     }
-    ActivityResumeEffect(superUserViewModel, settingsViewModel) {
+    ActivityResumeEffect(superUserViewModel) {
         superUserViewModel.dispatch(SuperUserUiAction.LoadInitialData)
-        settingsViewModel.dispatch(SettingsUiAction.RefreshLanguage)
     }
     // A restored detail or search route can be visible without composing the main pager.
     // Load once per process snapshot; resume and palette changes keep the existing list and query.

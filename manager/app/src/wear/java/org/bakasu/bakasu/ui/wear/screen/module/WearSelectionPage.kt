@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.Square
 import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -32,6 +33,8 @@ import java.util.Locale
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.availablePaletteStyles
 import org.bakasu.bakasu.domain.model.supportedAppLocales
+import org.bakasu.bakasu.domain.usecase.IsSystemLanguageSettingsUseCase
+import org.bakasu.bakasu.domain.usecase.LaunchSystemLanguageSettingsUseCase
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.WearPreference
@@ -47,6 +50,7 @@ import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.WearChoicePage
 import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
+import org.koin.compose.koinInject
 
 /**
  * @author Hanhan_awa
@@ -126,11 +130,22 @@ internal fun WearSelectionPage(
         ) { preferenceViewModel.set(WearPreference.Link, it) }
 
         WearSelection.Language -> {
+            val context = LocalContext.current
+            val isSystemLanguageSettings = koinInject<IsSystemLanguageSettingsUseCase>()
+            val launchSystemLanguageSettings = koinInject<LaunchSystemLanguageSettingsUseCase>()
+            if (isSystemLanguageSettings()) {
+                LaunchedEffect(Unit) {
+                    launchSystemLanguageSettings(context)
+                    onBack()
+                }
+                return
+            }
             // Observe configuration changes, but read system preferences independently of the app locale.
             LocalConfiguration.current
-            val system = LocaleManagerCompat.getSystemLocales(LocalContext.current)
+            val system = LocaleManagerCompat.getSystemLocales(context)
             WearLanguagePage(state.currentAppLocale, (0 until system.size()).mapNotNull { system[it] }, onBack) {
-                onAction(SettingsUiAction.SetWearLanguage(it))
+                onAction(SettingsUiAction.SetLanguage(it))
+                onAction(SettingsUiAction.RestartActivity)
             }
         }
 

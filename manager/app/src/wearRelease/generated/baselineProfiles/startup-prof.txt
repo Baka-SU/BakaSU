@@ -25835,9 +25835,7 @@ SPLorg/bakasu/bakasu/data/settings/LocaleHelper;->applyLanguage(Landroid/content
 SPLorg/bakasu/bakasu/data/settings/LocaleHelper;->getCurrentAppLocale(Landroid/content/Context;)Ljava/util/Locale;
 Lorg/bakasu/bakasu/data/settings/LocaleRepository;
 SPLorg/bakasu/bakasu/data/settings/LocaleRepository;-><clinit>()V
-SPLorg/bakasu/bakasu/data/settings/LocaleRepository;-><init>(Lorg/bakasu/bakasu/data/settings/LocaleHelper;Landroid/app/Application;)V
 SPLorg/bakasu/bakasu/data/settings/LocaleRepository;->applyLanguage(Landroid/content/Context;)Landroid/content/Context;
-SPLorg/bakasu/bakasu/data/settings/LocaleRepository;->getCurrentAppLocale()Ljava/util/Locale;
 Lorg/bakasu/bakasu/data/settings/SettingsPlatformRepository;
 SPLorg/bakasu/bakasu/data/settings/SettingsPlatformRepository;-><clinit>()V
 SPLorg/bakasu/bakasu/data/settings/SettingsPlatformRepository;-><init>(Landroid/app/Application;Lorg/bakasu/bakasu/data/AppSettingsRepository;Lorg/bakasu/bakasu/ui/theme/ThemeConfig;Lorg/bakasu/bakasu/data/theme/ThemeRepository;Lorg/bakasu/bakasu/ui/theme/BackgroundManager;Lorg/bakasu/bakasu/ui/theme/CardConfig;Lorg/bakasu/bakasu/data/settings/LocaleHelper;Lorg/bakasu/bakasu/data/shell/KsuCliRepository;)V
@@ -27212,10 +27210,6 @@ Lorg/bakasu/bakasu/domain/usecase/GetBridgePeersUseCase;
 Lorg/bakasu/bakasu/domain/usecase/GetCatalogModuleUseCase;
 SPLorg/bakasu/bakasu/domain/usecase/GetCatalogModuleUseCase;-><clinit>()V
 SPLorg/bakasu/bakasu/domain/usecase/GetCatalogModuleUseCase;-><init>(Lorg/bakasu/bakasu/data/module/ModuleCatalogRepository;)V
-Lorg/bakasu/bakasu/domain/usecase/GetCurrentAppLocaleUseCase;
-SPLorg/bakasu/bakasu/domain/usecase/GetCurrentAppLocaleUseCase;-><clinit>()V
-SPLorg/bakasu/bakasu/domain/usecase/GetCurrentAppLocaleUseCase;-><init>(Lorg/bakasu/bakasu/data/settings/LocaleRepository;)V
-SPLorg/bakasu/bakasu/domain/usecase/GetCurrentAppLocaleUseCase;->invoke()Ljava/util/Locale;
 Lorg/bakasu/bakasu/domain/usecase/GetDefaultUmountModulesUseCase;
 Lorg/bakasu/bakasu/domain/usecase/GetHomeBasicInfoUseCase;
 SPLorg/bakasu/bakasu/domain/usecase/GetHomeBasicInfoUseCase;-><clinit>()V
@@ -27829,10 +27823,6 @@ SPLorg/bakasu/bakasu/ui/viewmodel/SettingsUiAction$InitializeFirstRun;-><init>()
 Lorg/bakasu/bakasu/ui/viewmodel/SettingsUiAction$LoadFeatureSettings;
 SPLorg/bakasu/bakasu/ui/viewmodel/SettingsUiAction$LoadFeatureSettings;-><clinit>()V
 SPLorg/bakasu/bakasu/ui/viewmodel/SettingsUiAction$LoadFeatureSettings;-><init>()V
-Lorg/bakasu/bakasu/ui/viewmodel/SettingsUiAction$RefreshLanguage;
-SPLorg/bakasu/bakasu/ui/viewmodel/SettingsUiAction$RefreshLanguage;-><clinit>()V
-SPLorg/bakasu/bakasu/ui/viewmodel/SettingsUiAction$RefreshLanguage;-><init>()V
-SPLorg/bakasu/bakasu/ui/viewmodel/SettingsUiAction$RefreshLanguage;->equals(Ljava/lang/Object;)Z
 Lorg/bakasu/bakasu/ui/viewmodel/SettingsUiAction$RemoveCustomBackground;
 SPLorg/bakasu/bakasu/ui/viewmodel/SettingsUiAction$RemoveCustomBackground;-><clinit>()V
 SPLorg/bakasu/bakasu/ui/viewmodel/SettingsUiAction$RemoveCustomBackground;-><init>()V
@@ -27865,7 +27855,6 @@ SPLorg/bakasu/bakasu/ui/viewmodel/SettingsUiState;->getEnableSwipeDismiss()Z
 SPLorg/bakasu/bakasu/ui/viewmodel/SettingsUiState;->getUseAltIcon()Z
 Lorg/bakasu/bakasu/ui/viewmodel/SettingsViewModel;
 SPLorg/bakasu/bakasu/ui/viewmodel/SettingsViewModel;-><clinit>()V
-SPLorg/bakasu/bakasu/ui/viewmodel/SettingsViewModel;-><init>(Lorg/bakasu/bakasu/domain/usecase/LoadSettingsPlatformUseCase;Lorg/bakasu/bakasu/domain/usecase/GetCurrentAppLocaleUseCase;Lorg/bakasu/bakasu/domain/usecase/UpdateAppearanceUseCase;Lorg/bakasu/bakasu/domain/usecase/UpdatePlatformSettingUseCase;Lorg/bakasu/bakasu/domain/usecase/GetPlatformFeatureStatusUseCase;Lorg/bakasu/bakasu/domain/usecase/GetKernelFeatureSettingsUseCase;Lorg/bakasu/bakasu/domain/usecase/SetSuEnabledUseCase;Lorg/bakasu/bakasu/domain/usecase/SetKernelUmountEnabledUseCase;Lorg/bakasu/bakasu/domain/usecase/SetShellSuAdbOnlyEnabledUseCase;Lorg/bakasu/bakasu/domain/usecase/ConfigureSuLogUseCase;Lorg/bakasu/bakasu/domain/usecase/SetSelinuxHideEnabledUseCase;Lorg/bakasu/bakasu/domain/usecase/SetDefaultUmountModulesUseCase;)V
 SPLorg/bakasu/bakasu/ui/viewmodel/SettingsViewModel;->access$getGetKernelFeatureSettings$p(Lorg/bakasu/bakasu/ui/viewmodel/SettingsViewModel;)Lorg/bakasu/bakasu/domain/usecase/GetKernelFeatureSettingsUseCase;
 SPLorg/bakasu/bakasu/ui/viewmodel/SettingsViewModel;->access$getGetPlatformFeatureStatus$p(Lorg/bakasu/bakasu/ui/viewmodel/SettingsViewModel;)Lorg/bakasu/bakasu/domain/usecase/GetPlatformFeatureStatusUseCase;
 SPLorg/bakasu/bakasu/ui/viewmodel/SettingsViewModel;->access$getMutableState$p(Lorg/bakasu/bakasu/ui/viewmodel/SettingsViewModel;)Lkotlinx/coroutines/flow/MutableStateFlow;

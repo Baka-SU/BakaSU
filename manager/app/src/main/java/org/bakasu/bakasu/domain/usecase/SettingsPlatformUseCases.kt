@@ -13,7 +13,7 @@ class UpdateAppearanceUseCase(private val repository: SettingsPlatformRepository
 }
 
 class UpdatePlatformSettingUseCase(private val repository: SettingsPlatformRepository) {
-    suspend operator fun invoke(setting: PlatformSetting) = repository.updatePlatform(setting)
+    operator fun invoke(setting: PlatformSetting) = repository.updatePlatform(setting)
 }
 
 class GetPlatformFeatureStatusUseCase(private val repository: SettingsPlatformRepository) {
