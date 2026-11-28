@@ -168,7 +168,6 @@
     <string name="wear_downloading">Downloading</string>
     <string name="wear_download_percent" translatable="false">%1$d%%</string>
     <string name="wear_download_size" translatable="false">%1$s / %2$s</string>
-    <string name="wear_verifying_download">Verifying file</string>
     <string name="wear_webui_summary">Open the module web interface</string>
     <string name="wear_action_summary">Run the module action script</string>
     <string name="wear_uninstall_summary">Removed after a reboot</string>

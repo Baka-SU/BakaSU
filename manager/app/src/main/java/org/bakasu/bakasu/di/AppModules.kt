@@ -67,7 +67,6 @@ import org.bakasu.bakasu.domain.usecase.AddUmountPathUseCase
 import org.bakasu.bakasu.domain.usecase.ApplyLanguageUseCase
 import org.bakasu.bakasu.domain.usecase.BackupAllowlistUseCase
 import org.bakasu.bakasu.domain.usecase.CalculateInstalledModuleSizeUseCase
-import org.bakasu.bakasu.domain.usecase.CancelDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.CheckFlashModuleMountUseCase
 import org.bakasu.bakasu.domain.usecase.CheckManagerUpdateUseCase
 import org.bakasu.bakasu.domain.usecase.CleanSulogUseCase
@@ -180,7 +179,6 @@ import org.bakasu.bakasu.domain.usecase.UpdateAppearanceUseCase
 import org.bakasu.bakasu.domain.usecase.UpdateCachedModuleEnabledUseCase
 import org.bakasu.bakasu.domain.usecase.UpdatePlatformSettingUseCase
 import org.bakasu.bakasu.domain.usecase.ValidateSepolicyUseCase
-import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
 import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.ThemeConfig
@@ -348,7 +346,6 @@ val useCaseModule = module {
     factoryOf(::ObserveCompanionBridgeUseCase)
     factoryOf(::ConfigureCompanionBridgeUseCase)
     factoryOf(::ObserveDownloadsUseCase)
-    factoryOf(::CancelDownloadUseCase)
     factoryOf(::ObserveAssetDownloadUseCase)
     factoryOf(::GetKernelStatusUseCase)
     factoryOf(::GetInstallEnvironmentUseCase)
@@ -435,7 +432,6 @@ val useCaseModule = module {
     factoryOf(::TakeModuleUriPermissionUseCase)
     factoryOf(::ExtractModuleNameUseCase)
     factoryOf(::ExtractModuleIdUseCase)
-    factoryOf(::VerifyModuleDownloadUseCase)
     factoryOf(::ObserveInstalledModulesUseCase)
     factoryOf(::RefreshInstalledModulesUseCase)
     factoryOf(::CalculateInstalledModuleSizeUseCase)

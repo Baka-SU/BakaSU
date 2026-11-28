@@ -23,7 +23,6 @@ import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogModule
@@ -74,15 +73,9 @@ internal fun WearModuleUpdatePage(
     var verificationFailed by remember(module) { mutableStateOf(false) }
     val verificationError = stringResource(R.string.repo_update_unverifiable)
     WearFeedbackEffect(if (verificationFailed) verificationError else null) { verificationFailed = false }
-    val source = remember(module) { CompletableDeferred<CatalogModule?>() }
     var artwork by remember(module) { mutableStateOf<CatalogModule?>(null) }
     LaunchedEffect(module) {
-        try {
-            artwork = module?.let { findSource(it) }
-            source.complete(artwork)
-        } finally {
-            source.cancel()
-        }
+        artwork = module?.let { findSource(it) }
     }
     val update = module?.moduleUpdate
     WearList(onBack = onBack, isRefreshing = resolving) { spec ->
@@ -113,7 +106,6 @@ internal fun WearModuleUpdatePage(
                         scope.launch {
                             try {
                                 val verification = resolveUpdate(module)
-                                val artwork = source.await()
                                 if (active && currentModule == module) {
                                     if (verification == ModuleUpdateVerification.Rejected ||
                                         verification is ModuleUpdateVerification.Registry && !isUpdateCurrent(module, verification)

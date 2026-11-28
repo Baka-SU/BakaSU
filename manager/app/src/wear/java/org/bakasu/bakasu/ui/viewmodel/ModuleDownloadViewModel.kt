@@ -17,13 +17,10 @@ import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.usecase.EnqueueDownloadUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveDownloadUseCase
-import org.bakasu.bakasu.domain.usecase.VerifyModuleDownloadUseCase
-import org.bakasu.bakasu.ui.wear.screen.module.asset
 
-/** [VERIFYING] follows a finished transfer while the file is checked; nothing is downloading then. */
-enum class ModuleDownloadPhase { DOWNLOADING, VERIFYING, FAILED, VERIFY_FAILED, COMPLETED }
+enum class ModuleDownloadPhase { DOWNLOADING, FAILED, VERIFY_FAILED, COMPLETED }
 
-/** A null [phase] means no download; [resultUri] is set once a verified file is ready to install. */
+/** A null [phase] means no download; [resultUri] is set once the service finishes the download. */
 data class ModuleDownloadUiState(
     val asset: ModuleReleaseAsset? = null,
     val phase: ModuleDownloadPhase? = null,
@@ -42,13 +39,11 @@ data class ModuleDownloadUiState(
 class ModuleDownloadViewModel(
     private val enqueue: EnqueueDownloadUseCase,
     private val observe: ObserveDownloadUseCase,
-    private val verify: VerifyModuleDownloadUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ModuleDownloadUiState())
     val state: StateFlow<ModuleDownloadUiState> = mutableState.asStateFlow()
     private var job: Job? = null
 
-    /** A repository ZIP is offered for installing only when it matches the published size and SHA-256. */
     fun start(asset: ModuleReleaseAsset, module: DownloadModuleInfo? = null) {
         if (job?.isActive == true) return
         if (asset.verificationRequired && asset.expected == null) {
@@ -59,7 +54,7 @@ class ModuleDownloadViewModel(
             ?: mutableState.value.takeIf { it.asset == asset }?.totalBytes ?: -1L
         mutableState.value = ModuleDownloadUiState(asset, ModuleDownloadPhase.DOWNLOADING, totalBytes = knownSize)
         job = viewModelScope.launch {
-            val phase = try {
+            try {
                 // The service keeps enforcing published integrity even after this page closes.
                 val id = enqueue(asset.downloadUrl, asset.name, asset.expected, module)
                 val result = observe(id)
@@ -75,31 +70,18 @@ class ModuleDownloadViewModel(
                         }
                     }
                     .first { it == null || it.status == DownloadStatus.COMPLETED || it.status == DownloadStatus.FAILED }
-                val uri = result?.resultUri
-                if (result?.status == DownloadStatus.COMPLETED && uri != null) {
-                    mutableState.update { it.copy(phase = ModuleDownloadPhase.VERIFYING) }
-                }
-                when {
-                    result == null -> ModuleDownloadPhase.FAILED
-
-                    result.verificationFailure != null -> ModuleDownloadPhase.VERIFY_FAILED
-
-                    result.status == DownloadStatus.FAILED || uri == null -> ModuleDownloadPhase.FAILED
-
-                    verify(uri, asset.expected?.size ?: 0L, asset.expected?.sha256.orEmpty()) -> {
-                        mutableState.update { it.copy(resultUri = uri) }
-                        ModuleDownloadPhase.COMPLETED
+                if (result?.status != DownloadStatus.COMPLETED || result.resultUri == null) {
+                    mutableState.update {
+                        it.copy(phase = result?.verificationFailure?.let { ModuleDownloadPhase.VERIFY_FAILED } ?: ModuleDownloadPhase.FAILED)
                     }
-
-                    else -> ModuleDownloadPhase.VERIFY_FAILED
+                    return@launch
                 }
+                mutableState.update { it.copy(phase = ModuleDownloadPhase.COMPLETED, resultUri = result.resultUri) }
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
-                // A request/verification exception has no service-reported cause; show the generic failure.
-                ModuleDownloadPhase.FAILED
+                mutableState.update { it.copy(phase = ModuleDownloadPhase.FAILED) }
             }
-            mutableState.update { it.copy(phase = phase) }
         }
     }
 }

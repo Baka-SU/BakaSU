@@ -19,7 +19,6 @@ import org.bakasu.bakasu.ui.viewmodel.WearDownloadsViewModel
 import org.bakasu.bakasu.ui.wear.WearRoute
 import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
-import org.bakasu.bakasu.ui.wear.component.WearDownloadsFeedback
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -30,23 +29,19 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** The shared download service keeps running when this page or a transfer page closes. */
 @Composable
-internal fun WearDownloadsPage(onBack: () -> Unit, onInstall: (String) -> Unit, onOpen: (WearRoute.Download) -> Unit) {
+internal fun WearDownloadsPage(onBack: () -> Unit, onOpen: (WearRoute.Download) -> Unit) {
     val viewModel = koinViewModel<WearDownloadsViewModel>()
     val downloads by viewModel.downloads.collectAsStateWithLifecycle()
-    val verifying by viewModel.verifying.collectAsStateWithLifecycle()
-    WearDownloadsFeedback(viewModel.events, onInstall)
-    WearDownloadsPage(downloads, verifying, onBack, viewModel::install, viewModel::remove, viewModel::clear, { onOpen(WearRoute.Download(it.module?.moduleId.orEmpty(), it.id)) })
+    WearDownloadsPage(downloads, onBack, viewModel::remove, viewModel::clear, { onOpen(WearRoute.Download(it.module?.moduleId.orEmpty(), it.id)) })
 }
 
 @Composable
 internal fun WearDownloadsPage(
     downloads: List<DownloadState>,
-    verifying: Boolean,
     onBack: () -> Unit,
-    onInstall: (DownloadState) -> Unit,
     onRemove: (Int) -> Unit,
     onClear: () -> Unit,
-    onOpen: (DownloadState) -> Unit = onInstall,
+    onOpen: (DownloadState) -> Unit,
 ) {
     val listState = rememberTransformingLazyColumnState()
     var pendingRemoval by remember { mutableStateOf<Int?>(null) }
@@ -80,7 +75,6 @@ internal fun WearDownloadsPage(
                     spec = spec,
                     title = task.module?.name?.takeIf { it.isNotBlank() } ?: task.fileName,
                     onClick = { onOpen(task) },
-                    enabled = !verifying,
                     transformed = false,
                     iconContent = { DownloadModuleIcon(task) },
                     secondaryLabelContent = {

@@ -47,7 +47,6 @@ import org.bakasu.bakasu.ui.viewmodel.formatFileSize
 @Composable
 internal fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState, fraction: () -> Float, iconUrl: String? = null, iconOrigin: String? = null) {
     val failed = state.phase == ModuleDownloadPhase.FAILED || state.phase == ModuleDownloadPhase.VERIFY_FAILED
-    val sizeKnown = state.totalBytes > 0L
     val reduceMotion = LocalReduceMotion.current
     val failedProgress = remember { Animatable(0f) }
     LaunchedEffect(failed, reduceMotion) {
@@ -59,6 +58,7 @@ internal fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState
         }
     }
     val failureTitle = stringResource(R.string.download_failed_title)
+    val failureText = moduleDownloadFailureText(state)
     Box(Modifier.fillMaxSize()) {
         ScreenScaffold(contentPadding = PaddingValues(0.dp), timeText = { Box(Modifier.testTag("module-download-clock")) { WearTimeText(forceTime = true) } }, overscrollEffect = null) {
             BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -70,27 +70,18 @@ internal fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState
                 val textWidth = with(density) { (maxWidth * 0.72f).roundToPx() }
                 val constraints = Constraints(maxWidth = textWidth)
                 val downloading = stringResource(R.string.wear_downloading)
-                val verifying = stringResource(R.string.wear_verifying_download)
-                val progressText = if (state.fraction != null) {
-                    stringResource(R.string.wear_download_percent, ((state.fraction ?: 0f) * 100).toInt())
-                } else if (sizeKnown) {
-                    stringResource(R.string.wear_download_size, formatFileSize(state.downloadedBytes), formatFileSize(state.totalBytes))
-                } else {
-                    formatFileSize(state.downloadedBytes)
-                }
+                val progressText = state.fraction?.let { stringResource(R.string.wear_download_percent, (it * 100).toInt()) }
+                    ?: formatFileSize(state.downloadedBytes)
                 // Measure the actual fonts (including fallback glyphs and bold) rather than treating
                 // the declared line heights as hard bounds. Both outcomes retain one shared slot.
-                val statusPixels = maxOf(
-                    textMeasurer.measure(downloading, statusStyle, constraints = constraints).size.height,
-                    textMeasurer.measure(verifying, statusStyle, constraints = constraints).size.height,
-                )
+                val statusPixels = textMeasurer.measure(downloading, statusStyle, constraints = constraints).size.height
                 val percentPixels = textMeasurer.measure(
                     progressText,
                     percentStyle.copy(fontWeight = FontWeight.Bold),
                     constraints = constraints,
                 ).size.height
                 val failurePixels = textMeasurer.measure(
-                    "$downloading\n$verifying",
+                    failureText,
                     statusStyle,
                     constraints = constraints,
                     maxLines = 2,
@@ -111,7 +102,7 @@ internal fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState
                     Box(Modifier.fillMaxWidth().height(statusHeight), contentAlignment = Alignment.Center) {
                         if (failed) {
                             Text(
-                                moduleDownloadFailureText(state),
+                                failureText,
                                 style = statusStyle,
                                 color = MaterialTheme.colorScheme.error,
                                 textAlign = TextAlign.Center,
@@ -121,7 +112,7 @@ internal fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState
                         } else {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
-                                    stringResource(if (state.phase == ModuleDownloadPhase.VERIFYING) R.string.wear_verifying_download else R.string.wear_downloading),
+                                    downloading,
                                     style = statusStyle,
                                     maxLines = 1,
                                 )

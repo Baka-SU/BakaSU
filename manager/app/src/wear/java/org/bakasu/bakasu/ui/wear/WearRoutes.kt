@@ -104,7 +104,6 @@ sealed interface WearRoute : NavKey {
         val url: String,
         val size: Long,
         val sha256: String,
-        val version: String = "",
         val update: Boolean = false,
         val verificationRequired: Boolean = false,
         val iconUrl: String? = null,

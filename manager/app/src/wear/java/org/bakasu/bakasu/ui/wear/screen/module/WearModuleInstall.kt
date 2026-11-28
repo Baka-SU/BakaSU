@@ -39,7 +39,6 @@ import org.bakasu.bakasu.data.file.ZipFileInfo
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.domain.model.InstalledModule
-import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.model.ModuleUpdateMetadata
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
@@ -80,7 +79,7 @@ class WearModuleInstaller internal constructor(
 
     fun install(uri: String) = navigator.open(WearRoute.ModuleInstall(uri))
 
-    fun download(module: CatalogModule, release: ModuleRelease, asset: ModuleReleaseAsset) {
+    fun download(module: CatalogModule, asset: ModuleReleaseAsset) {
         if (module.isScript) return
         navigator.open(
             WearRoute.OnlineModuleDownload(
@@ -89,7 +88,6 @@ class WearModuleInstaller internal constructor(
                 asset.downloadUrl,
                 asset.expected?.size ?: 0L,
                 asset.expected?.sha256.orEmpty(),
-                release.name.ifBlank { release.tagName },
                 verificationRequired = asset.verificationRequired,
                 moduleId = module.moduleId,
                 iconUrl = module.iconUrl?.takeIf { it.isNotBlank() } ?: module.registryMetadata?.iconUrl,
@@ -108,7 +106,6 @@ class WearModuleInstaller internal constructor(
                 registry?.zipUrl ?: update.zipUrl,
                 size = registry?.expected?.size ?: 0L,
                 sha256 = registry?.expected?.sha256.orEmpty(),
-                version = update.version,
                 update = true,
                 verificationRequired = registry != null,
                 moduleId = module.id,

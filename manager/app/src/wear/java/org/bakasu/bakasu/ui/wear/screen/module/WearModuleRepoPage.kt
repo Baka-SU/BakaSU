@@ -43,11 +43,9 @@ import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DocumentFormat
 import org.bakasu.bakasu.domain.model.DownloadModuleInfo
 import org.bakasu.bakasu.domain.model.ModuleCatalogFailure
-import org.bakasu.bakasu.domain.model.ModuleRelease
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleDetailViewModel
-import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleRepoUiState
@@ -187,8 +185,7 @@ private fun catalogModuleViewModel(moduleId: String, repositoryUrl: String): Mod
 
 /** The download confirmation; confirming opens the download route for the chosen file. */
 @Composable
-private fun rememberModuleDownload(module: CatalogModule?, installer: WearModuleInstaller): (ModuleRelease, ModuleReleaseAsset) -> Unit {
-    var pendingRelease by remember { mutableStateOf<ModuleRelease?>(null) }
+private fun rememberModuleDownload(module: CatalogModule?, installer: WearModuleInstaller): (ModuleReleaseAsset) -> Unit {
     var pendingAsset by remember { mutableStateOf<ModuleReleaseAsset?>(null) }
     val thenInstall = stringResource(R.string.wear_download_then_install)
     val asset = pendingAsset
@@ -197,11 +194,9 @@ private fun rememberModuleDownload(module: CatalogModule?, installer: WearModule
         message = if (asset != null) stringResource(R.string.wear_catalog_summary, asset.name, formatFileSize(asset.size ?: 0L)) + "\n" + thenInstall else "",
         icon = Icons.Rounded.Download,
     ) {
-        val release = pendingRelease
-        if (module != null && !module.isScript && release != null && asset != null) installer.download(module, release, asset)
+        if (module != null && !module.isScript && asset != null) installer.download(module, asset)
     }
-    return { release, asset ->
-        pendingRelease = release
+    return { asset ->
         pendingAsset = asset
         confirmDialog.show()
     }
@@ -276,8 +271,7 @@ internal fun WearOnlineModulePage(
                     }
                 }
             }
-            val latestRelease = module.releases.firstOrNull { it.assets.isNotEmpty() }
-            val latest = latestRelease?.assets?.firstOrNull()
+            val latest = module.releases.firstNotNullOfOrNull { it.assets.firstOrNull() }
             if (module.isScript) {
                 item { WearStatusItem(spec, Icons.Rounded.Info, stringResource(R.string.wear_script_unsupported)) }
             }
@@ -285,7 +279,7 @@ internal fun WearOnlineModulePage(
                 WearIconButtonGroup(
                     spec,
                     listOfNotNull(
-                        WearIconAction(Icons.Rounded.Download, stringResource(R.string.wear_download), { if (latestRelease != null && latest != null) requestDownload(latestRelease, latest) }, latest != null && !module.isScript, primary = true),
+                        WearIconAction(Icons.Rounded.Download, stringResource(R.string.wear_download), { if (latest != null) requestDownload(latest) }, latest != null && !module.isScript, primary = true),
                         module.sourceUrl.takeIf { it.isNotBlank() }?.let { url ->
                             WearIconAction(Icons.Rounded.Code, stringResource(R.string.source_code), { onLink(url) })
                         },
@@ -385,7 +379,7 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String
                                 spec,
                                 Icons.Rounded.Download,
                                 asset.name,
-                                { requestDownload(release, asset) },
+                                { requestDownload(asset) },
                                 secondaryText = asset.size?.let(::formatFileSize),
                                 enabled = !module.isScript,
                             )
@@ -426,7 +420,7 @@ internal fun WearModuleDownloadPage(route: WearRoute.OnlineModuleDownload, onDow
         route.name,
         download,
         // Read through the state when the ring draws, not captured once.
-        fraction = { downloadState.value.fraction ?: 1f.takeIf { downloadState.value.phase == ModuleDownloadPhase.VERIFYING } ?: 0f },
+        fraction = { downloadState.value.fraction ?: 0f },
         iconUrl = route.iconUrl,
         iconOrigin = route.iconOrigin,
     )

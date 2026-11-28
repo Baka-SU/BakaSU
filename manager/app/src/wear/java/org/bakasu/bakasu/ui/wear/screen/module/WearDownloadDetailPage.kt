@@ -25,7 +25,6 @@ import org.bakasu.bakasu.ui.viewmodel.formatFileSize
 import org.bakasu.bakasu.ui.wear.WearRoute
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
-import org.bakasu.bakasu.ui.wear.component.WearDownloadsFeedback
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearInfoRow
@@ -39,11 +38,9 @@ import org.koin.compose.viewmodel.koinViewModel
 internal fun WearDownloadDetailPage(route: WearRoute.Download, onBack: () -> Unit, onInstall: (String) -> Unit) {
     val viewModel = koinViewModel<WearDownloadsViewModel>()
     val downloads by viewModel.downloads.collectAsStateWithLifecycle()
-    val verifying by viewModel.verifying.collectAsStateWithLifecycle()
     var downloadId by rememberSaveable(route) { mutableStateOf(route.downloadId) }
     val task = if (downloadId != null) downloads.firstOrNull { it.id == downloadId } else downloads.firstOrNull { it.module?.moduleId == route.moduleId }
-    WearDownloadsFeedback(viewModel.events, onInstall)
-    WearDownloadDetailContent(task, verifying, onBack, viewModel::install) {
+    WearDownloadDetailContent(task, onBack, { it.resultUri?.let(onInstall) }) {
         downloadId = viewModel.retry(it) ?: downloadId
     }
 }
@@ -51,7 +48,6 @@ internal fun WearDownloadDetailPage(route: WearRoute.Download, onBack: () -> Uni
 @Composable
 internal fun WearDownloadDetailContent(
     task: DownloadState?,
-    verifying: Boolean,
     onBack: () -> Unit,
     onInstall: (DownloadState) -> Unit,
     onRetry: (DownloadState) -> Unit,
@@ -100,7 +96,7 @@ internal fun WearDownloadDetailContent(
                 when (task.status) {
                     DownloadStatus.PENDING, DownloadStatus.DOWNLOADING -> Unit
                     DownloadStatus.FAILED -> WearActionButton(spec, Icons.Rounded.Refresh, stringResource(R.string.network_retry), { onRetry(task) })
-                    DownloadStatus.COMPLETED -> WearActionButton(spec, Icons.Rounded.Download, stringResource(R.string.install), { onInstall(task) }, enabled = !verifying)
+                    DownloadStatus.COMPLETED -> WearActionButton(spec, Icons.Rounded.Download, stringResource(R.string.install), { onInstall(task) })
                 }
             }
         }

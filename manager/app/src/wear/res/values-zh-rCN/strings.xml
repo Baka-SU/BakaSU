@@ -154,7 +154,6 @@
     <string name="wear_author_link_summary">打开作者链接</string>
     <string name="wear_download">下载</string>
     <string name="wear_downloading">下载中</string>
-    <string name="wear_verifying_download">正在校验文件</string>
     <string name="wear_webui_summary">打开模块的网页界面</string>
     <string name="wear_action_summary">运行模块的 Action 脚本</string>
     <string name="wear_uninstall_summary">重启后移除</string>

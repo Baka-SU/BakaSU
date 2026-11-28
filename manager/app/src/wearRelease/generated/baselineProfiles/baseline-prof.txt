@@ -31209,7 +31209,6 @@ SPLorg/bakasu/bakasu/domain/usecase/BackupAllowlistUseCase;-><init>(Lorg/bakasu/
 Lorg/bakasu/bakasu/domain/usecase/CalculateInstalledModuleSizeUseCase;
 SPLorg/bakasu/bakasu/domain/usecase/CalculateInstalledModuleSizeUseCase;-><clinit>()V
 SPLorg/bakasu/bakasu/domain/usecase/CalculateInstalledModuleSizeUseCase;-><init>(Lorg/bakasu/bakasu/data/module/ModuleRepository;)V
-Lorg/bakasu/bakasu/domain/usecase/CancelDownloadUseCase;
 Lorg/bakasu/bakasu/domain/usecase/CheckFlashModuleMountUseCase;
 Lorg/bakasu/bakasu/domain/usecase/CheckManagerUpdateUseCase;
 SPLorg/bakasu/bakasu/domain/usecase/CheckManagerUpdateUseCase;-><clinit>()V
@@ -31525,7 +31524,6 @@ Lorg/bakasu/bakasu/domain/usecase/UpdatePlatformSettingUseCase;
 SPLorg/bakasu/bakasu/domain/usecase/UpdatePlatformSettingUseCase;-><clinit>()V
 SPLorg/bakasu/bakasu/domain/usecase/UpdatePlatformSettingUseCase;-><init>(Lorg/bakasu/bakasu/data/settings/SettingsPlatformRepository;)V
 Lorg/bakasu/bakasu/domain/usecase/ValidateSepolicyUseCase;
-Lorg/bakasu/bakasu/domain/usecase/VerifyModuleDownloadUseCase;
 Lorg/bakasu/bakasu/ui/MainActivity;
 SPLorg/bakasu/bakasu/ui/MainActivity;-><clinit>()V
 SPLorg/bakasu/bakasu/ui/MainActivity;-><init>()V

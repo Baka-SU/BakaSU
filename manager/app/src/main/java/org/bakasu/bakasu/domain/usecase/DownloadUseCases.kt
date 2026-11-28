@@ -18,10 +18,6 @@ class EnqueueManagerUpdateUseCase(private val repository: DownloadRepository) {
     operator fun invoke(update: ManagerUpdateInfo): Int = repository.enqueueManagerUpdate(update)
 }
 
-class CancelDownloadUseCase(private val repository: DownloadRepository) {
-    operator fun invoke(id: Int) = repository.cancel(id)
-}
-
 class RemoveDownloadUseCase(private val repository: DownloadRepository) {
     operator fun invoke(id: Int) = repository.remove(id)
 }
