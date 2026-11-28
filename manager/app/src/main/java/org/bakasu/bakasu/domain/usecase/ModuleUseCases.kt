@@ -12,7 +12,7 @@ class ObserveInstalledModulesUseCase(private val repository: ModuleRepository) {
 }
 
 class RefreshInstalledModulesUseCase(private val repository: ModuleRepository) {
-    suspend operator fun invoke(manual: Boolean, checkUpdates: Boolean): Result<Unit> = repository.refreshInstalledModules(manual, checkUpdates)
+    suspend operator fun invoke(manual: Boolean, checkUpdates: Boolean): Result<Boolean> = repository.refreshInstalledModules(manual, checkUpdates)
 }
 
 class CalculateInstalledModuleSizeUseCase(private val repository: ModuleRepository) {

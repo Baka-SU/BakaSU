@@ -665,4 +665,23 @@
     <string name="repo_module_author_value">Автор: %1$s</string>
     <string name="superuser_root_access_required">Для завантаження додатків потрібен root-доступ.</string>
     <string name="superuser_service_start_failed">Не вдалося запустити RootService. Повторіть спробу завантажити додатки.</string>
+    <string name="settings_shell_su_adb_only_summary">Увімкнути додаткові перевірки для оболонок: Тільки процеси оболонки, ініційовані adbd або root процесом KernelSU, можуть отримати root доступ</string>
+    <string name="settings_shell_su_adb_only">Обмежити root доступ оболонки ADB</string>
+    <string name="module_flash_complete">Модуль прошитий</string>
+    <string name="kernel_flash_complete">Ядро прошито</string>
+    <string name="patch_complete">Патч завершено</string>
+    <string name="settings_flash_card_background">Фон картки на екрані прошивки</string>
+    <string name="settings_flash_card_background_summary">Намалюйте фон картки за журналом прошивки. Завжди ввімкнено, поки встановлено власний фон.</string>
+    <string name="feature_status_forced_summary">Ця функція примусово встановлена конфігурацією завантаження і не може бути змінена</string>
+    <string name="external_link_open_failed">Неможливо відкрити посилання</string>
+    <string name="open">Відкрити</string>
+    <string name="susfs_priority_uid_filter_title">Фільтр пріоритетного UID</string>
+    <string name="susfs_priority_uid_filter_description">Виберіть додатки, чиї UID мають бути приховані від системних викликів пріоритету та пріоритету вводу/виводу. Стосується UID програм 10000–19999. Зміни набувають чинності негайно та відновлюються після перезавантаження. Додатки, що мають спільний UID, зазнають змін одночасно.</string>
+    <string name="susfs_priority_uid_filter_search">Пошук додатків</string>
+    <string name="susfs_priority_uid_filter_loading">Завантаження додатків…</string>
+    <string name="susfs_sus_path_uid_filter_title">Видимість шляху SUS</string>
+    <string name="susfs_sus_path_uid_filter_description">Виберіть додатки, які можуть бачити шляхи, приховані SUSFS. Інші звичайні додатки не можуть бачити ці шляхи. Можна вибрати лише UID додатка 10000–19999. Зміни набувають чинності негайно та відновлюються після перезавантаження. Додатки, що мають спільний UID, зазнають змін одночасно.</string>
+    <string name="susfs_uid_filter_search">Пошук додатків</string>
+    <string name="susfs_uid_filter_loading">Завантаження додатків…</string>
+    <string name="local_network_permission_description">Для перевірки оновлень модулів від хостів локальної мережі потрібен дозвіл локальної мережі.</string>
 </resources>

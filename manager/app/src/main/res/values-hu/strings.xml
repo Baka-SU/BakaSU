@@ -671,4 +671,15 @@
     <string name="repo_health_stale">Forráskönyvtár meta-adatok nem aktuálisak.</string>
     <string name="repo_no_releases">Nincs elérhető kiadás.</string>
     <string name="repo_download_progress">%1$s letöltése: %2$d%%</string>
+    <string name="susfs_priority_uid_filter_search">Keresés applikációk között</string>
+    <string name="susfs_uid_filter_search">Keresés applikációk között</string>
+    <string name="open">Megnyit</string>
+    <string name="external_link_open_failed">Link megnyitása nem sikerült</string>
+    <string name="susfs_priority_uid_filter_loading">Applikációk betöltése…</string>
+    <string name="susfs_uid_filter_loading">Applikációk betöltése…</string>
+    <string name="susfs_sus_path_uid_filter_title">Gyanús Útvonalak láthatósága</string>
+    <string name="susfs_sus_path_uid_filter_description">Válasszd ki azokat az applikációkat, amelyek láthatják a SuSFS által elrejtett útvonalakat. Más, normál applikációk nem láthatják ezeket az útvonalakat. Csak a 10000–19999 közötti UID-vel rendelkező applikációk választhatóak. A módosítások azonnal érvénybe lépnek, illetve újraindítás után visszaállnak. Az azonos UID-vel rendelkező applikációkra a módosítások együttesen vonatkoznak.</string>
+    <string name="local_network_permission_description">Helyi hálózati kiszolgálóról történő modulfrissítések ellenőrzéséhez helyi hálózati hozzáférési jogosultságra van szükség.</string>
+    <string name="susfs_priority_uid_filter_title">Prioritás UID filter</string>
+    <string name="susfs_priority_uid_filter_description">Válasszd ki azokat az applikációkat, amelyek UID-jeit el szeretnéd rejteni a priority és az I/O priority rendszerhívások elől. Csak a 10000–19999 közötti UID-vel rendelkező applikációk választhatóak. A módosítások azonnal érvénybe lépnek, illetve újraindítás után visszaállnak. Az azonos UID-vel rendelkező applikációkra a módosítások együttesen vonatkoznak.</string>
 </resources>

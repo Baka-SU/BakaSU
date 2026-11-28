@@ -3,8 +3,8 @@
 # and nongki 4.14- can't use simonpunk's hook for that
 # check it, when there doesn't have, fallback to auto hook
 ifeq ($(shell grep -q "ksu_selinux_hide_running" $(srctree)/security/selinux/hooks.c; echo $$?),0)
-$(info -- $(REPO_NAME)/susfs_feature_check: selinux_hide manual hook found)
-ccflags-y += -DKSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
+  $(info -- $(REPO_NAME)/susfs_feature_check: selinux_hide manual hook found)
+  ccflags-y += -DKSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
 endif
 
 # susfs's dev branch currently using post_execve_hook

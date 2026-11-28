@@ -1,4 +1,4 @@
-#include "feature/selinux_hide.h"
+#include "feature/selinux_hide/selinux_hide.h"
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
 #include <linux/mm.h>
@@ -616,7 +616,7 @@ static __always_inline void ksu_common_newfstat_ret(unsigned long fd_long, void 
     pr_info("%s: stat init.rc \n", __func__);
     load_module_rc_once();
 
-    uintptr_t statbuf_ptr_local = (uintptr_t) * (void **)statbuf_ptr;
+    uintptr_t statbuf_ptr_local = (uintptr_t)*(void **)statbuf_ptr;
     void __user *statbuf = (void __user *)statbuf_ptr_local;
     if (!statbuf)
         return;
@@ -974,7 +974,7 @@ void ksu_execve_hook_ksud(const struct pt_regs *regs)
     struct user_arg_ptr argv;
 
 #ifdef CONFIG_COMPAT
-    argv.is_compat = is_compat_task();
+    argv.is_compat = ksu_is_compat_task();
     if (argv.is_compat)
         argv.ptr.compat = (const compat_uptr_t __user *)PT_REGS_USER_PTR(regs, 2);
     else
@@ -990,7 +990,7 @@ void ksu_execveat_hook_ksud(const struct pt_regs *regs)
     struct user_arg_ptr argv;
 
 #ifdef CONFIG_COMPAT
-    argv.is_compat = is_compat_task();
+    argv.is_compat = ksu_is_compat_task();
     if (argv.is_compat)
         argv.ptr.compat = (const compat_uptr_t __user *)PT_REGS_USER_PTR(regs, 3);
     else
@@ -1013,7 +1013,7 @@ static long ksu_sys_read(const struct pt_regs *regs)
     ksu_handle_sys_read(fd, &buf, &count);
 
 #if defined(__aarch64__) && defined(CONFIG_COMPAT)
-    if (is_compat_task()) {
+    if (ksu_is_compat_task()) {
         return orig_compat_sys_read(regs);
     } else {
         return orig_sys_read(regs);
@@ -1046,7 +1046,7 @@ static long ksu_sys_fstat(const struct pt_regs *regs)
     }
 
 #if defined(__aarch64__) && defined(CONFIG_COMPAT)
-    if (is_compat_task()) {
+    if (ksu_is_compat_task()) {
         ret = orig_sys_fstat64(regs);
     } else {
         ret = orig_sys_fstat(regs);
@@ -1061,7 +1061,7 @@ static long ksu_sys_fstat(const struct pt_regs *regs)
         size_t st_size_size;
         size_t extra = ksu_rc_len + module_rc_len;
 #if defined(__aarch64__) && defined(CONFIG_COMPAT)
-        if (is_compat_task()) {
+        if (ksu_is_compat_task()) {
             st_size_ptr = statbuf + offsetof(struct stat64, st_size);
             st_size_size = sizeof_field(struct stat64, st_size);
         } else

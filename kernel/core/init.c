@@ -26,6 +26,7 @@
 #include "ksu.h"
 #include "infra/file_wrapper.h"
 #include "selinux/selinux.h"
+#include "selinux/sepolicy.h"
 #include "hook/setuid_hook.h"
 #include "compat/kernel_compat.h"
 #include "feature/shell_su_adb_only.h"
@@ -34,7 +35,7 @@
 #include "feature/dynamic_manager.h"
 #include "feature/module_blacklist.h"
 #include "feature/sucompat.h"
-#include "feature/selinux_hide.h"
+#include "feature/selinux_hide/selinux_hide.h"
 #include "infra/symbol_resolver.h"
 #include "preinit/preinit.h"
 #include "uapi/supercall.h"
@@ -336,6 +337,7 @@ void __exit kernelsu_exit(void)
 
     ksu_shell_su_adb_only_exit();
     ksu_selinux_hide_exit();
+    ksu_original_symbols_exit();
     ksu_adb_root_exit();
     ksu_sulog_exit();
     ksu_feature_exit();

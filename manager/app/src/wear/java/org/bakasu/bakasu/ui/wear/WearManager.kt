@@ -402,6 +402,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                 ModuleUiEvent.RefreshCompleted -> moduleError = null
 
+                ModuleUiEvent.LocalNetworkPermissionRequired -> Unit
+
                 is ModuleUiEvent.EnabledChanged -> {
                     if (event.successful) {
                         moduleViewModel.dispatch(ModuleUiAction.Refresh())

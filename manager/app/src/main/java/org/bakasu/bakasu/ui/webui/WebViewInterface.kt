@@ -10,17 +10,24 @@ import android.widget.Toast
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import java.io.File
+import org.bakasu.bakasu.data.packageinfo.InstalledPackageRepository
 import org.bakasu.bakasu.data.webui.WebUiBackend
+import org.bakasu.bakasu.ui.webui.file.KsuIO
+import org.bakasu.bakasu.ui.webui.pm.KsuPm
 import org.json.JSONArray
 import org.json.JSONObject
 
 @Suppress("unused")
-class WebViewInterface(
+open class WebViewInterface(
     private val state: WebUIState,
     private val backend: WebUiBackend,
 ) {
-    private val webView get() = state.webView!!
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val modDir get() = state.modDir
+
+    private fun postToWebView(action: (android.webkit.WebView) -> Unit) {
+        mainHandler.post { state.webView?.let(action) }
+    }
 
     @JavascriptInterface
     fun exec(cmd: String): String = backend.execute(cmd).stdout
@@ -69,9 +76,7 @@ class WebViewInterface(
                     stdout,
                 )
             }, ${JSONObject.quote(stderr)}); } catch(e) { console.error(e); } })();"
-        webView.post {
-            webView.loadUrl(jsCode)
-        }
+        postToWebView { it.loadUrl(jsCode) }
     }
 
     @JavascriptInterface
@@ -99,9 +104,7 @@ class WebViewInterface(
                         data,
                     )
                 }); } catch(e) { console.error('emitData', e); } })();"
-            webView.post {
-                webView.loadUrl(jsCode)
-            }
+            postToWebView { it.loadUrl(jsCode) }
         }
 
         val process = backend.spawn(finalCommand.toString())
@@ -111,9 +114,7 @@ class WebViewInterface(
             onComplete = { result ->
                 val emitExitCode =
                     "javascript: (function() { try { $callbackFunc.emit('exit', ${result.code}); } catch(e) { console.error(`emitExit error: \${e}`); } })();"
-                webView.post {
-                    webView.loadUrl(emitExitCode)
-                }
+                postToWebView { it.loadUrl(emitExitCode) }
 
                 if (result.code != 0) {
                     val emitErrCode =
@@ -122,9 +123,7 @@ class WebViewInterface(
                                 result.stderr,
                             )
                         };$callbackFunc.emit('error', err); } catch(e) { console.error('emitErr', e); } })();"
-                    webView.post {
-                        webView.loadUrl(emitErrCode)
-                    }
+                    postToWebView { it.loadUrl(emitErrCode) }
                 }
             },
         )
@@ -132,24 +131,24 @@ class WebViewInterface(
 
     @JavascriptInterface
     fun toast(msg: String) {
-        webView.post {
-            Toast.makeText(webView.context, msg, Toast.LENGTH_SHORT).show()
+        postToWebView { view ->
+            Toast.makeText(view.context, msg, Toast.LENGTH_SHORT).show()
         }
     }
 
     @JavascriptInterface
     fun fullScreen(enable: Boolean) {
-        val context = webView.context
-        if (context is Activity) {
-            Handler(Looper.getMainLooper()).post {
+        postToWebView { view ->
+            val context = view.context
+            if (context is Activity) {
                 if (enable) {
                     hideSystemUI(context.window)
                 } else {
                     showSystemUI(context.window)
                 }
             }
+            enableEdgeToEdge(enable)
         }
-        enableEdgeToEdge(enable)
     }
 
     @JavascriptInterface
@@ -184,15 +183,35 @@ class WebViewInterface(
         return currentModuleInfo.toString()
     }
 
+    @Deprecated("Use ksu.pm().listPackages() instead")
     @JavascriptInterface
     fun listPackages(type: String): String = backend.listPackages(type)
 
+    @Deprecated("Use ksu.pm().getPackagesInfo() instead")
     @JavascriptInterface
     fun getPackagesInfo(packageNamesJson: String): String = backend.getPackagesInfo(packageNamesJson)
 
     @JavascriptInterface
     fun exit() {
         state.requestExit()
+    }
+
+    open fun destroy() = Unit
+}
+
+class LocalWebViewInterface(
+    state: WebUIState,
+    backend: WebUiBackend,
+    private val packageRepository: InstalledPackageRepository,
+) : WebViewInterface(state, backend) {
+    @JavascriptInterface
+    fun io() = KsuIO
+
+    @JavascriptInterface
+    fun pm() = KsuPm(packageRepository)
+
+    override fun destroy() {
+        KsuIO.destroy()
     }
 }
 

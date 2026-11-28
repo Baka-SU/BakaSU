@@ -6,6 +6,28 @@ use crate::android::susfs::{
 use anyhow::Result;
 
 impl Config {
+    pub fn set_priority_uid_filter(&mut self, apps: &str) -> Result<&mut Self> {
+        crate::android::susfs::api::features::package_list::validate_app_strings(apps)?;
+        self.priority_uid_filter = apps
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+            .collect();
+        Ok(self)
+    }
+
+    pub fn set_sus_path_uid_filter(&mut self, apps: &str) -> Result<&mut Self> {
+        crate::android::susfs::api::features::package_list::validate_app_strings(apps)?;
+        self.sus_path_uid_filter = apps
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+            .collect();
+        Ok(self)
+    }
+
     pub fn set_enabled(&mut self, enabled: bool) -> &mut Self {
         self.enabled = enabled;
         self

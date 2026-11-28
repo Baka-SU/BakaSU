@@ -97,7 +97,7 @@ class RemoteWebUIActivity : ComponentActivity() {
                         return@LaunchedEffect
                     }
                 }
-                DisposableEffect(Unit) { onDispose { webUIState.dispose() } }
+                DisposableEffect(Unit) { onDispose { webUIState.dispose(this@RemoteWebUIActivity) } }
 
                 when (val event = webUIState.uiEvent) {
                     is WebUIEvent.Error -> LaunchedEffect(event) {

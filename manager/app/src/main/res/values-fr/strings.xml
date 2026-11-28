@@ -672,4 +672,15 @@
     <string name="settings_flash_card_background">Arrière-plan de la carte sur l\'écran de flashage</string>
     <string name="settings_flash_card_background_summary">Affiche un arrière-plan derrière le journal de flashage. Toujours appliqué lorsqu\'un arrière-plan personnalisé est configuré</string>
     <string name="feature_status_forced_summary">Cette fonctionnalité est imposée par la configuration de démarrage et ne peut être modifiée</string>
+    <string name="external_link_open_failed">Ouverture du lien impossible</string>
+    <string name="open">Ouvrir</string>
+    <string name="susfs_priority_uid_filter_title">Filtre de priorité UID</string>
+    <string name="susfs_priority_uid_filter_description">Sélectionner les applications dont les UID doivent être masqués vis-à-vis des appels système relatifs à la priorité et à la priorité d\'E/S. Seules les applications ayant un UID compris entre 10000 et 19999 peuvent être sélectionnées. Les modifications prennent effet immédiatement et sont rétablies après un redémarrage. Les applications partageant un même UID sont toutes affectées simultanément.</string>
+    <string name="susfs_priority_uid_filter_search">Rechercher des applications</string>
+    <string name="susfs_priority_uid_filter_loading">Chargement des applications…</string>
+    <string name="susfs_sus_path_uid_filter_title">Visibilité du chemin SUS</string>
+    <string name="susfs_sus_path_uid_filter_description">Sélectionner les applications autorisées à voir les chemins masqués par SUSFS. Les autres applications ordinaires ne peuvent pas voir ces chemins. Seules les applications ayant un UID compris entre 10000 et 19999 peuvent être sélectionnées. Les modifications prennent effet immédiatement et sont rétablies après un redémarrage. Les applications partageant un même UID sont toutes affectées simultanément.</string>
+    <string name="susfs_uid_filter_search">Rechercher des applications</string>
+    <string name="susfs_uid_filter_loading">Chargement des applications…</string>
+    <string name="local_network_permission_description">Autorisation d\'accès au réseau local requise pour vérifier les mises à jour des modules auprès d\'hôtes situés sur le réseau local</string>
 </resources>

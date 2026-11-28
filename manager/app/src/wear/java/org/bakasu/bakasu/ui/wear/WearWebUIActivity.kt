@@ -123,7 +123,7 @@ private fun WearWebUIContent(activity: ComponentActivity, onFinish: () -> Unit) 
         )
     }
     DisposableEffect(Unit) {
-        onDispose { webUIState.dispose() }
+        onDispose { webUIState.dispose(activity) }
     }
     when (val event = webUIState.uiEvent) {
         is WebUIEvent.Close -> LaunchedEffect(event) { onFinish() }

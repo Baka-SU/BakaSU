@@ -52,4 +52,22 @@
     <string name="settings_sucompat_summary">تغییر مسیر /system/bin/su به ksud برای برنامه‌هایی که مجوز Superuser در پروفایل برنامه دارند؛ فقط برای فرآیندهای جدید موثر است.</string>
     <string name="settings_kernel_umount">جداسازی هسته</string>
     <string name="settings_kernel_umount_summary">رفتار جداسازی در سطح هسته که توسط KernelSU کنترل می‌شود</string>
+    <string name="learn_more">بیشتر بدانید</string>
+    <string name="home_susfs_version">نسخه SuSFS</string>
+    <string name="home_seccomp_status">وضعیت Seccomp</string>
+    <string name="seccomp_status_not_supported">پشتیبانی نشده</string>
+    <string name="seccomp_status_disabled">غیرفعال</string>
+    <string name="seccomp_status_strict">سختگیر</string>
+    <string name="seccomp_status_filter">فیلتر</string>
+    <string name="seccomp_status_unknown">ناشناخته</string>
+    <string name="sulog">گزارش SU</string>
+    <string name="sulog_log_files">پرونده‌های گزارش</string>
+    <string name="sulog_failed_to_load">شکست در بارگذاری گزارش SU</string>
+    <string name="sulog_disabled_title">گزارش SU فعال نیست</string>
+    <string name="sulog_unsupported_title">گزارش SU پشتیبانی نمی‌شود</string>
+    <string name="sulog_enable_action">فعال</string>
+    <string name="sulog_filter_title">فیلتر بر اساس نوع</string>
+    <string name="sulog_clean_title">پاکسازی گزارش</string>
+    <string name="sulog_filter_root_execve">اجرای ریشه</string>
+    <string name="sulog_filter_sucompat">SU قدیمی</string>
 </resources>
