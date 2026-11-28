@@ -9,7 +9,6 @@
 #include <linux/syscalls.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
-
 #ifdef CONFIG_KSU_SUSFS
 #include <linux/namei.h>
 #include <linux/susfs.h>
@@ -104,10 +103,6 @@ bool ksu_is_su_session_fd(const struct file *filp)
     return context && (context->permissions & KSU_DRIVER_PERMISSION_SU_SESSION);
 }
 
-#ifdef CONFIG_KSU_TOOLKIT_SUPPORT
-extern int ksu_try_handle_toolkit_cmd(int magic2, unsigned int cmd, void __user **arg);
-#endif
-
 #ifdef CONFIG_KSU_SUSFS
 extern int ksu_handle_susfs_cmd(unsigned int cmd, void __user **arg);
 #endif
@@ -136,25 +131,10 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user 
 
     // extensions
 
-#if !defined(CONFIG_KSU_TOOLKIT_SUPPORT) && !defined(CONFIG_KSU_SUSFS)
-    return 0;
-#endif
-
-    // other sys_reboot extensions are fully require uid 0,
-    // so let's check it before
-    if (ksu_get_uid_t(current_uid()) != 0)
-        return 0;
-
-#ifdef CONFIG_KSU_TOOLKIT_SUPPORT
-    if (ksu_try_handle_toolkit_cmd(magic2, cmd, arg))
-        return 0;
-#endif
-
 #ifdef CONFIG_KSU_SUSFS
     // If magic2 is susfs and current process is root
-    if (magic2 == SUSFS_MAGIC) {
+    if (magic2 == SUSFS_MAGIC && ksu_get_uid_t(current_uid()) == 0) {
         return ksu_handle_susfs_cmd(cmd, arg);
-    }
 #endif
     return 0;
 }

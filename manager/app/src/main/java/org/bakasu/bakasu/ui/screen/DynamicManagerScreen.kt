@@ -353,8 +353,6 @@ private fun DynamicManagerAppItem(
                 app.packageName,
                 if ((app.managerSignatureIndex ?: 0) == 254) {
                     "Debug"
-                } else if ((app.managerSignatureIndex ?: 0) == 253) {
-                    "KernelSU Toolkit"
                 } else {
                     "Kernel"
                 },

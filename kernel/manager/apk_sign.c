@@ -159,7 +159,7 @@ static bool check_block(struct file *fp, loff_t *pos, loff_t block_end, u8 *matc
     // keep 255, 254, 253 here
     // 255 reserved for dynamic manager
     // 254 reserved for ksu debug
-    // 253 reserved for ksu toolkit
+    // 253 deprecated
     BUILD_BUG_ON(ARRAY_SIZE(apk_sign_keys) >= 253);
     for (i = 0; i < ARRAY_SIZE(apk_sign_keys); i++) {
         sign_key = apk_sign_keys[i];

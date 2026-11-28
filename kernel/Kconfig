@@ -15,22 +15,6 @@ config KSU_DEBUG
 	  help
 		Enable KernelSU debug mode.
 
-config KSU_TOOLKIT_SUPPORT
-      bool "KernelSU toolkit support"
-      depends on KSU
-      default n
-      help
-        Enable KernelSU Toolkit (https://github.com/backslashxx/ksu_toolkit) support.
-        For testing and debugging purposes.
-        Support ksu toolkit features as below:
-        1: CHANGE_MANAGER_UID sys_reboot extensions
-        2: CHANGE_KSUVER sys_reboot extensions
-        3: CHANGE_SPOOF_UNAME sys_reboot extensions
-        4: CHANGE_KSUFLAGS sys_reboot_extensions
-        5: allow userspace pull list entries (always supported)
-        6: sulog (Not supported for now, use ksu's upstream sulog feature instead)
-        If you don't know what is that, DON'T enable this!
-
 config KSU_FULL_NAME_FORMAT
       string "KernelSU full name format"
       depends on KSU

@@ -10,10 +10,6 @@ ifeq ($(CONFIG_KSU_DEBUG),y)
 ccflags-y += -DCONFIG_KSU_DEBUG
 endif
 
-ifeq ($(CONFIG_KSU_TOOLKIT_SUPPORT),y)
-ccflags-y += -DCONFIG_KSU_TOOLKIT_SUPPORT
-endif
-
 ifeq ($(CONFIG_KSU_MULTI_MANAGER_SUPPORT),y)
 ccflags-y += -DCONFIG_KSU_MULTI_MANAGER_SUPPORT
 endif

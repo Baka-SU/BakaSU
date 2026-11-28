@@ -34,11 +34,6 @@
 #include "feature/dynamic_manager.h"
 #include "policy/app_profile.h"
 
-#ifdef CONFIG_KSU_TOOLKIT_SUPPORT
-#include <linux/utsname.h> // utsname() and uts_sem
-#include "manager/manager_identity.h" // for change_manager_appid
-#endif
-
 #ifdef CONFIG_ARM64
 #include "compat/apatch_conflict.h"
 #endif
@@ -62,11 +57,6 @@ static int do_grant_root(void __user *arg)
 
     return ret;
 }
-
-#ifdef CONFIG_KSU_TOOLKIT_SUPPORT
-static uint32_t ksuver_override = 0;
-static uint32_t ksuflags_override = 0;
-#endif
 
 static int do_get_info(void __user *arg)
 {
@@ -131,14 +121,6 @@ static int do_get_info_legacy(void __user *arg)
     cmd.flags |= KSU_GET_INFO_FLAG_PR_BUILD;
 #endif
     cmd.features = KSU_FEATURE_MAX;
-
-#ifdef CONFIG_KSU_TOOLKIT_SUPPORT
-    if (ksuver_override)
-        cmd.version = ksuver_override;
-
-    if (ksuflags_override)
-        cmd.flags = ksuflags_override;
-#endif
 
     if (copy_to_user(arg, &cmd, sizeof(cmd))) {
         pr_err("get_version: copy_to_user failed\n");
@@ -1196,125 +1178,6 @@ int ksu_handle_susfs_cmd(unsigned int cmd, void __user **arg)
         susfs_show_version(arg);
         return 0;
     }
-    }
-    return 0;
-}
-#endif
-
-#ifdef CONFIG_KSU_TOOLKIT_SUPPORT
-int ksu_try_handle_toolkit_cmd(int magic2, unsigned int cmd, void __user **arg)
-{
-    u64 reply = (u64)*arg;
-
-    if (magic2 == CHANGE_MANAGER_UID) {
-        pr_info("handle_toolkit_cmd: ksu_set_manager_appid to: %d\n", cmd);
-        ksu_unregister_manager_by_signature_index(KSU_SIGNATURE_INDEX_KSU_TOOLKIT);
-        ksu_register_manager(cmd, KSU_SIGNATURE_INDEX_KSU_TOOLKIT);
-
-        if (copy_to_user((void __user *)*arg, &reply, sizeof(reply)))
-            pr_err("handle_toolkit_cmd: reply fail\n");
-
-        return 1;
-    }
-
-    if (magic2 == CHANGE_KSUVER) {
-        pr_info("handle_toolkit_cmd: ksu_change_ksuver to: %d\n", cmd);
-        ksuver_override = cmd;
-
-        if (copy_to_user((void __user *)*arg, &reply, sizeof(reply)))
-            pr_err("handle_toolkit_cmd: reply fail\n");
-
-        return 1;
-    }
-
-    // WARNING!!! triple ptr zone! ***
-    // https://wiki.c2.com/?ThreeStarProgrammer
-    if (magic2 == CHANGE_SPOOF_UNAME) {
-        char release_buf[65];
-        char version_buf[65];
-        static char original_release_buf[65] = { 0 };
-        static char original_version_buf[65] = { 0 };
-
-        // basically void * void __user * void __user *arg
-        void ***ppptr = (void ***)(uintptr_t)arg;
-
-        // user pointer storage
-        // init this as zero so this works on 32-on-64 compat (LE)
-        uint64_t u_pptr = 0;
-        uint64_t u_ptr = 0;
-
-        pr_info("handle_toolkit_cmd: ppptr: 0x%lx \n", (uintptr_t)ppptr);
-
-        // arg here is ***, dereference to pull out **
-        if (copy_from_user(&u_pptr, (void __user *)*ppptr, sizeof(u_pptr))) {
-            pr_err("handle_toolkit_cmd: copy_from_user fail\n");
-            return 1;
-        }
-
-        pr_info("handle_toolkit_cmd: u_pptr: 0x%lx \n", (uintptr_t)u_pptr);
-
-        // now we got the __user **
-        // we cannot dereference this as this is __user
-        // we just do another copy_from_user to get it
-        if (copy_from_user(&u_ptr, (void __user *)u_pptr, sizeof(u_ptr))) {
-            pr_err("handle_toolkit_cmd: copy_from_user fail\n");
-            return 1;
-        }
-
-        // for release
-        if (strncpy_from_user(release_buf, (char __user *)u_ptr, sizeof(release_buf)) < 0) {
-            pr_err("handle_toolkit_cmd: strncpy_from_user fail\n");
-            return 1;
-        }
-        release_buf[sizeof(release_buf) - 1] = '\0';
-
-        // for version
-        if (strncpy_from_user(version_buf, (char __user *)(u_ptr + strlen(release_buf) + 1), sizeof(version_buf)) < 0) {
-            pr_err("handle_toolkit_cmd: strncpy_from_user fail\n");
-            return 1;
-        }
-        version_buf[sizeof(version_buf) - 1] = '\0';
-
-        if (original_release_buf[0] == '\0') {
-            struct new_utsname *u_curr = utsname();
-            // we save current version as the original before modifying
-            strncpy(original_release_buf, u_curr->release, sizeof(original_release_buf));
-            strncpy(original_version_buf, u_curr->version, sizeof(original_version_buf));
-            pr_info("handle_toolkit_cmd: original uname saved: %s %s\n", original_release_buf, original_version_buf);
-        }
-
-        // so user can reset
-        if (!strcmp(release_buf, "default")) {
-            memcpy(release_buf, original_release_buf, sizeof(release_buf));
-        }
-        if (!strcmp(version_buf, "default")) {
-            memcpy(version_buf, original_version_buf, sizeof(version_buf));
-        }
-
-        pr_info("handle_toolkit_cmd: spoofing kernel to: %s - %s\n", release_buf, version_buf);
-
-        struct new_utsname *u = utsname();
-
-        down_write(&uts_sem);
-        strncpy(u->release, release_buf, sizeof(u->release));
-        strncpy(u->version, version_buf, sizeof(u->version));
-        up_write(&uts_sem);
-
-        // we write our confirmation on **
-        if (copy_to_user((void __user *)*arg, &reply, sizeof(reply)))
-            pr_err("handle_toolkit_cmd: reply fail\n");
-
-        return 1;
-    }
-
-    if (magic2 == CHANGE_KSUFLAGS) {
-        pr_info("handle_toolkit_cmd: ksu_change_ksuflags to: %d\n", cmd);
-        ksuflags_override = cmd;
-
-        if (copy_to_user((void __user *)*arg, &reply, sizeof(reply)))
-            pr_err("handle_toolkit_cmd: reply fail\n");
-
-        return 1;
     }
     return 0;
 }
