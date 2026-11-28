@@ -7,8 +7,6 @@ import android.os.Build
 import android.os.Environment
 import androidx.core.content.ContextCompat
 import com.topjohnwu.superuser.io.SuFile
-import com.topjohnwu.superuser.io.SuFileInputStream
-import com.topjohnwu.superuser.io.SuFileOutputStream
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,27 +35,29 @@ class WearFileRepository(
 ) {
     private fun fail(resource: Int): Nothing = throw WearFileException(application.getString(resource))
 
-    private val stagingDirectory get() = File(application.cacheDir, "wear-picker").apply { mkdirs() }
-
     /**
      * Whether browsing shared storage still needs a permission: without root, plain file access
      * sees only media and the app's own files until all-files access (API 30+) or the read
      * permission (older releases) is granted.
      */
-    suspend fun needsStoragePermission(): Boolean = withContext(Dispatchers.IO) {
+    private fun needsStoragePermission(): Boolean {
         // All-files access exists for watches without DocumentsUI; a phone uses its own picker.
-        if (!application.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) return@withContext false
-        val granted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager()
-        } else {
-            ContextCompat.checkSelfPermission(application, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        if (!application.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) return false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return !Environment.isExternalStorageManager()
         }
-        !granted && cli.withNewRootShell(true) { !isRoot }
+        return ContextCompat.checkSelfPermission(application, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
     }
 
-    /** Lists [path] (or a default storage folder) with the files whose MIME type matches [mimeTypes]. */
-    suspend fun list(path: String?, mimeTypes: List<String>, directoriesOnly: Boolean): WearDirectory = withContext(Dispatchers.IO) {
+    /** Reports storage access before listing [path], so permission guidance survives a listing failure. */
+    suspend fun list(
+        path: String?,
+        mimeTypes: List<String>,
+        directoriesOnly: Boolean,
+        onStoragePermissionChecked: (Boolean) -> Unit,
+    ): WearDirectory = withContext(Dispatchers.IO) {
         cli.withNewRootShell(true) {
+            onStoragePermissionChecked(!isRoot && needsStoragePermission())
             val operationShell = this
             fun file(path: String): File = if (isRoot) SuFile(path).apply { shell = operationShell } else File(path)
             val directory = path?.let(::file) ?: listOf(
@@ -94,37 +94,6 @@ class WearFileRepository(
             }
             if (target.exists()) fail(R.string.wear_file_exists)
             target.path
-        }
-    }
-
-    /** Root paths must be staged before the app can read them through a file descriptor. */
-    suspend fun stage(path: String): File = withContext(Dispatchers.IO) {
-        cli.withNewRootShell(true) {
-            val operationShell = this
-            val source = if (isRoot) SuFile(path).apply { shell = operationShell } else File(path)
-            if (!source.isFile || !source.canRead()) fail(R.string.wear_module_file_unreadable)
-            val target = File(stagingDirectory, source.name)
-            val stream = if (source is SuFile) SuFileInputStream.open(source) else source.inputStream()
-            stream.use { input -> target.outputStream().use { input.copyTo(it) } }
-            target
-        }
-    }
-
-    /** A staging file the app writes before [commit] moves its content to the root path. */
-    fun stagingFile(name: String): File = File(stagingDirectory, "write-$name")
-
-    suspend fun commit(staged: File, path: String) = withContext(Dispatchers.IO) {
-        try {
-            cli.withNewRootShell(true) {
-                val target = if (isRoot) {
-                    SuFileOutputStream.open(SuFile(path).apply { shell = this@withNewRootShell })
-                } else {
-                    File(path).outputStream()
-                }
-                staged.inputStream().use { input -> target.use { input.copyTo(it) } }
-            }
-        } finally {
-            staged.delete()
         }
     }
 }

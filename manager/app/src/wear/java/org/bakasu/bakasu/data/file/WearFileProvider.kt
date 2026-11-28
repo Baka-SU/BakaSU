@@ -5,32 +5,26 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
-import android.os.Handler
-import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
-import android.util.Log
 import java.io.FileNotFoundException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.bakasu.bakasu.BuildConfig
+import org.bakasu.bakasu.data.packageinfo.RootServiceRepository
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 /**
  * Serves the files picked in the app's own document picker as `content://` URIs, so the existing
  * ContentResolver-based callers read and write them as they do with DocumentsUI results. The files
- * are reached with root through [WearFileRepository]: reads are staged first, and writes go to a
- * staging file that is copied to the target when the caller closes it. The provider is not
- * exported and grants no URI permissions, so only this app can use it.
+ * are opened directly through [RootServiceRepository], using root when available. Read and write
+ * failures reach the caller. The provider is not exported and grants no URI permissions, so only
+ * this app can use it.
  */
 class WearFileProvider :
     ContentProvider(),
     KoinComponent {
-    private val files: WearFileRepository by inject()
+    private val rootService: RootServiceRepository by inject()
 
     override fun onCreate() = true
 
@@ -50,22 +44,8 @@ class WearFileProvider :
 
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         val path = uri.path ?: throw FileNotFoundException(uri.toString())
-        val name = uri.lastPathSegment ?: throw FileNotFoundException(uri.toString())
-        if ('w' !in mode && 'a' !in mode) {
-            val staged = runCatching { runBlocking { files.stage(path) } }
-                .getOrElse { throw FileNotFoundException(it.message) }
-            return ParcelFileDescriptor.open(staged, ParcelFileDescriptor.MODE_READ_ONLY)
-        }
-        val staged = files.stagingFile(name)
-        return ParcelFileDescriptor.open(staged, ParcelFileDescriptor.parseMode(mode), Handler(Looper.getMainLooper())) { error ->
-            if (error != null) {
-                staged.delete()
-            } else {
-                commitScope.launch {
-                    runCatching { files.commit(staged, path) }.onFailure { Log.e("WearFileProvider", "Failed to write $path", it) }
-                }
-            }
-        }
+        return runCatching { runBlocking { rootService.openFile(path, ParcelFileDescriptor.parseMode(mode)) } }
+            .getOrElse { throw FileNotFoundException(it.message) }
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? = null
@@ -74,7 +54,6 @@ class WearFileProvider :
 
     companion object {
         private const val AUTHORITY = "${BuildConfig.APPLICATION_ID}.wearfiles"
-        private val commitScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         fun uriFor(path: String): Uri = Uri.Builder().scheme("content").authority(AUTHORITY).path(path).build()
     }

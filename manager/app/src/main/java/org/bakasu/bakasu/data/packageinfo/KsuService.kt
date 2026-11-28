@@ -4,10 +4,13 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.os.IBinder
+import android.os.ParcelFileDescriptor
 import android.os.UserHandle
 import android.os.UserManager
 import android.util.Log
 import com.topjohnwu.superuser.ipc.RootService
+import java.io.File
+import java.io.FileNotFoundException
 import org.bakasu.rootService.IKsuInterface
 
 /**
@@ -35,6 +38,12 @@ class KsuService : RootService() {
     }
 
     internal inner class Stub : IKsuInterface.Stub() {
+        override fun openFile(path: String, mode: Int): ParcelFileDescriptor = try {
+            ParcelFileDescriptor.open(File(path), mode)
+        } catch (error: FileNotFoundException) {
+            throw IllegalArgumentException(error.message, error)
+        }
+
         override fun getPackageCount(): Int = synchronized(cacheLock) {
             loadAllPackages().also { _all = it }.size
         }

@@ -6,10 +6,12 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageInfo
 import android.os.IBinder
+import android.os.ParcelFileDescriptor
 import android.os.RemoteException
 import androidx.core.content.ContextCompat
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
+import java.io.File
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -36,6 +38,20 @@ class RootServiceRepository(
     private val mainExecutor = ContextCompat.getMainExecutor(application)
 
     private data class Binding(val binder: IBinder, val connection: ServiceConnection)
+
+    suspend fun openFile(path: String, mode: Int): ParcelFileDescriptor = requestMutex.withLock {
+        withContext(Dispatchers.IO) {
+            ksuCliRepository.createRootShell(globalMnt = true).use { shell ->
+                if (!shell.isRoot) return@withContext ParcelFileDescriptor.open(File(path), mode)
+                val binding = connectService(shell)
+                try {
+                    IKsuInterface.Stub.asInterface(binding.binder).openFile(path, mode)
+                } finally {
+                    unbind(binding.connection)
+                }
+            }
+        }
+    }
 
     suspend fun getInstalledPackages(): List<PackageInfo> = requestMutex.withLock {
         withContext(Dispatchers.IO) {

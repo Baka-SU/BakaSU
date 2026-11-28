@@ -47,9 +47,9 @@ class WearFileViewModel(private val repository: WearFileRepository) : ViewModel(
         mutableState.update { it.copy(name = name) }
     }
     fun load(path: String?, mimeTypes: List<String>, directoriesOnly: Boolean) = submit {
-        val permissionRequired = repository.needsStoragePermission()
-        mutableState.update { it.copy(storagePermissionRequired = permissionRequired) }
-        val directory = repository.list(path, mimeTypes, directoriesOnly)
+        val directory = repository.list(path, mimeTypes, directoriesOnly) { permissionRequired ->
+            mutableState.update { it.copy(storagePermissionRequired = permissionRequired) }
+        }
         mutableState.update { it.copy(directory = directory) }
     }
     fun select(path: String) = submit { mutableEvents.emit(WearFileEvent.Picked(WearFileProvider.uriFor(path).toString())) }

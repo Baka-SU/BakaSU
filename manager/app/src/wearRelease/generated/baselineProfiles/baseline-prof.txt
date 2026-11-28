@@ -31557,7 +31557,6 @@ PLorg/bakasu/bakasu/ui/component/PackageIconKt$PackageIcon$packageInfo$2$1;->inv
 PLorg/bakasu/bakasu/ui/component/PackageIconKt$PackageIcon$packageInfo$2$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 Lorg/bakasu/bakasu/ui/navigation/LaunchIntentKt;
 SPLorg/bakasu/bakasu/ui/navigation/LaunchIntentKt;->parseValidatedDeepLink(Landroid/net/Uri;Ljava/lang/String;)Lorg/bakasu/bakasu/ui/navigation/KsuDeepLink;
-SPLorg/bakasu/bakasu/ui/navigation/LaunchIntentKt;->resolveLaunchIntent(Landroid/content/Context;Landroid/content/Intent;Ljava/lang/String;Lorg/bakasu/bakasu/data/file/ModuleUtils;)Lorg/bakasu/bakasu/ui/navigation/LaunchAction;
 Lorg/bakasu/bakasu/ui/navigation/LaunchIntentKt$$ExternalSyntheticTypeSwitchClass0;
 SPLorg/bakasu/bakasu/ui/navigation/LaunchIntentKt$$ExternalSyntheticTypeSwitchClass0;->switchDispatch(Ljava/lang/Object;I)I
 Lorg/bakasu/bakasu/ui/theme/BackgroundManager;
