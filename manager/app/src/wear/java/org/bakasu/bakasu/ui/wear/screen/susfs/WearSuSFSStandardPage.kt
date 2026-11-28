@@ -25,6 +25,7 @@ import org.bakasu.bakasu.ui.viewmodel.SuSFSUiAction
 import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.awaitSuSFSSlotInfo
 import org.bakasu.bakasu.ui.wear.WearRoute
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -154,10 +155,9 @@ internal fun WearSuSFSStandardPage(
                         item {
                             WearInfoCard(spec) { Text(stringResource(R.string.susfs_standard_uname_slot_info_load_failed)) }
                         }
-                    }
-                    if (state.slotInfo?.isEmpty() == true) {
+                    } else if (state.slotInfo?.isEmpty() == true) {
                         item {
-                            WearInfoCard(spec) { Text(stringResource(R.string.susfs_standard_uname_slot_info_empty)) }
+                            WearEmptyState(spec, Icons.Rounded.Storage, stringResource(R.string.susfs_standard_uname_slot_info_empty))
                         }
                     }
                     state.slotInfo?.takeUnless { slotFailed }?.sortedBy { it.slotName }?.forEach { slot ->

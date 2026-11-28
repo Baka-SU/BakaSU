@@ -17,7 +17,6 @@ import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Undo
-import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,6 +59,7 @@ import org.bakasu.bakasu.ui.wear.component.WearIconAction
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearInfoRow
 import org.bakasu.bakasu.ui.wear.component.WearList
+import org.bakasu.bakasu.ui.wear.component.WearLoadFailureContent
 import org.bakasu.bakasu.ui.wear.component.WearModuleInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearModuleSwipeActions
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -209,7 +209,6 @@ internal fun WearDynamicManagerAppsPage(
         destructive = true,
         onConfirm = onClear,
     )
-    val needsRetry = state.loadFailed || state.apps.isEmpty()
     WearList(
         pageTitle = stringResource(R.string.search_apps),
         isLoading = state.isLoading || state.isSubmitting,
@@ -218,25 +217,23 @@ internal fun WearDynamicManagerAppsPage(
         hasOperationsPanel = true,
         panelLabel = stringResource(R.string.wear_operations),
         onBack = onBack,
-        onConfirm = onRetry.takeIf { needsRetry },
-        confirmLabel = stringResource(R.string.network_retry),
+        onConfirm = onRetry.takeIf { state.loadFailed },
+        confirmLabel = if (state.loadFailed) stringResource(R.string.network_retry) else null,
         confirmEnabled = !state.isRefreshing,
     ) { spec ->
-        if (needsRetry) {
+        if (state.loadFailed) {
+            item { WearLoadFailureContent(spec, stringResource(R.string.operation_failed)) }
+        } else if (state.apps.isEmpty()) {
             item {
                 WearEmptyState(
                     spec,
-                    if (state.loadFailed) {
-                        Icons.Rounded.Warning
-                    } else if (state.search.isNotBlank()) {
+                    if (state.search.isNotBlank()) {
                         Icons.Rounded.SearchOff
                     } else {
                         Icons.Rounded.Apps
                     },
                     stringResource(
-                        if (state.loadFailed) {
-                            R.string.wear_load_failed
-                        } else if (state.search.isNotBlank()) {
+                        if (state.search.isNotBlank()) {
                             R.string.search_no_any_match
                         } else {
                             R.string.no_apps_found

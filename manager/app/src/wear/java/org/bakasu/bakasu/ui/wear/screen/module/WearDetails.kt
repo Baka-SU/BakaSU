@@ -77,6 +77,7 @@ import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearCatalogModuleIcon
 import org.bakasu.bakasu.ui.wear.component.WearCompactItemSpacing
 import org.bakasu.bakasu.ui.wear.component.WearDetailField
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearFeedbackEffect
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearInfoRow
@@ -122,6 +123,8 @@ internal fun WearModuleDetail(
                 item {
                     WearStatusItem(spec, Icons.Rounded.Error, error, tone = WearStatusTone.ERROR)
                 }
+            } else {
+                item { WearEmptyState(spec, Icons.Rounded.Extension, stringResource(R.string.repo_module_unavailable)) }
             }
         }
         return
@@ -305,7 +308,7 @@ internal fun WearAppProfileModeRoute(
     if (profile == null) {
         WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.profile)) }
-            if (!state.isLoading) item { WearStatusItem(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
+            if (!state.isLoading) item { WearEmptyState(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
         }
     } else {
         WearAppProfileModePage(
@@ -379,7 +382,7 @@ internal fun WearAppProfileTemplateChoiceRoute(
     if (profile == null) {
         WearList(isLoading = state.isLoading, onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.profile_template)) }
-            if (!state.isLoading) item { WearStatusItem(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
+            if (!state.isLoading) item { WearEmptyState(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
         }
     } else {
         WearAppProfileTemplateChoicePage(
@@ -498,7 +501,7 @@ internal fun WearAppDetail(
             item {
                 WearPageHeader(spec, stringResource(R.string.profile))
             }
-            item { WearStatusItem(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
+            item { WearEmptyState(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
         }
         return
     }
@@ -675,7 +678,7 @@ internal fun WearAffectedAppsPage(group: InstalledAppGroup?, onBack: () -> Unit)
     WearList(onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.affected_applications)) }
         if (group == null) {
-            item { WearStatusItem(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
+            item { WearEmptyState(spec, Icons.Rounded.Apps, stringResource(R.string.no_apps_found)) }
         } else {
             group.apps.forEach { app ->
                 item {

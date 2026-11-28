@@ -151,7 +151,7 @@
     <string name="wear_readme_summary">README 内容</string>
     <string name="wear_release_summary">Release 记录</string>
     <string name="wear_info_summary">ID · 简介 · 作者</string>
-    <string name="wear_author_link_summary">打开作者链接</string>
+    <string name="wear_author_summary">模块作者</string>
     <string name="wear_download">下载</string>
     <string name="wear_downloading">下载中</string>
     <string name="wear_webui_summary">打开模块的网页界面</string>
@@ -160,7 +160,9 @@
     <string name="wear_update_to">更新到 %1$s</string>
     <string name="wear_update_download">下载更新</string>
     <string name="wear_update_changelog_summary">点击加载更新日志</string>
-    <string name="wear_update_changelog_unavailable">无法读取更新日志</string>
+    <string name="wear_update_changelog_unavailable">暂无更新日志</string>
+    <string name="wear_libraries_empty">暂无开源库</string>
+    <string name="wear_licenses_empty">暂无许可证</string>
     <string name="wear_download_confirm_title">下载此模块？</string>
     <string name="wear_download_then_install">下载后确认安装</string>
     <string name="wear_browser_open_failed">无法打开浏览器</string>

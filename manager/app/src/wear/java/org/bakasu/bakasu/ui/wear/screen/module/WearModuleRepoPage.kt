@@ -296,15 +296,26 @@ internal fun WearOnlineModulePage(
                 val (target, label, summary) = section
                 WearSettingsJumpPageWidget(spec, stringResource(label), { onSection(target) }, icon = icon, description = stringResource(summary))
             }
-            item { WearSectionHeader(spec, stringResource(R.string.wear_authors_source)) }
-            LazySegmentedColumn(module.authorList.filter { it.link.isNotBlank() }, { it.link }) { author ->
-                WearSettingsJumpPageWidget(
-                    spec,
-                    author.name,
-                    { onLink(author.link) },
-                    icon = Icons.Rounded.Person,
-                    description = stringResource(R.string.wear_author_link_summary),
-                )
+            val authors = module.authorList.filter { it.name.isNotBlank() }
+            if (authors.isNotEmpty()) {
+                item { WearSectionHeader(spec, stringResource(R.string.wear_authors_source)) }
+                LazySegmentedColumn(authors, { "${it.name}:${it.link}" }) { author ->
+                    val colors = ButtonDefaults.filledTonalButtonColors()
+                    WearSettingsJumpPageWidget(
+                        spec,
+                        author.name,
+                        { onLink(author.link) },
+                        icon = Icons.Rounded.Person,
+                        description = stringResource(R.string.wear_author_summary),
+                        enabled = author.link.isNotBlank(),
+                        colors = colors.copy(
+                            disabledContainerColor = colors.containerColor,
+                            disabledContentColor = colors.contentColor,
+                            disabledSecondaryContentColor = colors.secondaryContentColor,
+                            disabledIconColor = colors.iconColor,
+                        ),
+                    )
+                }
             }
         }
     }
@@ -348,14 +359,17 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String
                             document.format == DocumentFormat.HTML -> HtmlCompat.fromHtml(document.content, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
                             else -> document.content.trim()
                         }
-                        // The whole README reads as one card, like a license text.
                         item {
-                            WearInfoCard(spec) {
-                                Text(
-                                    text ?: stringResource(R.string.repo_no_readme),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                            if (text.isNullOrBlank()) {
+                                WearEmptyState(spec, Icons.Rounded.Article, stringResource(R.string.repo_no_readme))
+                            } else {
+                                WearInfoCard(spec) {
+                                    Text(
+                                        text,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
                     }
@@ -365,13 +379,19 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String
                     if (module.isScript) {
                         item { WearStatusItem(spec, Icons.Rounded.Info, stringResource(R.string.wear_script_unsupported)) }
                     }
+                    if (module.releases.isEmpty()) {
+                        item { WearEmptyState(spec, Icons.Rounded.Tag, stringResource(R.string.repo_no_releases)) }
+                    }
                     // Each release keeps its own files, so an earlier version can still be downloaded.
                     module.releases.forEach { release ->
                         item { WearSectionHeader(spec, release.name.ifBlank { release.tagName }) }
-                        item {
-                            WearInfoCard(spec) {
-                                Text(release.publishedAt, style = MaterialTheme.typography.labelSmall)
-                                Text(HtmlCompat.fromHtml(release.descriptionHTML, HtmlCompat.FROM_HTML_MODE_COMPACT).toString(), style = MaterialTheme.typography.bodySmall)
+                        val description = HtmlCompat.fromHtml(release.descriptionHTML, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
+                        if (release.publishedAt.isNotBlank() || description.isNotBlank()) {
+                            item {
+                                WearInfoCard(spec) {
+                                    if (release.publishedAt.isNotBlank()) Text(release.publishedAt, style = MaterialTheme.typography.labelSmall)
+                                    if (description.isNotBlank()) Text(description, style = MaterialTheme.typography.bodySmall)
+                                }
                             }
                         }
                         items(release.assets, key = { it.downloadUrl }) { asset ->
@@ -390,9 +410,9 @@ internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String
                 else -> item {
                     WearInfoCard(spec) {
                         Text(module.moduleId, style = MaterialTheme.typography.titleSmall)
-                        Text(module.summary, style = MaterialTheme.typography.bodySmall)
-                        Text(module.authors, style = MaterialTheme.typography.bodySmall)
-                        Text(module.latestRelease, style = MaterialTheme.typography.labelSmall)
+                        if (module.summary.isNotBlank()) Text(module.summary, style = MaterialTheme.typography.bodySmall)
+                        if (module.authors.isNotBlank()) Text(module.authors, style = MaterialTheme.typography.bodySmall)
+                        if (module.latestRelease.isNotBlank()) Text(module.latestRelease, style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }

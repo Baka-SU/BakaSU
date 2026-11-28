@@ -36,6 +36,7 @@ import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.SusKstatOperation
 import org.bakasu.bakasu.ui.wear.WearRoute
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
@@ -117,10 +118,7 @@ internal fun WearSuSFSEntriesPage(
         }
         if (entries.isEmpty()) {
             item {
-                WearInfoCard(spec) {
-                    Text(stringResource(R.string.susfs_entry_no_entries))
-                    Text(stringResource(R.string.susfs_entry_no_entries_hint))
-                }
+                WearEmptyState(spec, section.icon, stringResource(R.string.susfs_entry_no_entries))
             }
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }

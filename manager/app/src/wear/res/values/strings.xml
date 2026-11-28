@@ -163,7 +163,7 @@
     <string name="wear_readme_summary">README content</string>
     <string name="wear_release_summary">Release history</string>
     <string name="wear_info_summary">ID · summary · authors</string>
-    <string name="wear_author_link_summary">Open the author\'s page</string>
+    <string name="wear_author_summary">Module author</string>
     <string name="wear_download">Download</string>
     <string name="wear_downloading">Downloading</string>
     <string name="wear_download_percent" translatable="false">%1$d%%</string>
@@ -175,7 +175,9 @@
     <string name="wear_update_to">Update to %1$s</string>
     <string name="wear_update_download">Download update</string>
     <string name="wear_update_changelog_summary">Tap to load the changelog</string>
-    <string name="wear_update_changelog_unavailable">Changelog unavailable</string>
+    <string name="wear_update_changelog_unavailable">No changelog available</string>
+    <string name="wear_libraries_empty">No open-source libraries</string>
+    <string name="wear_licenses_empty">No licenses available</string>
     <string name="wear_download_confirm_title">Download this module?</string>
     <string name="wear_download_then_install">Download, then confirm installing</string>
     <string name="wear_browser_open_failed">Couldn\'t open the browser</string>

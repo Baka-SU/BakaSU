@@ -100,7 +100,7 @@ fun wearStatusColors(tone: WearStatusTone): Pair<Color?, Color> = when (tone) {
 }
 
 /**
- * A single message card for list empty states, read failures and warnings: by default a centered
+ * A single message card for notices, read failures and warnings: by default a centered
  * 24dp icon above centered text, so the state reads at a glance on a round screen. With [centered]
  * false it keeps the compact paragraph layout (small icon beside start-aligned text) used by the Home
  * notices. Warnings and errors keep their yellow and red containers.

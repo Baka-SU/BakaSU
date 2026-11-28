@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 
@@ -47,6 +48,9 @@ internal fun WearLicensePage(onBack: () -> Unit, onOpenLibrary: (Int) -> Unit) {
     val libraries = rememberLibraries()
     WearList(isLoading = libraries == null, onBack = onBack) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.open_source_license)) }
+        if (libraries?.libraries?.isEmpty() == true) {
+            item { WearEmptyState(spec, Icons.Rounded.Copyright, stringResource(R.string.wear_libraries_empty)) }
+        }
         libraries?.libraries?.forEachIndexed { index, library ->
             item(key = "library-$index") {
                 WearActionButton(spec, Icons.Rounded.Copyright, library.name, { onOpenLibrary(index) })
@@ -61,11 +65,14 @@ internal fun WearLicenseDetailPage(index: Int, onBack: () -> Unit, onOpenLink: (
     val libraries = rememberLibraries()
     val library = libraries?.libraries?.getOrNull(index)
     WearList(isLoading = libraries == null, onBack = onBack) { spec ->
+        item { WearPageHeader(spec, library?.name ?: stringResource(R.string.open_source_license)) }
+        if (libraries != null && (library == null || library.licenses.isEmpty())) {
+            item { WearEmptyState(spec, Icons.Rounded.Copyright, stringResource(R.string.wear_licenses_empty)) }
+        }
         if (library != null) {
-            item { WearPageHeader(spec, library.name) }
-            // Each license is one card: its name above the complete, unaltered text in the
-            // theme's small body style, so the whole license scrolls as a single reading block.
+            // Keep each license's name and full text in one card; missing text uses the shared empty state.
             library.licenses.forEach { license ->
+                val content = license.licenseContent
                 item {
                     Card(
                         onClick = { license.url?.let(onOpenLink) },
@@ -74,13 +81,18 @@ internal fun WearLicenseDetailPage(index: Int, onBack: () -> Unit, onOpenLink: (
                         transformation = SurfaceTransformation(spec),
                     ) {
                         Text(license.name, style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            license.licenseContent ?: stringResource(R.string.no_license_text),
-                            modifier = Modifier.padding(top = 4.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        if (!content.isNullOrBlank()) {
+                            Text(
+                                content,
+                                modifier = Modifier.padding(top = 4.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
+                }
+                if (content.isNullOrBlank()) {
+                    item { WearEmptyState(spec, Icons.Rounded.Copyright, stringResource(R.string.no_license_text)) }
                 }
             }
         }

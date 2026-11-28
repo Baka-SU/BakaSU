@@ -36,6 +36,7 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleChangelogViewModel
 import org.bakasu.bakasu.ui.wear.WearRoute
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearChip
+import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearFeedbackEffect
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -152,7 +153,7 @@ internal fun WearModuleChangelogPage(module: InstalledModule?, onBack: () -> Uni
             }
 
             state.content.isBlank() -> item {
-                WearStatusItem(spec, Icons.Rounded.Article, stringResource(R.string.wear_update_changelog_unavailable))
+                WearEmptyState(spec, Icons.Rounded.Article, stringResource(R.string.wear_update_changelog_unavailable))
             }
 
             else -> changelogChunks(state.content).forEach { chunk ->

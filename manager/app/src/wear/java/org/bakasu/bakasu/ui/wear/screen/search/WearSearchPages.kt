@@ -41,7 +41,12 @@ internal fun WearAppSearchResults(
     onBack: () -> Unit,
 ) {
     val title = stringResource(R.string.search_apps)
-    WearList(onBack = onBack, snap = true) { spec ->
+    WearList(
+        onBack = onBack,
+        snap = true,
+        isLoading = state.isRefreshing && state.appGroupList.isEmpty(),
+        isRefreshing = state.isRefreshing && state.appGroupList.isNotEmpty(),
+    ) { spec ->
         searchHeader(spec, title, state.search, onEdit)
         when {
             !error.isNullOrBlank() -> item { WearStatusItem(spec, Icons.Rounded.Error, error, tone = WearStatusTone.ERROR) }
@@ -63,7 +68,12 @@ internal fun WearModuleSearchResults(
     onBack: () -> Unit,
 ) {
     val title = stringResource(R.string.search_modules)
-    WearList(onBack = onBack, snap = true) { spec ->
+    WearList(
+        onBack = onBack,
+        snap = true,
+        isLoading = state.isRefreshing && state.moduleList.isEmpty(),
+        isRefreshing = state.isRefreshing && state.moduleList.isNotEmpty(),
+    ) { spec ->
         searchHeader(spec, title, state.search, onEdit)
         when {
             !error.isNullOrBlank() -> item { WearStatusItem(spec, Icons.Rounded.Error, error, tone = WearStatusTone.ERROR) }
