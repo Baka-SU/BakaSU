@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
+import android.app.NotificationManager
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothClass
 import android.bluetooth.BluetoothDevice
@@ -128,12 +129,24 @@ class CompanionBridgeRepository(
     private val mutableListening = MutableStateFlow(false)
     internal val listening = mutableListening.asStateFlow()
 
-    private fun read() = BridgeState(
-        preferences.getString(ADDRESS)?.let { BridgePeer(it, preferences.getString(NAME).orEmpty().ifBlank { it }) },
-        preferences.getBoolean(ENABLED, false),
-        connected = activeConnections.isNotEmpty(),
-        remembered = preferences.getBoolean(REMEMBERED, false),
-    )
+    private fun read(): BridgeState {
+        val address = preferences.getString(ADDRESS)
+        val associationSupported = !isWatch && Build.VERSION.SDK_INT >= 33 &&
+            application.packageManager.hasSystemFeature(PackageManager.FEATURE_COMPANION_DEVICE_SETUP)
+        val manager = if (associationSupported) application.getSystemService(CompanionDeviceManager::class.java) else null
+        return BridgeState(
+            peer = address?.let { BridgePeer(it, preferences.getString(NAME).orEmpty().ifBlank { it }) },
+            enabled = preferences.getBoolean(ENABLED, false),
+            connected = activeConnections.isNotEmpty(),
+            remembered = preferences.getBoolean(REMEMBERED, false),
+            nearbyDevicesGranted = Build.VERSION.SDK_INT < 31 ||
+                ContextCompat.checkSelfPermission(application, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED,
+            notificationsGranted = application.getSystemService(NotificationManager::class.java).areNotificationsEnabled(),
+            associationSupported = manager != null,
+            associated = Build.VERSION.SDK_INT >= 33 && address != null &&
+                manager?.myAssociations?.any { it.deviceMacAddress?.toString().equals(address, true) } == true,
+        )
+    }
 
     fun refresh() {
         synchronized(activeConnections) {
@@ -165,8 +178,6 @@ class CompanionBridgeRepository(
         return adapter
     }
 
-    fun bondedPeers(): List<BridgePeer> = adapter().bondedDevices.map { BridgePeer(it.address, it.name.orEmpty().ifBlank { it.address }) }.sortedBy { it.name }
-
     private fun phoneCandidates(): List<BridgePhoneCandidate> {
         val candidates = adapter().bondedDevices.map { device ->
             val phone = when (device.bluetoothClass?.majorDeviceClass) {
@@ -194,25 +205,6 @@ class CompanionBridgeRepository(
         return selectBridgePhones(candidates, state.value.peer?.address)
     }
 
-    /** The watch or phone this Manager was paired with through the companion device manager. */
-    @Suppress("DEPRECATION")
-    fun associatedPeer(): BridgePeer? {
-        if (isWatch) return null
-        if (!application.packageManager.hasSystemFeature(PackageManager.FEATURE_COMPANION_DEVICE_SETUP)) return null
-        val manager = application.getSystemService(CompanionDeviceManager::class.java) ?: return null
-        if (Build.VERSION.SDK_INT >= 33) {
-            val info = manager.myAssociations.firstOrNull() ?: return null
-            val address = info.deviceMacAddress?.toString() ?: return null
-            val name = info.displayName?.toString().orEmpty()
-                .ifBlank { runCatching { adapter().getRemoteDevice(address).name }.getOrNull().orEmpty() }
-                .ifBlank { address }
-            return BridgePeer(address, name)
-        }
-        val address = manager.associations.firstOrNull() ?: return null
-        val name = runCatching { adapter().getRemoteDevice(address).name }.getOrNull().orEmpty().ifBlank { address }
-        return BridgePeer(address, name)
-    }
-
     fun setRemembered(remembered: Boolean) {
         preferences.putBoolean(REMEMBERED, remembered)
         refresh()
@@ -230,9 +222,15 @@ class CompanionBridgeRepository(
     /** Lets the system restart the receiver when the associated watch appears; CDM-only and optional. */
     fun observePresence(address: String) {
         if (isWatch || Build.VERSION.SDK_INT < 31) return
-        @Suppress("DEPRECATION")
-        runCatching { application.getSystemService(CompanionDeviceManager::class.java)?.startObservingDevicePresence(address) }
-            .onFailure { Log.w("CompanionBridge", "Presence observation unavailable", it) }
+        val manager = application.getSystemService(CompanionDeviceManager::class.java) ?: throw BridgeException(BridgeFailure.ASSOCIATION)
+        try {
+            @Suppress("DEPRECATION")
+            manager.startObservingDevicePresence(address)
+        } catch (error: Exception) {
+            throw BridgeException(BridgeFailure.ASSOCIATION_FAILED, error)
+        } finally {
+            refresh()
+        }
     }
 
     internal fun newSecret(): String = UUID.randomUUID().toString() + UUID.randomUUID().toString()
@@ -247,7 +245,7 @@ class CompanionBridgeRepository(
     }
 
     @Suppress("DEPRECATION")
-    fun unassociate(address: String) {
+    private fun unassociate(address: String) {
         if (isWatch) return
         val manager = application.getSystemService(CompanionDeviceManager::class.java) ?: return
         if (Build.VERSION.SDK_INT >= 33) {
@@ -287,9 +285,7 @@ class CompanionBridgeRepository(
     }
 
     internal fun closeConnections() {
-        activeConnections.forEach { connection ->
-            runCatching { connection.close() }.onFailure { Log.w("CompanionBridge", "Connection close failed", it) }
-        }
+        activeConnections.forEach(BridgeConnection::close)
     }
 
     private val transferMutex = Mutex()
@@ -533,11 +529,8 @@ class CompanionBridgeRepository(
         }
     }
 
-    private fun credential(address: String): String = preferences.getString(SECRET)?.takeIf { state.value.peer?.address.equals(address, true) }
-        ?: throw BridgeException(BridgeFailure.SETUP_REQUIRED)
-
     internal fun connect(address: String, operation: String): BridgeConnection {
-        val key = credential(address)
+        val key = savedSecret(address) ?: throw BridgeException(BridgeFailure.SETUP_REQUIRED)
         val socket = adapter().getRemoteDevice(address).createRfcommSocketToServiceRecord(serviceUuid(operation))
         return connectSocket(socket, operation, key)
     }

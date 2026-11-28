@@ -12,6 +12,7 @@ enum class BridgeFailure(@param:StringRes val resId: Int) {
     OPEN_FAILED(R.string.wear_link_open_failed),
     RESULT_UNKNOWN(R.string.wear_phone_result_unknown),
     ASSOCIATION(R.string.wear_bridge_association_unsupported),
+    ASSOCIATION_FAILED(R.string.wear_bridge_background_failed),
     NOTIFICATIONS(R.string.wear_bridge_notification_required),
     NOT_PAIRED(R.string.wear_bridge_not_paired),
     NOT_CONNECTED(R.string.wear_phone_not_connected),
@@ -20,7 +21,16 @@ enum class BridgeFailure(@param:StringRes val resId: Int) {
 
 class BridgeException(val reason: BridgeFailure, cause: Throwable? = null) : Exception(reason.name, cause)
 data class BridgePeer(val address: String, val name: String)
-data class BridgeState(val peer: BridgePeer? = null, val enabled: Boolean = false, val connected: Boolean = false, val remembered: Boolean = false)
+data class BridgeState(
+    val peer: BridgePeer? = null,
+    val enabled: Boolean = false,
+    val connected: Boolean = false,
+    val remembered: Boolean = false,
+    val nearbyDevicesGranted: Boolean = false,
+    val notificationsGranted: Boolean = false,
+    val associationSupported: Boolean = false,
+    val associated: Boolean = false,
+)
 
 enum class BridgeAction { WEB_UI, LINK }
 

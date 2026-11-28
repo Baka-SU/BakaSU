@@ -19,6 +19,7 @@ class CompanionBridgeViewModel(
 ) : ViewModel() {
     val state = observe()
     val request = observe.incomingRequest
+    val listening = observe.listening
     val needsReceiverSetup get() = configure.needsReceiverSetup
     fun resumeReceiver() = run { configure.resumeReceiver() }
     private val mutableError = MutableStateFlow<BridgeFailure?>(null)
@@ -32,11 +33,16 @@ class CompanionBridgeViewModel(
     fun failed(reason: BridgeFailure) {
         mutableError.value = reason
     }
-    fun refresh() = run { configure.refresh() }
-
-    /** Refreshes the receiver and remembered watch settings. */
-    fun initialize() = run {
-        configure.refresh()
+    fun refresh() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                configure.refresh()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                mutableError.value = (error as? BridgeException)?.reason ?: BridgeFailure.CONNECTION
+            }
+        }
     }
 
     fun observePresence(address: String) = run { configure.observePresence(address) }
@@ -46,7 +52,6 @@ class CompanionBridgeViewModel(
     fun presented(id: String) = configure.presented(id)
     fun completed(id: String, opened: Boolean) = configure.completed(id, opened)
     fun launch(id: String, open: (BridgeRequest) -> Boolean) = configure.launch(id, open)
-    fun unassociate(address: String) = run { configure.unassociate(address) }
     fun disconnect() = run { configure.disconnect() }
 
     private fun run(action: suspend () -> Unit) {

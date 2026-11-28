@@ -464,7 +464,7 @@ fun SettingsPage(bottomPadding: Dp) {
                         item {
                             SettingsJumpPageWidget(
                                 icon = Icons.TwoTone.Bluetooth,
-                                title = stringResource(R.string.wear_bridge),
+                                title = stringResource(R.string.wear_bridge_phone_title),
                                 description = stringResource(R.string.wear_bridge_summary),
                                 onClick = {
                                     context.startActivity(Intent(context, org.bakasu.bakasu.ui.webui.WearBridgeSetupActivity::class.java))
