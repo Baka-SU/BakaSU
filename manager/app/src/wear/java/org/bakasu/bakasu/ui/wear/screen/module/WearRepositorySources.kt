@@ -173,7 +173,7 @@ internal fun WearAddRepositoryPage(onBack: () -> Unit) {
                 pageTitle = stringResource(R.string.repo_add_repository),
                 onBack = onBack,
                 isBusy = state.busy,
-                isRefreshing = state.busy,
+                isLoading = state.busy,
                 onConfirm = { viewModel.add() },
                 confirmLabel = stringResource(R.string.add),
                 confirmEnabled = state.url.isNotBlank() && !state.busy,
