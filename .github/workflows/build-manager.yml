@@ -176,19 +176,20 @@ jobs:
             build_args+=("-PKSU_PACKAGE_NAME=$KSU_PACKAGE_NAME" "-PKSU_NAME=$KSU_NAME")
           fi
 
-          ./gradlew assemble${{ matrix.build_variant }}${{ matrix.build_type }} "${build_args[@]}"
+          manager_build_type="${{ matrix.build_type }}"
+          ./gradlew ":${{ matrix.build_variant }}:assemble${manager_build_type^}" "${build_args[@]}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: Manager-gradle-${{ matrix.build_variant }}-${{ matrix.build_type }}
-          path: manager/app/build/outputs/apk/${{ matrix.build_variant }}/${{ matrix.build_type }}/*.apk
+          path: manager/${{ matrix.build_variant }}/build/outputs/apk/${{ matrix.build_type }}/*.apk
 
       - name: Upload mappings
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.build_variant == 'wear' && 'Wear-Manager-mapping' || 'Manager-mapping' }}
-          path: manager/app/build/outputs/mapping/${{ matrix.build_variant }}Release/
+          path: manager/${{ matrix.build_variant }}/build/outputs/mapping/${{ matrix.build_type }}/
           if-no-files-found: ignore
 
   repack-manager:
@@ -239,6 +240,7 @@ jobs:
 
       - name: Place manager apk and ksud artifacts
         run: |
+          # The upstream repacker reads this staging path independently of the Gradle modules.
           mkdir -p manager/app/build/outputs/apk/${{ matrix.build_type }}
           cp -f artifacts/manager/*.apk manager/app/build/outputs/apk/${{ matrix.build_type }}/
 
