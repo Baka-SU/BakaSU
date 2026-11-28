@@ -47,8 +47,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.data.file.ZipFileInfo
-import org.bakasu.bakasu.data.file.ZipType
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
@@ -263,26 +261,14 @@ fun InstallItemCard(zipFile: ZipFileInfo) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = zipFile.name.ifEmpty {
-                            stringResource(
-                                when (zipFile.type) {
-                                    ZipType.MODULE -> R.string.unknown_module
-                                    ZipType.KERNEL -> R.string.unknown_kernel
-                                    else -> R.string.unknown_file
-                                },
-                            )
+                            stringResource(zipFile.type.unknownNameResId)
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = stringResource(
-                            when (zipFile.type) {
-                                ZipType.MODULE -> R.string.module_package
-                                ZipType.KERNEL -> R.string.kernel_package
-                                else -> R.string.unknown_package
-                            },
-                        ),
+                        text = stringResource(zipFile.type.resId),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

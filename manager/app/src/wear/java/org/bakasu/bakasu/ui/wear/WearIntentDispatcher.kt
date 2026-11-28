@@ -8,8 +8,8 @@ import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.first
 import org.bakasu.bakasu.Natives
-import org.bakasu.bakasu.data.file.ZipFileDetector
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
+import org.bakasu.bakasu.ui.component.ZipFileDetector
 import org.bakasu.bakasu.ui.navigation.LaunchAction
 import org.bakasu.bakasu.ui.navigation.resolveLaunchIntent
 import org.bakasu.bakasu.ui.wear.screen.module.WearModuleInstaller

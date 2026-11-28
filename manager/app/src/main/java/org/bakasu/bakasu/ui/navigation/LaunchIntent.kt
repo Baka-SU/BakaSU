@@ -10,9 +10,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.download.DownloadService
-import org.bakasu.bakasu.data.file.ZipFileDetector
-import org.bakasu.bakasu.data.file.ZipFileInfo
-import org.bakasu.bakasu.data.file.ZipType
+import org.bakasu.bakasu.ui.component.ZipFileDetector
+import org.bakasu.bakasu.ui.component.ZipFileInfo
+import org.bakasu.bakasu.ui.component.ZipType
 
 private const val SCHEME_KSU = "ksu"
 private const val HOST_ACTION = "action"

@@ -34,14 +34,14 @@ import androidx.wear.compose.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.data.file.ZipFileDetector
-import org.bakasu.bakasu.data.file.ZipFileInfo
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.ExpectedFile
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.ModuleReleaseAsset
 import org.bakasu.bakasu.domain.model.ModuleUpdateMetadata
 import org.bakasu.bakasu.domain.model.ModuleUpdateVerification
+import org.bakasu.bakasu.ui.component.ZipFileDetector
+import org.bakasu.bakasu.ui.component.ZipFileInfo
 import org.bakasu.bakasu.ui.wear.WearNavigator
 import org.bakasu.bakasu.ui.wear.WearRoute
 import org.bakasu.bakasu.ui.wear.component.WearDialogIcon

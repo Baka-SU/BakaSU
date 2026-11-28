@@ -13,12 +13,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.channels.ReceiveChannel
 import org.bakasu.bakasu.Natives
-import org.bakasu.bakasu.data.file.ZipFileDetector
-import org.bakasu.bakasu.data.file.ZipFileInfo
-import org.bakasu.bakasu.data.file.ZipType
 import org.bakasu.bakasu.data.settings.SettingsPlatformRepository
 import org.bakasu.bakasu.domain.usecase.PeekOneshotScriptUseCase
 import org.bakasu.bakasu.ui.component.InstallConfirmationDialog
+import org.bakasu.bakasu.ui.component.ZipFileDetector
+import org.bakasu.bakasu.ui.component.ZipFileInfo
+import org.bakasu.bakasu.ui.component.ZipType
 import org.bakasu.bakasu.ui.webui.WebUIActivity
 import org.koin.compose.koinInject
 

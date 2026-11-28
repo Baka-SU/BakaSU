@@ -46,12 +46,15 @@ class WearBoundaryDetector :
 
         /**
          * Phone components without a phone-only layout that Wear shares: the dialog API, which
-         * AGENTS.md requires for every custom dialog, and the app icon loader.
+         * AGENTS.md requires for every custom dialog, the app icon loader, and upstream ZIP parsing.
          */
         private val SHARED_COMPONENTS = setOf(
             "$PHONE_COMPONENT_PACKAGE.rememberCustomDialog",
             "$PHONE_COMPONENT_PACKAGE.DialogHandle",
             "$PHONE_COMPONENT_PACKAGE.PackageIcon",
+            "$PHONE_COMPONENT_PACKAGE.ZipFileDetector",
+            "$PHONE_COMPONENT_PACKAGE.ZipFileInfo",
+            "$PHONE_COMPONENT_PACKAGE.ZipType",
         )
 
         val ISSUE: Issue = Issue.create(
