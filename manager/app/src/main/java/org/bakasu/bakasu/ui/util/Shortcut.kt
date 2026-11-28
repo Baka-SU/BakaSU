@@ -1,7 +1,6 @@
 package org.bakasu.bakasu.ui.util
 
 import android.app.AppOpsManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -16,13 +15,11 @@ import androidx.core.graphics.drawable.IconCompat
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
 import org.bakasu.bakasu.R
-import org.bakasu.bakasu.data.AppSettingsRepository
 import org.bakasu.bakasu.data.shell.ShortcutRepository
-import org.bakasu.bakasu.ui.MainActivity
+import org.bakasu.bakasu.ui.UIActivity
 import org.bakasu.bakasu.ui.screen.main.ShortcutType
 
 class Shortcut(
-    private val settings: AppSettingsRepository,
     private val shortcutRepository: ShortcutRepository,
 ) {
     private companion object {
@@ -45,6 +42,13 @@ class Shortcut(
             .build()
     }
 
+    /**
+     * Launcher shortcuts always target [UIActivity] directly instead of one of the launcher
+     * alias entries. The aliases only exist to switch the app icon, and whichever alias is
+     * disabled at pin time can never be revived, so a shortcut pinned against it would stay dead.
+     */
+    private fun launchIntent(context: Context): Intent = Intent(context, UIActivity::class.java)
+
     fun createModuleActionShortcut(
         context: Context,
         moduleId: String,
@@ -52,13 +56,8 @@ class Shortcut(
         iconUri: String?,
         intentToken: String,
     ) {
-        val usingAltIcon = settings.getBoolean("use_alt_icon", false)
-        val mainActivity = ComponentName(context, MainActivity::class.java.name)
-        val mainActivityAlias = ComponentName(context, "${MainActivity::class.java.name}Alias")
-
         val shortcutId = "module_action_$moduleId"
-        val shortcutIntent = Intent().apply {
-            component = if (usingAltIcon) mainActivityAlias else mainActivity
+        val shortcutIntent = launchIntent(context).apply {
             action = Intent.ACTION_VIEW
             data = buildShortcutUri(moduleId, ShortcutType.Action, intentToken)
             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -82,7 +81,7 @@ class Shortcut(
         intentToken: String,
     ) {
         val shortcutId = "module_webui_$moduleId"
-        val shortcutIntent = Intent(context, MainActivity::class.java).apply {
+        val shortcutIntent = launchIntent(context).apply {
             action = Intent.ACTION_VIEW
             data = buildShortcutUri(moduleId, ShortcutType.WebUI, intentToken)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)

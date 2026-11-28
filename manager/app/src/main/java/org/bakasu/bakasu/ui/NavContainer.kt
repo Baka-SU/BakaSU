@@ -129,7 +129,7 @@ fun NavContainer(
     val themeConfig: ThemeConfig = koinInject()
     val backgroundRenderState = LocalBackgroundRenderState.current
     val extractModuleId = koinInject<ExtractModuleIdUseCase>()
-    val activity = LocalActivity.current as MainActivity
+    val activity = LocalActivity.current as UIActivity
     val context = LocalContext.current
 
     val settings by settingsViewModel.uiState.collectAsStateWithLifecycle()

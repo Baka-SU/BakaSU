@@ -41,7 +41,7 @@ import org.bakasu.bakasu.data.update.ZipRangeArchive
 import org.bakasu.bakasu.domain.model.DownloadStatus
 import org.bakasu.bakasu.domain.model.DownloadVerificationFailure
 import org.bakasu.bakasu.domain.model.ExpectedFile
-import org.bakasu.bakasu.ui.MainActivity
+import org.bakasu.bakasu.ui.UIActivity
 import org.koin.android.ext.android.inject
 
 class DownloadService : Service() {
@@ -445,7 +445,7 @@ class DownloadService : Service() {
             .setAutoCancel(true)
 
         // Add "Install" action button
-        val installIntent = Intent(this, MainActivity::class.java).apply {
+        val installIntent = Intent(this, UIActivity::class.java).apply {
             action = ACTION_INSTALL_MODULE
             putExtra(EXTRA_MODULE_URI, uri.toString())
             putExtra(EXTRA_DOWNLOAD_ID, id)
