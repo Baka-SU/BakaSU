@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import ExitStack
 import os,re
 import random
 import sys,json
@@ -108,8 +107,7 @@ Branch: {branch}
 ```
 {commit_line}
 [Workflow run]({run_url})
-[Mobile Debug](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main/Manager-debug.zip)
-[Wear Debug](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main/Wear-Manager-debug.zip)
+[Get latest main Debug build](https://nightly.link/Baka-SU/BakaSU/workflows/build-manager/main/Manager-debug.zip)
 """.strip()
 
 MAIN_UPDATED_MSG ="""
@@ -150,6 +148,20 @@ async def wait_for_bot_api():
 def get_caption(flavor):
     msg = MSG_TEMPLATE.format(
         title=escape_markdown_v2(f"{TITLE} - {MANAGER_FLAVORS[flavor]}"),
+        branch=escape_markdown_v2(BRANCH),
+        version=escape_markdown_v2(VERSION),
+        commit_message=escape_markdown_code(commit_message),
+        commit_line=commit_line,
+        run_url=escape_markdown_url(RUN_URL),
+    )
+    if BRANCH != "main" and GITHUB_REF_TYPE != "tag":
+        msg += "\n⚠️⚠️*DEV VERSION, PLEASE BACKUP BEFORE INSTALLATION*⚠️⚠️"
+        msg += "\n⚠️⚠️*测试版，安装前请备份*⚠️⚠️"
+    return msg
+
+def get_caption_for_debug():
+    msg = MSG_TEMPLATE.format(
+        title=escape_markdown_v2(f"{TITLE}-Debug"),
         branch=escape_markdown_v2(BRANCH),
         version=escape_markdown_v2(VERSION),
         commit_message=escape_markdown_code(commit_message),
@@ -228,75 +240,52 @@ async def send_media_group(bot: Bot, chat_id: int, media: list, message_thread_i
         raise
 
 MANAGER_FLAVORS = {"mobile": "Phone / 手机 mobile", "wear": "Watch / 手表 wear"}
-MANAGER_APK = re.compile(
-    r"^BakaSU_(.+)_(\d+)-(?:(mobile|wear)-)?(arm64-v8a|armeabi-v7a|x86_64|riscv64|universal)-release\.apk$"
-)
-
-
-def group_release_files(files):
-    groups = {flavor: [] for flavor in MANAGER_FLAVORS}
-    for file in sorted(files):
-        name = os.path.basename(file)
-        if name.endswith("-debug.apk"):
-            continue
-        match = MANAGER_APK.fullmatch(name)
-        if match is None:
-            raise ValueError(f"Unrecognized Manager release APK: {name}")
-        if not os.path.isfile(file):
-            raise FileNotFoundError(file)
-        groups[match.group(3) or "mobile"].append(file)
-    missing = [flavor for flavor, paths in groups.items() if not paths]
-    if missing:
-        raise ValueError(f"Missing Manager release APKs: {', '.join(missing)}")
-    return groups
-
-
-async def send_document(bot, chat_id, document, filename, caption, message_thread_id=None):
-    try:
-        return await bot.send_document(
-            chat_id=chat_id, document=document, filename=filename, caption=caption,
-            parse_mode=ParseMode.MARKDOWN_V2, message_thread_id=message_thread_id,
-            read_timeout=350, write_timeout=350, connect_timeout=350, pool_timeout=350,
-        )
-    except RetryAfter as e:
-        await asyncio.sleep(e.retry_after)
-        document.seek(0)
-        return await send_document(bot, chat_id, document, filename, caption, message_thread_id)
-
-
-async def send_release_files(bot, flavor, files):
-    caption = get_caption(flavor)
-    if len(caption) > 1024:
-        await send_message(bot, CHAT_ID, caption, MESSAGE_THREAD_ID)
-        caption = "*" + escape_markdown_v2(f"Release Manager - {MANAGER_FLAVORS[flavor]}") + "*"
-    # Telegram albums accept 2-10 documents; send a remaining single file separately.
-    for start in range(0, len(files), 10):
-        batch = files[start:start + 10]
-        with ExitStack() as stack:
-            documents = [stack.enter_context(open(file, "rb")) for file in batch]
-            if len(batch) == 1:
-                await send_document(bot, CHAT_ID, documents[0], os.path.basename(batch[0]), caption, MESSAGE_THREAD_ID)
-            else:
-                media = [
-                    InputMediaDocument(
-                        media=document, filename=os.path.basename(file),
-                        caption=caption if index == len(batch) - 1 else None,
-                        parse_mode=ParseMode.MARKDOWN_V2,
-                    )
-                    for index, (file, document) in enumerate(zip(batch, documents))
-                ]
-                await send_media_group(bot, CHAT_ID, media, MESSAGE_THREAD_ID)
-
 
 async def main():
     print("[+] Uploading to telegram")
     check_environ()
-    groups = group_release_files(sys.argv[1:])
-    print("[+] Files:", groups)
     await wait_for_bot_api()
-    bot = Bot(token=BOT_TOKEN, base_url="http://127.0.0.1:8081/bot", base_file_url="http://127.0.0.1:8081/file/bot")
+    files = sys.argv[1:]
+    print("[+] Files:", files)
+    if len(files) <= 0:
+        print("[-] No files to upload")
+        exit(1)
+    print("[+] Logging in Telegram with bot")
+    bot = Bot(token=BOT_TOKEN,base_url="http://127.0.0.1:8081/bot",base_file_url="http://127.0.0.1:8081/file/bot")
+    groups = {flavor: [] for flavor in MANAGER_FLAVORS}
+    for file in files:
+        flavor = "wear" if "-wear-" in os.path.basename(file) else "mobile"
+        groups[flavor].append(file)
     for flavor, files in groups.items():
-        await send_release_files(bot, flavor, files)
+        if not files:
+            continue
+        no_caption=False
+        caption = get_caption(flavor)
+        caption_debug = get_caption_for_debug()
+        if len(caption) > 1024 or len(caption_debug) > 1024:
+            print("[-] Caption is too long,so it will be sent as a separate message without caption for files")
+            no_caption = True
+        upload_release_files = []
+
+        for index, file in enumerate(files):
+            if os.path.basename(file).find("debug") != -1:
+                # If the filename contains "debug", skip it.
+                continue
+            elif index == len(files) - 1:
+                # Only add caption to the last file
+                upload_release_files.append(InputMediaDocument(media=open(file, "rb"), filename=os.path.basename(file), caption=f"{caption if not no_caption else '*Release Manager*'}", parse_mode=ParseMode.MARKDOWN_V2))
+                continue
+            upload_release_files.append(InputMediaDocument(media=open(file, "rb"), filename=os.path.basename(file)))
+
+        print("[+] Caption: ")
+        print("---")
+        print(caption)
+        print("---")
+        print("[+] Sending")
+        if no_caption:
+            await send_message(bot=bot, chat_id=CHAT_ID, text=caption, message_thread_id=MESSAGE_THREAD_ID)
+        if len(upload_release_files) > 0:
+            await send_media_group(bot=bot, chat_id=CHAT_ID, media=upload_release_files, message_thread_id=MESSAGE_THREAD_ID)
     if TITLE.lower() == "manager" and (BRANCH == "main" or GITHUB_REF_TYPE == "tag"):
         print("[+] Sending main branch updated message")
         await send_message(bot=bot,chat_id=CHAT_ID, text=MAIN_UPDATED_MSG, message_thread_id=DEVELOPING_THREAD_ID)
@@ -307,7 +296,6 @@ if __name__ == "__main__":
         asyncio.run(main())
     except Exception as e:
         print(f"[-] An error occurred: {e}")
-        raise
     finally:
         try:
             process.kill()
