@@ -1,6 +1,5 @@
 package org.bakasu.bakasu.ui.wear.component
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -48,7 +47,6 @@ fun TransformingLazyColumnItemScope.WearInfoCard(
     transformationSpec: TransformationSpec,
     modifier: Modifier = Modifier,
     containerColor: Color? = null,
-    border: BorderStroke? = null,
     shape: Shape = MaterialTheme.shapes.large,
     contentPadding: PaddingValues = PaddingValues(10.dp),
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(4.dp),
@@ -58,8 +56,8 @@ fun TransformingLazyColumnItemScope.WearInfoCard(
     val transformation = if (transformed) SurfaceTransformation(transformationSpec) else null
     val color = containerColor ?: MaterialTheme.colorScheme.surfaceContainer
     val background = remember(color) { ColorPainter(color) }
-    val painter = remember(transformation, shape, background, border) {
-        transformation?.createContainerPainter(background, shape, border) ?: background
+    val painter = remember(transformation, shape, background) {
+        transformation?.createContainerPainter(background, shape, null) ?: background
     }
     Column(
         modifier = Modifier

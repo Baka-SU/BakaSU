@@ -251,7 +251,7 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
                 }
             }
 
-            is WearRoute.SuSFSAdd -> WearSuSFSAddPage(WearSuSFSSection.valueOf(route.section), busy, viewModel, navigator::back, ::addEntries)
+            is WearRoute.SuSFSAdd -> WearSuSFSAddPage(WearSuSFSSection.valueOf(route.section), busy, navigator::back, ::addEntries)
 
             is WearRoute.SuSFSDetail -> if (config != null) {
                 WearSuSFSDetailPage(WearSuSFSSection.valueOf(route.section), config, route.path, busy, navigator::back) { command ->

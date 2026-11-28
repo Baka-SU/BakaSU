@@ -38,10 +38,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.wear.compose.material3.Text
 import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.KernelStatus
-import org.bakasu.bakasu.ui.theme.ThemeConfig
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
 import org.bakasu.bakasu.ui.viewmodel.WearPreferences
@@ -50,7 +48,6 @@ import org.bakasu.bakasu.ui.wear.WearSelection
 import org.bakasu.bakasu.ui.wear.WearSettingsCategory
 import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
-import org.bakasu.bakasu.ui.wear.component.WearScaledItem
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.settings.LazySegmentedColumn
 import org.bakasu.bakasu.ui.wear.component.settings.SegmentedColumn
@@ -59,10 +56,8 @@ import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 import org.bakasu.bakasu.ui.wear.component.wearGroupGap
 import org.bakasu.bakasu.ui.wear.screen.module.linkModeLabel
 import org.bakasu.bakasu.ui.wear.screen.module.pickerModeLabel
-import org.bakasu.bakasu.ui.wear.screen.module.screenShapeLabel
 import org.bakasu.bakasu.ui.wear.screen.module.suCompatModeLabel
 import org.bakasu.bakasu.ui.wear.screen.settings.wearAppVersion
-import org.koin.compose.koinInject
 
 /**
  * @author Hanhan_awa
@@ -73,7 +68,6 @@ internal fun settingsCategoryTitle(category: WearSettingsCategory?): Int = when 
     WearSettingsCategory.General -> R.string.app_settings
     WearSettingsCategory.Security -> R.string.configuration
     WearSettingsCategory.Advanced -> R.string.tools
-    WearSettingsCategory.Display -> R.string.wear_display
     null -> R.string.settings
 }
 
@@ -127,7 +121,6 @@ private fun settingsCategoryIcon(category: WearSettingsCategory): ImageVector = 
     WearSettingsCategory.General -> Icons.Rounded.Settings
     WearSettingsCategory.Security -> Icons.Rounded.Security
     WearSettingsCategory.Advanced -> Icons.Rounded.Build
-    WearSettingsCategory.Display -> Icons.Rounded.Palette
 }
 
 private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
@@ -178,18 +171,11 @@ internal fun WearSettingsPage(
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     backToTop: Boolean = false,
 ) {
-    val themeConfig = koinInject<ThemeConfig>()
     val languageSummary = state.currentAppLocale?.let { it.getDisplayName(it) }
         ?: stringResource(R.string.language_system_default)
     val pickerSummary = pickerModeLabel(preferences.picker)
     val linkSummary = linkModeLabel(preferences.link)
     val suCompatSummary = suCompatModeLabel(state.suCompatMode)
-    val colorSummary = if (state.useDynamicColor) {
-        stringResource(R.string.dynamic_color_title)
-    } else {
-        "#%06X".format(themeConfig.seedColor and 0xFFFFFF)
-    }
-    val shapeSummary = screenShapeLabel(preferences.shape)
     val version = wearAppVersion()
     WearList(onBack = onBack, snap = true, listState = listState, backToTop = backToTop) { spec ->
         item { WearPageHeader(spec, stringResource(settingsCategoryTitle(category))) }
@@ -226,42 +212,6 @@ internal fun WearSettingsPage(
                     icon = Icons.Rounded.Info,
                     description = version,
                 )
-            }
-        } else if (category == WearSettingsCategory.Display) {
-            item { WearSectionHeader(spec, stringResource(R.string.wear_display_appearance)) }
-            item {
-                WearSettingsJumpPageWidget(
-                    spec,
-                    stringResource(R.string.theme_color),
-                    { onOpen(WearRoute.Color) },
-                    icon = settingsRouteIcon(WearRoute.Color),
-                    description = colorSummary,
-                )
-            }
-            item { WearSectionHeader(spec, stringResource(R.string.wear_display_screen_layout)) }
-            SegmentedColumn(listOf(WearRoute.Dpi, WearRoute.Selection(WearSelection.ScreenShape)), { it.toString() }) { route ->
-                WearSettingsJumpPageWidget(
-                    spec,
-                    stringResource(if (route == WearRoute.Dpi) R.string.wear_display_scaling else R.string.wear_screen_shape),
-                    { onOpen(route) },
-                    icon = settingsRouteIcon(route),
-                    description = if (route == WearRoute.Dpi) null else shapeSummary,
-                )
-            }
-            // Android 13+ keeps the app language in the system per-app settings, which Wear does not
-            // offer, so the in-app choice is only shown where the shared locale handling applies it.
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                val language = WearRoute.Selection(WearSelection.Language)
-                item { WearSectionHeader(spec, stringResource(R.string.settings_language)) }
-                item {
-                    WearSettingsJumpPageWidget(
-                        spec,
-                        stringResource(R.string.settings_language),
-                        { onOpen(language) },
-                        icon = settingsRouteIcon(language),
-                        description = languageSummary,
-                    )
-                }
             }
         } else {
             val toggles = buildList {

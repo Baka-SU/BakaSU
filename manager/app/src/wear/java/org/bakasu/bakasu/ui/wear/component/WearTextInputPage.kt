@@ -34,25 +34,24 @@ import androidx.wear.compose.material3.Text
 
 /** Uses the watch IME, including its voice input, without importing a phone text-field control. */
 @Composable
-fun WearTextInputPage(title: String, initialValue: String, multiline: Boolean = false, imeAction: ImeAction = ImeAction.Done, autoFocus: Boolean = false, keyboardType: KeyboardType = KeyboardType.Text, placeholder: String? = null, enabled: Boolean = true, canSubmit: (String) -> Boolean = { true }, onValueChanged: (String) -> Unit = {}, onSubmit: (String) -> Unit) {
+fun WearTextInputPage(title: String, initialValue: String, multiline: Boolean = false, autoFocus: Boolean = false, keyboardType: KeyboardType = KeyboardType.Text, placeholder: String? = null, canSubmit: (String) -> Boolean = { true }, onSubmit: (String) -> Unit) {
     var value by rememberSaveable(title, initialValue) { mutableStateOf(initialValue) }
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     // Confirming is the page's primary action, so it takes the edge button; Back and swipe dismiss it.
-    val submit = { if (enabled && canSubmit(value)) onSubmit(value) }
-    WearList(onConfirm = submit, confirmEnabled = enabled && canSubmit(value)) { spec ->
+    val submit = { if (canSubmit(value)) onSubmit(value) }
+    WearList(onConfirm = submit, confirmEnabled = canSubmit(value)) { spec ->
         item { WearPageHeader(spec, title) }
         item {
             WearScaledItem(spec) {
                 BasicTextField(
-                    value = value, onValueChange = {
-                        value = it
-                        onValueChanged(it)
-                    }, enabled = enabled, singleLine = !multiline,
+                    value = value,
+                    onValueChange = { value = it },
+                    singleLine = !multiline,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    keyboardOptions = KeyboardOptions(imeAction = imeAction, keyboardType = keyboardType),
-                    keyboardActions = KeyboardActions(onDone = { submit() }, onSearch = { submit() }, onSend = { submit() }),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, keyboardType = keyboardType),
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(focus)
                         .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
                         .padding(12.dp).semantics { contentDescription = title },

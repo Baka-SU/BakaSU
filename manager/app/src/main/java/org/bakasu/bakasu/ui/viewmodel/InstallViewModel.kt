@@ -19,7 +19,6 @@ import org.bakasu.bakasu.domain.usecase.RebootUseCase
 data class InstallUiState(
     val environment: InstallEnvironment = InstallEnvironment(),
     val loading: Boolean = true,
-    val refreshVersion: Int = 0,
     val error: String? = null,
 )
 
@@ -69,11 +68,11 @@ class InstallViewModel(
         loadJob = viewModelScope.launch {
             runCatching { getInstallEnvironment(forceRefresh) }
                 .onSuccess { environment ->
-                    mutableState.update { it.copy(environment = environment, loading = false, refreshVersion = it.refreshVersion + if (forceRefresh) 1 else 0) }
+                    mutableState.update { it.copy(environment = environment, loading = false) }
                 }
                 .onFailure { error ->
                     if (error is CancellationException) throw error
-                    mutableState.update { it.copy(loading = false, error = error.message.orEmpty(), refreshVersion = it.refreshVersion + if (forceRefresh) 1 else 0) }
+                    mutableState.update { it.copy(loading = false, error = error.message.orEmpty()) }
                     mutableEvents.tryEmit(InstallUiEvent.Error(error.message.orEmpty()))
                 }
         }

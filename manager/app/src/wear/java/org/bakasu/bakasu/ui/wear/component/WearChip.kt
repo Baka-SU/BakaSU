@@ -1,6 +1,5 @@
 package org.bakasu.bakasu.ui.wear.component
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -8,11 +7,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +35,7 @@ import androidx.wear.compose.material3.lazy.TransformationSpec
  */
 
 /** Chip emphasis levels; a screen should lead with at most one [HIGH] chip. [ERROR] marks a failed state in red. */
-enum class WearChipEmphasis { HIGH, MEDIUM, OUTLINED, LOW, ERROR }
+enum class WearChipEmphasis { HIGH, MEDIUM, ERROR }
 
 @Composable
 fun TransformingLazyColumnItemScope.WearChip(
@@ -60,7 +57,6 @@ fun TransformingLazyColumnItemScope.WearChip(
         2
     }
     val centered = icon == null && secondaryLabel == null
-    val border = if (emphasis == WearChipEmphasis.OUTLINED) ButtonDefaults.outlinedButtonBorder(enabled = true) else null
     if (onClick != null) {
         WearRefreshItem(transformationSpec, modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)) {
             Button(
@@ -72,10 +68,6 @@ fun TransformingLazyColumnItemScope.WearChip(
 
                     WearChipEmphasis.MEDIUM -> ButtonDefaults.filledTonalButtonColors()
 
-                    WearChipEmphasis.OUTLINED -> ButtonDefaults.outlinedButtonColors()
-
-                    WearChipEmphasis.LOW -> ButtonDefaults.childButtonColors()
-
                     WearChipEmphasis.ERROR -> ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -83,7 +75,6 @@ fun TransformingLazyColumnItemScope.WearChip(
                         iconColor = MaterialTheme.colorScheme.onErrorContainer,
                     )
                 },
-                border = border,
                 icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize)) } },
                 // Keep the description to two lines; mode badges are measured separately in the headline.
                 // A [secondaryLabelStyle] from the theme typography lets a dense summary fit one line.
@@ -104,17 +95,12 @@ fun TransformingLazyColumnItemScope.WearChip(
         // A null container keeps the surface container, which follows the card transparency.
         WearChipEmphasis.MEDIUM -> Triple(null, scheme.onSurface, scheme.onSurfaceVariant)
 
-        WearChipEmphasis.OUTLINED -> Triple(Color.Transparent, scheme.primary, scheme.onSurfaceVariant)
-
-        WearChipEmphasis.LOW -> Triple(Color.Transparent, scheme.onSurface, scheme.onSurfaceVariant)
-
         WearChipEmphasis.ERROR -> Triple(scheme.errorContainer, scheme.onErrorContainer, scheme.onErrorContainer)
     }
     WearInfoCard(
         transformationSpec,
         modifier = modifier.heightIn(min = ButtonDefaults.Height),
         containerColor = container,
-        border = border,
         shape = ButtonDefaults.shape,
         contentPadding = ButtonDefaults.ContentPadding,
         verticalArrangement = Arrangement.Center,

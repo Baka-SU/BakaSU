@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 /** The settings pages that open from the Wear settings root. */
 @Serializable
-enum class WearSettingsCategory { General, Security, Advanced, Display }
+enum class WearSettingsCategory { General, Security, Advanced }
 
 @Serializable
 enum class WearOperationsPage { Home, SuperUser, Modules, Logs, Repository, DynamicManagerApps, Umount, Templates, OnlineTemplates, TemplateChoice }

@@ -43,7 +43,6 @@
     <string name="wear_uid">UID</string>
     <string name="wear_gid">GID</string>
     <string name="wear_webui">WebUI</string>
-    <string name="wear_display">Display</string>
     <string name="wear_link_mode">Open links and module WebUI</string>
     <string name="wear_web_page">Web page</string>
     <string name="wear_watch_webui">Open on watch</string>
@@ -63,11 +62,9 @@
     <string name="wear_custom_color">Custom colour</string>
     <string name="wear_joined" translatable="false">%1$s · %2$s</string>
     <string name="wear_directory_empty">No matching files in this folder</string>
-    <string name="wear_display_scaling">Display &amp; scaling</string>
     <string name="wear_screen_shape">Screen shape</string>
     <string name="wear_shape_round">Round</string>
     <string name="wear_shape_square">Square</string>
-    <string name="wear_display_appearance">Appearance</string>
     <string name="wear_display_screen_layout">Screen and layout</string>
     <string name="wear_settings_updates">Updates</string>
     <string name="wear_settings_links_files">WebUI and files</string>

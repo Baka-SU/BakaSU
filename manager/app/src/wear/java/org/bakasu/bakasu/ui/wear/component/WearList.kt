@@ -97,7 +97,6 @@ val LocalWearPanelPull = compositionLocalOf { mutableFloatStateOf(0f) }
  * The list uses the [ScreenScaffold] content padding (5.2% side and 10% vertical margins); items
  * raise the top and bottom padding with `minimumVerticalContentPadding` when they sit at an edge.
  * [snap] centers items after a fling or crown rotation, for lists of similarly sized items.
- * [fixedHeader] stays above the list and reserves its measured height without covering list items.
  */
 @Composable
 fun WearList(
@@ -121,7 +120,6 @@ fun WearList(
     itemSpacing: Dp = WearItemSpacing,
     topContentPadding: Dp = 0.dp,
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
-    fixedHeader: (@Composable () -> Unit)? = null,
     timeText: (@Composable () -> Unit)? = null,
     pageTitle: String? = null,
     content: TransformingLazyColumnScope.(TransformationSpec) -> Unit,
@@ -339,7 +337,7 @@ fun WearList(
         } else {
             // Header, refresh and list occupy separate layout regions on the same moving surface.
             val keepRefreshSpace = showRefreshGap || refreshOffset > 0.dp
-            val pinTitle = keepRefreshSpace && pageTitle != null && fixedHeader == null
+            val pinTitle = keepRefreshSpace && pageTitle != null
             val refreshBoundary = remember(pinTitle) {
                 when {
                     listState.isAtWearListStart(with(density) { 2.dp.roundToPx() }) -> -1
@@ -373,18 +371,15 @@ fun WearList(
                     }
                 },
             ) {
-                if (fixedHeader != null || keepRefreshSpace) {
+                if (keepRefreshSpace) {
                     Box(
                         Modifier.fillMaxWidth().padding(
                             start = contentPadding.calculateStartPadding(layoutDirection),
                             end = contentPadding.calculateEndPadding(layoutDirection),
-                            top = if (keepRefreshSpace) pinnedTopPadding else contentPadding.calculateTopPadding(),
-                            bottom = if (fixedHeader != null && !keepRefreshSpace) itemSpacing else 0.dp,
+                            top = pinnedTopPadding,
                         ),
                     ) {
-                        if (fixedHeader != null) {
-                            fixedHeader()
-                        } else if (pinTitle) {
+                        if (pinTitle) {
                             val progress = (refreshOffset / refreshHeight).coerceIn(0f, 1f)
                             WearPageHeader(pageTitle, bottomPadding = titleBottomPadding * (1f - progress))
                         }
@@ -403,7 +398,7 @@ fun WearList(
                         modifier = Modifier.fillMaxSize(),
                         userScrollEnabled = !isRefreshing,
                         state = listState,
-                        contentPadding = if (fixedHeader == null && !keepRefreshSpace) {
+                        contentPadding = if (!keepRefreshSpace) {
                             contentPadding
                         } else {
                             PaddingValues(

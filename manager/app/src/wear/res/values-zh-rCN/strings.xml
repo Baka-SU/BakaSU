@@ -14,7 +14,6 @@
     <string name="wear_no_logs">暂无 SU 日志</string>
     <string name="wear_refresh">刷新</string>
     <string name="wear_module_file_unreadable">无法读取所选模块 ZIP</string>
-    <string name="wear_display">显示</string>
     <string name="wear_link_mode">网页与模块 WebUI 打开方式</string>
     <string name="wear_web_page">网页</string>
     <string name="wear_watch_webui">在手表上打开</string>
@@ -33,11 +32,9 @@
     <string name="wear_directory_empty">此文件夹中没有匹配的文件</string>
     <string name="wear_loading">正在加载</string>
     <string name="wear_close_panel">收起菜单</string>
-    <string name="wear_display_scaling">显示与缩放</string>
     <string name="wear_screen_shape">屏幕形状</string>
     <string name="wear_shape_round">圆形</string>
     <string name="wear_shape_square">方形</string>
-    <string name="wear_display_appearance">外观</string>
     <string name="wear_display_screen_layout">屏幕与布局</string>
     <string name="wear_settings_updates">更新</string>
     <string name="wear_settings_links_files">WebUI 与文件</string>

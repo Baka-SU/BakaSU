@@ -32,7 +32,6 @@ import org.bakasu.bakasu.domain.model.SusKstatStatically
 import org.bakasu.bakasu.domain.model.SusKstatType
 import org.bakasu.bakasu.domain.model.UidScheme
 import org.bakasu.bakasu.ui.viewmodel.SuSFSUiAction
-import org.bakasu.bakasu.ui.viewmodel.SuSFSViewModel
 import org.bakasu.bakasu.ui.viewmodel.SusKstatOperation
 import org.bakasu.bakasu.ui.wear.WearRoute
 import org.bakasu.bakasu.ui.wear.component.WearActionButton
@@ -193,7 +192,6 @@ internal fun WearSuSFSDetailPage(
 internal fun WearSuSFSAddPage(
     section: WearSuSFSSection,
     busy: Boolean,
-    viewModel: SuSFSViewModel,
     onBack: () -> Unit,
     onCommand: (List<WearSuSFSCommand>) -> Unit,
 ) {
