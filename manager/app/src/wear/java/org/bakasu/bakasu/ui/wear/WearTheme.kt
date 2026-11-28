@@ -61,6 +61,7 @@ import org.bakasu.bakasu.ui.wear.component.WearStatusTone
 import org.bakasu.bakasu.ui.wear.component.WearTimeOptions
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.bakasu.bakasu.ui.wear.component.WearToastHost
+import org.bakasu.bakasu.ui.wear.component.WearToastState
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -78,7 +79,7 @@ internal fun wearThemeSeedColor(config: ThemeConfig, backgroundSeedColor: Int): 
 }
 
 @Composable
-fun WearManagerTheme(content: @Composable () -> Unit) {
+fun WearManagerTheme(toastState: WearToastState, content: @Composable () -> Unit) {
     val config = koinInject<ThemeConfig>()
     val viewModel = koinViewModel<SettingsViewModel>()
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
@@ -210,7 +211,7 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             // entry renders its own backdrop as well, so outgoing and incoming scenes transition
             // with independent image layers.
             WearBackground(onImageLoaded = { backgroundImage = it }) {
-                WearToastHost(style = preferences.toastStyle) {
+                WearToastHost(toastState, style = preferences.toastStyle) {
                     // Older installs prepare their saved background color before the first content is shown.
                     if (!contentShown && config.useDynamicColor && config.isUseBackgroundSeedColor && config.customBackgroundUri != null && backgroundState.seedColor == 0) {
                         WearLoadingScreen()

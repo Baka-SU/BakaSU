@@ -10,7 +10,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.usecase.GetStringPreferenceUseCase
 import org.bakasu.bakasu.ui.viewmodel.WearPreference
 import org.bakasu.bakasu.ui.viewmodel.wear
-import org.bakasu.bakasu.ui.wear.component.showWearToast
+import org.bakasu.bakasu.ui.wear.component.WearToastState
 import org.koin.android.ext.android.inject
 
 /**
@@ -20,6 +20,7 @@ import org.koin.android.ext.android.inject
  */
 abstract class WearActivity : ComponentActivity() {
     private val getPreference: GetStringPreferenceUseCase by inject()
+    protected val toastState = WearToastState()
 
     // This overrides the public Activity.dispatchKeyEvent; lint only sees the androidx.core
     // override in between, which is restricted to its own library group.
@@ -37,7 +38,7 @@ abstract class WearActivity : ComponentActivity() {
     override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
         val pickerMode = getPreference.wear(WearPreference.Picker)
         if (pickerMode == "system" && isSystemDocumentPickerUnavailable(intent)) {
-            showWearToast(getString(R.string.wear_no_system_file_picker))
+            toastState.show(getString(R.string.wear_no_system_file_picker))
             super.onActivityResult(requestCode, RESULT_CANCELED, null)
             return
         }
@@ -45,7 +46,7 @@ abstract class WearActivity : ComponentActivity() {
             super.startActivityForResult(withDocumentPickerFallback(intent, pickerMode), requestCode, options)
         } catch (error: ActivityNotFoundException) {
             if (intent.action !in DocumentActions) throw error
-            showWearToast(getString(R.string.wear_no_system_file_picker))
+            toastState.show(getString(R.string.wear_no_system_file_picker))
             super.onActivityResult(requestCode, RESULT_CANCELED, null)
         }
     }

@@ -53,7 +53,7 @@ internal fun WearBrowserPage(url: String, onBack: () -> Unit, onOpened: () -> Un
     val toast = LocalWearToast.current
     val failedMessage = stringResource(R.string.wear_link_open_failed)
     var renderGone by remember(url, attempt) { mutableStateOf(false) }
-    var unavailable by remember(url) { mutableStateOf(false) }
+    var unavailable by remember(url, attempt) { mutableStateOf(false) }
     val currentOnOpened by rememberUpdatedState(onOpened)
     val webView = remember(url, attempt) {
         runCatching {
@@ -79,7 +79,13 @@ internal fun WearBrowserPage(url: String, onBack: () -> Unit, onOpened: () -> Un
         }.getOrNull()
     }
     if (webView == null || unavailable) {
-        LaunchedEffect(url) { onUnavailable() }
+        if (attempt == 0) {
+            LaunchedEffect(url) { onUnavailable() }
+            return
+        }
+        WearBackground {
+            WearLoadFailureScreen(stringResource(R.string.wear_browser_load_failed), onBack, { attempt++ }, retryInEdgeButton = true)
+        }
         return
     }
     DisposableEffect(webView) {

@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -143,7 +144,9 @@ internal fun WearWebView(webView: WebView, modifier: Modifier = Modifier) {
                     }
                 },
             ) {
-                WearWebViewContent(webView, scale, round, resetPosition, screenActive, toolsOpen, toolsLabel) { toolsOpen = true }
+                key(webView) {
+                    WearWebViewContent(webView, scale, round, resetPosition, screenActive, toolsOpen, toolsLabel) { toolsOpen = true }
+                }
             }
         }
     }
@@ -293,7 +296,6 @@ internal class WearWebViewViewport(context: Context, private val webView: WebVie
     private var offsetY = 0f
     private var downX = 0f
     private var downY = 0f
-    private var lastX = 0f
     private var lastY = 0f
     private var panning = false
     private var corner = WebCorner.Default
@@ -510,7 +512,6 @@ internal class WearWebViewViewport(context: Context, private val webView: WebVie
                 gesture++
                 downX = event.x
                 downY = event.y
-                lastX = event.x
                 lastY = event.y
                 // A new finger starts from the last committed position, even when the native
                 // settle animation has not delivered its final frame yet.
@@ -524,7 +525,7 @@ internal class WearWebViewViewport(context: Context, private val webView: WebVie
                 pullingTools = false
                 gestureDecided = false
                 hostCanceled = false
-                cornerCandidate = if (round && restoring == null) cornerCandidate(event.x, event.y) else null
+                cornerCandidate = if (round) cornerCandidate(event.x, event.y) else null
                 atTop = null
                 onPull(0f)
                 val point = pagePoint(event.x, event.y)
@@ -618,7 +619,6 @@ internal class WearWebViewViewport(context: Context, private val webView: WebVie
                 if (before < pullThreshold && pull >= pullThreshold) haptic(HapticFeedbackType.GestureThresholdActivate)
                 onPull(pull)
             }
-            lastX = event.x
             lastY = event.y
         }
     }

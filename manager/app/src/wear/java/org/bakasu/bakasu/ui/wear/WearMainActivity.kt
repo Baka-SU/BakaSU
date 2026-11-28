@@ -47,7 +47,7 @@ open class WearMainActivity : WearActivity() {
         }
         val startupState = observeStartupState()
         setContent {
-            WearManagerTheme {
+            WearManagerTheme(toastState) {
                 when (val state = startupState.collectAsStateWithLifecycle().value) {
                     StartupState.Loading -> WearStartupStatus()
                     is StartupState.Failed -> WearStartupStatus(state.message)

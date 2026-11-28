@@ -16,7 +16,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -47,14 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-
-private val externalWearToastMessages = Channel<String>(Channel.BUFFERED)
-
-internal fun showWearToast(message: String) {
-    externalWearToastMessages.trySend(message)
-}
 
 class WearToastState {
     var message by mutableStateOf<String?>(null)
@@ -76,17 +68,13 @@ val LocalWearToast = staticCompositionLocalOf<WearToastState> { error("WearToast
 
 /** Short non-modal feedback, with an optional curved presentation on round screens. */
 @Composable
-fun WearToastHost(style: String = "auto", content: @Composable () -> Unit) {
-    val state = remember { WearToastState() }
+fun WearToastHost(state: WearToastState, style: String = "auto", content: @Composable () -> Unit) {
     val accessibility = LocalAccessibilityManager.current
     val reduceMotion = LocalReduceMotion.current
     val round = style == "round" || (style == "auto" && LocalConfiguration.current.isScreenRound)
     var displayedMessage by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(state.message) {
         state.message?.let { displayedMessage = it }
-    }
-    LaunchedEffect(state) {
-        for (message in externalWearToastMessages) state.show(message)
     }
     LaunchedEffect(state.sequence) {
         if (state.message != null) {

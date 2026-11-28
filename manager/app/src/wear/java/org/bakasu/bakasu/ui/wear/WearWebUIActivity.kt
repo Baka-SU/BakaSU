@@ -71,7 +71,7 @@ class WearWebUIActivity : WearActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            WearManagerTheme { WearWebUIContent(this) { finish() } }
+            WearManagerTheme(toastState) { WearWebUIContent(this) { finish() } }
         }
     }
 

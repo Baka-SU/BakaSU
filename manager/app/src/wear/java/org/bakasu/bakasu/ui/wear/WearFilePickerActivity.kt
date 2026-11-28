@@ -29,7 +29,7 @@ class WearFilePickerActivity : WearActivity() {
             ?: listOf(intent.type ?: "*/*")
         val name = intent.getStringExtra(Intent.EXTRA_TITLE).orEmpty()
         setContent {
-            WearManagerTheme {
+            WearManagerTheme(toastState) {
                 AppScaffold(
                     timeText = { WearTimeText(stringResource(R.string.wear_picker_mode)) },
                     containerColor = Color.Transparent,

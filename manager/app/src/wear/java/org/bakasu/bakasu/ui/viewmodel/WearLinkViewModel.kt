@@ -31,11 +31,8 @@ sealed interface WearLinkEvent {
     data class WebUi(val moduleId: String) : WearLinkEvent
 }
 
-/** A local link failure, presented separately from the shared phone transfer state. */
-sealed interface WearLinkResult {
-    /** A null [reason] is an unexpected failure. */
-    data class Failed(val reason: WearLinkFailure?, val bridgeFailure: BridgeFailure? = null, val automaticLink: Boolean = false, val onWatch: Boolean = false) : WearLinkResult
-}
+/** A local link failure; a null [reason] is an unexpected failure. */
+data class WearLinkResult(val reason: WearLinkFailure?, val bridgeFailure: BridgeFailure? = null, val automaticLink: Boolean = false, val onWatch: Boolean = false)
 
 /**
  * Every ordinary link entry shares the same fallback order and respects the saved mode.
@@ -132,8 +129,8 @@ class WearLinkViewModel(
         }
     }
 
-    fun fail(reason: WearLinkFailure?) {
-        mutableResult.value = WearLinkResult.Failed(reason, onWatch = true)
+    fun fail() {
+        mutableResult.value = WearLinkResult(null, onWatch = true)
     }
 
     fun dismissResult() {
@@ -158,11 +155,11 @@ class WearLinkViewModel(
                 throw error
             } catch (error: BridgeException) {
                 if (automaticLink) {
-                    mutableResult.value = WearLinkResult.Failed(null, bridgeFailure = error.reason, automaticLink = true)
+                    mutableResult.value = WearLinkResult(null, bridgeFailure = error.reason, automaticLink = true)
                 }
             } catch (error: Exception) {
                 val linkError = error as? WearLinkException
-                mutableResult.value = WearLinkResult.Failed(linkError?.reason, linkError?.phoneFailure, automaticLink, onWatch)
+                mutableResult.value = WearLinkResult(linkError?.reason, linkError?.phoneFailure, automaticLink, onWatch)
             } finally {
                 mutableLoading.value = false
             }

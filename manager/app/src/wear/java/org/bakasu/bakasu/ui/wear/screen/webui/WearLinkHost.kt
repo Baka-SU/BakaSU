@@ -19,7 +19,6 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.data.network.WearLinkFailure
 import org.bakasu.bakasu.domain.model.BridgeFailure
 import org.bakasu.bakasu.ui.viewmodel.WearLinkEvent
-import org.bakasu.bakasu.ui.viewmodel.WearLinkResult
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
 import org.bakasu.bakasu.ui.wear.WearWebUIActivity
 import org.bakasu.bakasu.ui.wear.component.WearErrorDialog
@@ -33,14 +32,14 @@ import org.bakasu.bakasu.ui.wear.component.WearWatchOpenFailureDialog
 internal fun WearLinkHost(viewModel: WearLinkViewModel, showLoading: Boolean, onWebView: (String) -> Unit) {
     val context = LocalContext.current
     val loading by viewModel.loading.collectAsStateWithLifecycle()
-    val result by viewModel.result.collectAsStateWithLifecycle()
+    val failed = viewModel.result.collectAsStateWithLifecycle().value
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
                 is WearLinkEvent.WebView -> onWebView(event.url)
 
                 is WearLinkEvent.WebUi -> runCatching { context.startActivity(WearWebUIActivity.intent(context, event.moduleId)) }
-                    .onFailure { viewModel.fail(null) }
+                    .onFailure { viewModel.fail() }
             }
         }
     }
@@ -62,7 +61,6 @@ internal fun WearLinkHost(viewModel: WearLinkViewModel, showLoading: Boolean, on
     BackHandler(loading || permissionRequest != null) { viewModel.cancel() }
     WearPhoneTransferDialog(transfer, onCancel = viewModel::cancel, onDismiss = viewModel::dismissTransfer)
     if (showLoading) WearLoadingOverlay()
-    val failed = result as? WearLinkResult.Failed
     val failureText = stringResource(
         when {
             failed?.bridgeFailure == BridgeFailure.RESULT_UNKNOWN -> R.string.wear_phone_result_unknown

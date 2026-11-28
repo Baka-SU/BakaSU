@@ -57,8 +57,7 @@ internal suspend fun resolveWearLink(
 
 /** Explicit device choices limit the handlers; only automatic mode can cross devices. */
 class WearLinkRepository(private val application: Application, private val bridge: CompanionBridgeRepository) {
-    fun openBrowser(url: String): WearLinkTarget {
-        if (!BridgeHandoff.valid(BridgeAction.LINK, url)) throw WearLinkException(WearLinkFailure.UNSUPPORTED_URL)
+    private fun openBrowser(url: String) {
         val uri = Uri.parse(url)
         if (!hasBrowser(uri)) throw WearLinkException(WearLinkFailure.BROWSER_FAILED)
         try {
@@ -66,7 +65,6 @@ class WearLinkRepository(private val application: Application, private val bridg
         } catch (error: Exception) {
             throw WearLinkException(WearLinkFailure.BROWSER_FAILED, error)
         }
-        return WearLinkTarget.BROWSER
     }
 
     fun openExternal(url: String): Result<Unit> = runCatching {
