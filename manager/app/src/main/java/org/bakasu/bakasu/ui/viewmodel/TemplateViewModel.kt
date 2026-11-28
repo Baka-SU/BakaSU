@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.domain.model.ProfileTemplate
 import org.bakasu.bakasu.domain.usecase.DeleteProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.ExportProfileTemplatesUseCase
@@ -91,7 +92,7 @@ class TemplateViewModel(
     val uiState: StateFlow<TemplateUiState> = state
 
     init {
-        dispatch(TemplateUiAction.Refresh())
+        if (BuildConfig.FLAVOR == "mobile") dispatch(TemplateUiAction.Refresh())
     }
 
     suspend fun fetchTemplates(sync: Boolean = false) {

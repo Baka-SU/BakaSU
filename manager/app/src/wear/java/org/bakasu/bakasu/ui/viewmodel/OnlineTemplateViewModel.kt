@@ -24,7 +24,6 @@ import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplatesUseCase
 data class OnlineTemplateUiState(
     val templates: List<ProfileTemplate> = emptyList(),
     val loading: Boolean = true,
-    val hasLoaded: Boolean = false,
     val loadFailure: ProfileTemplateFailure? = null,
     /** IDs of the local templates, which App Profile can select. */
     val addedIds: Set<String> = emptySet(),
@@ -84,7 +83,7 @@ class OnlineTemplateViewModel(
         online.update { it.copy(loading = true, loadFailure = null, manualRefresh = manual) }
         loadJob = viewModelScope.launch {
             fetchOnlineTemplates().fold(
-                onSuccess = { templates -> online.update { it.copy(templates = templates, loading = false, hasLoaded = true, loadFailure = null) } },
+                onSuccess = { templates -> online.update { it.copy(templates = templates, loading = false, loadFailure = null) } },
                 onFailure = { error ->
                     if (error is CancellationException) throw error
                     online.update { it.copy(loading = false, loadFailure = error.toFailure()) }

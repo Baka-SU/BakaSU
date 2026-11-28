@@ -679,7 +679,6 @@
 
     <!-- Wear OS -->
     <string name="scroll_to_top">回到顶部</string>
-    <string name="wear_invalid_color">请输入 #RRGGBB 格式的颜色。</string>
     <string name="wear_webui_load_failed">无法加载手表模块页面，请检查手机连接和模块 WebUI 文件。</string>
     <string name="wear_link_open_failed">无法打开链接</string>
     <string name="selected_slot">已选择槽位: %1$s</string>

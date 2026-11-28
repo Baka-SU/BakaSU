@@ -43,7 +43,6 @@ open class WearMainActivity : WearActivity() {
         // Repository data is not restored with the Activity's saved state.
         superUserViewModel.dispatch(SuperUserUiAction.LoadInitialData)
         if (savedInstanceState == null) {
-            homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = false))
             intent?.let { intentChannel.trySend(it) }
         }
         val startupState = observeStartupState()
@@ -56,6 +55,11 @@ open class WearMainActivity : WearActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = homeViewModel.uiState.value.isInitialDataLoaded))
     }
 
     override fun onNewIntent(intent: Intent) {

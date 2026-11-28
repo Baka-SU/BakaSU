@@ -1,6 +1,7 @@
 package org.bakasu.bakasu.ui.wear
 
 import android.content.res.Configuration
+import android.graphics.drawable.Drawable
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
@@ -29,6 +30,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Density
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.ColorScheme
@@ -40,10 +42,12 @@ import com.materialkolor.ktx.toColor
 import com.materialkolor.ktx.toHct
 import com.materialkolor.palettes.TonalPalette
 import org.bakasu.bakasu.R
+import org.bakasu.bakasu.ui.theme.BackgroundManager
 import org.bakasu.bakasu.ui.theme.BackgroundRenderState
 import org.bakasu.bakasu.ui.theme.CardConfig
 import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.bakasu.bakasu.ui.theme.extractSeedColor
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearPreferencesViewModel
 import org.bakasu.bakasu.ui.wear.component.LocalWearSwipeEnabled
@@ -114,8 +118,19 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             Density(settings.dpi / 160f, systemDensity.fontScale)
         }
     }
-    val backgroundState = remember(config.customBackgroundUri) {
+    val backgroundUri = config.customBackgroundUri
+    val backgroundManager = koinInject<BackgroundManager>()
+    var backgroundImage by remember(backgroundUri) { mutableStateOf<Drawable?>(null) }
+    val backgroundState = remember(backgroundUri) {
         BackgroundRenderState().apply { seedColor = config.backgroundSeedColor }
+    }
+    LaunchedEffect(backgroundUri, backgroundImage) {
+        if (backgroundState.seedColor != 0) return@LaunchedEffect
+        val image = backgroundImage ?: return@LaunchedEffect
+        val seed = image.toBitmap().extractSeedColor()
+        if (config.customBackgroundUri != backgroundUri) return@LaunchedEffect
+        backgroundManager.saveBackgroundSeedColor(seed)
+        backgroundState.seedColor = seed
     }
     val seed = wearThemeSeedColor(config, backgroundState.seedColor)
     val style = config.dynamicPaletteStyle
@@ -194,7 +209,7 @@ fun WearManagerTheme(content: @Composable () -> Unit) {
             // Keep an activity-level backdrop for surfaces outside Navigation 3. Each navigation
             // entry renders its own backdrop as well, so outgoing and incoming scenes transition
             // with independent image layers.
-            WearBackground {
+            WearBackground(onImageLoaded = { backgroundImage = it }) {
                 WearToastHost(style = preferences.toastStyle) {
                     // Older installs prepare their saved background color before the first content is shown.
                     if (!contentShown && config.useDynamicColor && config.isUseBackgroundSeedColor && config.customBackgroundUri != null && backgroundState.seedColor == 0) {

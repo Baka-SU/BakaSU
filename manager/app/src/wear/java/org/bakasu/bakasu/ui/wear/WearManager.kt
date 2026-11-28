@@ -299,9 +299,10 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         if (navigator.top is WearRoute.TemplateEditor && templateBack != null) templateBack?.invoke() else navigator.back()
     }
     val repositoryPageLoading = rememberWearRepositoryLoading(WearRoute.ModuleRepo in navigator.backStack, catalog.repositoryUrl) { moduleRepoViewModel.refresh() }
-    val templateManagementLoading = rememberWearTemplateLoading(WearRoute.Templates.takeIf { it in navigator.backStack }) { templateViewModel.fetchTemplates() }
-    val templateChoice = navigator.backStack.filterIsInstance<WearRoute.AppProfileTemplateChoice>().lastOrNull()
-    val templateChoiceLoading = rememberWearTemplateLoading(templateChoice) { templateViewModel.fetchTemplates() }
+    val templateRoute = navigator.backStack.firstOrNull {
+        it == WearRoute.Templates || it is WearRoute.AppProfileTemplateChoice || it is WearRoute.AppProfileCustom
+    } as WearRoute?
+    val templateLoading = rememberWearTemplateLoading(templateRoute) { templateViewModel.fetchTemplates() }
     val umountOpen = WearRoute.Umount in navigator.backStack
     LaunchedEffect(umountOpen) {
         if (umountOpen) umountViewModel.dispatch(UmountManagerUiAction.Refresh())
@@ -338,8 +339,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     LaunchedEffect(home.isInitialDataLoaded, home.systemStatus.isFullFeatured, home.systemInfo.susfsEnabled, home.systemStatus.isRootAvailable) {
         navigator.closeUnavailable(home)
     }
-    ActivityResumeEffect(homeViewModel) {
-        homeViewModel.dispatch(HomeUiAction.Refresh(showIndicator = true))
+    ActivityResumeEffect(superUserViewModel, settingsViewModel) {
         superUserViewModel.dispatch(SuperUserUiAction.LoadInitialData)
         settingsViewModel.dispatch(SettingsUiAction.RefreshLanguage)
     }
@@ -438,8 +438,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                             toast.show(message)
                             if (navigator.top == WearRoute.CustomColor || navigator.top == WearRoute.Color) back()
                         }
-
-                        R.string.wear_invalid_color -> toast.show(message)
 
                         R.string.dpi_applied_success,
                         R.string.icon_switched,
@@ -684,8 +682,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         route.packageName,
                                         onBack = { if (navigator.top == route) back() },
                                         templateViewModel = templateViewModel,
-                                        isPageLoading = templateChoiceLoading.loading,
-                                        isManualRefreshing = templateChoiceLoading.refreshing,
+                                        isPageLoading = templateLoading.loading,
+                                        isManualRefreshing = templateLoading.refreshing,
                                         onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.TemplateChoice)) },
                                     )
                                 }
@@ -700,8 +698,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         route.packageName,
                                         onBack = { if (navigator.top == route) back() },
                                         templateViewModel = templateViewModel,
-                                        isPageLoading = templateChoiceLoading.loading,
-                                        isManualRefreshing = templateChoiceLoading.refreshing,
+                                        isPageLoading = templateLoading.loading,
+                                        isManualRefreshing = templateLoading.refreshing,
                                         onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.TemplateChoice)) },
                                         query = route.query,
                                         onSaved = { navigator.finishTemplateChoice(route) },
@@ -863,7 +861,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 }
                                 entry<WearRoute.Templates> {
                                     WearTemplatePage(
-                                        templates.copy(isLoading = templateManagementLoading.loading, isRefreshing = false),
+                                        templates.copy(isLoading = templateLoading.loading, isRefreshing = false),
                                         ::back,
                                         { open(WearRoute.Operations(WearOperationsPage.Templates)) },
                                         { id, readOnly, creation -> open(WearRoute.TemplateEditor(id, readOnly, creation)) },
@@ -877,7 +875,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                 }
                                 entry<WearRoute.TemplateSearchResults> {
                                     WearTemplatePage(
-                                        templates.copy(isLoading = templateManagementLoading.loading, isRefreshing = false),
+                                        templates.copy(isLoading = templateLoading.loading, isRefreshing = false),
                                         ::back,
                                         { open(WearRoute.Operations(WearOperationsPage.Templates)) },
                                         { id, readOnly, creation -> open(WearRoute.TemplateEditor(id, readOnly, creation)) },
@@ -1112,14 +1110,14 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                                                             WearOperationsPage.Umount -> umountViewModel.dispatch(UmountManagerUiAction.Refresh())
 
-                                                            WearOperationsPage.TemplateChoice -> templateChoiceLoading.refresh()
+                                                            WearOperationsPage.TemplateChoice -> templateLoading.refresh()
                                                         }
                                                     }
                                                 },
                                                 isRefreshing = when (operationsPage) {
                                                     WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates -> false
                                                     WearOperationsPage.DynamicManagerApps -> dynamicManager.isLoading || dynamicManager.isRefreshing || dynamicManager.isSubmitting
-                                                    WearOperationsPage.TemplateChoice -> templateChoiceLoading.loading || templateChoiceLoading.refreshing
+                                                    WearOperationsPage.TemplateChoice -> templateLoading.loading || templateLoading.refreshing
                                                     WearOperationsPage.Home -> home.isRefreshing
                                                     WearOperationsPage.SuperUser -> superuser.isRefreshing
                                                     WearOperationsPage.Modules -> modules.isRefreshing
@@ -1137,8 +1135,13 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                                                         WearOperationsPage.Home, WearOperationsPage.OnlineTemplates -> Unit
 
-                                                        WearOperationsPage.TemplateChoice -> templateChoice?.let {
-                                                            open(WearRoute.AppProfileTemplateSearch(it.uid, it.packageName, (route as? WearRoute.AppProfileTemplateResults)?.query.orEmpty()))
+                                                        WearOperationsPage.TemplateChoice -> {
+                                                            if (route is WearRoute.AppProfileTemplateChoice) {
+                                                                open(WearRoute.AppProfileTemplateSearch(route.uid, route.packageName))
+                                                            }
+                                                            if (route is WearRoute.AppProfileTemplateResults) {
+                                                                open(WearRoute.AppProfileTemplateSearch(route.uid, route.packageName, route.query))
+                                                            }
                                                         }
 
                                                         WearOperationsPage.Templates -> open(WearRoute.TemplateSearch)
@@ -1281,7 +1284,6 @@ private fun WearMainPages(
     val activity = LocalActivity.current
     if (!home.isInitialDataLoaded && homeError == null) {
         // The first load keeps the startup spinner until Home has its data.
-        LaunchedEffect(Unit) { onHome(HomeUiAction.Refresh(showIndicator = false)) }
         WearLoadingScreen()
         return
     }

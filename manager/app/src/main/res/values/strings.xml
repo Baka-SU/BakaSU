@@ -683,7 +683,6 @@
 
     <!-- Wear OS -->
     <string name="scroll_to_top">Back to top</string>
-    <string name="wear_invalid_color">Enter a colour as #RRGGBB.</string>
     <string name="susfs_kstat_field_ino" translatable="false">ino</string>
     <string name="susfs_kstat_field_dev" translatable="false">dev</string>
     <string name="susfs_kstat_field_nlink" translatable="false">nlink</string>

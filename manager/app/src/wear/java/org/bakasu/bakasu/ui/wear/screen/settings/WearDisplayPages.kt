@@ -425,10 +425,11 @@ internal fun WearCustomColorPage(
     onBack: () -> Unit,
 ) {
     val (hue, saturation, brightness) = hsv
-    val hex = android.graphics.Color.HSVToColor(hsv).toHex()
+    val color = android.graphics.Color.HSVToColor(hsv)
+    val hex = color.toHex()
     WearList(
         onBack = onBack,
-        onConfirm = { onAction(SettingsUiAction.ApplyWearThemeColor(hex)) },
+        onConfirm = { onAction(SettingsUiAction.ApplyWearThemeColor(color)) },
         confirmLabel = stringResource(R.string.confirm),
         confirmEnabled = !state.applyingThemeColor,
     ) { spec ->

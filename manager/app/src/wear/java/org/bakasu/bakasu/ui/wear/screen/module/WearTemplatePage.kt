@@ -247,7 +247,7 @@ internal fun WearOnlineTemplatePage(
                         ),
                     )
                 }
-            } else if (state.hasLoaded && !state.loading && templates.isEmpty()) {
+            } else if (!state.loading && templates.isEmpty()) {
                 item { WearEmptyState(spec, Icons.Rounded.Cloud, stringResource(if (searchResults) R.string.wear_template_no_matches else R.string.wear_template_online_empty)) }
             }
             LazySegmentedColumn(if (failed) emptyList() else templates, { it.id }) { template ->

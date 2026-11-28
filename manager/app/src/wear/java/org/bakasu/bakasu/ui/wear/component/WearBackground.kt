@@ -1,5 +1,6 @@
 package org.bakasu.bakasu.ui.wear.component
 
+import android.graphics.drawable.Drawable
 import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
@@ -9,8 +10,6 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawBehind
@@ -18,7 +17,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventTransitionState
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
@@ -26,11 +24,7 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SwipeToDismissBox
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import kotlinx.coroutines.launch
-import org.bakasu.bakasu.ui.theme.BackgroundManager
-import org.bakasu.bakasu.ui.theme.LocalBackgroundRenderState
 import org.bakasu.bakasu.ui.theme.ThemeConfig
-import org.bakasu.bakasu.ui.theme.extractSeedColor
 import org.bakasu.bakasu.ui.wear.WearManagerTheme
 import org.koin.compose.koinInject
 
@@ -46,11 +40,8 @@ import org.koin.compose.koinInject
  * The plain black base follows predictive back; a selected image and its dim layer remain intact.
  */
 @Composable
-fun WearBackground(content: @Composable BoxScope.() -> Unit) {
+fun WearBackground(onImageLoaded: ((Drawable) -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
     val config = koinInject<ThemeConfig>()
-    val backgroundManager = koinInject<BackgroundManager>()
-    val renderState = LocalBackgroundRenderState.current
-    val scope = rememberCoroutineScope()
     val transition = LocalNavigationEventDispatcherOwner.current?.navigationEventDispatcher
         ?.transitionState?.collectAsStateWithLifecycle()?.value
     val back = (transition as? NavigationEventTransitionState.InProgress)
@@ -65,15 +56,7 @@ fun WearBackground(content: @Composable BoxScope.() -> Unit) {
         config.customBackgroundUri?.let { uri ->
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current).data(uri).allowHardware(false).build(),
-                onSuccess = { result ->
-                    scope.launch {
-                        val seed = result.result.drawable.toBitmap().extractSeedColor()
-                        if (config.customBackgroundUri == uri) {
-                            backgroundManager.saveBackgroundSeedColor(seed)
-                            renderState.seedColor = seed
-                        }
-                    }
-                },
+                onSuccess = { result -> onImageLoaded?.invoke(result.result.drawable) },
                 onError = { config.customBackgroundUri = null },
                 contentDescription = null,
                 contentScale = ContentScale.Crop,

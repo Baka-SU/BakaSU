@@ -29259,7 +29259,6 @@ Lorg/bakasu/bakasu/ui/wear/component/WearBackgroundKt;
 SPLorg/bakasu/bakasu/ui/wear/component/WearBackgroundKt;->$r8$lambda$8o_PoQzmC0_0YeFPUIsHeWvaVRE(JLandroidx/compose/runtime/State;Landroidx/compose/ui/graphics/drawscope/DrawScope;)Lkotlin/Unit;
 SPLorg/bakasu/bakasu/ui/wear/component/WearBackgroundKt;->WearBackground$lambda$1(Landroidx/compose/runtime/State;)F
 SPLorg/bakasu/bakasu/ui/wear/component/WearBackgroundKt;->WearBackground$lambda$2$0(JLandroidx/compose/runtime/State;Landroidx/compose/ui/graphics/drawscope/DrawScope;)Lkotlin/Unit;
-SPLorg/bakasu/bakasu/ui/wear/component/WearBackgroundKt;->WearBackground(Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
 SPLorg/bakasu/bakasu/ui/wear/component/WearBackgroundKt;->WearSwipeToDismissBox(Lkotlin/jvm/functions/Function0;ZLkotlin/jvm/functions/Function4;Landroidx/compose/runtime/Composer;II)V
 Lorg/bakasu/bakasu/ui/wear/component/WearBackgroundKt$$ExternalSyntheticLambda0;
 SPLorg/bakasu/bakasu/ui/wear/component/WearBackgroundKt$$ExternalSyntheticLambda0;-><init>(JLandroidx/compose/runtime/State;)V
