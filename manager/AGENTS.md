@@ -67,26 +67,35 @@ repository depend on a ViewModel or UI component, and do not move repository wor
 
 ---
 
-## Mobile and Wear Manager variants
+## Common, Mobile and Wear Manager modules
 
-The `:app` module defines the `mobile` and `wear` product flavors in the `device` dimension. Both use
-the same application ID and Koin setup.
+`:common` is an Android library shared by the `:mobile` and `:wear` application modules. Both
+applications retain the same application ID. Neither application depends on the other, and
+`:common` must not depend on either application.
 
-* `app/src/main` contains code and resources shared by both flavors.
-* `app/src/mobile` contains the phone UI and other mobile-only code and resources.
-* `app/src/wear` contains the watch UI and other Wear-only code and resources.
+* `common/src/main` contains shared data, domain operations, ViewModels, components, resources,
+  AIDL and native code. It has no device flavors.
+* `mobile/src/main` contains the phone entry point, UI and platform registrations.
+* `wear/src/main` contains the watch entry point, UI and platform registrations.
+
+Keep the original Kotlin and Java packages. The common namespace is `org.bakasu.bakasu`; application
+namespaces are `org.bakasu.bakasu.mobile` and `org.bakasu.bakasu.wear`. Use the owning module's `R`
+for its resources, and explicit component class names in application manifests.
+Shared build constants come from the root configuration. Inject `ManagerDevice` through Koin for
+Mobile/Wear behavior; do not add device flavors or application dependencies to `:common`.
 
 Keep package responsibilities unchanged when moving code between source sets.
 
 ### Entry points
 
-* `KernelSUApplication` starts Koin and runs `InitializeApplicationUseCase` for both form factors.
-* Each flavor provides `ui/MainActivity.kt`. The mobile implementation renders the phone UI;
+* Each `KernelSUApplication` supplies platform modules to `BaseKernelSUApplication`, which starts
+  Koin once and runs `InitializeApplicationUseCase` for both form factors.
+* Each application provides `ui/MainActivity.kt`. The mobile implementation renders the phone UI;
   the Wear implementation inherits `ui/wear/WearMainActivity.kt` directly. Both keep the same
   launcher component, alternate icon alias, shortcut and incoming Intent contracts. Do not restore
   runtime forwarding from the phone entry point to a class absent from the mobile APK.
-* Flavor-specific `di/PlatformModules.kt` registers dedicated repositories, use cases and
-  ViewModels inside the existing shared Koin module groups.
+* Application-specific `di/PlatformModules.kt` registers dedicated repositories, use cases and
+  ViewModels alongside the shared core, repository, use-case and ViewModel module groups.
 * `WearMainActivity` applies the language, initializes the manager, refreshes the home and app
   lists, and shows loading, error or `WearManagerScreen` according to `StartupState`.
 * `WearActivity` is the shared base of the Wear activities; it only intercepts `KEYCODE_BACK` when
@@ -98,7 +107,7 @@ Keep package responsibilities unchanged when moving code between source sets.
 
 * `data/file`: `WearFileRepository` (uses `SuFile` with root, plain `File` otherwise, still limited
   by the process permissions) and `WearFileProvider`.
-* `data/network/WearLinkRepository` and `OpenWearExternalLinkUseCase` belong to the wear source set.
+* `data/network/WearLinkRepository` and `OpenWearExternalLinkUseCase` belong to the wear module.
   The authenticated RFCOMM companion bridge in `data/webui` remains shared; the phone-side
   `WearBridgeSetupActivity` and `RemoteWebUIActivity` must remain available in mobile builds.
 * `WearPreferencesViewModel` holds the watch-only preferences (pickers, links, screen shape, long
@@ -108,7 +117,7 @@ Keep package responsibilities unchanged when moving code between source sets.
   `ExecuteModuleActionViewModel`.
 * `MANAGE_EXTERNAL_STORAGE`, the built-in file picker and its no-root fallback remain in Wear.
   Wear Compose, Navigation 3, Wear input and cnwearoverlay runtime/instrumentation are scoped to
-  Wear variants. Do not reintroduce them as shared runtime dependencies.
+  the Wear application. Do not reintroduce them as shared runtime dependencies.
 
 ### Wear UI
 
@@ -117,7 +126,8 @@ Keep package responsibilities unchanged when moving code between source sets.
   `ui/component/`. Phone UI must not depend on Wear-only components, and Wear UI must not depend on
   phone-only components; the `WearPhoneComponentBoundary` lint check reports these violations as errors.
   The dialog API (`rememberCustomDialog`, `DialogHandle`) and `PackageIcon` are approved shared
-  components. Non-UI helpers such as the `module.prop` parser `ZipFileDetector` belong in `data/`.
+  components. The upstream `ZipFileDetector`, `ZipFileInfo` and `ZipType` declarations remain shared
+  under `ui.component`; new data-layer helpers belong in `data/`.
 * `WearManager.kt` owns one `AppScaffold`, the four-page main `WearHorizontalPager` and a Navigation 3 `NavDisplay`;
   `WearRoutes.kt` declares the serializable destinations. Open and close pages through the
   `open`/`back` helpers and add a `WearRoute` for every new page instead of in-page string stacks.
@@ -136,11 +146,13 @@ Keep package responsibilities unchanged when moving code between source sets.
 
 ### Builds and distribution
 
-Use `assembleMobileRelease` or `assembleWearRelease` for a single flavor. `assembleRelease` builds
-both. Run `lintMobileDebug` and `lintWearDebug` to match the Manager CI lint checks.
+Use `:mobile:assembleRelease` or `:wear:assembleRelease` for a single application, or invoke both
+tasks to build both APKs. Run `:common:lintDebug :mobile:lintDebug :wear:lintDebug` to match CI.
+APK outputs are under `<module>/build/outputs/apk/<buildType>/`; mappings are under
+`<module>/build/outputs/mapping/<buildType>/`. Shared JNI builds belong to `:common`.
 
-CI builds and repacks the flavors separately as `Manager-release` (mobile) and `Wear-Manager-release`
-for Release. Installed Managers fetch the artifact matching their flavor for in-app Beta updates;
+CI builds and repacks the applications separately as `Manager-release` (mobile) and `Wear-Manager-release`
+for Release. Installed Managers fetch the artifact matching their device type for in-app Beta updates;
 the mobile artifact keeps its legacy name for compatibility with already installed versions.
 See the [Manager build workflow](../.github/workflows/build-manager.yml).
 
@@ -152,9 +164,10 @@ carry the `-wear-` segment.
 ### Baseline profiles and Wear verification
 
 Select the corresponding device with `ANDROID_SERIAL` when generating baseline and startup profiles.
-Mobile uses `:app:copyBaselineProfileIntoSrc` and the upstream profile files under
-`app/src/main/generated/baselineProfiles/`. Wear uses `:app:generateWearReleaseBaselineProfile`
-and stores its profiles under `app/src/wearRelease/generated/baselineProfiles/`.
+Use `:mobile:generateReleaseBaselineProfile` or `:wear:generateReleaseBaselineProfile`. The producer
+modules `:baselineprofile:mobile` and `:baselineprofile:wear` target their respective applications
+and reuse `baselineprofile/src/main/java`. Profiles are stored separately under
+`mobile/src/main/generated/baselineProfiles/` and `wear/src/main/generated/baselineProfiles/`.
 
 Check SU authorization, SUSFS kernels, round and square layouts, predictive back and the phone
 connection on a watch when a change touches those behaviors.
@@ -168,8 +181,8 @@ connection on a watch when a change touches those behaviors.
 Place reusable UI components according to their intended scope:
 
 ```text
-org.bakasu.bakasu.ui.component        # shared in app/src/main, phone-only in app/src/mobile
-org.bakasu.bakasu.ui.wear.component   # Wear-only in app/src/wear
+org.bakasu.bakasu.ui.component        # shared in common/src/main, phone-only in mobile/src/main
+org.bakasu.bakasu.ui.wear.component   # Wear-only in wear/src/main
 ```
 
 Do not create parallel reusable-component packages inside individual pages, features, or view
@@ -303,9 +316,9 @@ For implementation tasks:
 4. Add or update Android resources before wiring user-visible text into UI.
 5. Use `stringResource` for strings resolved in Compose.
 6. Verify formatting by running `./gradlew spotlessCheck` from the manager project root.
-7. Verify changes by running `./gradlew assembleRelease` from the manager project root.
+7. Verify changes by running `./gradlew :mobile:assembleRelease :wear:assembleRelease` from the manager project root.
 8. Report exactly what was changed and whether `./gradlew spotlessCheck`,
-   `./gradlew assembleRelease`, and applicable lint checks completed successfully.
+   `./gradlew :mobile:assembleRelease :wear:assembleRelease`, and applicable lint checks completed successfully.
 
 ---
 
@@ -325,7 +338,7 @@ Before completing a UI or settings task, verify:
 * No user-visible string is hardcoded.
 * Compose strings use `stringResource` whenever possible.
 * Verify formatting with `./gradlew spotlessCheck` and ensure it passes before reporting completion.
-* Verify the project with `./gradlew assembleRelease` before reporting completion.
+* Verify the project with `./gradlew :mobile:assembleRelease :wear:assembleRelease` before reporting completion.
 * Any build or test result is reported honestly; never claim verification passed when it was not
   run.
 * Ensure any lint rule checks passed.
