@@ -1,7 +1,11 @@
+import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
+import com.android.build.api.variant.FilterConfiguration
 import com.diffplug.spotless.LineEnding
 
 plugins {
     alias(libs.plugins.agp.app) apply false
+    alias(libs.plugins.agp.library) apply false
     alias(libs.plugins.agp.test) apply false
     alias(libs.plugins.androidx.baselineprofile) apply false
     alias(libs.plugins.kotlin) apply false
@@ -65,4 +69,88 @@ fun getGitDescribe(): String {
         return "$desc-spoofed"
     }
     return desc
+}
+
+subprojects {
+    pluginManager.withPlugin("com.android.application") {
+        val isReleaseTask = project.gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
+        val managerVersionName = rootProject.extra["managerVersionName"] as String
+        val managerVersionCode = rootProject.extra["managerVersionCode"] as Int
+        val device = project.name
+
+        configure<ApplicationExtension> {
+            namespace = "org.bakasu.bakasu.$device"
+            compileSdk = rootProject.extra["androidCompileSdkVersion"] as Int
+            ndkVersion = rootProject.extra["androidCompileNdkVersion"] as String
+            buildToolsVersion = rootProject.extra["androidBuildToolsVersion"] as String
+            defaultConfig {
+                applicationId = rootProject.extra["managerPackageName"] as String
+                minSdk = rootProject.extra["androidMinSdkVersion"] as Int
+                targetSdk = rootProject.extra["androidTargetSdkVersion"] as Int
+                versionCode = managerVersionCode
+                versionName = managerVersionName
+                ndk { abiFilters += listOf("arm64-v8a", "x86_64", "armeabi-v7a", "riscv64") }
+            }
+            buildTypes {
+                getByName("release") {
+                    isMinifyEnabled = true
+                    isShrinkResources = true
+                    vcsInfo.include = false
+                    proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), rootProject.file("proguard-rules.pro"))
+                }
+            }
+            buildFeatures { compose = true }
+            packaging {
+                jniLibs { useLegacyPackaging = true }
+                resources {
+                    if (isReleaseTask) {
+                        // https://stackoverflow.com/a/58956288
+                        // It will break Layout Inspector, but it's unused for release build.
+                        excludes += "META-INF/*.version"
+                    }
+                    // https://github.com/Kotlin/kotlinx.coroutines?tab=readme-ov-file#avoiding-including-the-debug-infrastructure-in-the-resulting-apk
+                    excludes += "DebugProbesKt.bin"
+                    // https://issueantenna.com/repo/kotlin/kotlinx.coroutines/issues/3158
+                    excludes += "kotlin-tooling-metadata.json"
+                }
+            }
+            dependenciesInfo {
+                includeInApk = false
+                includeInBundle = false
+            }
+            androidResources { generateLocaleConfig = true }
+            splits {
+                abi {
+                    isEnable = isReleaseTask
+                    reset()
+                    include("arm64-v8a", "x86_64", "armeabi-v7a", "riscv64")
+                    isUniversalApk = true
+                }
+            }
+            compileOptions {
+                sourceCompatibility = rootProject.extra["androidSourceCompatibility"] as JavaVersion
+                targetCompatibility = rootProject.extra["androidTargetCompatibility"] as JavaVersion
+            }
+            lint {
+                abortOnError = true
+                checkReleaseBuilds = false
+            }
+        }
+
+        configure<ApplicationAndroidComponentsExtension> {
+            onVariants { variant ->
+                variant.outputs.forEach { output ->
+                    val abi = output.filters.firstOrNull { it.filterType == FilterConfiguration.FilterType.ABI }?.identifier
+                    val abiSegment = when {
+                        abi != null -> "-$abi"
+                        variant.outputs.size > 1 -> "-universal"
+                        else -> ""
+                    }
+                    // Installed Mobile Managers still match the flavorless filename.
+                    val deviceSegment = if (device == "wear") "-wear" else ""
+                    output.outputFileName.set("BakaSU_${managerVersionName}_$managerVersionCode$deviceSegment$abiSegment-${variant.buildType}.apk")
+                }
+            }
+        }
+    }
 }

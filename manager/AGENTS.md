@@ -67,19 +67,128 @@ repository depend on a ViewModel or UI component, and do not move repository wor
 
 ---
 
+## Common, Mobile and Wear Manager modules
+
+`:common` is an Android library shared by the `:mobile` and `:wear` application modules. Both
+applications retain the same application ID. Neither application depends on the other, and
+`:common` must not depend on either application.
+
+* `common/src/main` contains shared data, domain operations, ViewModels, components, resources,
+  AIDL and native code. It has no device flavors.
+* `mobile/src/main` contains the phone entry point, UI and platform registrations.
+* `wear/src/main` contains the watch entry point, UI and platform registrations.
+
+Keep the original Kotlin and Java packages. The common namespace is `org.bakasu.bakasu`; application
+namespaces are `org.bakasu.bakasu.mobile` and `org.bakasu.bakasu.wear`. Use the owning module's `R`
+for its resources, and explicit component class names in application manifests.
+Shared build constants come from the root configuration. Inject `ManagerDevice` through Koin for
+Mobile/Wear behavior; do not add device flavors or application dependencies to `:common`.
+
+Keep package responsibilities unchanged when moving code between source sets.
+
+### Entry points
+
+* Each `KernelSUApplication` supplies platform modules to `BaseKernelSUApplication`, which starts
+  Koin once and runs `InitializeApplicationUseCase` for both form factors.
+* Each application provides `ui/MainActivity.kt`. The mobile implementation renders the phone UI;
+  the Wear implementation inherits `ui/wear/WearMainActivity.kt` directly. Both keep the same
+  launcher component, alternate icon alias, shortcut and incoming Intent contracts. Do not restore
+  runtime forwarding from the phone entry point to a class absent from the mobile APK.
+* Application-specific `di/PlatformModules.kt` registers dedicated repositories, use cases and
+  ViewModels alongside the shared core, repository, use-case and ViewModel module groups.
+* `WearMainActivity` applies the language, initializes the manager, refreshes the home and app
+  lists, and shows loading, error or `WearManagerScreen` according to `StartupState`.
+* `WearActivity` is the shared base of the Wear activities; it only intercepts `KEYCODE_BACK` when
+  the user enables the block-back-key option.
+* `WearWebUIActivity` hosts module WebUI on the watch, and `WearFilePickerActivity` answers SAF
+  picker requests on watches without DocumentsUI (`exported=false`, low intent-filter priority).
+
+### Wear-only data sources
+
+* `data/file`: `WearFileRepository` (uses `SuFile` with root, plain `File` otherwise, still limited
+  by the process permissions) and `WearFileProvider`.
+* `data/network/WearLinkRepository` and `OpenWearExternalLinkUseCase` belong to the wear module.
+  The authenticated RFCOMM companion bridge in `data/webui` remains shared; the phone-side
+  `WearBridgeSetupActivity` and `RemoteWebUIActivity` must remain available in mobile builds.
+* `WearPreferencesViewModel` holds the watch-only preferences (pickers, links, screen shape, long
+  press feedback, keep screen on, back handling). Other Wear pages reuse shared ViewModels, such
+  as `HomeViewModel`, `SuperUserViewModel`, `ModuleViewModel`, `SettingsViewModel`,
+  `SulogViewModel`, `SuSFSViewModel`, `FlashViewModel`, `KernelFlashViewModel` and
+  `ExecuteModuleActionViewModel`.
+* `MANAGE_EXTERNAL_STORAGE`, the built-in file picker and its no-root fallback remain in Wear.
+  Wear Compose, Navigation 3, Wear input and cnwearoverlay runtime/instrumentation are scoped to
+  the Wear application. Do not reintroduce them as shared runtime dependencies.
+
+### Wear UI
+
+* Pages live in `ui/wear/`; Wear-only reusable components live in `ui/wear/component/`, with Wear
+  settings adapters in `ui/wear/component/settings/`. Shared UI components belong in
+  `ui/component/`. Phone UI must not depend on Wear-only components, and Wear UI must not depend on
+  phone-only components; the `WearPhoneComponentBoundary` lint check reports these violations as errors.
+  The dialog API (`rememberCustomDialog`, `DialogHandle`) and `PackageIcon` are approved shared
+  components. The upstream `ZipFileDetector`, `ZipFileInfo` and `ZipType` declarations remain shared
+  under `ui.component`; new data-layer helpers belong in `data/`.
+* `WearManager.kt` owns one `AppScaffold`, the four-page main `WearHorizontalPager` and a Navigation 3 `NavDisplay`;
+  `WearRoutes.kt` declares the serializable destinations. Open and close pages through the
+  `open`/`back` helpers and add a `WearRoute` for every new page instead of in-page string stacks.
+* Lists use `WearList` (`ScreenScaffold` + `TransformingLazyColumn`), which applies the round-screen
+  transformation and keeps items unscaled on square screens. Build pages from `WearPageHeader`,
+  `WearSectionHeader`, `WearChip`, `WearActionButton` and the settings adapters.
+* `WearSubPage` holds input or detail pages nested in one destination; `WearLogPage` and
+  `rememberWearLogSaver` show and save the output of flash and script runs.
+* Confirmations use `rememberWearConfirmDialog`; one-shot operation results use
+  `LocalWearToast` or `WearFeedbackEffect` for pending message state, without result dialogs.
+* `WearManagerTheme` applies DPI, screen shape, haptics, keep screen on, dynamic color, background
+  and card opacity, sharing `ThemeConfig`, `BackgroundManager` and the settings use cases with the
+  phone.
+* Below API 36 `WearSwipeToDismissBox` provides the in-app swipe back; from API 36 the platform
+  predictive back and Wear Navigation 3 handle it.
+
+### Builds and distribution
+
+Use `:mobile:assembleRelease` or `:wear:assembleRelease` for a single application, or invoke both
+tasks to build both APKs. Run `:common:lintDebug :mobile:lintDebug :wear:lintDebug` to match CI.
+APK outputs are under `<module>/build/outputs/apk/<buildType>/`; mappings are under
+`<module>/build/outputs/mapping/<buildType>/`. Shared JNI builds belong to `:common`.
+
+CI builds and repacks the applications separately as `Manager-release` (mobile) and `Wear-Manager-release`
+for Release. Installed Managers fetch the artifact matching their device type for in-app Beta updates;
+the mobile artifact keeps its legacy name for compatibility with already installed versions.
+See the [Manager build workflow](../.github/workflows/build-manager.yml).
+
+The updater selects the APK by flavor and ABI. Mobile APKs keep the legacy flavorless filename
+(`BakaSU_<version>_<code>-<abi>-release.apk`) so Managers installed before the mobile/wear split
+can still match them; the `-mobile-` and legacy `-normal-` segments are also accepted. Wear APKs
+carry the `-wear-` segment.
+
+### Baseline profiles and Wear verification
+
+Select the corresponding device with `ANDROID_SERIAL` when generating baseline and startup profiles.
+Use `:mobile:generateReleaseBaselineProfile` or `:wear:generateReleaseBaselineProfile`. The producer
+modules `:baselineprofile:mobile` and `:baselineprofile:wear` target their respective applications
+and reuse `baselineprofile/src/main/java`. Profiles are stored separately under
+`mobile/src/main/generated/baselineProfiles/` and `wear/src/main/generated/baselineProfiles/`.
+
+Check SU authorization, SUSFS kernels, round and square layouts, predictive back and the phone
+connection on a watch when a change touches those behaviors.
+
+---
+
 ## UI component conventions
 
-### Canonical component location
+### Canonical component locations
 
-All reusable UI components must be placed under:
+Place reusable UI components according to their intended scope:
 
 ```text
-org.bakasu.bakasu.ui.component
+org.bakasu.bakasu.ui.component        # shared in common/src/main, phone-only in mobile/src/main
+org.bakasu.bakasu.ui.wear.component   # Wear-only in wear/src/main
 ```
 
 Do not create parallel reusable-component packages inside individual pages, features, or view
-models. Screen-specific composables may remain close to their screen when they are truly local, but
-components intended for reuse must live in `ui.component`.
+models. Screen-specific composables may remain close to their screen when they are truly local.
+Components intended for reuse must live in the canonical package for their scope: shared and phone
+components in `ui.component`, and Wear-only components in `ui.wear.component`.
 
 ### Dialog
 
@@ -178,13 +287,14 @@ instead.
 
 * Keep repositories and data access in `data/`.
 * Keep presentation and Compose work in `ui/`.
-* Put reusable composables in `ui.component`, and prefer the settings component system for settings
-  surfaces.
+* Put shared and phone reusable composables in `ui.component`; put Wear-only reusable composables
+  in `ui.wear.component`. Prefer the settings component system for settings surfaces, using the
+  platform-appropriate package.
 * Extend the nearest existing pattern before creating a new abstraction.
 * Avoid duplicating existing widgets, shapes, or resource-access patterns.
-* Use `org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction` for every pager. Do not
-  call
-  `HorizontalPager` directly from screens; pager gesture arbitration belongs in this component.
+* Use `org.bakasu.bakasu.ui.component.HorizontalPagerWithInteraction` for every phone pager and
+  `org.bakasu.bakasu.ui.wear.component.WearHorizontalPager` for every Wear pager. Do not call
+  `HorizontalPager` directly from screens; pager gesture arbitration belongs in these components.
 
 ---
 
@@ -206,9 +316,9 @@ For implementation tasks:
 4. Add or update Android resources before wiring user-visible text into UI.
 5. Use `stringResource` for strings resolved in Compose.
 6. Verify formatting by running `./gradlew spotlessCheck` from the manager project root.
-7. Verify changes by running `./gradlew assembleRelease` from the manager project root.
+7. Verify changes by running `./gradlew :mobile:assembleRelease :wear:assembleRelease` from the manager project root.
 8. Report exactly what was changed and whether `./gradlew spotlessCheck`,
-   `./gradlew assembleRelease`, and applicable lint checks completed successfully.
+   `./gradlew :mobile:assembleRelease :wear:assembleRelease`, and applicable lint checks completed successfully.
 
 ---
 
@@ -216,18 +326,19 @@ For implementation tasks:
 
 Before completing a UI or settings task, verify:
 
-* Reusable components are under `org.bakasu.bakasu.ui.component`, unless it from library, if so,
-  you MUST keep the original copyright notice.
+* Shared and phone reusable components are under `org.bakasu.bakasu.ui.component`; Wear-only
+  reusable components are under `org.bakasu.bakasu.ui.wear.component`. If a component comes from a
+  library, preserve its original copyright notice.
 * Settings screens use `org.bakasu.bakasu.ui.component.settings` components.
 * Static settings groups use `SegmentedColumn`; runtime-changing groups use `LazySegmentedColumn`.
 * Standard settings rows use the relevant `SettingsBaseWidget` wrapper instead of a hand-built
   equivalent.
 * Dynamic corner-shape animation uses `AnimatedShape.kt` when applicable.
-* Every pager is rendered through `HorizontalPagerWithInteraction`.
+* Every pager is rendered through `HorizontalPagerWithInteraction` (phone) or `WearHorizontalPager` (Wear).
 * No user-visible string is hardcoded.
 * Compose strings use `stringResource` whenever possible.
 * Verify formatting with `./gradlew spotlessCheck` and ensure it passes before reporting completion.
-* Verify the project with `./gradlew assembleRelease` before reporting completion.
+* Verify the project with `./gradlew :mobile:assembleRelease :wear:assembleRelease` before reporting completion.
 * Any build or test result is reported honestly; never claim verification passed when it was not
   run.
 * Ensure any lint rule checks passed.

@@ -1,0 +1,78 @@
+package org.bakasu.bakasu.ui.wear.component.settings
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
+import androidx.wear.compose.material3.ButtonColors
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.FilledTonalButton
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.SurfaceTransformation
+import androidx.wear.compose.material3.lazy.TransformationSpec
+import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
+import org.bakasu.bakasu.ui.wear.component.WearBadge
+import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
+
+@Composable
+fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
+    spec: TransformationSpec,
+    title: String,
+    onClick: () -> Unit,
+    icon: ImageVector? = null,
+    enabled: Boolean = true,
+    description: String? = null,
+    transformed: Boolean = true,
+    largeIcon: Boolean = false,
+    titleBadge: String? = null,
+    iconContent: (@Composable BoxScope.() -> Unit)? = null,
+    colors: ButtonColors = ButtonDefaults.filledTonalButtonColors(),
+    secondaryLabelContent: (@Composable RowScope.() -> Unit)? = null,
+    titleContent: (@Composable () -> Unit)? = null,
+    transformSurface: Boolean = transformed,
+    contentPadding: PaddingValues = if (largeIcon) ButtonDefaults.ButtonWithLargeIconContentPadding else ButtonDefaults.ContentPadding,
+) {
+    val button: @Composable () -> Unit = {
+        FilledTonalButton(
+            onClick = onClick,
+            enabled = enabled,
+            colors = colors,
+            modifier = Modifier.fillMaxWidth(),
+            transformation = if (transformSurface) SurfaceTransformation(spec) else null,
+            contentPadding = contentPadding,
+            icon = iconContent ?: icon?.let {
+                {
+                    Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize))
+                }
+            },
+            secondaryLabel = secondaryLabelContent ?: description?.let { text -> { WearAutoMarqueeText(text, maxLines = 2) } },
+        ) {
+            if (titleContent != null) {
+                titleContent()
+            } else if (titleBadge == null) {
+                WearAutoMarqueeText(title)
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    WearAutoMarqueeText(title, Modifier.weight(1f, fill = false))
+                    WearBadge(titleBadge)
+                }
+            }
+        }
+    }
+
+    if (transformed) {
+        WearRefreshItem(spec, Modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding), button)
+    } else {
+        // Inside a swipe-to-reveal row the row owns displacement, transformation and edge padding.
+        button()
+    }
+}

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+
+    <uses-sdk tools:overrideLibrary="top.yukonga.miuix.kmp.blur" />
+
+    <application android:name="org.bakasu.bakasu.KernelSUApplication">
+        <activity
+            android:name="org.bakasu.bakasu.ui.MainActivity"
+            android:exported="true"
+            android:enabled="true"
+            android:launchMode="standard"
+            android:documentLaunchMode="intoExisting"
+            android:autoRemoveFromRecents="true"
+            android:theme="@style/Theme.KernelSU.Starting">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+                <data android:scheme="content" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
+                    android:host="action"
+                    android:scheme="ksu" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
+                    android:host="webui"
+                    android:scheme="ksu" />
+            </intent-filter>
+        </activity>
+        <!-- 切换图标 -->
+        <activity-alias
+            android:name="org.bakasu.bakasu.ui.MainActivityAlias"
+            android:targetActivity="org.bakasu.bakasu.ui.MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_alt"
+            android:roundIcon="@mipmap/ic_launcher_alt">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+            </intent-filter>
+        </activity-alias>
+        <activity
+            android:name="org.bakasu.bakasu.ui.webui.WebUIActivity"
+            android:autoRemoveFromRecents="true"
+            android:documentLaunchMode="intoExisting"
+            android:taskAffinity="${applicationId}.webui"
+            android:exported="false"
+            android:theme="@style/Theme.KernelSU.WebUI"
+            android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden"
+            />
+
+        <!-- Opened internally after Bluetooth app authentication, never by an exported deep link. -->
+        <activity
+            android:name="org.bakasu.bakasu.ui.webui.RemoteWebUIActivity"
+            android:launchMode="singleTask"
+            android:autoRemoveFromRecents="true"
+            android:taskAffinity="${applicationId}.webui"
+            android:exported="false"
+            android:theme="@style/Theme.KernelSU.WebUI"
+            android:configChanges="density|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|locale|layoutDirection|fontScale|keyboard|keyboardHidden" />
+        <activity android:name="org.bakasu.bakasu.ui.webui.BridgeRequestActivity" android:exported="false" android:theme="@style/Theme.KernelSU" />
+        <activity android:name="org.bakasu.bakasu.ui.webui.WearBridgeSetupActivity" android:exported="false" android:theme="@style/Theme.KernelSU" />
+
+        <activity
+            android:name="org.bakasu.bakasu.ui.screen.themeSettings.crop.BackgroundCropActivity"
+            android:exported="false"
+            android:theme="@style/Theme.KernelSU" />
+    </application>
+</manifest>

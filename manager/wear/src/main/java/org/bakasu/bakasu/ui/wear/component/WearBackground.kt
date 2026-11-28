@@ -1,0 +1,78 @@
+package org.bakasu.bakasu.ui.wear.component
+
+import android.graphics.drawable.Drawable
+import android.os.Build
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigationevent.NavigationEventTransitionState
+import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.SwipeToDismissBox
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import org.bakasu.bakasu.ui.theme.ThemeConfig
+import org.bakasu.bakasu.ui.wear.WearManagerTheme
+import org.koin.compose.koinInject
+
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/**
+ * Gives each navigation entry its own backdrop for scene transitions. The theme also uses it
+ * outside navigation. Predictive back fades the plain base and leaves selected images and dimming unchanged.
+ */
+@Composable
+fun WearBackground(onImageLoaded: ((Drawable) -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
+    val config = koinInject<ThemeConfig>()
+    val transition = LocalNavigationEventDispatcherOwner.current?.navigationEventDispatcher
+        ?.transitionState?.collectAsStateWithLifecycle()?.value
+    val back = (transition as? NavigationEventTransitionState.InProgress)
+        ?.takeIf { it.direction == NavigationEventTransitionState.TRANSITIONING_BACK }
+    val baseColor = MaterialTheme.colorScheme.background
+    val backgroundAlpha by animateFloatAsState(
+        targetValue = if (config.customBackgroundUri != null) 1f else (1f - (back?.latestEvent?.progress ?: 0f)).coerceIn(0f, 1f),
+        animationSpec = if (back != null) snap() else MaterialTheme.motionScheme.defaultEffectsSpec<Float>(),
+        label = "wear-back-background",
+    )
+    Box(Modifier.fillMaxSize().drawBehind { drawRect(baseColor.copy(alpha = backgroundAlpha)) }) {
+        config.customBackgroundUri?.let { uri ->
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current).data(uri).allowHardware(false).build(),
+                onSuccess = { result -> onImageLoaded?.invoke(result.result.drawable) },
+                onError = { config.customBackgroundUri = null },
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().then(if (config.isEnableBlur && Build.VERSION.SDK_INT >= 31) Modifier.blur(25.dp) else Modifier),
+            )
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = config.backgroundDim.coerceIn(0f, 1f))))
+        }
+        content()
+    }
+}
+
+/** Keeps the backdrop visible beneath a swipe-dismissed page while the content scrim dims the page. */
+@Composable
+fun WearSwipeToDismissBox(onDismissed: () -> Unit, userSwipeEnabled: Boolean = true, content: @Composable BoxScope.(isBackground: Boolean) -> Unit) {
+    // On API 36+, a touch-driven dismiss box would compete with platform predictive back.
+    if (Build.VERSION.SDK_INT >= 36 || !LocalWearSwipeEnabled.current) {
+        Box(Modifier.fillMaxSize()) { content(false) }
+    } else {
+        SwipeToDismissBox(onDismissed = onDismissed, userSwipeEnabled = userSwipeEnabled, backgroundScrimColor = Color.Transparent, content = content)
+    }
+}

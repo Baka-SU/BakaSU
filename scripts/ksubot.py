@@ -145,9 +145,9 @@ async def wait_for_bot_api():
         return 
         
 
-def get_caption():
+def get_caption(flavor):
     msg = MSG_TEMPLATE.format(
-        title=escape_markdown_v2(TITLE),
+        title=escape_markdown_v2(f"{TITLE} - {MANAGER_FLAVORS[flavor]}"),
         branch=escape_markdown_v2(BRANCH),
         version=escape_markdown_v2(VERSION),
         commit_message=escape_markdown_code(commit_message),
@@ -239,6 +239,8 @@ async def send_media_group(bot: Bot, chat_id: int, media: list, message_thread_i
     except:
         raise
 
+MANAGER_FLAVORS = {"mobile": "Phone / 手机 mobile", "wear": "Watch / 手表 wear"}
+
 async def main():
     print("[+] Uploading to telegram")
     check_environ()
@@ -249,34 +251,41 @@ async def main():
         print("[-] No files to upload")
         exit(1)
     print("[+] Logging in Telegram with bot")
-    no_caption=False
     bot = Bot(token=BOT_TOKEN,base_url="http://127.0.0.1:8081/bot",base_file_url="http://127.0.0.1:8081/file/bot")
-    caption = get_caption()
-    caption_debug = get_caption_for_debug()
-    if len(caption) > 1024 or len(caption_debug) > 1024:
-        print("[-] Caption is too long,so it will be sent as a separate message without caption for files")
-        no_caption = True
-    upload_release_files = []
-
-    for index, file in enumerate(files):
-        if os.path.basename(file).find("debug") != -1:
-            # If the filename contains "debug", skip it.
+    groups = {flavor: [] for flavor in MANAGER_FLAVORS}
+    for file in files:
+        flavor = "wear" if "-wear-" in os.path.basename(file) else "mobile"
+        groups[flavor].append(file)
+    for flavor, files in groups.items():
+        if not files:
             continue
-        elif index == len(files) - 1:
-            # Only add caption to the last file
-            upload_release_files.append(InputMediaDocument(media=open(file, "rb"), filename=os.path.basename(file), caption=f"{caption if not no_caption else '*Release Manager*'}", parse_mode=ParseMode.MARKDOWN_V2))
-            continue
-        upload_release_files.append(InputMediaDocument(media=open(file, "rb"), filename=os.path.basename(file)))
+        no_caption=False
+        caption = get_caption(flavor)
+        caption_debug = get_caption_for_debug()
+        if len(caption) > 1024 or len(caption_debug) > 1024:
+            print("[-] Caption is too long,so it will be sent as a separate message without caption for files")
+            no_caption = True
+        upload_release_files = []
 
-    print("[+] Caption: ")
-    print("---")
-    print(caption)
-    print("---")
-    print("[+] Sending")
-    if no_caption:
-        await send_message(bot=bot, chat_id=CHAT_ID, text=caption, message_thread_id=MESSAGE_THREAD_ID)
-    if len(upload_release_files) > 0:
-        await send_media_group(bot=bot, chat_id=CHAT_ID, media=upload_release_files, message_thread_id=MESSAGE_THREAD_ID)
+        for index, file in enumerate(files):
+            if os.path.basename(file).find("debug") != -1:
+                # If the filename contains "debug", skip it.
+                continue
+            elif index == len(files) - 1:
+                # Only add caption to the last file
+                upload_release_files.append(InputMediaDocument(media=open(file, "rb"), filename=os.path.basename(file), caption=f"{caption if not no_caption else '*Release Manager*'}", parse_mode=ParseMode.MARKDOWN_V2))
+                continue
+            upload_release_files.append(InputMediaDocument(media=open(file, "rb"), filename=os.path.basename(file)))
+
+        print("[+] Caption: ")
+        print("---")
+        print(caption)
+        print("---")
+        print("[+] Sending")
+        if no_caption:
+            await send_message(bot=bot, chat_id=CHAT_ID, text=caption, message_thread_id=MESSAGE_THREAD_ID)
+        if len(upload_release_files) > 0:
+            await send_media_group(bot=bot, chat_id=CHAT_ID, media=upload_release_files, message_thread_id=MESSAGE_THREAD_ID)
     if TITLE.lower() == "manager" and (BRANCH == "main" or GITHUB_REF_TYPE == "tag"):
         print("[+] Sending main branch updated message")
         await send_message(bot=bot,chat_id=CHAT_ID, text=MAIN_UPDATED_MSG, message_thread_id=DEVELOPING_THREAD_ID)

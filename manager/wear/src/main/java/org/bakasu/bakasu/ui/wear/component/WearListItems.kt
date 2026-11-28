@@ -1,0 +1,223 @@
+package org.bakasu.bakasu.ui.wear.component
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonColors
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.ListHeader
+import androidx.wear.compose.material3.ListHeaderDefaults
+import androidx.wear.compose.material3.ListSubHeader
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.SurfaceTransformation
+import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.lazy.TransformationSpec
+import androidx.wear.compose.material3.lazy.transformedHeight
+
+/**
+ * @author Hanhan_awa
+ * @date 2026/10/1.
+ */
+
+/** Uses a 7.3% side margin to keep two-line titles inside round screens. */
+@Composable
+fun TransformingLazyColumnItemScope.WearPageHeader(
+    transformationSpec: TransformationSpec,
+    title: String,
+) {
+    WearPageHeader(
+        title,
+        modifier = if (LocalWearTimeOptions.current.mode == "title") {
+            Modifier
+        } else {
+            Modifier.transformedHeight(this, transformationSpec)
+                .minimumVerticalContentPadding(ListHeaderDefaults.minimumTopListContentPadding)
+        },
+        transformation = SurfaceTransformation(transformationSpec),
+    )
+}
+
+@Composable
+fun WearPageHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    transformation: SurfaceTransformation? = null,
+    bottomPadding: androidx.compose.ui.unit.Dp? = null,
+) {
+    Column(modifier.fillMaxWidth()) {
+        if (LocalWearTimeOptions.current.mode == "title") {
+            // TimeText owns the title and its measured refresh anchor.
+            Box(Modifier.fillMaxWidth())
+        } else {
+            val side = maxOf(14.dp, (LocalConfiguration.current.screenWidthDp * 0.073f).dp)
+            val defaults = ListHeaderDefaults.ContentPadding
+            ListHeader(
+                modifier = Modifier.fillMaxWidth().then(if (bottomPadding != null) Modifier.heightIn(min = 1.dp) else Modifier),
+                transformation = transformation,
+                contentPadding = PaddingValues(
+                    start = side,
+                    end = side,
+                    top = defaults.calculateTopPadding(),
+                    bottom = bottomPadding ?: defaults.calculateBottomPadding(),
+                ),
+            ) {
+                Text(title, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+@Composable
+fun TransformingLazyColumnItemScope.WearSectionHeader(
+    transformationSpec: TransformationSpec,
+    title: String,
+) {
+    WearRefreshItem(transformationSpec) {
+        ListSubHeader(
+            modifier = Modifier.fillMaxWidth(),
+            transformation = SurfaceTransformation(transformationSpec),
+        ) {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(title, Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
+        }
+    }
+}
+
+/** Compact rows retain a 48dp minimum touch target and grow for taller content. */
+val WearCompactRowHeight = 48.dp
+
+fun Modifier.wearCompactRow(compact: Boolean): Modifier = if (compact) heightIn(min = WearCompactRowHeight) else this
+
+@Composable
+fun TransformingLazyColumnItemScope.WearActionButton(
+    transformationSpec: TransformationSpec,
+    icon: ImageVector?,
+    label: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    secondaryText: String? = null,
+    colors: ButtonColors = wearButtonColors(),
+    compact: Boolean = false,
+    largeIcon: Boolean = false,
+    isLoading: Boolean = false,
+) {
+    WearRefreshItem(transformationSpec, Modifier.minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)) {
+        WearActionButton(
+            icon, label, onClick,
+            enabled = enabled,
+            secondaryText = secondaryText,
+            colors = colors,
+            compact = compact,
+            largeIcon = largeIcon,
+            isLoading = isLoading,
+            transformation = SurfaceTransformation(transformationSpec),
+        )
+    }
+}
+
+@Composable
+fun WearActionButton(
+    icon: ImageVector?,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    secondaryText: String? = null,
+    colors: ButtonColors = wearButtonColors(),
+    compact: Boolean = false,
+    largeIcon: Boolean = false,
+    isLoading: Boolean = false,
+    transformation: SurfaceTransformation? = null,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.fillMaxWidth().wearCompactRow(compact),
+        transformation = transformation,
+        colors = colors,
+        contentPadding = if (largeIcon) ButtonDefaults.ButtonWithLargeIconContentPadding else ButtonDefaults.ContentPadding,
+        icon = icon?.let { { if (isLoading) WearLoadingIndicator(Modifier.size(ButtonDefaults.IconSize)) else Icon(it, contentDescription = null, modifier = Modifier.size(if (largeIcon) ButtonDefaults.LargeIconSize else ButtonDefaults.IconSize)) } },
+        secondaryLabel = secondaryText?.let { text -> { WearAutoMarqueeText(text, maxLines = 2) } },
+    ) { WearAutoMarqueeText(label) }
+}
+
+@Composable
+fun WearBadge(
+    text: String,
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.tertiary,
+    contentColor: Color = MaterialTheme.colorScheme.onTertiary,
+    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyExtraSmall,
+    horizontalPadding: androidx.compose.ui.unit.Dp = 4.dp,
+) {
+    Text(
+        text,
+        modifier = modifier
+            .background(containerColor, MaterialTheme.shapes.extraSmall)
+            .padding(horizontal = horizontalPadding),
+        color = contentColor,
+        style = style,
+        maxLines = 1,
+    )
+}
+
+@Composable
+fun TransformingLazyColumnItemScope.WearEmptyState(transformationSpec: TransformationSpec, icon: ImageVector, text: String) {
+    WearScaledItem(transformationSpec) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.LargeIconSize))
+            Text(
+                text,
+                modifier = Modifier.padding(top = 8.dp),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+// An empty item adds another 4dp gap, giving 8dp between groups at the default spacing.
+fun TransformingLazyColumnScope.wearGroupGap(key: Any) {
+    item(key = key, contentType = "wear-group-gap") { Box(Modifier) }
+}
+
+/** Scale a custom or text-only item with the same height and visual spec as Wear Material items. */
+@Composable
+fun TransformingLazyColumnItemScope.WearScaledItem(
+    transformationSpec: TransformationSpec,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    content: @Composable BoxScope.() -> Unit,
+) {
+    Box(
+        modifier = Modifier.graphicsLayer {
+            with(transformationSpec) { applyContainerTransformation(scrollProgress) }
+        }.then(modifier.transformedHeight(this, transformationSpec)).graphicsLayer {
+            with(transformationSpec) { applyContentTransformation(scrollProgress) }
+        },
+        content = content,
+    )
+}
