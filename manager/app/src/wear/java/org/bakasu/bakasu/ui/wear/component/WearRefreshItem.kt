@@ -8,9 +8,8 @@ import androidx.wear.compose.material3.lazy.TransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 
 /**
- * Moves the complete Material surface, including its hit target, outside its offscreen layer.
- * List measurement and edge padding belong to this outer item; the child keeps its visual
- * SurfaceTransformation but must not apply the refresh offset or transformedHeight again.
+ * Applies list measurement and edge padding outside the Material surface's offscreen layer.
+ * The child keeps its visual SurfaceTransformation but must not apply transformedHeight again.
  */
 @Composable
 internal fun TransformingLazyColumnItemScope.WearRefreshItem(
@@ -19,7 +18,7 @@ internal fun TransformingLazyColumnItemScope.WearRefreshItem(
     content: @Composable () -> Unit,
 ) {
     Box(
-        modifier = Modifier.wearRefreshOffset().then(modifier).transformedHeight(this, transformationSpec),
+        modifier = modifier.transformedHeight(this, transformationSpec),
         propagateMinConstraints = true,
     ) { content() }
 }

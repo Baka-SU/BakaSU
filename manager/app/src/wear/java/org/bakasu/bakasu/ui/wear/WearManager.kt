@@ -760,10 +760,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                             logError = null
                                             sulogViewModel.dispatch(SulogUiAction.Enable)
                                         },
-                                        onRefresh = {
-                                            logError = null
-                                            sulogViewModel.dispatch(SulogUiAction.Refresh)
-                                        },
                                         onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.Logs)) },
                                         onEntry = { open(WearRoute.LogEntry(it.key)) },
                                         error = logError,
@@ -804,10 +800,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         onEnable = {
                                             logError = null
                                             sulogViewModel.dispatch(SulogUiAction.Enable)
-                                        },
-                                        onRefresh = {
-                                            logError = null
-                                            sulogViewModel.dispatch(SulogUiAction.Refresh)
                                         },
                                         onEntry = { open(WearRoute.LogEntry(it.key)) },
                                         onEditSearch = logSearchInput,
@@ -1363,7 +1355,6 @@ private fun WearMainPages(
                             SUPERUSER -> WearSuperUserPage(
                                 state = superuser,
                                 error = superuserError,
-                                onRefresh = { onSuperUser(SuperUserUiAction.Refresh) },
                                 onBack = { activity?.finish() },
                                 onOpenPanel = { onOpen(WearRoute.Operations(WearOperationsPage.SuperUser)) },
                                 hasOperationsPanel = true,
@@ -1376,7 +1367,6 @@ private fun WearMainPages(
                                 state = modules,
                                 moduleIcons = moduleIcons,
                                 error = moduleError,
-                                onRefresh = { onModule(ModuleUiAction.Refresh(manual = true)) },
                                 onOpenPanel = { onOpen(WearRoute.Operations(WearOperationsPage.Modules)) },
                                 hasOperationsPanel = true,
                                 listState = moduleListState,

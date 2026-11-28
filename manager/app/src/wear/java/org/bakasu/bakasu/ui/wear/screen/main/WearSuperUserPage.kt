@@ -37,7 +37,6 @@ import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsJumpPageWidget
 internal fun WearSuperUserPage(
     state: SuperUserUiState,
     error: String?,
-    onRefresh: () -> Unit,
     onAppClick: (Int, String) -> Unit,
     onBack: () -> Unit,
     onOpenPanel: () -> Unit,
@@ -51,7 +50,7 @@ internal fun WearSuperUserPage(
     WearErrorDialog(error.takeUnless { state.isRefreshing })
     WearList(
         pageTitle = stringResource(R.string.superuser),
-        isLoading = loading, isRefreshing = state.isRefreshing && !loading, onRefresh = onRefresh,
+        isLoading = loading, isRefreshing = state.isRefreshing && !loading,
         onBack = onBack, onOpenPanel = onOpenPanel, panelLabel = stringResource(R.string.wear_operations),
         hasOperationsPanel = hasOperationsPanel,
         snap = true, listState = listState, backToTop = backToTop,

@@ -28,7 +28,6 @@ import org.bakasu.bakasu.domain.model.RepositoryFailure
 internal fun WearLoadFailureScreen(reason: String, onBack: () -> Unit, onRetry: () -> Unit, retryInEdgeButton: Boolean = false) {
     WearList(
         onBack = onBack,
-        onRefresh = onRetry,
         onConfirm = if (retryInEdgeButton) onRetry else null,
         confirmLabel = if (retryInEdgeButton) stringResource(R.string.network_retry) else null,
     ) { spec ->

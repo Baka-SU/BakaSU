@@ -62,7 +62,7 @@ fun TransformingLazyColumnItemScope.WearInfoCard(
         transformation?.createContainerPainter(background, shape, border) ?: background
     }
     Column(
-        modifier = (if (transformed) Modifier.wearRefreshOffset() else Modifier)
+        modifier = Modifier
             .graphicsLayer { transformation?.let { with(it) { applyContainerTransformation() } } }
             .then(if (transformed) modifier.transformedHeight(this, transformationSpec) else modifier)
             .fillMaxWidth()

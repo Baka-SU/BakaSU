@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.material.icons.Icons
@@ -26,7 +25,6 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
@@ -54,7 +52,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.LocalScreenIsActive
@@ -94,18 +91,6 @@ val LocalWearPanelHosted = compositionLocalOf { false }
  */
 val LocalWearPanelPull = compositionLocalOf { mutableFloatStateOf(0f) }
 
-internal val LocalWearRefreshOffset = compositionLocalOf { 0.dp }
-
-/**
- * Move the complete row, including its hit target, while keeping the title and scroll anchor still.
- * Apply outside the surface: Material Card/Button prepend an offscreen layer to their modifier.
- */
-@Composable
-internal fun Modifier.wearRefreshOffset(): Modifier {
-    val offset = LocalWearRefreshOffset.current
-    return this.offset { IntOffset(0, offset.roundToPx()) }
-}
-
 /**
  * A Wear screen whose crown and vertical touch gestures scroll only its own content.
  *
@@ -119,8 +104,6 @@ fun WearList(
     isLoading: Boolean = false,
     isRefreshing: Boolean = false,
     isBusy: Boolean = false,
-    // Kept source-compatible for callers migrating to operations menus.
-    @Suppress("UNUSED_PARAMETER") onRefresh: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
     onConfirm: (() -> Unit)? = null,
     confirmLabel: String? = null,
@@ -379,82 +362,80 @@ fun WearList(
             } else {
                 contentPadding.calculateTopPadding()
             }
-            CompositionLocalProvider(LocalWearRefreshOffset provides 0.dp) {
-                Column(
-                    Modifier.fillMaxSize().graphicsLayer {
-                        translationY = if (panelHosted && onClosePanel != null) {
-                            0f
-                        } else if (!hasOperationsPanel || pullProgress.floatValue < 0f) {
-                            animatedOffset
-                        } else {
-                            0f
+            Column(
+                Modifier.fillMaxSize().graphicsLayer {
+                    translationY = if (panelHosted && onClosePanel != null) {
+                        0f
+                    } else if (!hasOperationsPanel || pullProgress.floatValue < 0f) {
+                        animatedOffset
+                    } else {
+                        0f
+                    }
+                },
+            ) {
+                if (fixedHeader != null || keepRefreshSpace) {
+                    Box(
+                        Modifier.fillMaxWidth().padding(
+                            start = contentPadding.calculateStartPadding(layoutDirection),
+                            end = contentPadding.calculateEndPadding(layoutDirection),
+                            top = if (keepRefreshSpace) pinnedTopPadding else contentPadding.calculateTopPadding(),
+                            bottom = if (fixedHeader != null && !keepRefreshSpace) itemSpacing else 0.dp,
+                        ),
+                    ) {
+                        if (fixedHeader != null) {
+                            fixedHeader()
+                        } else if (pinTitle) {
+                            val progress = (refreshOffset / refreshHeight).coerceIn(0f, 1f)
+                            WearPageHeader(pageTitle, bottomPadding = titleBottomPadding * (1f - progress))
                         }
-                    },
-                ) {
-                    if (fixedHeader != null || keepRefreshSpace) {
-                        Box(
-                            Modifier.fillMaxWidth().padding(
+                    }
+                }
+                if (keepRefreshSpace) {
+                    Box(Modifier.fillMaxWidth().height(refreshOffset).clipToBounds(), contentAlignment = Alignment.TopCenter) {
+                        WearLoadingIndicator(
+                            Modifier.padding(top = WearRefreshSpacing).semantics { contentDescription = loadingDescription },
+                            contained = true,
+                        )
+                    }
+                }
+                Box(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
+                    TransformingLazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        userScrollEnabled = !isRefreshing,
+                        state = listState,
+                        contentPadding = if (fixedHeader == null && !keepRefreshSpace) {
+                            contentPadding
+                        } else {
+                            PaddingValues(
                                 start = contentPadding.calculateStartPadding(layoutDirection),
                                 end = contentPadding.calculateEndPadding(layoutDirection),
-                                top = if (keepRefreshSpace) pinnedTopPadding else contentPadding.calculateTopPadding(),
-                                bottom = if (fixedHeader != null && !keepRefreshSpace) itemSpacing else 0.dp,
-                            ),
-                        ) {
-                            if (fixedHeader != null) {
-                                fixedHeader()
-                            } else if (pinTitle) {
-                                val progress = (refreshOffset / refreshHeight).coerceIn(0f, 1f)
-                                WearPageHeader(pageTitle!!, bottomPadding = titleBottomPadding * (1f - progress))
-                            }
-                        }
-                    }
-                    if (keepRefreshSpace) {
-                        Box(Modifier.fillMaxWidth().height(refreshOffset).clipToBounds(), contentAlignment = Alignment.TopCenter) {
-                            WearLoadingIndicator(
-                                Modifier.padding(top = WearRefreshSpacing).semantics { contentDescription = loadingDescription },
-                                contained = true,
+                                bottom = contentPadding.calculateBottomPadding(),
                             )
-                        }
-                    }
-                    Box(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
-                        TransformingLazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            userScrollEnabled = !isRefreshing,
-                            state = listState,
-                            contentPadding = if (fixedHeader == null && !keepRefreshSpace) {
-                                contentPadding
-                            } else {
-                                PaddingValues(
-                                    start = contentPadding.calculateStartPadding(layoutDirection),
-                                    end = contentPadding.calculateEndPadding(layoutDirection),
-                                    bottom = contentPadding.calculateBottomPadding(),
-                                )
-                            },
-                            verticalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.Top),
-                            flingBehavior = if (snap) {
-                                TransformingLazyColumnDefaults.snapFlingBehavior(listState)
-                            } else {
-                                ScrollableDefaults.flingBehavior()
-                            },
-                            rotaryScrollableBehavior = rotaryBehavior,
-                        ) {
-                            if (pageTitle != null) {
-                                item {
-                                    // Retain index zero while refreshing so existing item anchors stay valid.
-                                    if (!pinTitle) WearPageHeader(transformationSpec, pageTitle) else Spacer(Modifier.height(with(density) { 1.toDp() }))
-                                }
+                        },
+                        verticalArrangement = Arrangement.spacedBy(itemSpacing, Alignment.Top),
+                        flingBehavior = if (snap) {
+                            TransformingLazyColumnDefaults.snapFlingBehavior(listState)
+                        } else {
+                            ScrollableDefaults.flingBehavior()
+                        },
+                        rotaryScrollableBehavior = rotaryBehavior,
+                    ) {
+                        if (pageTitle != null) {
+                            item {
+                                // Retain index zero while refreshing so existing item anchors stay valid.
+                                if (!pinTitle) WearPageHeader(transformationSpec, pageTitle) else Spacer(Modifier.height(with(density) { 1.toDp() }))
                             }
-                            content(transformationSpec)
-                            if (!configuration.isScreenRound && hasFooterButton) {
-                                item {
-                                    WearPageFooterButton(
-                                        onClick = onFooterClick,
-                                        enabled = footerEnabled,
-                                        icon = footerIcon,
-                                        contentDescription = if (onConfirm != null) confirmLabel ?: footerDescription else footerDescription,
-                                        label = confirmLabel.takeIf { onConfirm != null },
-                                    )
-                                }
+                        }
+                        content(transformationSpec)
+                        if (!configuration.isScreenRound && hasFooterButton) {
+                            item {
+                                WearPageFooterButton(
+                                    onClick = onFooterClick,
+                                    enabled = footerEnabled,
+                                    icon = footerIcon,
+                                    contentDescription = if (onConfirm != null) confirmLabel ?: footerDescription else footerDescription,
+                                    label = confirmLabel.takeIf { onConfirm != null },
+                                )
                             }
                         }
                     }
