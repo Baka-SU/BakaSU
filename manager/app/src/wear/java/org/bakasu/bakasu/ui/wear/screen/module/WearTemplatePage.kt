@@ -4,7 +4,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Save
@@ -32,7 +31,6 @@ import org.bakasu.bakasu.ui.viewmodel.TemplateViewModel
 import org.bakasu.bakasu.ui.wear.WearNavigator
 import org.bakasu.bakasu.ui.wear.WearRoute
 import org.bakasu.bakasu.ui.wear.component.LocalWearToast
-import org.bakasu.bakasu.ui.wear.component.WearActionButton
 import org.bakasu.bakasu.ui.wear.component.WearEmptyState
 import org.bakasu.bakasu.ui.wear.component.WearInfoCard
 import org.bakasu.bakasu.ui.wear.component.WearList
@@ -68,7 +66,7 @@ internal fun WearTemplatePage(
 ) {
     val listState = rememberTransformingLazyColumnState()
     val shownTemplates = if (searchResults) state.searchResults else state.templateList
-    // A saved template is deleted only after confirmation; the revealed action only asks for it.
+    // Local templates are deleted only after confirmation; cloud templates stay read-only.
     var pendingDelete by remember { mutableStateOf<ProfileTemplate?>(null) }
     val deleteDialog = rememberWearConfirmDialog(
         stringResource(R.string.app_profile_template_delete),
@@ -95,8 +93,20 @@ internal fun WearTemplatePage(
         }
         // Items are keyed by the template ID, so a reveal stays with its template as the list changes.
         LazySegmentedColumn(shownTemplates, { it.id }) { template ->
-            val open = { onOpenTemplate(template.id, !template.local, false) }
-            // Every saved template can be deleted; its source still controls editing.
+            val row: @Composable () -> Unit = {
+                WearSettingsJumpPageWidget(
+                    spec,
+                    template.name.ifBlank { template.id },
+                    { onOpenTemplate(template.id, !template.local, false) },
+                    icon = Icons.Rounded.Description,
+                    description = template.description.ifBlank { null },
+                    transformed = !template.local,
+                )
+            }
+            if (!template.local) {
+                row()
+                return@LazySegmentedColumn
+            }
             WearSwipeToDelete(
                 spec,
                 listState.isScrollInProgress,
@@ -105,16 +115,8 @@ internal fun WearTemplatePage(
                     pendingDelete = template
                     deleteDialog.show()
                 },
-            ) {
-                WearSettingsJumpPageWidget(
-                    spec,
-                    template.name.ifBlank { template.id },
-                    open,
-                    icon = Icons.Rounded.Description,
-                    description = template.description.ifBlank { null },
-                    transformed = false,
-                )
-            }
+                content = row,
+            )
         }
     }
 }
@@ -183,9 +185,6 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
     val template = state.template
     val fields = TEMPLATE_FIELDS
     val navigator = rememberWearNavigator(onExit = onBack, initialRoute = WearRoute.TemplateEditor(id, readOnly, creation))
-    val delete = rememberWearConfirmDialog(stringResource(R.string.app_profile_template_delete), stringResource(R.string.wear_template_delete_message, template.name.ifBlank { template.id }), destructive = true) {
-        viewModel.dispatch(TemplateEditorUiAction.Delete)
-    }
     val leave by rememberUpdatedState<() -> Unit> {
         if (navigator.backStack.size > 1) {
             navigator.back()
@@ -237,7 +236,6 @@ internal fun WearTemplateEditor(id: String, readOnly: Boolean, creation: Boolean
                             description = template.field(field).ifEmpty { null },
                         )
                     }
-                    if (!creation && !state.loading) item { WearActionButton(spec, Icons.Rounded.Delete, stringResource(R.string.app_profile_template_delete), delete::show) }
                 }
             }
         }
