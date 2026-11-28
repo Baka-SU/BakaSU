@@ -50,7 +50,6 @@ class CompanionBridgeViewModel(
     fun setRemembered(enabled: Boolean) = run { configure.remember(enabled) }
     fun approve(id: String, remember: Boolean?) = configure.approve(id, remember)
     fun presented(id: String) = configure.presented(id)
-    fun completed(id: String, opened: Boolean) = configure.completed(id, opened)
     fun launch(id: String, open: (BridgeRequest) -> Boolean) = configure.launch(id, open)
     fun disconnect() = run { configure.disconnect() }
 

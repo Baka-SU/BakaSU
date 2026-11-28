@@ -382,7 +382,6 @@ private class RemoteFileInputStream(
     @Synchronized override fun close() {
         if (closed) return
         closed = true
-        runCatching { connection.close() }
         onClosed()
     }
 }

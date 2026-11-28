@@ -55,7 +55,6 @@ class BridgeRequestActivity : ComponentActivity() {
                 val lifecycle = LocalLifecycleOwner.current.lifecycle
                 fun reject() {
                     viewModel.approve(id, null)
-                    viewModel.completed(id, false)
                     finish()
                 }
                 BackHandler { reject() }

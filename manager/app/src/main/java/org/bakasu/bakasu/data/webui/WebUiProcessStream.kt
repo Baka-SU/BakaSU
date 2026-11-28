@@ -1,6 +1,5 @@
 package org.bakasu.bakasu.data.webui
 
-import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
@@ -14,17 +13,12 @@ private sealed interface ProcessEvent {
 
 /** Shell callbacks may run on the UI thread. Only this IO consumer writes to Bluetooth. */
 internal suspend fun streamWebUiProcess(process: WebUiProcess, write: (Byte, ByteArray) -> Unit) = withContext(Dispatchers.IO) {
-    val events = Channel<ProcessEvent>(64)
-    fun offer(event: ProcessEvent) {
-        if (events.trySend(event).isFailure) {
-            events.close(IOException("Remote WebUI output queue is full or closed"))
-        }
-    }
+    val events = Channel<ProcessEvent>(Channel.UNLIMITED)
     try {
         process.start(
-            onStdout = { offer(ProcessEvent.Output(WearWebUiProtocol.FRAME_STDOUT, it)) },
-            onStderr = { offer(ProcessEvent.Output(WearWebUiProtocol.FRAME_STDERR, it)) },
-            onComplete = { offer(ProcessEvent.Exit(it)) },
+            onStdout = { events.trySend(ProcessEvent.Output(WearWebUiProtocol.FRAME_STDOUT, it)) },
+            onStderr = { events.trySend(ProcessEvent.Output(WearWebUiProtocol.FRAME_STDERR, it)) },
+            onComplete = { events.trySend(ProcessEvent.Exit(it)) },
         )
         for (event in events) {
             when (event) {

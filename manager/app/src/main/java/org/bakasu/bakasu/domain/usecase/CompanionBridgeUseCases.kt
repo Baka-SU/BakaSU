@@ -22,7 +22,6 @@ class ConfigureCompanionBridgeUseCase(private val repository: CompanionBridgeRep
     }
     fun approve(id: String, remember: Boolean?) = repository.approveRequest(id, remember)
     fun presented(id: String) = repository.presentRequest(id)
-    fun completed(id: String, opened: Boolean) = repository.completeRequest(id, opened)
     fun launch(id: String, open: (BridgeRequest) -> Boolean) = repository.launchRequest(id, open)
     fun answerPermission(id: String, granted: Boolean) = repository.answerPermission(id, granted)
     fun cancelTransfer() = repository.cancelTransfer()

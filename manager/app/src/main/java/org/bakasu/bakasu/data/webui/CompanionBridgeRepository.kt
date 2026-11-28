@@ -356,11 +356,6 @@ class CompanionBridgeRepository(
     }
 
     @Synchronized
-    fun completeRequest(id: String, opened: Boolean) {
-        pendingRequest?.takeIf { it.request.id == id }?.opened?.complete(opened)
-    }
-
-    @Synchronized
     fun launchRequest(id: String, open: (BridgeRequest) -> Boolean) {
         val request = mutableRequest.value?.takeIf { it.id == id && it.readyToOpen } ?: return
         pendingRequest?.takeIf { it.request.id == id }?.launch { open(request) }
