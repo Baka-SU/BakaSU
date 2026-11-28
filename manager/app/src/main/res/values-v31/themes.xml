@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.KernelSU.Starting" parent="Theme.SplashScreen">
+        <item name="postSplashScreenTheme">@style/Theme.KernelSU</item>
+    </style>
+</resources>
