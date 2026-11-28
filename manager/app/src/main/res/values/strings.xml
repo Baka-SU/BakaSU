@@ -42,7 +42,6 @@
     <string name="module_failed_to_enable">Failed to enable module: %s</string>
     <string name="module_failed_to_disable">Failed to disable module: %s</string>
     <string name="module_empty">No module installed</string>
-    <string name="local_network_permission_description">Local network permission is needed to check module updates from local network hosts.</string>
     <string name="module">Modules</string>
     <string name="module_repo">Module Repo</string>
     <string name="module_sort_action_first">Sort (Action first)</string>

@@ -42,7 +42,6 @@
     <string name="module_failed_to_enable">无法启用模块：%s</string>
     <string name="module_failed_to_disable">无法禁用模块：%s</string>
     <string name="module_empty">没有安装模块</string>
-    <string name="local_network_permission_description">检查局域网服务器上的模块更新需要本地网络权限。</string>
     <string name="module">模块</string>
     <string name="module_repo">模块仓库</string>
     <string name="module_sort_action_first">排序（可执行优先）</string>
