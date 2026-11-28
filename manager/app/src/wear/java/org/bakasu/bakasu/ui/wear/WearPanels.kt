@@ -123,10 +123,6 @@ internal fun WearOperationsPanel(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.wear_search_umount_paths), onSearch),
         )
 
-        WearOperationsPage.OnlineTemplates -> listOf(
-            WearIconAction(Icons.Rounded.Search, stringResource(R.string.wear_template_search), onSearch),
-        )
-
         WearOperationsPage.DynamicManagerApps -> listOf(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.search_apps), onSearch),
         )
@@ -138,7 +134,6 @@ internal fun WearOperationsPanel(
         WearOperationsPage.Templates -> listOf(
             WearIconAction(Icons.Rounded.Search, stringResource(R.string.wear_template_search), onSearch),
             WearIconAction(Icons.Rounded.Add, stringResource(R.string.app_profile_template_create), { onOpen(WearRoute.TemplateEditor("", false, true)) }),
-            WearIconAction(Icons.Rounded.Cloud, stringResource(R.string.wear_template_view_online), { onOpen(WearRoute.OnlineTemplates) }),
             WearIconAction(Icons.Rounded.ContentPaste, stringResource(R.string.app_profile_import_from_clipboard), onImportTemplates),
             WearIconAction(Icons.Rounded.ContentCopy, stringResource(R.string.app_profile_export_to_clipboard), onExportTemplates),
         )

@@ -31193,7 +31193,6 @@ SPLorg/bakasu/bakasu/domain/model/UmountState;->isLoading()Z
 SPLorg/bakasu/bakasu/domain/model/UmountState;->isRefreshing()Z
 Lorg/bakasu/bakasu/domain/text/TextTransliterator;
 Lorg/bakasu/bakasu/domain/usecase/AddModuleRepositoryUseCase;
-Lorg/bakasu/bakasu/domain/usecase/AddOnlineProfileTemplateUseCase;
 Lorg/bakasu/bakasu/domain/usecase/AddUmountPathUseCase;
 SPLorg/bakasu/bakasu/domain/usecase/AddUmountPathUseCase;-><clinit>()V
 SPLorg/bakasu/bakasu/domain/usecase/AddUmountPathUseCase;-><init>(Lorg/bakasu/bakasu/data/kernel/UmountRepository;)V
@@ -31252,7 +31251,6 @@ SPLorg/bakasu/bakasu/domain/usecase/ExportProfileTemplatesUseCase;-><clinit>()V
 SPLorg/bakasu/bakasu/domain/usecase/ExportProfileTemplatesUseCase;-><init>(Lorg/bakasu/bakasu/data/profile/ProfileTemplateRepository;)V
 Lorg/bakasu/bakasu/domain/usecase/ExtractModuleIdUseCase;
 Lorg/bakasu/bakasu/domain/usecase/ExtractModuleNameUseCase;
-Lorg/bakasu/bakasu/domain/usecase/FetchOnlineProfileTemplatesUseCase;
 Lorg/bakasu/bakasu/domain/usecase/FetchRemoteTextUseCase;
 Lorg/bakasu/bakasu/domain/usecase/FindModuleUpdateSourceUseCase;
 SPLorg/bakasu/bakasu/domain/usecase/FindModuleUpdateSourceUseCase;-><clinit>()V
@@ -31861,7 +31859,6 @@ SPLorg/bakasu/bakasu/ui/viewmodel/ModuleViewModel$state$1;-><init>(Lorg/bakasu/b
 SPLorg/bakasu/bakasu/ui/viewmodel/ModuleViewModel$state$1;->invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
 SPLorg/bakasu/bakasu/ui/viewmodel/ModuleViewModel$state$1;->invoke(Lorg/bakasu/bakasu/domain/model/InstalledModulesState;Lorg/bakasu/bakasu/ui/viewmodel/ModuleControls;Lorg/bakasu/bakasu/domain/model/ModulePreferences;Ljava/util/Map;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 SPLorg/bakasu/bakasu/ui/viewmodel/ModuleViewModel$state$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
-Lorg/bakasu/bakasu/ui/viewmodel/OnlineTemplateViewModel;
 Lorg/bakasu/bakasu/ui/viewmodel/PredictiveBackAnimation;
 SPLorg/bakasu/bakasu/ui/viewmodel/PredictiveBackAnimation;->$values()[Lorg/bakasu/bakasu/ui/viewmodel/PredictiveBackAnimation;
 SPLorg/bakasu/bakasu/ui/viewmodel/PredictiveBackAnimation;-><clinit>()V
@@ -33499,22 +33496,6 @@ Lorg/bakasu/bakasu/ui/wear/WearRoute$ModuleUpdate;
 Lorg/bakasu/bakasu/ui/wear/WearRoute$OnlineModule;
 Lorg/bakasu/bakasu/ui/wear/WearRoute$OnlineModuleDownload;
 Lorg/bakasu/bakasu/ui/wear/WearRoute$OnlineModuleSection;
-Lorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplateDetail;
-Lorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplateSearch;
-PLorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplateSearch;-><clinit>()V
-PLorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplateSearch;-><init>()V
-PLorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplateSearch$$ExternalSyntheticLambda0;-><init>()V
-Lorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplateSearchResults;
-SPLorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplateSearchResults;-><clinit>()V
-SPLorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplateSearchResults;-><init>()V
-Lorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplateSearchResults$$ExternalSyntheticLambda0;
-SPLorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplateSearchResults$$ExternalSyntheticLambda0;-><init>()V
-Lorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplates;
-SPLorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplates;-><clinit>()V
-SPLorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplates;-><init>()V
-SPLorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplates;->equals(Ljava/lang/Object;)Z
-Lorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplates$$ExternalSyntheticLambda0;
-SPLorg/bakasu/bakasu/ui/wear/WearRoute$OnlineTemplates$$ExternalSyntheticLambda0;-><init>()V
 Lorg/bakasu/bakasu/ui/wear/WearRoute$Operations;
 PLorg/bakasu/bakasu/ui/wear/WearRoute$Operations;-><clinit>()V
 PLorg/bakasu/bakasu/ui/wear/WearRoute$Operations;-><init>(Lorg/bakasu/bakasu/ui/wear/WearOperationsPage;)V

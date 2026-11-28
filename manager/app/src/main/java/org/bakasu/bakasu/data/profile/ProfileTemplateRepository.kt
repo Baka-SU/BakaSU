@@ -2,7 +2,6 @@ package org.bakasu.bakasu.data.profile
 
 import java.text.Collator
 import java.util.Locale
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -68,54 +67,6 @@ class ProfileTemplateRepository(
         } finally {
             mutableRefreshing.value = false
         }
-    }
-
-    /** Partial downloads remain browsable; a nonempty index with no downloaded bodies is a failure. */
-    private suspend fun fetchRemoteBodies(): Map<String, String>? {
-        val indexBody = networkRequestRepository.fetch(TEMPLATE_INDEX_URL).getOrNull() ?: return null
-        val ids = runCatching { JSONArray(indexBody) }.getOrElse {
-            throw ProfileTemplateException(ProfileTemplateFailure.Invalid)
-        }
-        val bodies = (0 until ids.length()).mapNotNull { index ->
-            val id = ids.optString(index)
-            networkRequestRepository.fetch(TEMPLATE_URL.format(id)).getOrNull()?.let { id to it }
-        }.toMap()
-        return bodies.takeUnless { ids.length() > 0 && it.isEmpty() }
-    }
-
-    /** Browses the official source on this device; only [addOnline] stores a chosen template. */
-    suspend fun fetchOnline(): Result<List<ProfileTemplate>> = withContext(Dispatchers.IO) {
-        val online = networkStatusRepository.isAvailable()
-        val bodies = try {
-            fetchRemoteBodies()
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            return@withContext Result.failure(error)
-        } ?: return@withContext Result.failure(ProfileTemplateException(if (online) ProfileTemplateFailure.RequestFailed else ProfileTemplateFailure.Offline))
-        val templates = bodies.values.mapNotNull { body ->
-            runCatching { JSONObject(body).toTemplate() }.getOrNull()?.copy(local = false)
-        }
-        if (templates.isEmpty() && bodies.isNotEmpty()) {
-            Result.failure(ProfileTemplateException(ProfileTemplateFailure.Invalid))
-        } else {
-            Result.success(templates.sortedWith(compareBy(Collator.getInstance(Locale.getDefault()), ProfileTemplate::name)))
-        }
-    }
-
-    /**
-     * Stores an online template as a local one, which App Profile can select. A local template
-     * with the same ID is kept, not overwritten; a copy saved by an earlier synchronization is.
-     */
-    suspend fun addOnline(template: ProfileTemplate): Result<Unit> = withContext(Dispatchers.IO) {
-        if (readTemplate(template.id)?.local == true) {
-            return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.Conflict))
-        }
-        if (!ksuCliRepository.setAppProfileTemplate(template.id, template.copy(local = true).toJson().toString())) {
-            return@withContext Result.failure(ProfileTemplateException(ProfileTemplateFailure.Command("add failed")))
-        }
-        refreshLocalCache()
-        Result.success(Unit)
     }
 
     suspend fun get(id: String): Result<ProfileTemplate> = withContext(Dispatchers.IO) {
@@ -196,9 +147,14 @@ class ProfileTemplateRepository(
     }
 
     private suspend fun fetchRemoteTemplates(): Boolean = runCatching {
-        val bodies = fetchRemoteBodies() ?: return false
-        var fetchedAny = bodies.isEmpty()
-        bodies.forEach { (id, body) ->
+        val ids = networkRequestRepository.fetch(TEMPLATE_INDEX_URL)
+            .mapCatching { JSONArray(it) }
+            .getOrElse { return false }
+        var fetchedAny = ids.length() == 0
+        (0 until ids.length()).forEach { index ->
+            val id = ids.optString(index)
+            val body = networkRequestRepository.fetch(TEMPLATE_URL.format(id)).getOrNull()
+                ?: return@forEach
             val template =
                 runCatching { JSONObject(body).toTemplate() }.getOrNull() ?: return@forEach
             if (ksuCliRepository.setAppProfileTemplate(
@@ -210,10 +166,7 @@ class ProfileTemplateRepository(
             }
         }
         fetchedAny
-    }.getOrElse { error ->
-        if (error is CancellationException) throw error
-        false
-    }
+    }.getOrDefault(false)
 
     private fun readTemplate(id: String): ProfileTemplate? = runCatching {
         JSONObject(ksuCliRepository.getAppProfileTemplate(id)).toTemplate()

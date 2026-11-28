@@ -62,7 +62,6 @@ import org.bakasu.bakasu.data.webui.CompanionBridgeRepository
 import org.bakasu.bakasu.data.webui.WebUiRepository
 import org.bakasu.bakasu.domain.text.TextTransliterator
 import org.bakasu.bakasu.domain.usecase.AddModuleRepositoryUseCase
-import org.bakasu.bakasu.domain.usecase.AddOnlineProfileTemplateUseCase
 import org.bakasu.bakasu.domain.usecase.AddUmountPathUseCase
 import org.bakasu.bakasu.domain.usecase.ApplyLanguageUseCase
 import org.bakasu.bakasu.domain.usecase.BackupAllowlistUseCase
@@ -84,7 +83,6 @@ import org.bakasu.bakasu.domain.usecase.ExecuteModuleActionUseCase
 import org.bakasu.bakasu.domain.usecase.ExportProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleIdUseCase
 import org.bakasu.bakasu.domain.usecase.ExtractModuleNameUseCase
-import org.bakasu.bakasu.domain.usecase.FetchOnlineProfileTemplatesUseCase
 import org.bakasu.bakasu.domain.usecase.FetchRemoteTextUseCase
 import org.bakasu.bakasu.domain.usecase.GenerateBugreportUseCase
 import org.bakasu.bakasu.domain.usecase.GetAppProfileUseCase
@@ -392,8 +390,6 @@ val useCaseModule = module {
     factoryOf(::ObserveProfileTemplateRefreshingUseCase)
     factoryOf(::ObserveProfileTemplateOfflineUseCase)
     factoryOf(::RefreshProfileTemplatesUseCase)
-    factoryOf(::FetchOnlineProfileTemplatesUseCase)
-    factoryOf(::AddOnlineProfileTemplateUseCase)
     factoryOf(::GetProfileTemplateUseCase)
     factoryOf(::SaveProfileTemplateUseCase)
     factoryOf(::DeleteProfileTemplateUseCase)

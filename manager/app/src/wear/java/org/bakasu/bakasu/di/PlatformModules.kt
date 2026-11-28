@@ -7,7 +7,6 @@ import org.bakasu.bakasu.domain.usecase.OpenWearExternalLinkUseCase
 import org.bakasu.bakasu.domain.usecase.ResolveInstalledModuleIconUseCase
 import org.bakasu.bakasu.ui.viewmodel.ModuleChangelogViewModel
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadViewModel
-import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearDownloadsViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearFileViewModel
 import org.bakasu.bakasu.ui.viewmodel.WearLinkViewModel
@@ -35,7 +34,6 @@ internal fun Module.platformViewModels() {
     viewModelOf(::WearFileViewModel)
     viewModelOf(::WearLinkViewModel)
     viewModelOf(::WearPreferencesViewModel)
-    viewModelOf(::OnlineTemplateViewModel)
     viewModelOf(::ModuleDownloadViewModel)
     viewModel { parameters -> WearSearchViewModel(parameters[0], get(), get()) }
     viewModel { parameters -> ModuleChangelogViewModel(parameters.get(), get()) }

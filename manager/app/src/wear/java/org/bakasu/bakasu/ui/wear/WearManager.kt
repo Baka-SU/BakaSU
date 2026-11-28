@@ -42,8 +42,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.lifecycle.viewmodel.ViewModelStoreProvider
-import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreProvider
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
@@ -85,8 +83,6 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleUiAction
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiEvent
 import org.bakasu.bakasu.ui.viewmodel.ModuleUiState
 import org.bakasu.bakasu.ui.viewmodel.ModuleViewModel
-import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateUiAction
-import org.bakasu.bakasu.ui.viewmodel.OnlineTemplateViewModel
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiAction
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiEvent
 import org.bakasu.bakasu.ui.viewmodel.SettingsUiState
@@ -158,9 +154,6 @@ import org.bakasu.bakasu.ui.wear.screen.module.WearModuleRepoSortPage
 import org.bakasu.bakasu.ui.wear.screen.module.WearModuleUpdatePage
 import org.bakasu.bakasu.ui.wear.screen.module.WearOnlineModulePage
 import org.bakasu.bakasu.ui.wear.screen.module.WearOnlineModuleSectionPage
-import org.bakasu.bakasu.ui.wear.screen.module.WearOnlineTemplateDetail
-import org.bakasu.bakasu.ui.wear.screen.module.WearOnlineTemplateFeedback
-import org.bakasu.bakasu.ui.wear.screen.module.WearOnlineTemplatePage
 import org.bakasu.bakasu.ui.wear.screen.module.WearRepositorySourcePage
 import org.bakasu.bakasu.ui.wear.screen.module.WearRepositorySourcesPage
 import org.bakasu.bakasu.ui.wear.screen.module.WearSelectionPage
@@ -467,9 +460,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         WearIntentDispatcher(intentChannel, navigator, installer)
     }
     val viewModelStores = rememberViewModelStoreProvider()
-    if (WearRoute.OnlineTemplates in navigator.backStack) {
-        WearOnlineTemplateFeedback(onlineTemplateViewModel(viewModelStores))
-    }
     WearTimeTitleLayout(navigator.top to mainTitle) {
         AppScaffold(
             timeText = { WearTimeText(stringResource((navigator.top ?: WearRoute.Main).titleResource(mainTitle))) },
@@ -884,50 +874,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                         searchResults = true,
                                     )
                                 }
-                                entry<WearRoute.OnlineTemplates>(clazzContentKey = { OnlineTemplatesContentKey }) {
-                                    val menu = navigator.operationsFor(WearRoute.OnlineTemplates)
-                                    WearOnlineTemplatePage(
-                                        viewModel = onlineTemplateViewModel(viewModelStores),
-                                        onOpenTemplate = { open(WearRoute.OnlineTemplateDetail(it)) },
-                                        onBack = ::back,
-                                        onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.OnlineTemplates)) },
-                                        menuOpen = menu != null,
-                                        menuActive = menu != null && navigator.top == menu,
-                                        onClosePanel = { if (menu != null && navigator.top == menu) back() },
-                                        onSearch = { open(WearRoute.OnlineTemplateSearch) },
-                                    )
-                                }
-                                entry<WearRoute.OnlineTemplateSearch> {
-                                    val viewModel = onlineTemplateViewModel(viewModelStores)
-                                    val state by viewModel.state.collectAsStateWithLifecycle()
-                                    WearSearchPage(stringResource(R.string.wear_template_search), "online-templates", state.search, ::back) { query ->
-                                        back()
-                                        if (navigator.top is WearRoute.Operations) back()
-                                        viewModel.dispatch(OnlineTemplateUiAction.Search(query.trim()))
-                                        if (query.isBlank()) {
-                                            if (navigator.top == WearRoute.OnlineTemplateSearchResults) back()
-                                        } else if (navigator.top != WearRoute.OnlineTemplateSearchResults) {
-                                            open(WearRoute.OnlineTemplateSearchResults)
-                                        }
-                                    }
-                                }
-                                entry<WearRoute.OnlineTemplateSearchResults> {
-                                    val menu = navigator.operationsFor(WearRoute.OnlineTemplateSearchResults)
-                                    WearOnlineTemplatePage(
-                                        viewModel = onlineTemplateViewModel(viewModelStores),
-                                        onOpenTemplate = { open(WearRoute.OnlineTemplateDetail(it)) },
-                                        onBack = ::back,
-                                        onOpenPanel = { open(WearRoute.Operations(WearOperationsPage.OnlineTemplates)) },
-                                        menuOpen = menu != null,
-                                        menuActive = menu != null && navigator.top == menu,
-                                        onClosePanel = { if (menu != null && navigator.top == menu) back() },
-                                        onSearch = { open(WearRoute.OnlineTemplateSearch) },
-                                        searchResults = true,
-                                    )
-                                }
-                                entry<WearRoute.OnlineTemplateDetail> { route ->
-                                    WearOnlineTemplateDetail(onlineTemplateViewModel(viewModelStores), route.id, ::back)
-                                }
                                 entry<WearRoute.TemplateEditor> { route ->
                                     WearTemplateEditor(route.id, route.readOnly, route.creation, { templateBack = it }, { navigator.back() })
                                 }
@@ -1042,13 +988,8 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                     )
                                 }
                             },
-                            pageContent = page@{ key, content ->
+                            pageContent = { key, content ->
                                 val route = key as WearRoute
-                                // The cloud entry owns its ViewModel and refresh menu, so opening a local menu never loads it.
-                                if (route == WearRoute.OnlineTemplates || route == WearRoute.OnlineTemplateSearchResults) {
-                                    content()
-                                    return@page
-                                }
                                 val menu = navigator.operationsFor(route)
                                 val operationsPage = menu?.page ?: when (route) {
                                     WearRoute.Main -> when (mainTitle) {
@@ -1091,7 +1032,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                 } else {
                                                     {
                                                         when (operationsPage) {
-                                                            WearOperationsPage.Home, WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates -> Unit
+                                                            WearOperationsPage.Home, WearOperationsPage.Templates -> Unit
 
                                                             WearOperationsPage.DynamicManagerApps -> dynamicManagerViewModel.dispatch(DynamicManagerUiAction.Refresh)
 
@@ -1116,7 +1057,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                                                     }
                                                 },
                                                 isRefreshing = when (operationsPage) {
-                                                    WearOperationsPage.Templates, WearOperationsPage.OnlineTemplates -> false
+                                                    WearOperationsPage.Templates -> false
                                                     WearOperationsPage.DynamicManagerApps -> dynamicManager.isLoading || dynamicManager.isRefreshing || dynamicManager.isSubmitting
                                                     WearOperationsPage.TemplateChoice -> templateLoading.loading || templateLoading.refreshing
                                                     WearOperationsPage.Home -> home.isRefreshing
@@ -1134,7 +1075,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
 
                                                         WearOperationsPage.Logs -> logSearchInput()
 
-                                                        WearOperationsPage.Home, WearOperationsPage.OnlineTemplates -> Unit
+                                                        WearOperationsPage.Home -> Unit
 
                                                         WearOperationsPage.TemplateChoice -> {
                                                             if (route is WearRoute.AppProfileTemplateChoice) {
@@ -1407,14 +1348,6 @@ private fun WearRoute.BootFlash.toOperation() = FlashOperation.Boot(
     enableAdb = enableAdb,
     forceBackup = forceBackup,
 )
-
-internal const val OnlineTemplatesContentKey = "wear-online-templates"
-
-@Composable
-internal fun onlineTemplateViewModel(provider: ViewModelStoreProvider): OnlineTemplateViewModel {
-    val owner = rememberViewModelStoreOwner(key = OnlineTemplatesContentKey, provider = provider)
-    return koinViewModel(viewModelStoreOwner = owner)
-}
 
 /** Only the loaded home state can identify the first-install shortcut. */
 internal fun HomeDashboardState.canOpenPatchDirectly(): Boolean = isInitialDataLoaded && systemStatus.ksuVersion == null && systemStatus.kernelVersion.isGKI()
