@@ -153,16 +153,13 @@ class ModuleRepoViewModel(
     }
 
     fun resolveAsset(catalogId: String, asset: ModuleReleaseAsset): CatalogModule? = resolveModule(catalogId)?.takeIf { module ->
-        (module.registryMetadata != null || module.repositoryUrl !in observeSources.failures.value) &&
-            isCurrent(module) && module.latestAsset?.assets?.any { it.hasSameIdentity(asset) && it.hasSameVerification(asset) } == true
+        isCurrent(module) && module.latestAsset?.assets?.any { it.hasSameIdentity(asset) && it.hasSameVerification(asset) } == true
     }
 
     suspend fun resolveModuleForInstall(catalogId: String): CatalogModule? {
         val module = resolveModule(catalogId) ?: return null
         val loaded = (getModule(module.moduleId, module.repositoryUrl) as? ModuleCatalogResult.Success)?.value ?: return null
-        return resolveModule(loaded.catalogId)?.takeIf {
-            (it.registryMetadata != null || it.repositoryUrl !in observeSources.failures.value) && it.detailLoaded && isCurrent(it)
-        }
+        return resolveModule(loaded.catalogId)?.takeIf { it.detailLoaded && isCurrent(it) }
     }
 
     fun updateSearch(value: String) {
@@ -179,15 +176,16 @@ class ModuleRepoViewModel(
         val url = activeRepository()
         refreshJob?.takeIf { it.isActive && refreshRequest.value?.first == url }?.let { return it }
         refreshJob?.cancel()
-        return viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-            if (url == null) return@launch
-            refreshRequest.value = url to fromPull
-            try {
-                refreshCatalog(url, force)
-            } finally {
-                if (refreshRequest.value?.first == url) refreshRequest.value = null
-            }
-        }.also { refreshJob = it }
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
+            if (url != null) refreshCatalog(url, force)
+        }
+        refreshJob = job
+        refreshRequest.value = url?.let { it to fromPull }
+        job.invokeOnCompletion {
+            if (refreshJob === job) refreshRequest.value = null
+        }
+        job.start()
+        return job
     }
 
     fun dispatch(action: ModuleRepoUiAction) {

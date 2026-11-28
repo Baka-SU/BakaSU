@@ -477,7 +477,7 @@ val viewModelModule = module {
     viewModelOf(::SuperUserViewModel)
     viewModelOf(::SuSFSViewModel)
     viewModel { parameters -> ModuleRepoViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), parameters.getOrNull<String>()) }
-    viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get()) }
+    viewModel { parameters -> ModuleDetailViewModel(parameters[0], parameters[1], get(), get(), get(), get(), get(), get(), get()) }
     viewModelOf(::RepositorySourcesViewModel)
     viewModelOf(::TemplateViewModel)
     viewModel { parameters ->

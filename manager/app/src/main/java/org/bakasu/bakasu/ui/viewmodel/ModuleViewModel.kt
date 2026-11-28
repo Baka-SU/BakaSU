@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.bakasu.bakasu.BuildConfig
 import org.bakasu.bakasu.data.module.ModulePreferencesRepository
 import org.bakasu.bakasu.domain.model.InstalledModule
 import org.bakasu.bakasu.domain.model.MetaModuleStatus
@@ -242,7 +243,7 @@ class ModuleViewModel(
             {
                 val executable = it.hasWebUi || it.hasActionScript
                 when {
-                    it.metamodule -> 0
+                    it.metamodule && (it.enabled || BuildConfig.FLAVOR == "wear") -> 0
 
                     sortEnabledFirst && sortActionFirst -> when {
                         it.enabled && executable -> 1

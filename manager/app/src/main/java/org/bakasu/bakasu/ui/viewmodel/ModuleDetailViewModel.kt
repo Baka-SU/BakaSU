@@ -25,6 +25,7 @@ import org.bakasu.bakasu.domain.usecase.GetModuleReleaseDetailsUseCase
 import org.bakasu.bakasu.domain.usecase.IsCatalogModuleCurrentUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveCatalogModulesUseCase
 import org.bakasu.bakasu.domain.usecase.ObserveRepositorySourcesUseCase
+import org.bakasu.bakasu.domain.usecase.RefreshModuleCatalogUseCase
 
 data class ModuleDetailUiState(
     val module: CatalogModule? = null,
@@ -61,6 +62,7 @@ class ModuleDetailViewModel(
     private val observeModules: ObserveCatalogModulesUseCase,
     private val observeSources: ObserveRepositorySourcesUseCase,
     private val isCurrent: IsCatalogModuleCurrentUseCase,
+    private val refreshCatalog: RefreshModuleCatalogUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ModuleDetailUiState())
 
@@ -71,7 +73,6 @@ class ModuleDetailViewModel(
         if (observeSources.sources.value.none { it.url == repositoryUrl }) return null
         return observeModules().value.firstOrNull { module ->
             module.moduleId == moduleId && module.repositoryUrl == repositoryUrl &&
-                (module.registryMetadata != null || repositoryUrl !in observeSources.failures.value) &&
                 isCurrent(module) && module.releases.any { release -> release.assets.any { it.hasSameIdentity(asset) && it.hasSameVerification(asset) } }
         }
     }
@@ -117,6 +118,7 @@ class ModuleDetailViewModel(
         if (detailJob?.isActive == true) return
         detailJob = viewModelScope.launch {
             mutableState.update { it.copy(loading = true, error = null, repositoryFailure = null) }
+            if (forceDetail) refreshCatalog(repositoryUrl)
             when (val result = getModule(moduleId, repositoryUrl, forceDetail)) {
                 is ModuleCatalogResult.Success -> mutableState.update {
                     if (observeSources.sources.value.none { source -> source.url == repositoryUrl }) {
@@ -131,7 +133,7 @@ class ModuleDetailViewModel(
                         module = current,
                         loading = false,
                         error = null,
-                        repositoryFailure = null,
+                        repositoryFailure = observeSources.failures.value[repositoryUrl],
                         documents = if (it.module?.registryMetadata?.buildId == current.registryMetadata?.buildId) it.documents else emptyMap(),
                         releaseDetails = emptyMap(),
                     )
