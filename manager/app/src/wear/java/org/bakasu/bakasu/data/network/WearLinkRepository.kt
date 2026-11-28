@@ -15,7 +15,7 @@ import org.bakasu.bakasu.domain.model.BridgeFailure
 
 enum class WearLinkTarget { WEBVIEW, BROWSER, PHONE }
 
-enum class WearLinkFailure { UNSUPPORTED_URL, WEBVIEW_UNAVAILABLE, BROWSER_FAILED, PHONE_UNAVAILABLE, PHONE_APP_MISSING, PHONE_FAILED }
+enum class WearLinkFailure { UNSUPPORTED_URL, WEBVIEW_UNAVAILABLE, BROWSER_FAILED }
 class WearLinkException(val reason: WearLinkFailure, cause: Throwable? = null, val phoneFailure: BridgeFailure? = null) : Exception(reason.name, cause)
 
 /** Remaining handlers belong to this attempt, including an asynchronous WebView failure. */

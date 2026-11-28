@@ -66,11 +66,6 @@ class OnlineTemplateViewModel(
 
     private var loadJob: Job? = null
 
-    fun cancelLoad() {
-        loadJob?.cancel()
-        online.update { it.copy(loading = false) }
-    }
-
     init {
         load()
     }
@@ -88,17 +83,13 @@ class OnlineTemplateViewModel(
         if (loadJob?.isActive == true) return
         online.update { it.copy(loading = true, loadFailure = null, manualRefresh = manual) }
         loadJob = viewModelScope.launch {
-            try {
-                fetchOnlineTemplates().fold(
-                    onSuccess = { templates -> online.update { it.copy(templates = templates, loading = false, hasLoaded = true, loadFailure = null) } },
-                    onFailure = { error ->
-                        if (error is CancellationException) throw error
-                        online.update { it.copy(loading = false, loadFailure = error.toFailure()) }
-                    },
-                )
-            } finally {
-                online.update { it.copy(loading = false) }
-            }
+            fetchOnlineTemplates().fold(
+                onSuccess = { templates -> online.update { it.copy(templates = templates, loading = false, hasLoaded = true, loadFailure = null) } },
+                onFailure = { error ->
+                    if (error is CancellationException) throw error
+                    online.update { it.copy(loading = false, loadFailure = error.toFailure()) }
+                },
+            )
         }
     }
 

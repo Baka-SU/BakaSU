@@ -33,8 +33,8 @@ sealed interface WearLinkEvent {
 
 /** A local link failure, presented separately from the shared phone transfer state. */
 sealed interface WearLinkResult {
-    /** A null [reason] is an unexpected failure; [onPhone] marks a module WebUI the phone could not open. */
-    data class Failed(val reason: WearLinkFailure?, val onPhone: Boolean = false, val bridgeFailure: BridgeFailure? = null, val automaticLink: Boolean = false, val onWatch: Boolean = false) : WearLinkResult
+    /** A null [reason] is an unexpected failure. */
+    data class Failed(val reason: WearLinkFailure?, val bridgeFailure: BridgeFailure? = null, val automaticLink: Boolean = false, val onWatch: Boolean = false) : WearLinkResult
 }
 
 /**
@@ -123,7 +123,7 @@ class WearLinkViewModel(
      */
     fun openWebUi(moduleId: String, moduleName: String) {
         val mode = mode
-        run(onPhone = mode == "phone", automaticLink = mode == "auto", onWatch = mode == "webview") {
+        run(automaticLink = mode == "auto", onWatch = mode == "webview") {
             webViewRequest = null
             val resolution = repository.resolveWebUi(moduleId, moduleName, mode)
             if (resolution.target == WearLinkTarget.WEBVIEW) {
@@ -147,7 +147,7 @@ class WearLinkViewModel(
     }
 
     /** One opening at a time, shown as loading until it ends; a failure becomes the result. */
-    private fun run(onPhone: Boolean = false, automaticLink: Boolean = false, onWatch: Boolean = false, block: suspend () -> Unit) {
+    private fun run(automaticLink: Boolean = false, onWatch: Boolean = false, block: suspend () -> Unit) {
         if (task?.isActive == true) return
         task = viewModelScope.launch {
             mutableLoading.value = true
@@ -162,7 +162,7 @@ class WearLinkViewModel(
                 }
             } catch (error: Exception) {
                 val linkError = error as? WearLinkException
-                mutableResult.value = WearLinkResult.Failed(linkError?.reason, onPhone, linkError?.phoneFailure, automaticLink, onWatch)
+                mutableResult.value = WearLinkResult.Failed(linkError?.reason, linkError?.phoneFailure, automaticLink, onWatch)
             } finally {
                 mutableLoading.value = false
             }
