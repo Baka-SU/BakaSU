@@ -1,0 +1,146 @@
+package org.bakasu.bakasu.ui.viewmodel
+
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import org.bakasu.bakasu.domain.model.ManagerDevice
+import org.bakasu.bakasu.domain.model.ProfileTemplate
+import org.bakasu.bakasu.domain.usecase.DeleteProfileTemplateUseCase
+import org.bakasu.bakasu.domain.usecase.ExportProfileTemplatesUseCase
+import org.bakasu.bakasu.domain.usecase.ImportProfileTemplatesUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplateOfflineUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplateRefreshingUseCase
+import org.bakasu.bakasu.domain.usecase.ObserveProfileTemplatesUseCase
+import org.bakasu.bakasu.domain.usecase.RefreshProfileTemplatesUseCase
+
+data class TemplateUiState(
+    val templateList: List<ProfileTemplate> = emptyList(),
+    val search: String = "",
+    val searchResults: List<ProfileTemplate> = emptyList(),
+    val profileTemplates: List<String> = emptyList(),
+    val profileTemplateNames: List<String> = emptyList(),
+    val isLoading: Boolean = true,
+    val loadFailed: Boolean = false,
+    val isRefreshing: Boolean = false,
+    val isOffline: Boolean = false,
+)
+
+sealed interface TemplateUiAction {
+    data class Refresh(val synchronize: Boolean = false) : TemplateUiAction
+    data class Import(val json: String) : TemplateUiAction
+    data class Search(val query: String) : TemplateUiAction
+    data object Export : TemplateUiAction
+    data class Delete(val id: String) : TemplateUiAction
+}
+
+sealed interface TemplateUiEvent {
+    data object ImportCompleted : TemplateUiEvent
+    data class Exported(val json: String) : TemplateUiEvent
+    data object ExportEmpty : TemplateUiEvent
+    data class Error(val message: String) : TemplateUiEvent
+}
+
+class TemplateViewModel(
+    observeTemplates: ObserveProfileTemplatesUseCase,
+    observeRefreshing: ObserveProfileTemplateRefreshingUseCase,
+    observeOffline: ObserveProfileTemplateOfflineUseCase,
+    private val refreshTemplates: RefreshProfileTemplatesUseCase,
+    private val importTemplatesUseCase: ImportProfileTemplatesUseCase,
+    private val exportTemplatesUseCase: ExportProfileTemplatesUseCase,
+    private val deleteTemplateUseCase: DeleteProfileTemplateUseCase,
+    private val savedState: SavedStateHandle,
+    private val device: ManagerDevice,
+) : ViewModel() {
+    private val mutableEvents = MutableSharedFlow<TemplateUiEvent>(extraBufferCapacity = 1)
+    val events: SharedFlow<TemplateUiEvent> = mutableEvents.asSharedFlow()
+
+    private val search = savedState.getStateFlow("template-search", "")
+    private val lastLoad = MutableStateFlow<Result<Unit>?>(null)
+
+    private val templatesSource = observeTemplates()
+
+    val state: StateFlow<TemplateUiState> = combine(
+        templatesSource,
+        observeRefreshing(),
+        observeOffline(),
+        search,
+        lastLoad,
+    ) { templates, refreshing, offline, query, result ->
+        TemplateUiState(
+            templateList = templates,
+            search = query,
+            searchResults = filterProfileTemplates(templates, query),
+            profileTemplates = templates.map(ProfileTemplate::id),
+            profileTemplateNames = templates.map { template ->
+                template.name.ifBlank { template.id }
+            },
+            isLoading = result == null,
+            loadFailed = result?.isFailure == true,
+            isRefreshing = refreshing,
+            isOffline = offline,
+        )
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, TemplateUiState())
+    val uiState: StateFlow<TemplateUiState> = state
+
+    init {
+        if (device == ManagerDevice.MOBILE) dispatch(TemplateUiAction.Refresh())
+    }
+
+    suspend fun fetchTemplates(sync: Boolean = false) {
+        val result = refreshTemplates(sync)
+        lastLoad.value = result
+        // Entry loading ends only once the same data and result are available to the UI collector.
+        state.first { !it.isLoading && !it.isRefreshing && it.templateList == templatesSource.value && it.loadFailed == result.isFailure }
+        result.exceptionOrNull()?.let {
+            mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty()))
+        }
+    }
+    fun dispatch(action: TemplateUiAction) {
+        when (action) {
+            is TemplateUiAction.Search -> savedState["template-search"] = action.query.trim()
+
+            is TemplateUiAction.Refresh -> viewModelScope.launch { fetchTemplates(action.synchronize) }
+
+            is TemplateUiAction.Import -> viewModelScope.launch {
+                val result = importTemplatesUseCase(action.json)
+                result.fold(
+                    onSuccess = { mutableEvents.emit(TemplateUiEvent.ImportCompleted) },
+                    onFailure = { mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty())) },
+                )
+            }
+
+            // The repository removes the template from ksud and refreshes the list App Profile reads.
+            is TemplateUiAction.Delete -> viewModelScope.launch {
+                deleteTemplateUseCase(action.id).onFailure { mutableEvents.emit(TemplateUiEvent.Error(it.message.orEmpty())) }
+            }
+
+            TemplateUiAction.Export -> viewModelScope.launch {
+                exportTemplatesUseCase().fold(
+                    onSuccess = { mutableEvents.emit(TemplateUiEvent.Exported(it)) },
+                    onFailure = { mutableEvents.emit(TemplateUiEvent.ExportEmpty) },
+                )
+            }
+        }
+    }
+}
+
+fun filterProfileTemplates(templates: List<ProfileTemplate>, query: String): List<ProfileTemplate> {
+    val trimmed = query.trim()
+    return if (trimmed.isEmpty()) {
+        templates
+    } else {
+        templates.filter { template ->
+            listOf(template.name, template.id, template.description, template.author).any { it.contains(trimmed, ignoreCase = true) }
+        }
+    }
+}

@@ -22,7 +22,7 @@ class WearBoundaryDetector :
             val imported = node.importReference?.asSourceString() ?: return
             val filePackage = context.uastFile?.packageName ?: return
             val inWear = filePackage == WEAR_PACKAGE || filePackage.startsWith("$WEAR_PACKAGE.") ||
-                context.file.invariantSeparatorsPath.contains("/src/wear/")
+                context.file.invariantSeparatorsPath.contains("/wear/src/")
             val message = when {
                 inWear && imported.startsWith("$PHONE_COMPONENT_PACKAGE.") && imported !in SHARED_COMPONENTS ->
                     "Wear UI should not use phone components from $PHONE_COMPONENT_PACKAGE; use $WEAR_COMPONENT_PACKAGE."

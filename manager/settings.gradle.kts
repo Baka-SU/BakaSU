@@ -20,6 +20,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "BakaSU"
-include(":app")
-include(":baselineprofile")
+include(":common", ":mobile", ":wear")
+include(":baselineprofile:mobile", ":baselineprofile:wear")
 include(":lint-rules")

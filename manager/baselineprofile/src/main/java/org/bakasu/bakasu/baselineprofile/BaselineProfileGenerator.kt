@@ -9,7 +9,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 /**
- * Run :app:copyBaselineProfileIntoSrc for mobile or :app:generateWearReleaseBaselineProfile for Wear
+ * Run :mobile:generateReleaseBaselineProfile or :wear:generateReleaseBaselineProfile
  * with only the corresponding device selected through ANDROID_SERIAL.
  * Match the app language to the device language for the resource-backed Wear selectors.
  * Superuser and Modules require a working KernelSU environment on the watch.
@@ -53,6 +53,6 @@ class BaselineProfileGenerator(private val deviceType: String) {
         // The producer copies profiles by filename, so each form factor needs distinct test names.
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun deviceTypes(): List<String> = listOf(BuildConfig.FLAVOR)
+        fun deviceTypes(): List<String> = listOf(BuildConfig.TARGET_DEVICE)
     }
 }

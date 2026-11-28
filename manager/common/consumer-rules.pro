@@ -1,0 +1,1 @@
+-keep interface org.bakasu.rootService.** { *; }

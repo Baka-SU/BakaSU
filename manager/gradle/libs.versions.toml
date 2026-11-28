@@ -37,11 +37,13 @@ profileinstaller = "1.4.1"
 koin-bom = "4.2.2"
 commons-compress = "1.28.0"
 xz = "1.12"
+okhttp = "4.12.0"
 spotless = "8.10.3"
 ktlint = "1.8.0"
 compose-rules = "0.6.7"
 
 [plugins]
+agp-library = { id = "com.android.library", version.ref = "agp" }
 agp-app = { id = "com.android.application", version.ref = "agp" }
 agp-test = { id = "com.android.test", version.ref = "agp" }
 androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "benchmark" }
@@ -56,6 +58,7 @@ spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 xz = { module = "org.tukaani:xz", version.ref = "xz" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
 koin-core = { module = "io.insert-koin:koin-core" }
 koin-android = { module = "io.insert-koin:koin-android" }
