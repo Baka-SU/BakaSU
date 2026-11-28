@@ -66,7 +66,6 @@ internal enum class WearSuSFSSection(val title: Int, val icon: ImageVector) {
 
 internal typealias WearSuSFSCommand = (SuSFSCommandReply) -> SuSFSUiAction
 
-/** Wear presentation of the phone SUSFS manager, sharing its commands, config and resources. */
 @Composable
 internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
     val viewModel = koinViewModel<SuSFSViewModel>()
@@ -166,7 +165,6 @@ internal fun WearSuSFSPage(onBack: () -> Unit, onReboot: () -> Unit) {
         if (uri != null) importSelected(uri.toString())
     }
 
-    // Plain SAF requests, as on the phone; watches without DocumentsUI get the built-in picker.
     fun launchPicker(export: Boolean) {
         runCatching {
             if (export) exportLauncher.launch(backupFileName) else importLauncher.launch(arrayOf("application/json"))

@@ -28,11 +28,7 @@ import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.bakasu.bakasu.ui.wear.component.WearSectionHeader
 import org.bakasu.bakasu.ui.wear.component.rememberWearConfirmDialog
 
-/**
- * Backing up and restoring the allowlist with the phone's SuperUserViewModel actions: the backup
- * is written to a document the user picks, and restoring asks first because it overwrites the
- * current allowlist.
- */
+/** Restoring requires confirmation because it overwrites the current allowlist. */
 @Composable
 internal fun WearAllowlistBackupPage(viewModel: SuperUserViewModel, onBack: () -> Unit) {
     var restoreUri by rememberSaveable { mutableStateOf("") }
@@ -74,7 +70,6 @@ internal fun WearAllowlistBackupPage(viewModel: SuperUserViewModel, onBack: () -
                 Icons.Rounded.Save,
                 stringResource(R.string.backup_allowlist),
                 {
-                    // The same file name as the phone backup, so both are recognized alike.
                     val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
                     runCatching { backupLauncher.launch("ksu_allowlist_backup_$timestamp.dat") }.onFailure { result = failed }
                 },

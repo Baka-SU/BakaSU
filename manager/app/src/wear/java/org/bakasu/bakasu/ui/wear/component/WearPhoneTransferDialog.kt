@@ -23,7 +23,6 @@ import org.bakasu.bakasu.domain.model.BridgeFailure
 import org.bakasu.bakasu.domain.model.BridgeStage
 import org.bakasu.bakasu.domain.model.BridgeTransfer
 
-/** All phone operations share the same dialog, including waiting, rejection and transport errors. */
 @Composable
 fun WearPhoneTransferDialog(transfer: BridgeTransfer?, onCancel: () -> Unit, onDismiss: () -> Unit) {
     var shown by remember { mutableStateOf(transfer) }

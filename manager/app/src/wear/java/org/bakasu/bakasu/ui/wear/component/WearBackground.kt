@@ -34,10 +34,8 @@ import org.koin.compose.koinInject
  */
 
 /**
- * Renders a Wear content layer's black base and selected image backdrop. WearManagerTheme uses one
- * activity-level instance for content outside Navigation 3, while each navigation entry gets its
- * own instance so incoming and outgoing scenes render their backgrounds independently.
- * The plain black base follows predictive back; a selected image and its dim layer remain intact.
+ * Gives each navigation entry its own backdrop for scene transitions. The theme also uses it
+ * outside navigation. Predictive back fades the plain base and leaves selected images and dimming unchanged.
  */
 @Composable
 fun WearBackground(onImageLoaded: ((Drawable) -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
@@ -68,15 +66,10 @@ fun WearBackground(onImageLoaded: ((Drawable) -> Unit)? = null, content: @Compos
     }
 }
 
-/**
- * Swipe-dismiss layers contain only page content; the theme owns the stationary backdrop. The
- * default background scrim is an opaque fill under the foreground page that would hide that
- * backdrop, so it is transparent; the content scrim still dims the page while it is swiped away.
- */
+/** Keeps the backdrop visible beneath a swipe-dismissed page while the content scrim dims the page. */
 @Composable
 fun WearSwipeToDismissBox(onDismissed: () -> Unit, userSwipeEnabled: Boolean = true, content: @Composable BoxScope.(isBackground: Boolean) -> Unit) {
-    // Wear API 36+ delivers predictive back through the platform, just like the Navigation 3
-    // Wear scene strategy. A second touch-driven dismiss box competes with back-to-home.
+    // On API 36+, a touch-driven dismiss box would compete with platform predictive back.
     if (Build.VERSION.SDK_INT >= 36 || !LocalWearSwipeEnabled.current) {
         Box(Modifier.fillMaxSize()) { content(false) }
     } else {

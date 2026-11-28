@@ -67,8 +67,6 @@ internal fun WearModulesPage(
     listState: TransformingLazyColumnState = rememberTransformingLazyColumnState(),
     hasOperationsPanel: Boolean = false,
 ) {
-    // As on the phone: an empty list shows the loading indicator in place of the page; once it has
-    // content, refreshing overlays a contained indicator without removing the list.
     val loading = state.isRefreshing && state.moduleList.isEmpty() && state.search.isEmpty()
     WearErrorDialog(error.takeUnless { state.isRefreshing })
     WearList(
@@ -93,12 +91,6 @@ internal fun WearModulesPage(
     }
 }
 
-/**
- * One module row: the row opens the module details. The whole container takes the active color
- * while the module is enabled and applied, a subdued removal color while pending removal and the
- * neutral tonal surface otherwise. META shares the title row, and only the version appears below.
- * Pending changes are conveyed by color and the removal strike-through.
- */
 @Composable
 internal fun TransformingLazyColumnItemScope.WearModuleItem(
     spec: TransformationSpec,
@@ -137,8 +129,8 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
             largeIcon = true,
             contentPadding = ButtonDefaults.ContentPadding,
             transformed = false,
-            transformSurface = actions.isEmpty(),
             // A reveal row owns its transformation; a standalone row owns its own.
+            transformSurface = actions.isEmpty(),
             colors = when {
                 module.remove -> ButtonDefaults.filledTonalButtonColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer.withoutTint(),
@@ -152,7 +144,6 @@ internal fun TransformingLazyColumnItemScope.WearModuleItem(
                 else -> ButtonDefaults.filledTonalButtonColors()
             },
             iconContent = {
-                // Preserve the existing icon size while matching the reference's inset and gap.
                 val iconSize = with(LocalDensity.current) { MaterialTheme.typography.labelMedium.lineHeight.toDp() + MaterialTheme.typography.labelSmall.lineHeight.toDp() }.coerceAtLeast(ButtonDefaults.LargeIconSize)
                 val active = module.enabled && !module.update && !module.remove
                 WearCatalogModuleIcon(

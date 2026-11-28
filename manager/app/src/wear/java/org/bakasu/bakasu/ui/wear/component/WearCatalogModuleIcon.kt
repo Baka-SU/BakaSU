@@ -39,7 +39,6 @@ internal fun WearCatalogModuleIcon(module: CatalogModule, size: Dp = 24.dp) {
     WearCatalogModuleIcon(module.iconUrl?.takeIf { it.isNotBlank() } ?: module.registryMetadata?.iconUrl, module.repositoryUrl.takeIf { module.registryMetadata != null }, size)
 }
 
-/** All Wear catalog surfaces use the existing validated icon cache and the same tonal fallback. */
 @Composable
 internal fun WearCatalogModuleIcon(
     url: String?,
@@ -97,7 +96,6 @@ private fun WearCatalogModuleIcon(
     }
 }
 
-/** Objective artwork properties; theme colors are selected only by the composable. */
 internal data class CatalogIconMetrics(val scale: Float, val transparent: Boolean, val monochrome: Boolean, val luminance: Float)
 
 internal fun catalogIconMetrics(bitmap: Bitmap): CatalogIconMetrics {

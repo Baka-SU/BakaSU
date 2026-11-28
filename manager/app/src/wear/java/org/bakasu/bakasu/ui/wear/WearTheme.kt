@@ -172,13 +172,8 @@ fun WearManagerTheme(toastState: WearToastState, content: @Composable () -> Unit
             onErrorContainer = generated.onErrorContainer,
         )
     }
-    // Container colors follow the card transparency so a custom background shows through them,
-    // the same rule the phone applies per row in SettingsBaseWidget. It has to happen here rather
-    // than per call site: Wear components take their containers from scheme roles, including the
-    // ones inside the library (slider, swipe-to-reveal, switch track). Accent fills that the phone
-    // also leaves solid stay solid — `primary` for high-emphasis buttons, `errorContainer` for
-    // error surfaces, and `background` for dialogs. Derived outside the remember above so the
-    // scheme itself is still only generated when the seed or the dynamic-color switch changes.
+    // Apply card alpha to scheme roles so library components inherit it too.
+    // Primary fills, errors and dialog backgrounds stay opaque.
     val cardConfig = koinInject<CardConfig>()
     val alpha = cardConfig.cardAlpha
     val themedColors = remember(colors, alpha) {
@@ -207,9 +202,7 @@ fun WearManagerTheme(toastState: WearToastState, content: @Composable () -> Unit
         LocalBackgroundRenderState provides backgroundState,
     ) {
         MaterialTheme(colorScheme = themedColors, typography = wearTypography(config.isHighContrastMode), motionScheme = MotionScheme.expressive()) {
-            // Keep an activity-level backdrop for surfaces outside Navigation 3. Each navigation
-            // entry renders its own backdrop as well, so outgoing and incoming scenes transition
-            // with independent image layers.
+            // Covers content outside navigation; entries own their backgrounds during transitions.
             WearBackground(onImageLoaded = { backgroundImage = it }) {
                 WearToastHost(toastState, style = preferences.toastStyle) {
                     // Older installs prepare their saved background color before the first content is shown.

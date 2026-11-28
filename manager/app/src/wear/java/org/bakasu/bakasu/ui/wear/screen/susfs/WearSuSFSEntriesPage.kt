@@ -209,7 +209,6 @@ internal fun WearSuSFSAddPage(
     val readFailed = stringResource(R.string.susfs_entry_import_file_failed)
     val notText = stringResource(R.string.susfs_entry_import_file_not_text)
     val context = LocalContext.current
-    // Reads the picked file as the phone's entry dialog does.
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         readingFile = true

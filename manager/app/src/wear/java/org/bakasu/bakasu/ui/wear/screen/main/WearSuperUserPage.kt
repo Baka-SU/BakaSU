@@ -44,8 +44,6 @@ internal fun WearSuperUserPage(
     backToTop: Boolean = false,
     hasOperationsPanel: Boolean = false,
 ) {
-    // As on the phone: an empty list shows the loading indicator in place of the page; once it has
-    // content, refreshing reserves an indicator region without removing the list.
     val loading = state.isRefreshing && state.appGroupList.isEmpty() && state.search.isEmpty()
     WearErrorDialog(error.takeUnless { state.isRefreshing })
     WearList(
@@ -60,19 +58,12 @@ internal fun WearSuperUserPage(
                 WearEmptyState(spec, Icons.Rounded.Archive, stringResource(R.string.no_apps_found))
             }
         }
-        // An app button list: 32dp app icon, the app name and the phone's status labels.
         items(state.appGroupList, key = { "${it.uid}:${it.primaryPackageName}" }) { group ->
             WearAppItem(spec, group, onAppClick, group.uid in state.managerUids)
         }
     }
 }
 
-/**
- * One app group, as in the design: its icon, the app name as the title (wrapping to three
- * a single scrolling line when long) and, below it, the phone's status labels: ROOT, UMOUNT, CUSTOM, DEFAULT
- * and MANAGER. A granted app takes the primary container, the others the neutral tonal surface. The
- * large app icon uses the large icon content padding, so it sits centered in the rounded container.
- */
 @Composable
 internal fun TransformingLazyColumnItemScope.WearAppItem(
     spec: TransformationSpec,
@@ -80,7 +71,6 @@ internal fun TransformingLazyColumnItemScope.WearAppItem(
     onAppClick: (Int, String) -> Unit,
     isManager: Boolean = false,
 ) {
-    // The same labels and conditions as the phone's superuser list.
     val labels = buildList {
         if (group.allowSu) {
             add(R.string.wear_badge_root)

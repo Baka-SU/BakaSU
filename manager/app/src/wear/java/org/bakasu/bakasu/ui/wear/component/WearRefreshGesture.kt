@@ -41,16 +41,13 @@ internal fun TransformingLazyColumnState.isAtWearListStart(tolerancePx: Int): Bo
  */
 
 /**
- * Pulls past the list boundaries. At the top, pulling down (or turning the crown up) opens the page's
- * panel, or closes it when [closePanelOnPullDown] is set. At the end, pulling up only
- * closes a panel that uses upward dismissal. Turning the crown down past the end still
- * closes either kind of panel. Releasing past
- * the 48dp threshold commits; ordinary scrolling and shorter pulls do nothing.
+ * Opens a panel by pulling down at the list start. [closePanelOnPullDown] uses that gesture to
+ * close instead; other panels close by pulling up at the end. Touch release commits past 48dp.
+ * Turning the crown up at the start opens a panel; turning it down at the end closes either panel type.
  *
- * Apply it to the whole screen (list and edge button), so a pull that starts on the edge button at
- * the end of the list still counts. [displacement] receives the list offset that follows the pull;
- * draw it on the list only, so it does not shift the coordinates this gesture measures.
- * [pullProgress] is the pull relative to the threshold: positive at the top, negative at the end.
+ * Apply to the stationary screen, including its edge button. Apply [displacement] only to the
+ * list so gesture coordinates stay fixed. [pullProgress] is relative to the threshold for
+ * touch or crown input, positive for downward pulls and negative for upward pulls.
  */
 @Composable
 internal fun Modifier.wearRefreshGesture(
@@ -66,7 +63,6 @@ internal fun Modifier.wearRefreshGesture(
     onPullStart: () -> Float = { 0f },
     onPullEnd: () -> Unit = {},
 ): Modifier {
-    // Lists without any boundary action keep their gestures untouched.
     if (onOpenPanel == null && onClosePanel == null) return this
     val active by rememberUpdatedState(enabled)
     val panel by rememberUpdatedState(onOpenPanel)
@@ -80,8 +76,7 @@ internal fun Modifier.wearRefreshGesture(
     val threshold = with(LocalDensity.current) { WearPullThreshold.toPx() }
     val topTolerance = with(LocalDensity.current) { 2.dp.roundToPx() }
     val backLabel = stringResource(R.string.back)
-    // The crown turned past the boundary: three times the touch threshold of extra rotation, with a
-    // pause of the crown resetting it.
+    // Crown input needs three times the touch threshold and resets after a pause.
     val crownTarget = threshold * 3
     val crown = remember { CrownPull() }
     val scope = rememberCoroutineScope()
@@ -97,11 +92,8 @@ internal fun Modifier.wearRefreshGesture(
         onDispose { crown.timeout?.cancel() }
     }
     return this.onPreRotaryScrollEvent { event ->
-        // Once committed, let the reveal finish and hand focus to the destination. More crown
-        // events in the same burst must not catch and cancel that opening/closing animation.
+        // Consume the remaining crown burst so it cannot interrupt a committed transition.
         if (crown.committed && active) return@onPreRotaryScrollEvent true
-        // A panel closes past its end with the crown turned down; a page opens its panel past the
-        // top with the crown turned up. Touch dismissal may instead use a downward pull at the top.
         val closing = closePanel != null
         val action = closePanel ?: panel
         val atBoundary = if (closing) !listState.canScrollForward else listState.isAtWearListStart(topTolerance)
@@ -214,7 +206,6 @@ internal fun Modifier.wearRefreshGesture(
                     crossed = pull >= threshold
                     val sign = if (pullDown > 0f) 1f else -1f
                     pullProgress.floatValue = sign * pull / threshold
-                    // Match finger travel without resistance or a displacement cap.
                     displacement.floatValue = sign * pull
                     if (dragging) pointer.consume()
                 }

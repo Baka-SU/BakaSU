@@ -52,10 +52,6 @@ import org.bakasu.bakasu.ui.wear.rememberWearNavigator
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-/**
- * The changelog opens separately, so its length and availability do not block the download.
- * [onDownload] downloads the ZIP on the shared module download page, which installs it.
- */
 @Composable
 internal fun WearModuleUpdatePage(
     module: InstalledModule?,
@@ -82,10 +78,10 @@ internal fun WearModuleUpdatePage(
     WearList(onBack = onBack, isRefreshing = resolving) { spec ->
         item { WearPageHeader(spec, stringResource(R.string.module_update)) }
         if (module != null && update != null) {
-            // The module and its version change lead, followed by the two actions.
             item {
                 WearModuleHeader(spec, module, artwork, stringResource(R.string.wear_update_version, module.version.ifBlank { stringResource(R.string.unknown) }, update.version))
             }
+            // Load the changelog on its own page so it cannot block the update download.
             item {
                 WearActionButton(
                     spec,
@@ -167,10 +163,7 @@ internal fun WearModuleChangelogPage(module: InstalledModule?, onBack: () -> Uni
     }
 }
 
-/**
- * Splits a changelog into list items at line breaks, so no line is cut and the original line
- * structure stays; only a single line longer than [limit] is split within itself.
- */
+/** Splits at line breaks, splitting within a line only when it exceeds [limit]. */
 private fun changelogChunks(text: String, limit: Int = 600): List<String> {
     val chunks = mutableListOf<String>()
     val current = StringBuilder()
@@ -188,11 +181,6 @@ private fun changelogChunks(text: String, limit: Int = 600): List<String> {
     return chunks.map { it.trim('\n') }.filter(String::isNotBlank)
 }
 
-/**
- * Runs a module's action script with the phone's ExecuteModuleActionViewModel: the status shows
- * the latest output line, the full output opens as its own log page, and saving goes through the
- * shared log use case once the script has finished.
- */
 @Composable
 internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompleted: () -> Unit) {
     val viewModel = koinViewModel<ExecuteModuleActionViewModel>(parameters = { parametersOf(moduleId) })
@@ -256,7 +244,6 @@ internal fun WearExecuteModulePage(moduleId: String, onBack: () -> Unit, onCompl
                 )
             }
             item { WearSectionHeader(spec, stringResource(R.string.wear_operations)) }
-            // The view model saves the log only after the script has finished, as on the phone.
             item {
                 WearActionButton(
                     spec,

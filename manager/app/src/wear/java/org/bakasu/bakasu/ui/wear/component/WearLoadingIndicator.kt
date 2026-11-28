@@ -37,13 +37,11 @@ fun WearLoadingOverlay() {
     }
 }
 
-/** The shared expressive loading animation, sized and colored for Wear surfaces. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun WearLoadingIndicator(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary, contained: Boolean = false) {
     if (contained) {
-        // As with the phone's pull refresh, an opaque circular surface separates the animation
-        // from content that has already loaded underneath it.
+        // Keep the indicator opaque over loaded content.
         Box(
             modifier.size(WearLoadingIndicatorSize).shadow(6.dp, CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f), CircleShape).padding(6.dp),
             contentAlignment = Alignment.Center,

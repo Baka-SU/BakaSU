@@ -41,9 +41,6 @@ import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadPhase
 import org.bakasu.bakasu.ui.viewmodel.ModuleDownloadUiState
 import org.bakasu.bakasu.ui.viewmodel.formatFileSize
 
-/**
- * Download identity stays fixed; progress and compact failure feedback share the remaining space.
- */
 @Composable
 internal fun WearModuleDownloadScreen(name: String, state: ModuleDownloadUiState, fraction: () -> Float, iconUrl: String? = null, iconOrigin: String? = null) {
     val failed = state.phase == ModuleDownloadPhase.FAILED || state.phase == ModuleDownloadPhase.VERIFY_FAILED

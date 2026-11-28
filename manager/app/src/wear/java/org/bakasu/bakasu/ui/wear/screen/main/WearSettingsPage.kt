@@ -84,7 +84,6 @@ private enum class SettingsSection(val title: Int) {
     KernelMaintenance(R.string.wear_settings_kernel_maintenance),
 }
 
-/** A settings switch row: section, label, phone summary, current value and dispatched action. */
 private data class SettingsToggle(
     val section: SettingsSection,
     val label: Int,
@@ -155,10 +154,6 @@ private fun settingsRouteIcon(route: WearRoute): ImageVector = when (route) {
     else -> Icons.Rounded.Settings
 }
 
-/**
- * The settings root lists the available categories and About; each category groups its switches and
- * navigation entries by purpose, omitting sections with no available controls.
- */
 @Composable
 internal fun WearSettingsPage(
     state: SettingsUiState,
@@ -309,7 +304,6 @@ internal fun WearSettingsPage(
                             SettingsUiAction.SetSuLog(!state.isSuLogEnabled),
                         ),
                     )
-                    // A short Wear summary keeps this row compact; the phone summary wraps around "SELinux".
                     add(
                         SettingsToggle(
                             SettingsSection.LoggingPrivacy,
@@ -334,7 +328,6 @@ internal fun WearSettingsPage(
                     }
                 }
             }
-            // Pages that open from this category, with the current value or phone summary as description.
             val pages = buildList {
                 if (category == WearSettingsCategory.General) {
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {

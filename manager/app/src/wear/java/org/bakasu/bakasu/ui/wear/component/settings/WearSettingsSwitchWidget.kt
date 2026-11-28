@@ -24,7 +24,6 @@ import org.bakasu.bakasu.ui.wear.component.wearCompactRow
  * @date 2026/10/1.
  */
 
-/** Settings labels scroll only when they overflow their allowed line count. */
 @Composable
 fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
     transformationSpec: TransformationSpec,
@@ -44,7 +43,6 @@ fun TransformingLazyColumnItemScope.WearSettingsSwitchWidget(
         modifier = (if (transformed) Modifier.transformedHeight(this, transformationSpec) else Modifier).fillMaxWidth()
             .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)
             .wearCompactRow(compact),
-        // A compact switch uses the button's 6dp vertical padding instead of its own 8dp.
         contentPadding = if (compact) ButtonDefaults.ContentPadding else SwitchButtonDefaults.ContentPadding,
         transformation = if (transformSurface) SurfaceTransformation(transformationSpec) else null,
         checked = checked,

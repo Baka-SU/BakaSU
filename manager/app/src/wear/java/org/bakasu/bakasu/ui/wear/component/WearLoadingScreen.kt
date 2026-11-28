@@ -28,11 +28,7 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.ui.viewmodel.SettingsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
-/**
- * Shown inside [androidx.wear.compose.material3.AppScaffold], which already draws the system time.
- * The icon and name sit centered, and the official indeterminate [ArcProgressIndicator] runs along
- * the bottom of the screen at its recommended diameter, as in the Wear progress indicator sample.
- */
+/** Startup content for [androidx.wear.compose.material3.AppScaffold], which owns the time display. */
 @Composable
 fun WearLoadingScreen() {
     val context = LocalContext.current

@@ -14,7 +14,6 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.Icon
 import org.bakasu.bakasu.R
 
-/** Local opening failures use the transfer dialog's appearance with an explicit watch target. */
 @Composable
 internal fun WearWatchOpenFailureDialog(message: String?, onDismiss: () -> Unit) {
     var shown by remember { mutableStateOf(message.orEmpty()) }

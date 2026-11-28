@@ -34,11 +34,7 @@ import org.koin.compose.koinInject
  * @date 2026/10/1.
  */
 
-/**
- * Asks once per version whether to update the manager, when an update check finds one. It shows the
- * phone's update texts in a Wear alert dialog (the message, version details and changelog scroll
- * inside it) and confirming starts the same download as the phone's update card.
- */
+/** Prompts once per update version and enqueues the download after confirmation. */
 @Composable
 fun WearManagerUpdateDialog(update: ManagerUpdateInfo?) {
     val toast = LocalWearToast.current
@@ -46,7 +42,7 @@ fun WearManagerUpdateDialog(update: ManagerUpdateInfo?) {
     val current by rememberUpdatedState(update)
     var promptedVersion by rememberSaveable { mutableIntStateOf(0) }
     val deniedText = stringResource(R.string.notification_permission_denied)
-    // As on the phone, the download notification needs the notification permission on Android 13+.
+    // Download notifications require permission on Android 13+.
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
             current?.let(enqueue::invoke)

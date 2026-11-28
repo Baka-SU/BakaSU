@@ -14,9 +14,8 @@ import org.bakasu.bakasu.ui.wear.component.WearToastState
 import org.koin.android.ext.android.inject
 
 /**
- * The base of the Wear activities. Some watches translate their swipe into KEYCODE_BACK instead of a
- * system back gesture, which the block-back-key option swallows; standard SAF requests fall back to
- * the app's own picker where the device has no usable one, or when the picker option asks for it.
+ * Applies the Wear back-key setting and document picker fallback. Some watches report
+ * swipe-back as KEYCODE_BACK rather than a system back gesture.
  */
 abstract class WearActivity : ComponentActivity() {
     private val getPreference: GetStringPreferenceUseCase by inject()

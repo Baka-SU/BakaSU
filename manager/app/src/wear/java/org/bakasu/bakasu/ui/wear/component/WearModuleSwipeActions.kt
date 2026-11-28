@@ -123,8 +123,7 @@ fun TransformingLazyColumnItemScope.WearModuleSwipeActions(
         },
         // The row is never dragged by the component, so a full swipe cannot happen.
         onSwipePrimaryAction = {},
-        // Match the Wear 1.7 SwipeToReveal list sample: keep the row transformation, but avoid
-        // an offscreen buffer that clips translated content to the original row's bounds.
+        // Avoid offscreen clipping of translated rows, as in the Wear 1.7 SwipeToReveal sample.
         modifier = Modifier.transformedHeight(this, transformationSpec).graphicsLayer {
             with(transformationSpec) { applyContainerTransformation(scrollProgress) }
             compositingStrategy = CompositingStrategy.ModulateAlpha

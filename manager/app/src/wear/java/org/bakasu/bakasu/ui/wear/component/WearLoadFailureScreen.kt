@@ -23,7 +23,6 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.RepositoryError
 import org.bakasu.bakasu.domain.model.RepositoryFailure
 
-/** Persistent failure content, matching the warning, title and reason in the Wear demo. */
 @Composable
 internal fun WearLoadFailureScreen(reason: String, onBack: () -> Unit, onRetry: () -> Unit, retryInEdgeButton: Boolean = false) {
     WearList(

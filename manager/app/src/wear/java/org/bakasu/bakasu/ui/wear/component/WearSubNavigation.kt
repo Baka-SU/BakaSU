@@ -23,9 +23,7 @@ internal val LocalWearSubPageTitle = compositionLocalOf<String?> { null }
 /** Feature drafts and running operations stay in the owner; Navigation 3 owns its child pages. */
 @Composable
 internal fun WearSubNavigation(navigator: WearNavigator, transparentRoot: Boolean = false, content: @Composable (WearRoute) -> Unit) {
-    // A transparent root keeps live content (the module WebView) under the navigation layer.
-    // The Wear scene strategy fills that layer with the theme's background scrim, which would
-    // hide the content, so a transparent root also clears the scrim.
+    // A transparent root also needs a transparent scrim to keep the WebView beneath it visible.
     val scrimColor = if (transparentRoot) Color.Transparent else LocalSwipeToDismissBackgroundScrimColor.current
     CompositionLocalProvider(LocalSwipeToDismissBackgroundScrimColor provides scrimColor) {
         NavDisplay(

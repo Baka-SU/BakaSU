@@ -33,13 +33,9 @@ import org.bakasu.bakasu.ui.theme.monospaceFontFamily
  * @author Hanhan_awa
  * @date 2026/10/1.
  */
-/** The stage of a flash or script run, which decides the page's sections and actions. */
 enum class WearFlashStatus { RUNNING, SUCCESS, FAILED }
 
-/**
- * Output as a Wear text list: one monospace line per item, so long logs scale at the round edges
- * and scroll line by line. Blank lines are kept to preserve the script's layout.
- */
+/** Renders one transformed item per log line, preserving blank lines. */
 fun TransformingLazyColumnScope.wearLogLines(transformationSpec: TransformationSpec, lines: List<String>) {
     items(count = lines.size, contentType = { "wear-log-line" }) { index ->
         WearScaledItem(transformationSpec) {
@@ -66,7 +62,6 @@ fun WearFollowLog(listState: TransformingLazyColumnState, lineCount: Int, follow
     }
 }
 
-/** The full output of a run on its own page, following the newest line while [following]. */
 @Composable
 fun WearLogPage(title: String, lines: List<String>, following: Boolean, onBack: () -> Unit) {
     val listState = rememberTransformingLazyColumnState()
@@ -77,10 +72,7 @@ fun WearLogPage(title: String, lines: List<String>, following: Boolean, onBack: 
     }
 }
 
-/**
- * Saves a log to a document the user picks, named `<prefix>_<date>.log` as on the phone, and shows
- * the result once with [WearFeedbackEffect]. Returns the action that starts saving.
- */
+/** Returns an action to save `<prefix>_<date>.log` through the document picker and report the result. */
 @Composable
 fun rememberWearLogSaver(fileNamePrefix: String, content: () -> String): () -> Unit {
     val context = LocalContext.current

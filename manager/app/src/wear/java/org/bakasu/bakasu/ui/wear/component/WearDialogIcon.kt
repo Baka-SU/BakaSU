@@ -32,7 +32,6 @@ internal fun wearDialogContentPadding(edgeButton: Boolean = false): PaddingValue
     )
 }
 
-/** The large icon slot used by the Wear M3 dialog samples, with their default safe padding. */
 @Composable
 fun WearDialogIcon(image: ImageVector, tint: Color = MaterialTheme.colorScheme.primary) {
     Icon(image, contentDescription = null, modifier = Modifier.size(ButtonDefaults.LargeIconSize), tint = tint)

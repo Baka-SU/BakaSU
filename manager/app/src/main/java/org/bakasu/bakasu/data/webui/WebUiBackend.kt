@@ -10,11 +10,7 @@ import org.bakasu.bakasu.domain.model.WebUiProcess
 import org.json.JSONArray
 import org.json.JSONObject
 
-/**
- * What a module WebUI needs from the device that owns the module: root commands, module files and
- * the module and package lists. [LocalWebUiBackend] serves the device itself; the phone uses
- * [RemoteWebUiBackend] to reach a watch's module over authenticated secure RFCOMM.
- */
+/** Module files, commands and package data, served locally or over authenticated RFCOMM. */
 interface WebUiBackend {
     fun execute(command: String): WebUiCommandResult
     fun spawn(command: String): WebUiProcess

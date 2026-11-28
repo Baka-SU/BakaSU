@@ -34,7 +34,6 @@ import androidx.wear.compose.material3.lazy.TransformationSpec
  * @date 2026/10/1.
  */
 
-/** Chip emphasis levels; a screen should lead with at most one [HIGH] chip. [ERROR] marks a failed state in red. */
 enum class WearChipEmphasis { HIGH, MEDIUM, ERROR }
 
 @Composable
@@ -76,8 +75,6 @@ fun TransformingLazyColumnItemScope.WearChip(
                     )
                 },
                 icon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize)) } },
-                // Keep the description to two lines; mode badges are measured separately in the headline.
-                // A [secondaryLabelStyle] from the theme typography lets a dense summary fit one line.
                 secondaryLabel = secondaryLabel?.let { text ->
                     { WearAutoMarqueeText(text, style = secondaryLabelStyle ?: LocalTextStyle.current, maxLines = 2) }
                 },
@@ -154,8 +151,7 @@ private fun WearChipHeadline(
         )
         return
     }
-    // Match the phone's title -> mode -> architecture row. Only the badges can scroll when
-    // accessibility text sizes or extra modes exceed the remaining width; the title stays still.
+    // Scroll overflowing badges independently so the title stays fixed.
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
@@ -170,7 +166,6 @@ private fun WearChipHeadline(
             badges.forEach { badge ->
                 WearBadge(
                     badge,
-                    // A nested badge stays solid, distinct from the bright primary status surface.
                     containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 1f),
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     horizontalPadding = 2.dp,

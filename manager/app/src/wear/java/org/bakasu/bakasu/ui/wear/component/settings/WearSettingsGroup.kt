@@ -4,11 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 
-/**
- * The Wear adapter emits group entries into the existing list, without nesting a second scroller.
- * Entries keep the standard Wear button shape and the list's 4dp in-group spacing instead of the
- * phone's segmented corners.
- */
+/** Emits group items into the current Wear list without adding a nested scroller. */
 @Suppress("ktlint:standard:function-naming")
 fun <T> TransformingLazyColumnScope.LazySegmentedColumn(
     entries: List<T>,

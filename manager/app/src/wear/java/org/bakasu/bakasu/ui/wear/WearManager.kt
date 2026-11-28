@@ -199,7 +199,7 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
     val activity = LocalActivity.current
     val resources = LocalResources.current
     val toast = LocalWearToast.current
-    // The shared models belong to the activity, outside the back stack, as on the phone.
+    // Activity-scoped models outlive individual navigation entries.
     val homeViewModel = koinViewModel<HomeViewModel>()
     val superUserViewModel = koinViewModel<SuperUserViewModel>()
     val moduleViewModel = koinViewModel<ModuleViewModel>()
@@ -317,8 +317,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         clearSettingsFeedback()
         settingsViewModel.dispatch(it)
     }
-    // Ordinary switches speak through their state; selected settings results use a toast.
-    // Blocking failures and follow-up instructions stay visible until the user dismisses them.
     val settingsNotice = settingsMessageResource?.let { (id, arg) ->
         if (arg == null) stringResource(id) else stringResource(id, arg)
     }
@@ -451,7 +449,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
         }
     }
 
-    // A found manager update is offered in a dialog, the stable channel first as on the phone's Home.
     WearManagerUpdateDialog(home.stableManagerUpdate ?: home.betaManagerUpdate)
     WearErrorDialog(settingsError?.ifBlank { operationFailedText }) { clearSettingsFeedback() }
     WearModuleInstallConfirmDialog(installer)
@@ -1113,7 +1110,6 @@ fun WearManagerScreen(intentChannel: ReceiveChannel<Intent>) {
                     )
                 }
                 WearOperationsBackHandler(operationsOnTop) { back() }
-                // Over the pages: waiting for a link to open, which Back cancels, and its result.
                 WearLinkHost(linkViewModel, showLinkLoading) { url ->
                     linkViewModel.navigateWithinLink { open(WearRoute.Browser(url)) }
                 }
@@ -1173,7 +1169,6 @@ private val WearPageTransitions: Map<String, Any> = if (Build.VERSION.SDK_INT >=
     }
 }
 
-// This group retains its shorter entrance; NavDisplay still owns both navigation directions.
 private val DynamicManagerTransitions: Map<String, Any> = if (Build.VERSION.SDK_INT >= 36) {
     NavDisplay.transitionSpec {
         (
@@ -1185,12 +1180,7 @@ private val DynamicManagerTransitions: Map<String, Any> = if (Build.VERSION.SDK_
     emptyMap()
 }
 
-/**
- * Attaches each page's transition defaults while allowing explicit entry transitions.
- * A scene's metadata is built from its entry's metadata last. The key and the
- * content key are carried over unchanged, leaving the entry's saveable state and ViewModel scopes
- * as they were.
- */
+/** Applies default transitions while preserving entry overrides, saveable state and ViewModel scopes. */
 internal fun <T : Any> withPageTransitions(
     provider: (T) -> NavEntry<T>,
     pageContent: @Composable (T, @Composable () -> Unit) -> Unit,
@@ -1225,7 +1215,6 @@ private fun WearMainPages(
 ) {
     val activity = LocalActivity.current
     if (!home.isInitialDataLoaded && homeError == null) {
-        // The first load keeps the startup spinner until Home has its data.
         WearLoadingScreen()
         return
     }
@@ -1240,8 +1229,7 @@ private fun WearMainPages(
             previousPages = pages
         }
     }
-    // Lists load once, as on the phone; later changes refresh through their own events and the pull
-    // gesture, not on every page visit.
+    // App and module lists load once; returning to a page preserves their data and query.
     LaunchedEffect(pagerState.currentPage, home.systemStatus.isFullFeatured) {
         onTitleChange(
             when (pages.getOrNull(pagerState.currentPage)) {

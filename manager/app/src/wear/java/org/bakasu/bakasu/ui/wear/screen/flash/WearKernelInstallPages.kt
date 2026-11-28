@@ -65,17 +65,14 @@ import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
 import org.bakasu.bakasu.ui.wear.rememberWearNavigator
 import org.koin.compose.viewmodel.koinViewModel
 
-/** The phone's LKM install methods: patch a selected image, patch the current slot, or the inactive slot after OTA. */
 private enum class LkmMethod { SELECT_FILE, DIRECT, INACTIVE_SLOT }
 
-/** Render the shared model's real loading state; leaving a page never forces an environment query. */
 @Composable
 internal fun rememberInstallState(viewModel: InstallViewModel): InstallUiState {
     val state by viewModel.state.collectAsStateWithLifecycle()
     return state
 }
 
-/** The phone Install screen's two tabs become two entries: LKM patching and AnyKernel3 flashing. */
 @Composable
 internal fun WearInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit, onPatchWithoutRoot: () -> Unit) {
     val viewModel = koinViewModel<InstallViewModel>()
@@ -100,7 +97,6 @@ internal fun WearInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit, on
                 description = stringResource(R.string.select_file_tip, environment.defaultPartition),
             )
         }
-        // AnyKernel3 flashing needs root, as on the phone.
         item {
             WearSettingsJumpPageWidget(
                 spec,
@@ -114,10 +110,6 @@ internal fun WearInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit, on
     }
 }
 
-/**
- * LKM install: the method as radio buttons, then the phone's advanced options, then "Next" as the
- * screen's single high-emphasis button. A GKI kernel without a known KMI asks for one first.
- */
 @Composable
 internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit) {
     val viewModel = koinViewModel<InstallViewModel>()
@@ -139,7 +131,6 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
             bootUri = uri.toString()
         }
     }
-    // Like the phone, only a `.ko` file is accepted as a local LKM.
     val selectLkm = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             val accepted = uri.fileName().endsWith(".ko", ignoreCase = true)
@@ -327,13 +318,10 @@ internal fun WearLkmInstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit)
     }
 }
 
-/** The phone preselects the default partition, or the first available one. */
 private fun defaultPartition(environment: InstallEnvironment): String? = environment.availablePartitions.let { it.getOrNull(it.indexOf(environment.defaultPartition).coerceAtLeast(0)) }
 
-/** The file name of a picked document, as far as its URI shows it. */
 private fun Uri.fileName(): String = lastPathSegment?.substringAfterLast('/') ?: toString()
 
-/** AnyKernel3: pick the ZIP, choose the slot on A/B devices, then flash. */
 @Composable
 internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit, initialUri: String? = null) {
     val viewModel = koinViewModel<InstallViewModel>()
@@ -413,11 +401,6 @@ internal fun WearAk3InstallPage(onBack: () -> Unit, onOpen: (WearRoute) -> Unit,
     }
 }
 
-/**
- * AnyKernel3 flashing with the phone's KernelFlashViewModel: the current step while flashing, then
- * the result with saving the log and rebooting, or retrying after a failure. The log opens as its
- * own page.
- */
 @Composable
 internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, onBack: () -> Unit) {
     val viewModel = koinViewModel<KernelFlashViewModel>()
@@ -425,7 +408,7 @@ internal fun WearKernelFlashPage(uri: String, slot: String?, skipKsud: Boolean, 
     val flash = state.flash
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     val navigator = rememberWearNavigator(onExit = onBack, initialRoute = WearRoute.OperationStatus)
-    // Starting again would restart the flash, so the page starts it once, as the phone does.
+    // Dispatch Start once to avoid restarting the flash.
     var started by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (!started) {

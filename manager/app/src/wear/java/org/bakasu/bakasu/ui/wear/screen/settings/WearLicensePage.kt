@@ -42,7 +42,6 @@ private fun rememberLibraries(): Libs? {
     return libraries
 }
 
-/** The open source libraries; each opens its licenses as its own page. */
 @Composable
 internal fun WearLicensePage(onBack: () -> Unit, onOpenLibrary: (Int) -> Unit) {
     val libraries = rememberLibraries()
@@ -59,7 +58,6 @@ internal fun WearLicensePage(onBack: () -> Unit, onOpenLibrary: (Int) -> Unit) {
     }
 }
 
-/** The licenses of the library at [index]; tapping a license opens its link. */
 @Composable
 internal fun WearLicenseDetailPage(index: Int, onBack: () -> Unit, onOpenLink: (String) -> Unit) {
     val libraries = rememberLibraries()
@@ -70,7 +68,6 @@ internal fun WearLicenseDetailPage(index: Int, onBack: () -> Unit, onOpenLink: (
             item { WearEmptyState(spec, Icons.Rounded.Copyright, stringResource(R.string.wear_licenses_empty)) }
         }
         if (library != null) {
-            // Keep each license's name and full text in one card; missing text uses the shared empty state.
             library.licenses.forEach { license ->
                 val content = license.licenseContent
                 item {

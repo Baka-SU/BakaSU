@@ -42,9 +42,6 @@ import org.bakasu.bakasu.ui.wear.component.wearGroupGap
  * @date 2026/10/1.
  */
 
-/**
- * App identity, icon attribution, support, documentation, community and license destinations.
- */
 @Composable
 internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, onLicenses: () -> Unit) {
     val context = LocalContext.current
@@ -161,7 +158,6 @@ internal fun WearAboutDetail(onBack: () -> Unit, onOpenLink: (String) -> Unit, o
     }
 }
 
-/** The manager version as shown on the phone About page; commit-hash version names are shortened. */
 @Composable
 internal fun wearAppVersion(): String = stringResource(
     R.string.wear_app_version,

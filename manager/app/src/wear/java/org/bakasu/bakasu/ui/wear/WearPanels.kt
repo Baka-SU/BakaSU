@@ -58,7 +58,6 @@ import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
  * @date 2026/10/1.
  */
 
-/** Page actions have no category headings; detailed controls stay behind their own entries. */
 @Composable
 internal fun WearOperationsPanel(
     page: WearOperationsPage,
@@ -261,7 +260,6 @@ internal fun WearRebootPanel(rootAvailable: Boolean, onBack: () -> Unit, onReboo
     }
 }
 
-/** Both menu layouts use the same power operations and the platform's userspace reboot capability. */
 @Composable
 private fun wearRebootMethods(): Map<Int, String> {
     val context = LocalContext.current

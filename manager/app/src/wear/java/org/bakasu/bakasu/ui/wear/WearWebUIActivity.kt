@@ -66,7 +66,6 @@ import org.koin.compose.viewmodel.koinViewModel
 
 private const val EXTRA_ID = "id"
 
-/** A module WebUI on the watch: the phone's WebView setup and `ksu` bridge in a watch surface. */
 class WearWebUIActivity : WearActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -199,7 +198,6 @@ internal fun WearWebUIScreen(state: WebUIState, onFinish: () -> Unit) {
     }
 }
 
-/** Keep module loading and its JS/file/lifecycle handlers on the shared full-window watch surface. */
 @Composable
 private fun WearModuleWebView(state: WebUIState) {
     val webView = state.webView ?: return

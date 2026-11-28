@@ -25,7 +25,6 @@ import org.bakasu.bakasu.domain.usecase.ObserveCompanionBridgeUseCase
  * @date 2026/10/1.
  */
 
-/** What the watch shows itself after a link or module WebUI was resolved. */
 sealed interface WearLinkEvent {
     data class WebView(val url: String) : WearLinkEvent
     data class WebUi(val moduleId: String) : WearLinkEvent
@@ -34,9 +33,6 @@ sealed interface WearLinkEvent {
 /** A local link failure; a null [reason] is an unexpected failure. */
 data class WearLinkResult(val reason: WearLinkFailure?, val bridgeFailure: BridgeFailure? = null, val automaticLink: Boolean = false, val onWatch: Boolean = false)
 
-/**
- * Every ordinary link entry shares the same fallback order and respects the saved mode.
- */
 class WearLinkViewModel(
     private val repository: WearLinkRepository,
     private val getPreference: GetStringPreferenceUseCase,
@@ -114,10 +110,7 @@ class WearLinkViewModel(
         }
     }
 
-    /**
-     * Automatic module WebUI tries the phone before the watch WebView. Explicit device choices
-     * stay on that device. The phone receives the page from this watch over secure RFCOMM.
-     */
+    /** Automatic mode tries the phone before the watch WebView; explicit choices stay on that device. */
     fun openWebUi(moduleId: String, moduleName: String) {
         val mode = mode
         run(automaticLink = mode == "auto", onWatch = mode == "webview") {
@@ -143,7 +136,6 @@ class WearLinkViewModel(
         configureBridge.cancelTransfer()
     }
 
-    /** One opening at a time, shown as loading until it ends; a failure becomes the result. */
     private fun run(automaticLink: Boolean = false, onWatch: Boolean = false, block: suspend () -> Unit) {
         if (task?.isActive == true) return
         task = viewModelScope.launch {

@@ -30,7 +30,7 @@ data class ModuleDownloadUiState(
     val resultUri: String? = null,
     val verificationFailure: DownloadVerificationFailure? = null,
 ) {
-    /** The downloaded share from 0 to 1, or null when the size is unknown and no share can be given. */
+    /** Download progress from 0 to 1, or null when the total size is not positive. */
     val fraction: Float?
         get() = if (totalBytes > 0L) (downloadedBytes.toFloat() / totalBytes).coerceIn(0f, 1f) else null
 }

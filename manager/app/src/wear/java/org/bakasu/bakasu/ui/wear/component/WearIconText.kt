@@ -42,7 +42,6 @@ fun WearDetailField(
     }
 }
 
-/** A custom icon, such as an app icon, beside the complete title and value. */
 @Composable
 fun WearDetailField(
     label: String,

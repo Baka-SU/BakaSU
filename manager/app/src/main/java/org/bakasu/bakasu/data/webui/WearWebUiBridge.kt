@@ -120,9 +120,8 @@ object WearWebUiSession {
 }
 
 /**
- * The phone's [WebUiBackend] for a watch module: each call opens an authenticated socket to [peerAddress] and is
- * answered by the watch. Calls block, as the WebView calls its bridge and file handler off the main
- * thread.
+ * Sends module requests from the phone to the watch at [peerAddress] over authenticated RFCOMM.
+ * Blocking calls, including WebView bridge calls and file requests, must run off the main thread.
  */
 class RemoteWebUiBackend internal constructor(
     private val transport: CompanionBridgeRepository,
@@ -406,9 +405,8 @@ internal fun serveWebUiClaim(connection: BridgeConnection) {
 }
 
 /**
- * The watch's answer to one phone call on [connection], served by [backend]. Only the phone Bluetooth peer that
- * claimed the session, presenting its token, is answered; file reads are limited to the session
- * module's webroot.
+ * Serves [backend] requests only for the phone and token that claimed the session.
+ * File reads are restricted to the session module's webroot.
  */
 internal suspend fun serveWebUiCall(
     connection: BridgeConnection,
@@ -453,7 +451,6 @@ internal suspend fun serveWebUiCall(
                     if (stream == null) {
                         output.writeFrame(FRAME_ERROR, ByteArray(0))
                     } else {
-                        // Chunked, so a page file never needs one watch-sized frame.
                         stream.use { source ->
                             val buffer = ByteArray(CHUNK_SIZE)
                             while (true) {
@@ -463,8 +460,7 @@ internal suspend fun serveWebUiCall(
                             }
                         }
                         output.writeFrame(FRAME_CHUNK, ByteArray(0))
-                        // Closing RFCOMM can discard queued bytes. Keep the socket alive until
-                        // the phone has consumed the last chunk, including large JavaScript files.
+                        // Wait for the phone to consume the last chunk; closing RFCOMM can discard queued bytes.
                         CompanionBridgeRepository.handshake(connection.socket) { check(input.readBoolean()) }
                     }
                 }

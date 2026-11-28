@@ -3,18 +3,15 @@ package org.bakasu.bakasu.ui.wear
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
-/** The settings pages that open from the Wear settings root. */
 @Serializable
 enum class WearSettingsCategory { General, Security, Advanced }
 
 @Serializable
 enum class WearOperationsPage { Home, SuperUser, Modules, Logs, Repository, DynamicManagerApps, Umount, Templates, TemplateChoice }
 
-/** The settings that are chosen from a single list of options. */
 @Serializable
 enum class WearSelection { PickerMode, LinkMode, ScreenShape, Language, SuCompat, Palette, ColorSpec, TimeDisplay, ToastDisplay }
 
-/** Navigation destinations of [WearManagerScreen]; [Main] is the pager with the four top-level pages. */
 @Serializable
 sealed interface WearRoute : NavKey {
     @Serializable
@@ -87,16 +84,12 @@ sealed interface WearRoute : NavKey {
         WearRoute,
         NeedsRoot
 
-    /** The README, releases or information of a repository module. */
     @Serializable
     data class OnlineModuleSection(val id: String, val repositoryUrl: String, val section: String) :
         WearRoute,
         NeedsRoot
 
-    /**
-     * The download of one module file, with what the file must match. Repository downloads and
-     * module updates share it; an [update] installs right away, as the update page already asked.
-     */
+    /** Shared repository/update download; [update] installs immediately because confirmation already occurred. */
     @Serializable
     data class OnlineModuleDownload(
         val name: String,
@@ -263,7 +256,6 @@ sealed interface WearRoute : NavKey {
     @Serializable
     data object Uninstall : WearRoute, NeedsRoot
 
-    /** Restoring the stock image or uninstalling permanently. */
     @Serializable
     data class UninstallFlash(val restore: Boolean) : WearRoute
 
@@ -276,7 +268,6 @@ sealed interface WearRoute : NavKey {
     @Serializable
     data class Ak3Install(val uri: String? = null) : WearRoute
 
-    /** Patching the boot image with the choices of [LkmInstall], as the phone's Flash screen does. */
     @Serializable
     data class BootFlash(
         val bootUri: String?,

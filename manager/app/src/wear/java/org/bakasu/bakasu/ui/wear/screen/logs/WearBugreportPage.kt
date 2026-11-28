@@ -30,7 +30,6 @@ import org.bakasu.bakasu.ui.wear.component.WearList
 import org.bakasu.bakasu.ui.wear.component.WearPageHeader
 import org.koin.compose.koinInject
 
-/** Saving or sharing the bugreport, as the phone's log sheet does. */
 @Composable
 internal fun WearBugreportPage(onBack: () -> Unit) {
     val context = LocalContext.current

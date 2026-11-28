@@ -42,7 +42,7 @@ import androidx.wear.compose.material3.lazy.transformedHeight
  * @date 2026/10/1.
  */
 
-/** Titles keep a 7.3% internal side margin so they are not clipped by a round screen, and take at most two lines. */
+/** Uses a 7.3% side margin to keep two-line titles inside round screens. */
 @Composable
 fun TransformingLazyColumnItemScope.WearPageHeader(
     transformationSpec: TransformationSpec,
@@ -60,7 +60,6 @@ fun TransformingLazyColumnItemScope.WearPageHeader(
     )
 }
 
-/** The same page heading without list transformations when placed in a fixed header. */
 @Composable
 fun WearPageHeader(
     title: String,
@@ -108,21 +107,11 @@ fun TransformingLazyColumnItemScope.WearSectionHeader(
     }
 }
 
-/**
- * The minimum height of a compact row: Wear's 48dp minimum touch target instead of the 52dp
- * default, so the container fits a label and a one-line secondary label more closely while the
- * whole row stays tappable. Taller content still grows the row.
- */
+/** Compact rows retain a 48dp minimum touch target and grow for taller content. */
 val WearCompactRowHeight = 48.dp
 
-/** Applies [WearCompactRowHeight]; Wear buttons document Modifier.heightIn as their height override. */
 fun Modifier.wearCompactRow(compact: Boolean): Modifier = if (compact) heightIn(min = WearCompactRowHeight) else this
 
-/**
- * A full-width list button with a one-line title and up to two secondary lines. Overflowing
- * interactive labels use the shared marquee policy. A [compact]
- * button keeps less room above and below its content; see [WearCompactRowHeight].
- */
 @Composable
 fun TransformingLazyColumnItemScope.WearActionButton(
     transformationSpec: TransformationSpec,
@@ -150,7 +139,6 @@ fun TransformingLazyColumnItemScope.WearActionButton(
     }
 }
 
-/** A Wear action outside a scrolling list, sharing the same appearance and sizing. */
 @Composable
 fun WearActionButton(
     icon: ImageVector?,
@@ -177,10 +165,6 @@ fun WearActionButton(
     ) { WearAutoMarqueeText(label) }
 }
 
-/**
- * A small label beside a title that marks what kind of item it is, such as a metamodule. Like the
- * phone's module labels it sits on the tertiary color by default, so it reads apart from the title.
- */
 @Composable
 fun WearBadge(
     text: String,
@@ -201,10 +185,6 @@ fun WearBadge(
     )
 }
 
-/**
- * An empty list as in the design: a large icon above a centered title, on no card, below the
- * page's own header and buttons, which stay in place.
- */
 @Composable
 fun TransformingLazyColumnItemScope.WearEmptyState(transformationSpec: TransformationSpec, icon: ImageVector, text: String) {
     WearScaledItem(transformationSpec) {
@@ -220,10 +200,7 @@ fun TransformingLazyColumnItemScope.WearEmptyState(transformationSpec: Transform
     }
 }
 
-/**
- * Items are 4dp apart within a group; an empty item adds one more 4dp gap, giving the 8dp spacing
- * the Wear list guidance uses between groups of the same section.
- */
+// An empty item adds another 4dp gap, giving 8dp between groups at the default spacing.
 fun TransformingLazyColumnScope.wearGroupGap(key: Any) {
     item(key = key, contentType = "wear-group-gap") { Box(Modifier) }
 }

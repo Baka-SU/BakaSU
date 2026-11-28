@@ -71,11 +71,6 @@ import org.bakasu.bakasu.ui.wear.component.settings.WearSettingsSwitchWidget
  * @date 2026/10/1.
  */
 
-/**
- * The SU log: page actions in its pull-down panel and the status of
- * the log, then one Wear Material 3 [TitleCard] per entry that opens its full fields. Log files,
- * type filters and cleaning live in [WearLogOptionsPage], as the phone keeps them in the app bar.
- */
 @Composable
 internal fun WearLogsPage(
     state: SulogUiState,
@@ -218,7 +213,6 @@ internal fun WearLogsPage(
     }
 }
 
-/** Every parsed field of one entry, as the phone's detail dialog shows it. */
 @Composable
 internal fun WearLogEntryPage(entry: SulogEntry?, onBack: () -> Unit) {
     WearList(onBack = onBack) { spec ->

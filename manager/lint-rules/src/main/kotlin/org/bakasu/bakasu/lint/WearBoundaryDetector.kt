@@ -11,10 +11,7 @@ import com.android.tools.lint.detector.api.Severity
 import com.android.tools.lint.detector.api.SourceCodeScanner
 import org.jetbrains.uast.UImportStatement
 
-/**
- * Keeps the phone and Wear sides apart, reported as errors in both directions: phone code must
- * not import from the Wear package tree, and Wear screens must not import phone UI components.
- */
+/** Reports cross-imports between phone UI and Wear UI as lint errors. */
 class WearBoundaryDetector :
     Detector(),
     SourceCodeScanner {
@@ -44,10 +41,7 @@ class WearBoundaryDetector :
         private const val WEAR_PACKAGE = "org.bakasu.bakasu.ui.wear"
         private const val WEAR_COMPONENT_PACKAGE = "$WEAR_PACKAGE.component"
 
-        /**
-         * Phone components without a phone-only layout that Wear shares: the dialog API, which
-         * AGENTS.md requires for every custom dialog, the app icon loader, and upstream ZIP parsing.
-         */
+        // Shared dialog API, app icons and upstream ZIP parsing have no phone-only layout.
         private val SHARED_COMPONENTS = setOf(
             "$PHONE_COMPONENT_PACKAGE.rememberCustomDialog",
             "$PHONE_COMPONENT_PACKAGE.DialogHandle",

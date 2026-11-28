@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-feature android:name="android.hardware.type.watch" android:required="true" />
-    <!-- All-files access is only ever requested by the Wear file picker, and only when no root
-         shell is available: watches usually have no DocumentsUI, so browsing /sdcard needs it.
-         Phones never ask for it, since root covers every path there. -->
+    <!-- Watches without DocumentsUI need all-files access to browse /sdcard without root. -->
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
@@ -33,8 +31,7 @@
     </queries>
     <application>
         <meta-data android:name="com.google.android.wearable.standalone" android:value="true" />
-        <!-- The Google Wear SDK, when the watch has it, for Wear Compose crown haptics; cnwearoverlay
-             falls back to the Xiaomi SDK without it. Optional, so other devices still install. -->
+        <!-- Optional Wear SDK for crown haptics; cnwearoverlay falls back to the Xiaomi SDK. -->
         <uses-library
             android:name="wear-sdk"
             android:required="false" />

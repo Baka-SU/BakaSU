@@ -37,11 +37,7 @@ import androidx.wear.compose.material3.lazy.transformedHeight
  * @date 2026/10/1.
  */
 
-/**
- * A non-interactive information container using the Wear surface transformation.
- * A null [containerColor] uses the neutral surface, which the theme makes translucent whenever a
- * custom background is set, so the image shows through the card.
- */
+/** A non-interactive card; a null [containerColor] inherits the theme's surface and card opacity. */
 @Composable
 fun TransformingLazyColumnItemScope.WearInfoCard(
     transformationSpec: TransformationSpec,
@@ -79,13 +75,9 @@ fun TransformingLazyColumnItemScope.WearInfoCard(
     )
 }
 
-/** How a status card is colored: neutral surface, yellow warning or red error. */
 enum class WearStatusTone { NEUTRAL, WARNING, ERROR }
 
-/**
- * Wear Material 3 has no warning color role, so warnings use a fixed yellow with dark text
- * (about 12:1 contrast). Errors use the theme's error container pair.
- */
+// Wear Material 3 has no warning role; this pair provides about 12:1 contrast.
 private val WarningContainer = Color(0xFFFFD54F)
 private val OnWarningContainer = Color(0xFF231B00)
 
@@ -97,12 +89,6 @@ fun wearStatusColors(tone: WearStatusTone): Pair<Color?, Color> = when (tone) {
     WearStatusTone.ERROR -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
 }
 
-/**
- * A single message card for notices, read failures and warnings: by default a centered
- * 24dp icon above centered text, so the state reads at a glance on a round screen. With [centered]
- * false it keeps the compact paragraph layout (small icon beside start-aligned text) used by the Home
- * notices. Warnings and errors keep their yellow and red containers.
- */
 @Composable
 fun TransformingLazyColumnItemScope.WearStatusItem(
     transformationSpec: TransformationSpec,

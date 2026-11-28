@@ -15,7 +15,6 @@ import org.bakasu.bakasu.ui.navigation.resolveLaunchIntent
 import org.bakasu.bakasu.ui.wear.screen.module.WearModuleInstaller
 import org.koin.compose.koinInject
 
-/** Handles incoming launches with Wear destinations. */
 @Composable
 internal fun WearIntentDispatcher(
     intentChannel: ReceiveChannel<Intent>,

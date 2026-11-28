@@ -20,10 +20,9 @@ data class WearDirectory(val path: String, val parent: String?, val entries: Lis
 /** A failure whose message is already a localized, user-facing resource string. */
 class WearFileException(message: String) : Exception(message)
 
-/** The MIME type of a file name, as served by [WearFileProvider]; unknown types are generic binary data. */
 fun wearFileMimeType(name: String): String = MimeUtil.getMimeFromFileName(name) ?: "application/octet-stream"
 
-/** Whether [mimeType] is accepted by one of the requested [filters], which may use wildcard types. */
+/** Accepts exact MIME types, type wildcards and the all-types wildcard. */
 fun matchesMimeType(mimeType: String, filters: List<String>): Boolean = filters.any { filter ->
     filter == "*/*" || filter.equals(mimeType, ignoreCase = true) ||
         filter.endsWith("/*") && mimeType.startsWith(filter.dropLast(1), ignoreCase = true)
@@ -35,13 +34,8 @@ class WearFileRepository(
 ) {
     private fun fail(resource: Int): Nothing = throw WearFileException(application.getString(resource))
 
-    /**
-     * Whether browsing shared storage still needs a permission: without root, plain file access
-     * sees only media and the app's own files until all-files access (API 30+) or the read
-     * permission (older releases) is granted.
-     */
+    // Without root, shared storage needs all-files access on API 30+ or read permission below it.
     private fun needsStoragePermission(): Boolean {
-        // All-files access exists for watches without DocumentsUI; a phone uses its own picker.
         if (!application.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) return false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             return !Environment.isExternalStorageManager()

@@ -81,7 +81,6 @@ class ManagerUpdateRepository(
         if (versionCode <= currentVersionCode) return@withContext null
 
         val preferredAbi = supportedAbis.firstOrNull() ?: UNIVERSAL_ABI
-        // Mobile APKs keep the legacy flavorless name (see managerApkPattern).
         val flavorSegment = if (BuildConfig.FLAVOR == "wear") "wear-" else ""
         return@withContext ManagerUpdateInfo(
             channel = ManagerUpdateChannel.BETA,

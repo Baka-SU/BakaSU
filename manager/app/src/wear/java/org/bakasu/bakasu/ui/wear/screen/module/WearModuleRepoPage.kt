@@ -163,7 +163,6 @@ internal fun WearModuleRepoPage(
     }
 }
 
-/** The repository search input, a route of its own; it searches the list it was opened from. */
 @Composable
 internal fun WearModuleRepoSearchPage(viewModel: ModuleRepoViewModel, onBack: () -> Unit, onSubmit: () -> Unit, onAdvanced: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -183,7 +182,6 @@ private fun catalogModuleViewModel(moduleId: String, repositoryUrl: String): Mod
     return viewModel
 }
 
-/** The download confirmation; confirming opens the download route for the chosen file. */
 @Composable
 private fun rememberModuleDownload(module: CatalogModule?, installer: WearModuleInstaller): (ModuleReleaseAsset) -> Unit {
     var pendingAsset by remember { mutableStateOf<ModuleReleaseAsset?>(null) }
@@ -227,14 +225,10 @@ internal fun WearOnlineModulePage(
     WearList(isLoading = state.loading, onBack = onBack, backToTop = true) { spec ->
         if (module == null) item { WearPageHeader(spec, stringResource(R.string.module_repo)) }
         if (module != null) {
-            // As in the design: the module icon, name and authors, then its main actions. As the
-            // first item the icon takes the card's minimum list padding, a share of the screen
-            // height, so it stays below the time text on any screen size.
             item {
                 WearScaledItem(spec, Modifier.fillMaxWidth().minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)) {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                         WearCatalogModuleIcon(module, 52.dp)
-                        // The bold name leads; authors and version follow in smaller, neutral styles.
                         Text(
                             module.moduleName,
                             modifier = Modifier.padding(top = 8.dp),
@@ -321,7 +315,6 @@ internal fun WearOnlineModulePage(
     }
 }
 
-/** The README, releases or information of a repository module, each opened as its own route. */
 @Composable
 internal fun WearOnlineModuleSectionPage(moduleId: String, repositoryUrl: String, section: String, onBack: () -> Unit, installer: WearModuleInstaller) {
     val viewModel = catalogModuleViewModel(moduleId, repositoryUrl)
@@ -446,7 +439,6 @@ internal fun WearModuleDownloadPage(route: WearRoute.OnlineModuleDownload, onDow
     )
 }
 
-/** The existing repository sort option, shared by advanced search and the operations panel. */
 @Composable
 internal fun WearModuleRepoSortPage(viewModel: ModuleRepoViewModel, onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()

@@ -54,7 +54,6 @@ import org.koin.core.parameter.parametersOf
  * @date 2026/10/1.
  */
 
-/** Templates already saved on this device; menu actions share the same state owner. */
 @Composable
 internal fun WearTemplatePage(
     state: org.bakasu.bakasu.ui.viewmodel.TemplateUiState,

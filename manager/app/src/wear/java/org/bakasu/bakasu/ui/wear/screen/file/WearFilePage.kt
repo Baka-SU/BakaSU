@@ -74,13 +74,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * @date 2026/10/1.
  */
 
-/**
- * The built-in picker as a Wear list: the title, the current path as a caption, a low-emphasis
- * entry to the parent folder, then folders and the files matching [mimeTypes] as tonal buttons. In
- * save mode the file name follows and the edge button confirms; otherwise picking a file returns it.
- * [onPicked] receives the file as a content URI. Failed operations open an AlertDialog to retry or
- * cancel, and browsing without root first asks for the storage permission.
- */
+/** Picks or creates a file and returns its content URI through [onPicked]. */
 @Composable
 internal fun WearFilePage(
     mimeTypes: List<String>,
@@ -110,8 +104,7 @@ internal fun WearFilePage(
             perform { viewModel.load(null, mimeTypes, saving) }
         }
     }
-    // A failed operation needs a decision, so it opens an AlertDialog with Retry and Cancel instead of
-    // a message in the list. Cancelling a failed first load leaves the picker, as nothing can be shown.
+    // Cancelling a failed first load exits the picker because no directory is available.
     val errorDialog = rememberCustomDialog { dismiss ->
         val close = {
             dismiss()
@@ -138,8 +131,7 @@ internal fun WearFilePage(
             dismissButton = { AlertDialogDefaults.DismissButton(onClick = close) },
         )
     }
-    // Without root, shared storage needs a permission the user grants in the system; the picker asks
-    // once per visit and reloads when the user returns from granting it.
+    // Ask for storage permission once per visit and reload after returning from settings.
     var permissionAsked by rememberSaveable { mutableStateOf(false) }
     var awaitingPermission by rememberSaveable { mutableStateOf(false) }
     var permissionFailed by remember { mutableStateOf(false) }

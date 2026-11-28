@@ -24,19 +24,10 @@ import org.bakasu.bakasu.ui.component.rememberCustomDialog
  * @date 2026/10/1.
  */
 
-/** The large body style in SemiBold, for what a dialog acts on, such as a module name. */
 @Composable
 fun wearEmphasizedBodyStyle(): TextStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
 
-/**
- * A confirmation as the official Wear [AlertDialog]: the operation [title], then Confirm and Cancel.
- * Without a [subject] the [message] sits in the dialog's text slot. With one, the subject (such as
- * the module to uninstall) takes the text slot in the emphasized body style, and the message follows
- * in the body style, centered across the content width like the slots above; it scrolls when long.
- * Cancel, swiping away and Back only close it; [onConfirm] runs once, after the dialog has closed. A
- * [destructive] operation, such as deleting or uninstalling, takes the error colors on its icon and
- * Confirm button.
- */
+/** Confirms after dismissing the dialog; Cancel, Back and swipe-dismiss only close it. */
 @Composable
 fun rememberWearConfirmDialog(
     title: String,

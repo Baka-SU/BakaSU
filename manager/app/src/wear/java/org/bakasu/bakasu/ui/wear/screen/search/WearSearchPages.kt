@@ -27,11 +27,6 @@ import org.bakasu.bakasu.ui.wear.screen.main.WearModuleItem
  * @date 2026/10/1.
  */
 
-/**
- * The results of an app search on their own page, as Wear search flows do: the title, the query as a
- * button that reopens the input, then the matching apps. Leaving the page clears the query, so the
- * main list stays unfiltered.
- */
 @Composable
 internal fun WearAppSearchResults(
     state: SuperUserUiState,
@@ -58,7 +53,6 @@ internal fun WearAppSearchResults(
     }
 }
 
-/** The module counterpart of [WearAppSearchResults]. */
 @Composable
 internal fun WearModuleSearchResults(
     state: ModuleUiState,

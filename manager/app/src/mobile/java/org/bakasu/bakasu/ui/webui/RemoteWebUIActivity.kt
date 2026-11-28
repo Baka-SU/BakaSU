@@ -33,11 +33,8 @@ import org.bakasu.bakasu.ui.theme.KernelSUTheme
 import org.koin.compose.koinInject
 
 /**
- * The phone side of a watch module's WebUI, opened internally after Bluetooth app authentication.
- * The activity claims the module session from the approved watch over secure RFCOMM. The
- * page, its files and its `ksu` bridge commands are all served by the watch, so every change the
- * page makes is applied on the watch; closing the page tells the watch to end the session and
- * reload its modules.
+ * Displays an approved watch module through [RemoteWebUiBackend] after Bluetooth app authentication.
+ * Files come from the watch and commands run there; closing the page ends the session and reloads its modules.
  */
 class RemoteWebUIActivity : ComponentActivity() {
     private var backend: RemoteWebUiBackend? = null

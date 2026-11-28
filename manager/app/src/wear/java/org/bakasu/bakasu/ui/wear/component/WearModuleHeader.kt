@@ -20,7 +20,6 @@ import org.bakasu.bakasu.R
 import org.bakasu.bakasu.domain.model.CatalogModule
 import org.bakasu.bakasu.domain.model.InstalledModule
 
-/** The installed module's two-line capsule, shared by its details and update pages. */
 @Composable
 internal fun TransformingLazyColumnItemScope.WearModuleHeader(
     spec: TransformationSpec,

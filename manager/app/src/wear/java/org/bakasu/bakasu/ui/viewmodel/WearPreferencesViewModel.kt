@@ -12,11 +12,6 @@ import org.bakasu.bakasu.domain.usecase.SetStringPreferenceUseCase
  * @date 2026/10/1.
  */
 
-/**
- * The watch-only preferences, each with its saved key, default and, for a choice, its [options]. A
- * saved value that is no longer an option, such as the removed "browser" link mode, reads as the
- * default.
- */
 enum class WearPreference(val key: String, val default: String, val options: List<String> = emptyList()) {
     Picker("wear_file_picker", "auto", listOf("auto", "builtin", "system")),
     Link("wear_link_mode", "auto", listOf("auto", "webview", "phone")),
@@ -29,7 +24,7 @@ enum class WearPreference(val key: String, val default: String, val options: Lis
     BlockBackKey("wear_block_back_key", "false"),
 }
 
-/** Reads a Wear preference, falling back to its default. */
+/** Returns the saved value, or the default if unset or no longer supported. */
 fun GetStringPreferenceUseCase.wear(preference: WearPreference): String = invoke(preference.key, preference.default)
     ?.takeIf { preference.options.isEmpty() || it in preference.options } ?: preference.default
 

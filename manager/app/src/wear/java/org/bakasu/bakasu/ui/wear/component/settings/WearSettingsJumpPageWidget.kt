@@ -23,10 +23,6 @@ import org.bakasu.bakasu.ui.wear.component.WearAutoMarqueeText
 import org.bakasu.bakasu.ui.wear.component.WearBadge
 import org.bakasu.bakasu.ui.wear.component.WearRefreshItem
 
-/**
- * A settings entry that opens another page: a neutral filled tonal button with an optional leading
- * icon and a [description] (summary or current value) as its secondary label.
- */
 @Composable
 fun TransformingLazyColumnItemScope.WearSettingsJumpPageWidget(
     spec: TransformationSpec,

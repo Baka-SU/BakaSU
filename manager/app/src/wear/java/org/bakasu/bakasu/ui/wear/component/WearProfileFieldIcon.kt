@@ -11,7 +11,6 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Storage
 import org.bakasu.bakasu.R
 
-/** Keep app profiles, local templates and online template details visually consistent. */
 internal fun wearProfileFieldIcon(field: Int) = when (field) {
     R.string.app_profile_template_id, R.string.wear_uid, R.string.wear_gid -> Icons.Rounded.Numbers
     R.string.app_profile_template_name -> Icons.Rounded.Edit

@@ -271,7 +271,6 @@ internal fun WearDynamicManagerAppsPage(
     }
 }
 
-/** A text field of the umount path page, edited on its own input page. */
 private enum class UmountInput { Path, Flags }
 
 @Composable

@@ -88,10 +88,8 @@ internal fun WearHomePage(
     val info = state.systemInfo
     val seccomp = wearSeccompStatus(state)
     val managers = managerSignatures(state)
-    // Build notices are warnings; missing root or incompatible interfaces block features and are errors.
     val warnings = buildList {
-        // The Wear APK can be sideloaded onto phones; it still runs there, so only warn like the
-        // unofficial-manager notice and point the user at the Mobile APK.
+        // Warn on non-watch devices without blocking use of a sideloaded Wear APK.
         if (!LocalContext.current.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)) {
             add(WearHomeWarning(R.string.wear_non_watch_title, stringResource(R.string.wear_non_watch_message), WearStatusTone.WARNING))
         }
@@ -107,7 +105,6 @@ internal fun WearHomePage(
             } else {
                 R.string.require_kernel_version_gki
             }
-            // As the phone notice says, an outdated LKM kernel is updated from the install page.
             add(
                 WearHomeWarning(
                     R.string.wear_warning_version_mismatch,
@@ -135,8 +132,6 @@ internal fun WearHomePage(
         }
     }
     var shownWarning by remember { mutableStateOf<WearHomeWarning?>(null) }
-    // The notice is read in a scrolling AlertDialog: a notice with a follow-up action offers it with
-    // Cancel, the others close with a single acknowledgement button.
     val warningDialog = rememberCustomDialog { dismiss ->
         val warning = shownWarning ?: return@rememberCustomDialog
         val action = warning.onAction
@@ -194,7 +189,6 @@ internal fun WearHomePage(
                     }
                 }
             }
-            // The running state is the screen's only high-emphasis chip.
             item {
                 val working = status.ksuVersion != null
                 WearChip(
@@ -216,7 +210,6 @@ internal fun WearHomePage(
                         info.superuserCount,
                         info.moduleCount,
                     ),
-                    // Match the phone status card: mode badges belong beside the headline, not in the description.
                     headlineBadges = if (working) {
                         listOfNotNull(
                             stringResource(if (status.lkmMode == true) R.string.wear_mode_lkm else R.string.wear_mode_builtin),
@@ -226,23 +219,17 @@ internal fun WearHomePage(
                     } else {
                         emptyList()
                     },
-                    // The superuser and module counts fit one line in the theme's smallest body style.
                     secondaryLabelStyle = if (working) MaterialTheme.typography.bodyExtraSmall else null,
                     icon = when {
                         working -> Icons.Rounded.TaskAlt
                         status.kernelVersion.isGKI() -> Icons.Rounded.Warning
                         else -> Icons.Rounded.Block
                     },
-                    // Not installed or unsupported is an error state, shown in red.
                     emphasis = if (working) WearChipEmphasis.HIGH else WearChipEmphasis.ERROR,
-                    // As on the phone, the status opens installation when root or a GKI kernel allows it.
                     onClick = onInstall.takeIf { status.isRootAvailable || status.kernelVersion.isGKI() },
                 )
             }
             if (state.isSimpleMode) {
-                // Simple mode folds each section into one summary row; the full section opens on its own page.
-                // The rows use the tonal surface of the other Home chips, so they follow the dynamic
-                // color scheme and the card transparency.
                 item {
                     WearChip(
                         spec,
@@ -273,7 +260,6 @@ internal fun WearHomePage(
     }
 }
 
-/** The full version information that simple mode opens from its summary row. */
 @Composable
 internal fun WearHomeVersionInfoPage(state: HomeDashboardState, onBack: () -> Unit) {
     val unknown = stringResource(R.string.unknown)
@@ -283,7 +269,6 @@ internal fun WearHomeVersionInfoPage(state: HomeDashboardState, onBack: () -> Un
     }
 }
 
-/** The full status information that simple mode opens from its summary row. */
 @Composable
 internal fun WearHomeStatusInfoPage(state: HomeDashboardState, onBack: () -> Unit) {
     val unknown = stringResource(R.string.unknown)
@@ -295,10 +280,6 @@ internal fun WearHomeStatusInfoPage(state: HomeDashboardState, onBack: () -> Uni
     }
 }
 
-/**
- * A notice in a standard list button, sized and padded like the other Home rows: its icon and
- * short title, with a "tap to view" hint as the secondary label; the full text opens in a dialog.
- */
 @Composable
 private fun TransformingLazyColumnItemScope.WearWarningBar(
     spec: TransformationSpec,

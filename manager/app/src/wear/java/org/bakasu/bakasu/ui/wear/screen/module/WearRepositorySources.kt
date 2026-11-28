@@ -50,7 +50,6 @@ private fun wearRepositoryError(failure: RepositoryFailure?): String? {
     return failure.httpStatus?.let { stringResource(R.string.repo_error_http, reason, it) } ?: reason
 }
 
-/** The same source repository and validation as the phone, presented with Wear settings rows. */
 @Composable
 internal fun WearRepositorySourcesPage(onBack: () -> Unit, onAdd: () -> Unit, onSource: (String) -> Unit) {
     val viewModel = koinViewModel<RepositorySourcesViewModel>()
@@ -122,7 +121,6 @@ internal fun WearRepositorySourcePage(url: String, selectedUrl: String?, onBack:
     }
 }
 
-/** A standard-sized icon stays centered beside details that may wrap over several lines. */
 @Composable
 private fun WearRepositoryDetailField(icon: ImageVector, label: String, value: String) {
     WearDetailField(label, value, iconAlignment = Alignment.CenterVertically) {

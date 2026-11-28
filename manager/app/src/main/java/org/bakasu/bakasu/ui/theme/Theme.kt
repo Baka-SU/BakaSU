@@ -164,7 +164,6 @@ class BackgroundManager(
         /** Name used before backgrounds were stored under a per-save name; still deleted on replace. */
         const val LEGACY_BACKGROUND_FILE_NAME = "custom_background.jpg"
 
-        /** Prefix of the per-save background names; the suffix keeps every saved Uri distinct. */
         const val BACKGROUND_FILE_PREFIX = "custom_background_"
     }
 
@@ -259,8 +258,7 @@ class BackgroundManager(
         }
 
         config.backgroundDim = prefs.getFloat("background_dim", 0f).coerceIn(0f, 1f)
-        // Read with the other background settings: the Wear theme loads them only through here, so
-        // leaving the blur out turned it off again after the app restarted.
+        // Wear restores its blur settings through this loader.
         config.isEnableBlur = prefs.getBoolean("enable_blur", false)
         config.isEnableBlurExp = prefs.getBoolean("enable_blur_exp", false)
         config.isUseBackgroundSeedColor = prefs.getBoolean("use_background_seed_color", false)
@@ -280,13 +278,7 @@ class BackgroundManager(
         }
     }
 
-    /**
-     * Copies the picked image into the app's own storage under a fresh, per-save name.
-     *
-     * The name has to change on every save: Coil compares image requests field by field and skips
-     * a request equal to the one already loaded, so reusing a fixed name would leave the previous
-     * image on screen after the user picks another one.
-     */
+    // A fresh URI makes Coil reload the image instead of reusing the previous request.
     private fun copyImageToInternalStorage(context: Context, uri: Uri): Uri? {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri) ?: return null
@@ -310,11 +302,7 @@ class BackgroundManager(
         }
     }
 
-    /**
-     * Deletes a stored background image once it is no longer referenced. Only files this class
-     * writes qualify — the legacy fixed name and its per-save successors — so the blur cache,
-     * which shares the same directory under a different name, is left alone.
-     */
+    // Delete only saved backgrounds; the blur cache shares this directory.
     private fun deleteBackgroundFile(context: Context, uri: Uri?) {
         val file = uri?.path?.let(::File) ?: return
         val isStoredBackground = file.parentFile == context.filesDir &&

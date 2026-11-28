@@ -51,14 +51,8 @@ import kotlin.math.roundToInt
  */
 
 /**
- * A slider wrapped in one card together with its information: the icon, a one-line label and the
- * current value on top, and a segmented track below that is dragged or tapped to a step.
- *
- * Wear Material 3's Slider only steps with its decrease and increase buttons, so the track follows
- * the design instead: the selected part on the primary color, the rest on a neutral track, a stop
- * dot for every step and an upright thumb between them. [onValueChange] runs only when the chosen
- * step changes, never for every pixel of a drag, so a setting that is written right away is written
- * once per step; a setting with its own Apply button keeps it.
+ * Supports track taps and drags, which Wear Material 3's button-stepped Slider does not.
+ * [onValueChange] runs only when the selected step changes, limiting immediate setting writes.
  */
 @Composable
 fun TransformingLazyColumnItemScope.WearSliderCard(
@@ -99,7 +93,7 @@ fun TransformingLazyColumnItemScope.WearSliderCard(
     }
 }
 
-/** The track's measurements; the touch area is the 48dp minimum touch target. */
+// Keep a 48dp touch target around the smaller track.
 private val TrackTouchHeight = 48.dp
 private val TrackHeight = 20.dp
 private val ThumbWidth = 4.dp
@@ -123,8 +117,7 @@ private fun WearStepTrack(
     fun stepOf(target: Float) = if (span <= 0f) 0 else (((target - start) / span) * segments).roundToInt().coerceIn(0, segments)
     fun valueAt(step: Int) = start + span * step / segments
 
-    // While dragging, the thumb shows the finger's step at once; the settled value comes back
-    // through [value], which may arrive a moment later.
+    // Show the dragged step immediately while waiting for the caller to update value.
     var dragStep by remember { mutableStateOf<Int?>(null) }
     val shownStep = dragStep ?: stepOf(value)
     val currentStep by rememberUpdatedState(stepOf(value))
@@ -207,8 +200,6 @@ private fun DrawScope.drawStepTrack(step: Int, segments: Int, active: Color, onA
     fun stopX(index: Int) = inset + usable * index / segments
     val thumbX = stopX(step)
 
-    // The selected part runs to the thumb, the rest from the thumb to the end, each with a small
-    // corner where it meets the thumb.
     if (thumbX - gap > 0f) {
         drawPath(
             Path().apply {
@@ -226,8 +217,7 @@ private fun DrawScope.drawStepTrack(step: Int, segments: Int, active: Color, onA
         )
     }
     val stopRadius = StopRadius.toPx()
-    // Fine color adjustments have more steps than can fit visibly on a watch. Keep their
-    // precision, but only draw stops when adjacent dots have enough room to remain distinct.
+    // Hide crowded intermediate stops without reducing the setting's precision.
     val visibleStops = if (usable / segments >= stopRadius * 4) 0..segments else listOf(0, segments)
     for (index in visibleStops) {
         val x = stopX(index)

@@ -8,9 +8,5 @@ import androidx.wear.compose.material3.ButtonDefaults
  * @date 2026/10/1.
  */
 
-/**
- * The medium-emphasis list action: the official filled variant pairs primaryContainer with
- * onPrimaryContainer for the label, secondary label and icon alike.
- */
 @Composable
 fun wearButtonColors() = ButtonDefaults.filledVariantButtonColors()

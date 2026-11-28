@@ -11,10 +11,7 @@ import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.lazy.TransformationSpec
 
-/**
- * Read-only module information, using the official Card's shape, padding and surface roles. A
- * [compact] card takes a button's padding and row height, to line up with compact buttons beside it.
- */
+/** Read-only module card; [compact] matches the padding and height of compact action rows. */
 @Composable
 fun TransformingLazyColumnItemScope.WearModuleInfoCard(
     spec: TransformationSpec,

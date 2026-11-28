@@ -32,13 +32,11 @@ import androidx.wear.compose.material3.Text
  * @date 2026/10/1.
  */
 
-/** Uses the watch IME, including its voice input, without importing a phone text-field control. */
 @Composable
 fun WearTextInputPage(title: String, initialValue: String, multiline: Boolean = false, autoFocus: Boolean = false, keyboardType: KeyboardType = KeyboardType.Text, placeholder: String? = null, canSubmit: (String) -> Boolean = { true }, onSubmit: (String) -> Unit) {
     var value by rememberSaveable(title, initialValue) { mutableStateOf(initialValue) }
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    // Confirming is the page's primary action, so it takes the edge button; Back and swipe dismiss it.
     val submit = { if (canSubmit(value)) onSubmit(value) }
     WearList(onConfirm = submit, confirmEnabled = canSubmit(value)) { spec ->
         item { WearPageHeader(spec, title) }

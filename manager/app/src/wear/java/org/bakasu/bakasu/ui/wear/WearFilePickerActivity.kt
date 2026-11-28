@@ -14,13 +14,7 @@ import org.bakasu.bakasu.data.file.WearFileProvider
 import org.bakasu.bakasu.ui.wear.component.WearTimeText
 import org.bakasu.bakasu.ui.wear.screen.file.WearFilePage
 
-/**
- * The app's own document picker for watches without a usable DocumentsUI. It answers the standard
- * SAF intents the app already sends (open, get content and create document) and returns a
- * `content://` URI of [org.bakasu.bakasu.data.file.WearFileProvider]. It is not exported, so
- * only this app can start it, and [withDocumentPickerFallback] routes an intent here only when no
- * system picker can take it or the Wear picker setting asks for the built-in one.
- */
+/** App-only SAF picker returning [WearFileProvider] URIs for open, get-content and create requests. */
 class WearFilePickerActivity : WearActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,10 +47,8 @@ internal fun Context.isSystemDocumentPickerUnavailable(intent: Intent): Boolean 
     }
 
 /**
- * The SAF [intent] unchanged while a system picker can take it; otherwise the same intent limited
- * to this app, where it resolves to [WearFilePickerActivity] through that activity's intent filter.
- * Some watches resolve these actions only to a framework stub that cannot pick files. [pickerMode]
- * is the Wear picker setting: `builtin` always uses the app's picker and `system` never does.
+ * Routes implicit SAF requests to the built-in picker when the system picker is absent or a stub.
+ * [pickerMode] `builtin` forces the app picker; `system` leaves the intent unchanged.
  */
 fun Context.withDocumentPickerFallback(intent: Intent, pickerMode: String?): Intent {
     if (intent.action !in DocumentActions || intent.component != null || intent.`package` != null) return intent

@@ -84,11 +84,7 @@ val LocalWearPanelDismissals = compositionLocalOf { 0 }
 /** Whether the shared operations host currently owns the reveal. */
 val LocalWearPanelHosted = compositionLocalOf { false }
 
-/**
- * How far the panel of the page on screen has been pulled, from 0 (closed) to 1 (landed). The page
- * publishes it so the surfaces drawn above the page, such as the pager indicator, can step aside
- * with the pull instead of sitting on top of the panel.
- */
+/** Panel reveal from 0 (closed) to 1 (open), shared with overlays such as the pager indicator. */
 val LocalWearPanelPull = compositionLocalOf { mutableFloatStateOf(0f) }
 
 /**
@@ -142,8 +138,6 @@ fun WearList(
         remember(listState, flingBehavior, density, configuration) { behavior }
     }
     var viewportTop by remember { mutableFloatStateOf(0f) }
-    // Round screens scale and fade items at the edges; square screens (including the screen shape
-    // setting) keep items at full size, as nothing is cut off there.
     val transformationSpec = rememberWearTransformationSpec()
     val pullOffset = remember { mutableFloatStateOf(0f) }
     val pullProgress = remember { mutableFloatStateOf(0f) }
@@ -203,8 +197,7 @@ fun WearList(
     }.coerceAtLeast(0f)
     val pageRecess = revealProgress.coerceIn(0f, WearPageRecessLimit)
     val pageScale = wearPanelPageScale(pageRecess)
-    // The destination has started closing or has left; the held preview goes away at once, so the
-    // closing panel uncovers the page rather than a copy of itself.
+    // Clear the preview so the closing panel reveals the page beneath it.
     LaunchedEffect(panelDismissals) {
         if (panelWasDismissed) {
             lastDismissal = panelDismissals
@@ -223,8 +216,7 @@ fun WearList(
             panelPull.floatValue = closingPull
         }
     }
-    // A page that leaves the screen gives up a pull in progress, unless the panel it handed over to
-    // is the reason the page is not active: that panel is still showing the same content.
+    // An inactive page retains its pull only while its menu is hosted.
     LaunchedEffect(screenActive, panelHosted) {
         // An outgoing menu must not complete a delayed Back against the newly opened page.
         if (!screenActive && onClosePanel != null) {
@@ -239,7 +231,6 @@ fun WearList(
             pullProgress.floatValue = 0f
         }
     }
-    // Boundary drags follow the finger without resistance; release returns without a spring.
     val animatedOffset by animateFloatAsState(
         pullOffset.floatValue,
         animationSpec = if (reduceMotion || pullOffset.floatValue != 0f) snap() else tween(180),
@@ -283,8 +274,6 @@ fun WearList(
         },
         onPullEnd = { draggingPanel = false },
     )
-    // Loading shows the indeterminate indicator at the screen center instead of the content, as the
-    // phone does; the branded loading screen is only for the manager's first load.
     val loadingDescription = stringResource(R.string.wear_loading)
     val hasFooterButton = !isLoading && (onBack != null || onConfirm != null || backToTop)
     val footerEnabled = !isRefreshing && (onConfirm == null || confirmEnabled) &&
@@ -335,7 +324,6 @@ fun WearList(
                 WearLoadingIndicator(Modifier.semantics { contentDescription = loadingDescription })
             }
         } else {
-            // Header, refresh and list occupy separate layout regions on the same moving surface.
             val keepRefreshSpace = showRefreshGap || refreshOffset > 0.dp
             val pinTitle = keepRefreshSpace && pageTitle != null
             val refreshBoundary = remember(pinTitle) {
@@ -438,8 +426,6 @@ fun WearList(
             }
         }
     }
-    // The main page stays stationary; the menu is a separate surface above it. Behind an opening
-    // panel the page also scales down, so the panel appears to land on a receding page.
     val pageModifier = Modifier.graphicsLayer {
         translationY = if (onClosePanel != null) closeDirection * closeProgress * viewportHeight else 0f
         if (hasOperationsPanel) {
@@ -450,7 +436,6 @@ fun WearList(
     Box(
         Modifier.fillMaxSize().then(gestureModifier).onGloballyPositioned { viewportTop = it.positionInRoot().y }.onSizeChanged { viewportHeight = it.height.toFloat().coerceAtLeast(1f) },
     ) {
-        // Round edge actions stay hidden until loading and the refresh transition end.
         if (configuration.isScreenRound && hasFooterButton) {
             ScreenScaffold(
                 scrollState = listState,
@@ -464,7 +449,7 @@ fun WearList(
                         EdgeButton(
                             enabled = footerEnabled,
                             onClick = onFooterClick,
-                            // Dragging on the edge button keeps scrolling the list, as in the M3 list guidance.
+                            // Let drags on the edge button scroll the list.
                             modifier = Modifier.scrollable(
                                 listState,
                                 enabled = !isRefreshing,
@@ -501,13 +486,10 @@ internal const val WearPanelMaxDim = 1f
 /** A bound on the page overshoot, so a long pull cannot shrink it far out of shape. */
 private const val WearPageRecessLimit = 1.2f
 
-/** Equal space above and below the refresh indicator. */
 private val WearRefreshSpacing = 8.dp
 
-/** The gap between list items, the TransformingLazyColumn default. */
 val WearItemSpacing = 4.dp
 
-/** A slightly tighter gap for pages made of full-width rows, such as the module details. */
 val WearCompactItemSpacing = 2.dp
 
 @Composable

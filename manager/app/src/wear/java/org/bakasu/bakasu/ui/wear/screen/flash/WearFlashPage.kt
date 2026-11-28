@@ -39,12 +39,7 @@ import org.bakasu.bakasu.ui.wear.rememberWearNavigator
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
-/**
- * Runs a [FlashOperation] with the phone's FlashViewModel: a module ZIP, a boot image patch, or
- * uninstalling. The page shows the current step while running and the result with its follow-up
- * actions afterwards; the output opens as its own log page. [onInstalled] runs once the operation
- * succeeds.
- */
+/** Runs [operation] through [FlashViewModel] and calls [onInstalled] after success. */
 @Composable
 internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInstalled: () -> Unit) {
     val viewModel = koinViewModel<FlashViewModel>()
@@ -52,7 +47,7 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
     val takeUriPermission = koinInject<TakeModuleUriPermissionUseCase>()
     val state by viewModel.state.collectAsStateWithLifecycle()
     var fileError by rememberSaveable { mutableStateOf(false) }
-    // FlashUiAction.Start restarts a running operation, so the page sends it once, as the phone does.
+    // Dispatch Start once; repeating it restarts a running operation.
     var started by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -77,7 +72,6 @@ internal fun WearFlashPage(operation: FlashOperation, onBack: () -> Unit, onInst
     }
 }
 
-/** Renders the progress and actions for the current operation. */
 @Composable
 internal fun WearFlashPage(operation: FlashOperation, state: FlashUiState, fileError: Boolean, onBack: () -> Unit, onReboot: () -> Unit) {
     val failed = fileError || state.exitCode.let { it != null && it != 0 }

@@ -130,11 +130,11 @@ private const val MODULE_HOST = "mui.kernelsu.org"
 private const val TAG = "ModuleWebUI"
 
 /**
- * Creates the module WebView for [webUIState], whose module name and directory are already set,
- * serving files, commands and the `ksu` bridge from [backend]. With [restrictToModule] nothing
- * outside the module's own origin loads into the page, so no other site can reach the bridge; links
- * elsewhere open in the browser. With [recoverFromRenderCrash] a crashed renderer closes the page
- * with an error instead of killing the app, as low-memory watches need. Must run on the main thread.
+ * Creates a module WebView using [backend] for files, commands and the `ksu` bridge.
+ * Call on the main thread after setting the module name and directory in [webUIState].
+ *
+ * [restrictToModule] keeps other origins out of the bridge-enabled page and opens external links
+ * in the browser. [recoverFromRenderCrash] closes a failed renderer with an error.
  */
 @SuppressLint("SetJavaScriptEnabled")
 internal fun createWebView(

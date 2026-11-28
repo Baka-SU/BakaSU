@@ -51,11 +51,9 @@ import org.bakasu.bakasu.ui.wear.component.wearEmphasizedBodyStyle
 import org.koin.compose.koinInject
 
 /**
- * Installing a module ZIP on the watch, from any of its three starts. A picked file and a
- * repository download are confirmed first, as on the phone; a module update, whose page already
- * asked, installs as soon as it is downloaded. Repository files must match their published size
- * and SHA-256; registry updates use the same verification as the phone. After installing, [onInstalled]
- * refreshes what shows modules.
+ * Confirms picked ZIPs and repository downloads; previously confirmed updates install after download.
+ * Carries published size and SHA-256 requirements into the download route and refreshes modules
+ * through [onInstalled] after installation.
  */
 @Stable
 class WearModuleInstaller internal constructor(
@@ -64,7 +62,6 @@ class WearModuleInstaller internal constructor(
     private val pick: () -> Unit,
     val onInstalled: () -> Unit,
 ) {
-    /** The ZIP waiting for the install confirmation, or null. */
     internal val pendingConfirmation: String? get() = confirming.value
 
     fun pickFile() = pick()
@@ -155,15 +152,7 @@ internal fun rememberWearModuleInstaller(navigator: WearNavigator, onPickFailed:
     }
 }
 
-/**
- * Confirms installing the ZIP the [installer] waits on with the official Wear [AlertDialog]. The
- * type follows the Wear roles: the dialog title in the title slot's own style, the module name in an
- * emphasized body style (wrapping, never cut), the metadata in quieter body styles and the
- * description in the body text style, all centered like the dialog's own slots; a long description
- * wraps and scrolls with the dialog. Missing `module.prop` fields are left out, and an unreadable
- * one falls back to the file name. Only Confirm installs; Cancel, swiping away and Back only close
- * it. Nothing shows while the details are still read.
- */
+/** Shows parsed module details before installation; only Confirm starts the install. */
 @Composable
 internal fun WearModuleInstallConfirmDialog(installer: WearModuleInstaller) {
     val uri = installer.pendingConfirmation
@@ -205,11 +194,9 @@ internal fun WearModuleInstallConfirmDialog(installer: WearModuleInstaller) {
         },
         dismissButton = { AlertDialogDefaults.DismissButton(onClick = installer::dismissConfirmation) },
     ) {
-        // The metadata, one field per item at the list's 4dp spacing.
         if (version.isNotBlank()) item { WearDialogField(stringResource(R.string.module_version), version) }
         module?.author?.ifBlank { null }?.let { author -> item { WearDialogField(stringResource(R.string.module_author), author) } }
         if (fileName.isNotBlank()) item { WearDialogField(stringResource(R.string.wear_file_name), fileName) }
-        // The description is its own group: 4dp more above it gives the dialog's 8dp group spacing.
         module?.description?.ifBlank { null }?.let { description ->
             item {
                 WearDialogField(
@@ -222,10 +209,6 @@ internal fun WearModuleInstallConfirmDialog(installer: WearModuleInstaller) {
     }
 }
 
-/**
- * One metadata field of a dialog: a quiet small label above its value. Both span the content width
- * and are centered, like the dialog's own title and text slots.
- */
 @Composable
 private fun WearDialogField(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {

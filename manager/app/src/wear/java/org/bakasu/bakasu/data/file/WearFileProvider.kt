@@ -15,11 +15,8 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 /**
- * Serves the files picked in the app's own document picker as `content://` URIs, so the existing
- * ContentResolver-based callers read and write them as they do with DocumentsUI results. The files
- * are opened directly through [RootServiceRepository], using root when available. Read and write
- * failures reach the caller. The provider is not exported and grants no URI permissions, so only
- * this app can use it.
+ * Exposes picker files as app-only `content://` URIs without URI permission grants.
+ * [RootServiceRepository] opens files with root when available; read and write failures reach callers.
  */
 class WearFileProvider :
     ContentProvider(),

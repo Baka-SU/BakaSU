@@ -85,11 +85,6 @@ private fun Int.toHex() = "#%06X".format(this and 0xFFFFFF)
 
 internal fun Int.toWearColorHsv() = FloatArray(3).also { android.graphics.Color.colorToHSV(this, it) }
 
-/**
- * One scrolling page in three sections: accent color (follow-system switch and swatches), custom
- * color (preview and HSV editor) and background
- * (image, removal and dimming).
- */
 @Composable
 internal fun WearColorPage(state: SettingsUiState, seed: Int, onBack: () -> Unit, onAction: (SettingsUiAction) -> Unit, onOpen: (WearRoute) -> Unit, onImage: () -> Unit) {
     val config = koinInject<ThemeConfig>()
@@ -106,7 +101,6 @@ internal fun WearColorPage(state: SettingsUiState, seed: Int, onBack: () -> Unit
     }
     val hex = seed.toHex()
     Box(Modifier.fillMaxSize()) {
-        // Keep three equally sized cells; each toggle leaves 5% space on each side.
         val columns = 3
         WearList(onBack = onBack) { spec ->
             item { WearPageHeader(spec, stringResource(R.string.theme_color)) }
@@ -153,7 +147,6 @@ internal fun WearColorPage(state: SettingsUiState, seed: Int, onBack: () -> Unit
                 }
             }
             item { WearSectionHeader(spec, stringResource(R.string.choose_theme_color)) }
-            // Swatches share the row equally so they fill the screen width (margins stretch evenly).
             swatches.chunked(columns).forEachIndexed { index, row ->
                 item(key = "swatches-$index") {
                     WearScaledItem(spec) {
@@ -216,8 +209,6 @@ internal fun WearColorPage(state: SettingsUiState, seed: Int, onBack: () -> Unit
                         steps = 19,
                     )
                 }
-                // How much of the background the components let through, matching the phone's
-                // card transparency slider.
                 item {
                     WearSliderCard(
                         spec,
@@ -235,14 +226,12 @@ internal fun WearColorPage(state: SettingsUiState, seed: Int, onBack: () -> Unit
     }
 }
 
-/** A swatch toggle: the selected color morphs its shape and shows a check and an outline, not color alone. */
 @Composable
 private fun ColorSwatch(color: Color, selected: Boolean, onSelect: () -> Unit) {
     val contentColor = if (color.luminance() > 0.5f) Color.Black else Color.White
     IconToggleButton(
         checked = selected,
         onCheckedChange = { onSelect() },
-        // Fill the wider weighted cell while retaining the Wear toggle's selection animation.
         modifier = Modifier.fillMaxWidth(0.9f).heightIn(min = 48.dp),
         colors = IconToggleButtonDefaults.colors(
             checkedContainerColor = color,
@@ -261,10 +250,6 @@ private fun ColorSwatch(color: Color, selected: Boolean, onSelect: () -> Unit) {
     }
 }
 
-/**
- * The editable hex value, previewed by a color dot in the icon slot; the `#RRGGBB` hint is its
- * secondary label.
- */
 @Composable
 private fun TransformingLazyColumnItemScope.HexColorButton(spec: TransformationSpec, hex: String, onClick: () -> Unit) {
     WearSettingsJumpPageWidget(
@@ -278,11 +263,7 @@ private fun TransformingLazyColumnItemScope.HexColorButton(spec: TransformationS
     )
 }
 
-/**
- * The pending UI scale in a slider card; the apply action is the single high-emphasis
- * button and runs only when the scale changed, and restoring the system scale only resets the
- * pending value.
- */
+/** UI scale changes, including reset, remain pending until Apply. */
 @Composable
 internal fun WearDpiPage(
     state: SettingsUiState,
@@ -318,7 +299,6 @@ internal fun WearDpiPage(
             )
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_display_screen_layout)) }
-        // The scale label and value sit inside the slider card, above its track.
         item {
             WearSliderCard(
                 spec,
@@ -414,7 +394,6 @@ internal fun WearDpiPage(
     }
 }
 
-/** The phone's HSV picker adapted to a scrolling Wear page with one edge confirmation. */
 @Composable
 internal fun WearCustomColorPage(
     hsv: FloatArray,

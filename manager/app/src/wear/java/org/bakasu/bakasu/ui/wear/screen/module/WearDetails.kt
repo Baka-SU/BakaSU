@@ -131,7 +131,6 @@ internal fun WearModuleDetail(
     }
 
     val unknown = stringResource(R.string.unknown)
-    // The module name stands out on its own; the risk follows it, without repeating the name.
     val removeDialog = rememberWearConfirmDialog(
         title = stringResource(R.string.wear_uninstall_module),
         message = stringResource(if (module.metamodule) R.string.wear_metamodule_uninstall_message else R.string.wear_uninstall_message),
@@ -141,22 +140,17 @@ internal fun WearModuleDetail(
     )
     WearFeedbackEffect(error?.takeIf { it.isNotBlank() }, onErrorShown)
     WearList(onBack = onBack, itemSpacing = WearCompactItemSpacing, topContentPadding = 12.dp) { spec ->
-        // As in the design, the page opens with the module title card instead of a page title.
         item {
             WearModuleHeader(spec, module, artwork)
         }
 
         item { WearSectionHeader(spec, stringResource(R.string.wear_module_information)) }
-        // Information rows read like the operation buttons below (icon, label, secondary label), but
-        // stay cards, as nothing happens on a tap.
         item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.Rounded.Person, stringResource(R.string.module_author), module.author.ifBlank { unknown }) } }
         item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.Rounded.Tag, stringResource(R.string.wear_details), module.id) } }
         if (module.description.isNotBlank()) {
             item { WearModuleInfoCard(spec, compact = true) { WearInfoRow(Icons.Rounded.Description, stringResource(R.string.wear_description), module.description) } }
         }
         item { WearSectionHeader(spec, stringResource(R.string.wear_module_operations)) }
-        // Every operation uses the button's icon, label and secondary label slots: the label names the
-        // operation and the secondary label gives its state or what it does.
         item {
             WearSettingsSwitchWidget(
                 spec,
@@ -572,7 +566,6 @@ internal fun WearAppDetail(
     WearList(isLoading = state.isLoading && state.profile == null, onBack = onBack) { spec ->
         val profile = state.profile
         if (profile != null) {
-            // As in the design, the page opens with the app title card instead of a page title.
             item {
                 WearModuleInfoCard(spec) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
