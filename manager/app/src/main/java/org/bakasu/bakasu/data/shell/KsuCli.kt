@@ -38,7 +38,6 @@ class KsuCliRepository(context: Context) {
         val MODULE_ID_REGEX = Regex("^[a-zA-Z][a-zA-Z0-9._-]+$")
     }
 
-    private val appContext = context.applicationContext
     private val nativeLibraryDir = context.applicationInfo.nativeLibraryDir
     private val shellLock = Any()
     private var rootShell: Shell? = null
@@ -55,12 +54,11 @@ class KsuCliRepository(context: Context) {
     fun getKsuDaemonPath(): String = getNativeLibraryPath("ksud")
 
     /** Shared shells belong to this repository; callers must not close them. */
-    fun getRootShell(globalMnt: Boolean = false, recheckRoot: Boolean = false): Shell = synchronized(shellLock) {
+    fun getRootShell(globalMnt: Boolean = false): Shell = synchronized(shellLock) {
         val cached = if (globalMnt) globalMountShell else rootShell
-        if (cached != null && cached.isAlive && (!recheckRoot || cached.isRoot)) {
+        if (cached != null && cached.isAlive) {
             cached
         } else {
-            cached?.close()
             createRootShell(globalMnt).also {
                 if (globalMnt) globalMountShell = it else rootShell = it
             }
@@ -211,19 +209,15 @@ class KsuCliRepository(context: Context) {
     fun listModules(): String {
         val shell = getRootShell()
 
-        val result = shell.newJob()
-            .add("${getKsuDaemonPath()} module list").to(ArrayList(), ArrayList()).exec()
-        val output = result.out.joinToString("\n")
-        if (BuildConfig.FLAVOR == "wear" && (!result.isSuccess || output.isBlank())) {
-            Log.w(TAG, "Module list failed (${result.code}): ${result.err.joinToString("\n")}")
-            throw IOException(appContext.getString(R.string.module_load_failed))
-        }
-        return output.ifBlank { "[]" }
+        val out = shell.newJob()
+            .add("${getKsuDaemonPath()} module list").to(ArrayList(), null).exec().out
+        return out.joinToString("\n").ifBlank { "[]" }
     }
 
     fun getModuleCount(): Int {
+        val result = listModules()
         runCatching {
-            val array = JSONArray(listModules())
+            val array = JSONArray(result)
             return array.length()
         }.getOrElse { return 0 }
     }
@@ -531,16 +525,7 @@ class KsuCliRepository(context: Context) {
     }
 
     fun rootAvailable(): Boolean {
-        // A fallback sh opened before manager authorization must not decide every later refresh.
-        val shell = getRootShell(recheckRoot = true)
-        if (shell.isRoot) {
-            synchronized(shellLock) {
-                globalMountShell?.takeUnless { it.isRoot }?.let {
-                    it.close()
-                    globalMountShell = null
-                }
-            }
-        }
+        val shell = getRootShell()
         return shell.isRoot
     }
 
@@ -660,11 +645,10 @@ class KsuCliRepository(context: Context) {
         .exec().out
         .joinToString("\n")
 
-    fun forceStopApp(packageName: String): Boolean {
+    fun forceStopApp(packageName: String) {
         val shell = getRootShell()
         val result = shell.newJob().add("am force-stop $packageName").exec()
         Log.i(TAG, "force stop $packageName result: $result")
-        return result.isSuccess
     }
 
     fun launchApp(packageName: String) {

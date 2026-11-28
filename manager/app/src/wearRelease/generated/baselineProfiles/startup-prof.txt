@@ -25871,8 +25871,6 @@ SPLorg/bakasu/bakasu/data/shell/KsuCliRepository;->getKsuDaemonPath()Ljava/lang/
 SPLorg/bakasu/bakasu/data/shell/KsuCliRepository;->getMetaModuleImplement()Ljava/lang/String;
 SPLorg/bakasu/bakasu/data/shell/KsuCliRepository;->getModuleCount()I
 SPLorg/bakasu/bakasu/data/shell/KsuCliRepository;->getNativeLibraryPath(Ljava/lang/String;)Ljava/lang/String;
-SPLorg/bakasu/bakasu/data/shell/KsuCliRepository;->getRootShell$default(Lorg/bakasu/bakasu/data/shell/KsuCliRepository;ZZILjava/lang/Object;)Lcom/topjohnwu/superuser/Shell;
-SPLorg/bakasu/bakasu/data/shell/KsuCliRepository;->getRootShell(ZZ)Lcom/topjohnwu/superuser/Shell;
 SPLorg/bakasu/bakasu/data/shell/KsuCliRepository;->getSlotSuffix(ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 SPLorg/bakasu/bakasu/data/shell/KsuCliRepository;->getSuperuserCount()I
 SPLorg/bakasu/bakasu/data/shell/KsuCliRepository;->getSupportedKmis(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
